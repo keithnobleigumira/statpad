@@ -6,7 +6,8 @@ Each run it:
   1. results   football-data.co.uk results (every RESULTS_EVERY hours) -> league tables and team
                 attack/defence ratings (Poisson model with home advantage, time decay and shrinkage)
   2. fixtures  football-data.co.uk fixtures.csv + new_league_fixtures.csv (every FIXTURES_EVERY hours),
-                including their average / best 1X2 and over-under 2.5 prices
+                including their average / best 1X2 and over-under 2.5 prices, plus full-season
+                schedules from openfootball (GitHub) so the week ahead is never empty
   3. events    The Odds API /events (free of credits) for leagues, UEFA competitions and cups
   4. odds      The Odds API /odds, paced so the monthly credit allowance lasts the month
   5. builds    matches.json for the next DAYS days: expected goals per side from the ratings, market
@@ -63,7 +64,7 @@ def _now():
 NOW = _now()
 DAYS = float(ENV('STATPAD_DAYS') or 7)
 RESULTS_EVERY = 6      # hours
-FIXTURES_EVERY = 3     # hours
+FIXTURES_EVERY = 1     # hours
 SPORTS_EVERY = 12      # hours
 EVENTS_EVERY = 60      # minutes
 API_KEY = (ENV('ODDS_API_KEY') or '').strip()
@@ -75,6 +76,14 @@ RESET_DAY = int(ENV('ODDS_RESET_DAY') or 1)
 SPORTS_MODE = (ENV('ODDS_SPORTS') or 'mapped').lower()
 
 FD = 'https://www.football-data.co.uk'
+OF_BASE = 'https://raw.githubusercontent.com/openfootball/football.json/master'
+# openfootball season files: league -> (file, local UTC offset in winter, uses EU summer time)
+OF_MAP = {'EPL': ('en.1', 0, True), 'ENG2': ('en.2', 0, True), 'ENG3': ('en.3', 0, True), 'ENG4': ('en.4', 0, True),
+          'BUN': ('de.1', 1, True), 'GER2': ('de.2', 1, True), 'LaLiga': ('es.1', 1, True), 'ESP2': ('es.2', 1, True),
+          'SA': ('it.1', 1, True), 'ITA2': ('it.2', 1, True), 'L1': ('fr.1', 1, True), 'FRA2': ('fr.2', 1, True),
+          'ERE': ('nl.1', 1, True), 'NED2': ('nl.2', 1, True), 'POR': ('pt.1', 0, True), 'BEL': ('be.1', 1, True),
+          'SCO1': ('sco.1', 0, True), 'TUR1': ('tr.1', 3, False), 'AUT1': ('at.1', 1, True), 'SUI1': ('ch.1', 1, True),
+          'GRE1': ('gr.1', 2, True), 'DEN1': ('dk.1', 1, True), 'CZE1': ('cz.1', 1, True)}
 OA = 'https://api.the-odds-api.com/v4'
 
 # ----------------------------------------------------------------------------------------------
@@ -151,7 +160,8 @@ EXCHANGES = {'betfair_ex_eu', 'betfair_ex_uk', 'betfair_ex_au', 'matchbook', 'sm
 # ----------------------------------------------------------------------------------------------
 STOP = {'fc', 'cf', 'afc', 'sc', 'ac', 'as', 'ssc', 'ss', 'us', 'sv', 'vfl', 'vfb', 'tsg', 'fk', 'sk', 'nk', 'cd',
         'ud', 'sd', 'rc', 'rcd', 'ca', 'club', 'de', 'the', 'calcio', 'bc', 'fsv', 'ogc', 'sl', 'cp', 'sad', 'kv',
-        'kaa', 'krc', 'rsc', 'royal', 'hsc', 'osc', 'stade', 'olympique', 'aj', 'losc', 'kvc'}
+        'kaa', 'krc', 'rsc', 'royal', 'hsc', 'osc', 'stade', 'olympique', 'aj', 'losc', 'kvc', 'acf', 'cfc', 'es',
+        'estac', 'sco', 'sbv', 'gd'}
 ALIAS = {
     'manchester united': 'man united', 'man utd': 'man united', 'manchester city': 'man city',
     'tottenham hotspur': 'tottenham', 'spurs': 'tottenham', 'wolverhampton wanderers': 'wolves', 'wolverhampton': 'wolves',
@@ -183,6 +193,10 @@ ALIAS = {
     'vitoria guimaraes': 'guimaraes', 'vitoria': 'guimaraes', 'royal antwerp': 'antwerp', 'sint truiden': 'st truiden',
     'standard liege': 'standard', 'union saint gilloise': 'st gilloise', 'union sg': 'st gilloise',
     'oud heverlee leuven': 'oud heverlee leuven', 'celtic': 'celtic', 'rangers': 'rangers',
+    'real betis balompie': 'betis', 'rayo vallecano madrid': 'vallecano', 'espanyol barcelona': 'espanol',
+    'real sociedad futbol': 'sociedad', 'internazionale milano': 'inter', 'strasbourg alsace': 'strasbourg',
+    'willem ii tilburg': 'willem ii', 'ado den haag': 'den haag', 'feyenoord rotterdam': 'feyenoord',
+    'sporting clube portugal': 'sp lisbon', 'atletico madrid': 'ath madrid', 'club atletico madrid': 'ath madrid',
 }
 PRETTY = {
     'Man United': 'Manchester United', 'Man City': 'Manchester City', "Nott'm Forest": 'Nottingham Forest',
@@ -362,17 +376,27 @@ def last_sunday(y, m):
     return d
 
 
+def local_to_utc(day, hhmm, base=0, dst=True):
+    """Local kick-off time -> UTC. base = winter offset from UTC; dst = clocks go forward in summer (EU rules)."""
+    t = hhmm or ''
+    m = re.search(r'(\d{1,2})[:.](\d{2})', t)
+    h, mi = (int(m.group(1)) % 24, int(m.group(2))) if m else (15, 0)
+    local = day.replace(hour=h, minute=mi)
+    z = re.search(r'UTC\s*([+-]\d{1,2})', t)
+    if z:
+        return local - timedelta(hours=int(z.group(1)))
+    off = base
+    if dst:
+        start = last_sunday(day.year, 3).replace(hour=1)
+        end = last_sunday(day.year, 10).replace(hour=1)
+        if start <= local - timedelta(hours=base) < end:
+            off += 1
+    return local - timedelta(hours=off)
+
+
 def uk_to_utc(day, hhmm):
     """football-data times are UK local time (GMT in winter, BST in summer)."""
-    try:
-        h, m = [int(x) for x in (hhmm or '15:00').split(':')[:2]]
-    except ValueError:
-        h, m = 15, 0
-    local = day.replace(hour=h, minute=m)
-    start = last_sunday(day.year, 3).replace(hour=1)
-    end = last_sunday(day.year, 10).replace(hour=1)
-    bst = start <= local - timedelta(hours=1) < end
-    return local - timedelta(hours=1 if bst else 0)
+    return local_to_utc(day, hhmm, 0, True)
 
 
 def season_code(dt, back=0):
@@ -591,6 +615,48 @@ def load_fd_fixtures():
             if lk and d and h and a:
                 out.append({'lk': lk, 'ko': iso(uk_to_utc(d, col(row, 'Time'))), 'h': h, 'a': a, 'mkt': fd_market(row, upd)})
     return out, ok_main or ok_new
+
+
+def of_season(dt):
+    y = dt.year if dt.month >= 7 else dt.year - 1
+    return f'{y}-{(y + 1) % 100:02d}'
+
+
+KEEP_SUFFIX = {'Paris FC'}
+
+
+def of_name(n):
+    n = (n or '').strip()
+    return n if n in KEEP_SUFFIX else re.sub(r'\s+(FC|AFC|CF)$', '', n)
+
+
+def load_openfootball():
+    """Full-season schedules (no key needed) so upcoming games show before football-data's weekly file."""
+    out, ok = [], False
+    season = of_season(NOW)
+    for lk, (code, base, dst) in OF_MAP.items():
+        r = fetch(f'{OF_BASE}/{season}/{code}.json', tries=1)
+        if r.status != 200 or not r.body:
+            continue
+        try:
+            d = json.loads(text_of(r.body))
+        except ValueError:
+            continue
+        ok = True
+        for m in d.get('matches') or []:
+            if not isinstance(m, dict):
+                continue
+            sc = m.get('score')
+            if sc and (not isinstance(sc, dict) or sc.get('ft')):
+                continue
+            day = parse_date(m.get('date'))
+            if not day or not (NOW - timedelta(days=1) <= day <= NOW + timedelta(days=DAYS + 1)):
+                continue
+            h, a = of_name(m.get('team1')), of_name(m.get('team2'))
+            if h and a:
+                out.append({'lk': lk, 'ko': iso(local_to_utc(day, m.get('time'), base, dst)), 'h': h, 'a': a,
+                            'tbc': not m.get('time')})
+    return out, ok
 
 
 # ----------------------------------------------------------------------------------------------
@@ -837,7 +903,11 @@ def table_pos(leagues):
     return pos
 
 
-def build(state, prev):
+def same_team(x, y):
+    return norm(x) == norm(y) or norm(pretty(x)) == norm(y) or norm(x) == norm(pretty(y))
+
+
+def build(state, prev, seed=None):
     leagues = state.get('leagues') or {}
     teams = Teams()
     for lk, lg in leagues.items():
@@ -848,9 +918,13 @@ def build(state, prev):
 
     fx = []   # {'lk','ko','h','a','fd_mkt','api_mkt','api_id'}
 
-    def find(lk, h, a, ko):
+    def find(lk, h, a, ko, tbc=False):
+        # a team can't play twice in one competition within 36 hours, so one matching side is enough;
+        # schedule dates without a time are provisional, so those get a wider window
+        t = parse_iso(ko)
         for f in fx:
-            if f['lk'] == lk and f['h'] == h and f['a'] == a and abs((parse_iso(f['ko']) - parse_iso(ko)).total_seconds()) < 36 * 3600:
+            win = 96 if (tbc or f.get('tbc')) else 36
+            if f['lk'] == lk and abs((parse_iso(f['ko']) - t).total_seconds()) < win * 3600 and (same_team(f['h'], h) or same_team(f['a'], a)):
                 return f
         return None
 
@@ -861,7 +935,16 @@ def build(state, prev):
         h = teams.resolve(f['lk'], f['h']) or f['h']
         a = teams.resolve(f['lk'], f['a']) or f['a']
         if not find(f['lk'], h, a, f['ko']):
-            fx.append({'lk': f['lk'], 'ko': f['ko'], 'h': h, 'a': a, 'fd_mkt': f.get('mkt'), 'api_mkt': None, 'api_id': None})
+            fx.append({'lk': f['lk'], 'ko': f['ko'], 'h': h, 'a': a, 'fd_mkt': f.get('mkt'), 'api_mkt': None, 'api_id': None, 'ks': 'fd'})
+
+    for f in state.get('of_fixtures') or []:
+        ko = parse_iso(f['ko'])
+        if f['lk'] not in L or not (lo <= ko <= hi):
+            continue
+        h = teams.resolve(f['lk'], f['h']) or f['h']
+        a = teams.resolve(f['lk'], f['a']) or f['a']
+        if not find(f['lk'], h, a, f['ko'], f.get('tbc')):
+            fx.append({'lk': f['lk'], 'ko': f['ko'], 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'of'})
 
     plan = sport_plan(state, quiet=True) if state.get('api') else {}
     for key, blob in (state.get('api') or {}).items():
@@ -884,22 +967,47 @@ def build(state, prev):
             f = find(lk, h, a, e['ko'])
             if f:
                 f['ko'] = iso(ko)   # the API kickoff is exact
+                f['ks'] = 'api'
+                f['tbc'] = False
             else:
-                f = {'lk': lk, 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None}
+                f = {'lk': lk, 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'ks': 'api'}
                 fx.append(f)
             f['api_mkt'] = api_market(e)
             f['api_id'] = e.get('id')
 
-    prev_by_id = {m['id']: m for m in (prev or {}).get('matches', [])}
+    prev_list, ids = [], set()
+    for doc in (prev, seed):
+        for m in (doc or {}).get('matches', []):
+            if m.get('id') not in ids and m.get('ko') and m.get('lk') in L:
+                ids.add(m['id'])
+                prev_list.append(m)
+    prev_by_id = {m['id']: m for m in prev_list}
+    prev_by_lk = {}
+    for m in prev_list:
+        prev_by_lk.setdefault(m['lk'], []).append(m)
+
+    def prev_for(lk, h, a, ko, wide=False):
+        for m in prev_by_lk.get(lk, []):
+            win = 96 if wide else 36
+            if abs((parse_iso(m['ko']) - ko).total_seconds()) < win * 3600 and (same_team(m['h'], h) or same_team(m['a'], a)):
+                return m
+        return {}
     matches = []
     seen = set()
     for f in sorted(fx, key=lambda f: (f['ko'], f['lk'], f['h'])):
         ko = parse_iso(f['ko'])
         mid = f"{f['lk']}-{ko:%Y%m%d}-{slug(f['h'])}-{slug(f['a'])}"
+        old = prev_by_id.get(mid) or prev_for(f['lk'], f['h'], f['a'], ko, wide=bool(f.get('tbc')))
+        ks = f.get('ks', 'fd')
+        tbc = bool(f.get('tbc'))
+        # season schedules can carry provisional kick-off times; trust an earlier time from a firmer source
+        if ks == 'of' and old and old.get('ks', 'seed') != 'of' and old.get('ko'):
+            ko = parse_iso(old['ko'])
+            ks, tbc = old.get('ks', 'seed'), bool(old.get('tbc'))
+            mid = f"{f['lk']}-{ko:%Y%m%d}-{slug(f['h'])}-{slug(f['a'])}"
         if mid in seen:
             continue
         seen.add(mid)
-        old = prev_by_id.get(mid) or {}
         mkt = f['api_mkt'] or f['fd_mkt'] or old.get('mkt')
         lam, cross = expected_goals(f['lk'], f['h'], f['a'], leagues, teams)
         ph = pos.get((f['lk'], f['h']))
@@ -924,15 +1032,16 @@ def build(state, prev):
             'ph': ph[0] if ph else None, 'pa': pa[0] if pa else None,
             'fh': ph[2] if ph else None, 'fa': pa[2] if pa else None,
             'dh': dom_h, 'da': dom_a,
-            'lm': lam, 'xl': cross, 'mkt': mkt, 'hist': hist, 'clash': clash,
+            'lm': lam, 'xl': cross, 'mkt': mkt, 'hist': hist, 'clash': clash, 'tbc': tbc, 'ks': ks,
         })
 
-    # keep the previous list if every source failed this run
-    if not matches and prev and prev.get('matches'):
-        keep = [m for m in prev['matches'] if lo <= parse_iso(m['ko']) <= hi]
-        if keep:
-            log('no fixtures from any source this run; keeping', len(keep), 'previous matches')
-            matches = keep
+    # competitions no source covered this run keep their previous (or starter) fixtures until kick-off
+    covered = {m['lk'] for m in matches}
+    carried = [m for m in prev_list if m['lk'] not in covered and lo <= parse_iso(m['ko']) <= hi]
+    if carried:
+        log('kept', len(carried), 'earlier fixtures for', len({m['lk'] for m in carried}), 'competitions with no fresh fixtures')
+        matches.extend(carried)
+        matches.sort(key=lambda m: (m['ko'], m['lk'], m['h']))
 
     used = {m['lk'] for m in matches}
     out_leagues = {}
@@ -941,6 +1050,9 @@ def build(state, prev):
         if lk not in used and not lg:
             continue
         rec = {'name': c['name'], 'country': c['country'], 'group': c['group']}
+        old_lg = ((seed or {}).get('leagues') or {}).get(lk) or {}
+        if not lg and old_lg.get('table'):
+            rec.update({'season': old_lg.get('season'), 'mu': None, 'home': None, 'table': old_lg['table']})
         if lg:
             rec.update({'season': lg.get('season'), 'mu': lg.get('mu'), 'home': lg.get('home'),
                         'table': [[pretty(r[0])] + r[1:] for r in lg.get('table') or []]})
@@ -984,33 +1096,44 @@ def main():
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     state = load_json(STATE_DIR / 'state.json') or {}
-    prev = load_json(STATE_DIR / 'last.json') or load_json(SEED)
+    seed = load_json(SEED)
+    prev = load_json(STATE_DIR / 'last.json') or seed
     last = state.setdefault('last', {})
     src = state.setdefault('sources', {})
 
+    def safe(fn, default):
+        try:
+            return fn()
+        except Exception as e:   # one bad source must never stop the run
+            log('source error in', fn.__name__, '->', repr(e))
+            return default
+
     if due(state, 'results', RESULTS_EVERY) or not state.get('leagues'):
-        res = load_results()
+        res = safe(load_results, {})
         if res:
-            state['leagues'] = compute_leagues(res, Teams())
+            state['leagues'] = safe(lambda: compute_leagues(res, Teams()), state.get('leagues') or {})
             last['results'] = iso(NOW)
             src['results'] = {'ok': True, 'at': iso(NOW), 'leagues': len(res)}
         else:
             src['results'] = {'ok': False, 'at': iso(NOW)}
         log('results:', len(res), 'leagues')
 
-    if due(state, 'fixtures', FIXTURES_EVERY):
-        fx, ok = load_fd_fixtures()
+    if due(state, 'fixtures', FIXTURES_EVERY) or 'of_fixtures' not in state:
+        fx, ok = safe(load_fd_fixtures, ([], False))
         if ok:
             state['fd_fixtures'] = fx
             last['fixtures'] = iso(NOW)
-        src['fixtures'] = {'ok': ok, 'at': iso(NOW), 'count': len(fx)}
-        log('football-data fixtures:', len(fx))
+        ofx, ok2 = safe(load_openfootball, ([], False))
+        if ok2:
+            state['of_fixtures'] = ofx
+        src['fixtures'] = {'ok': ok or ok2, 'at': iso(NOW), 'count': len(fx) + len(ofx)}
+        log('football-data fixtures:', len(fx), '| openfootball schedule fixtures:', len(ofx))
 
-    msg = refresh_odds_api(state)
+    msg = safe(lambda: refresh_odds_api(state), 'error')
     src['odds_api'] = {'ok': msg not in ('no key', 'paused', 'out of credits'), 'at': iso(NOW), 'note': msg}
     log('odds:', msg, '| credits left:', (state.get('quota') or {}).get('remaining'))
 
-    doc = build(state, prev)
+    doc = build(state, prev, seed)
     changed = prev is None or stable(doc) != stable(prev) or FORCE
     if not doc['matches'] and prev and prev.get('matches') and not FORCE:
         changed = False   # never replace a live board with an empty one
