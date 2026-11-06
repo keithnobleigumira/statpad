@@ -1,0 +1,1318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Statpad: football predictions from a goals model blended with live bookmaker prices. Probabilities for every market, value picks and target-odds slips.">
+<meta name="theme-color" content="#f2f4f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a100e" media="(prefers-color-scheme: dark)">
+<meta property="og:title" content="Statpad">
+<meta property="og:description" content="Every fixture, priced by the numbers.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230d1813'/%3E%3Crect x='4' y='6' width='16' height='12' rx='1.5' fill='none' stroke='%23eef3ef' stroke-width='1.5'/%3E%3Cpath d='M12 6v12' stroke='%23eef3ef' stroke-width='1.3'/%3E%3Ccircle cx='12' cy='12' r='2.3' fill='none' stroke='%23eef3ef' stroke-width='1.3'/%3E%3Crect x='15' y='9.5' width='2.6' height='5' fill='%236f86ff'/%3E%3C/svg%3E">
+<title>Statpad</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Hanken+Grotesk:wght@400;500;600;700&family=Martian+Mono:wdth,wght@75..112.5,400..600&display=swap">
+<style>
+/* Statpad: a match-day notepad. Chalk paper, pitch lines, one cobalt accent for anything you can act on;
+   pitch green / card red only for prices moving or value appearing. */
+:root {
+  --paper: #f2f4f1; --card: #ffffff; --sunk: #e9eee9; --ink: #0d1813; --ink-2: #4f5f57; --ink-3: #7d8a83;
+  --rule: #dbe2dd; --rule-2: #e8ede9;
+  --cobalt: #2a46e8; --cobalt-ink: #ffffff; --cobalt-soft: rgba(42, 70, 232, .09); --cobalt-line: rgba(42, 70, 232, .35);
+  --pitch: #0f8a52; --pitch-soft: rgba(15, 138, 82, .11); --red: #d8432f; --red-soft: rgba(216, 67, 47, .1);
+  --yellow: #b98900; --yellow-soft: rgba(229, 168, 0, .14);
+  --h: #2a46e8; --d: #b8c2bc; --a: #e8743b;
+  --ticket: #0d1813; --ticket-2: #1b2822; --ticket-ink: #eef3ef; --ticket-mute: #8fa199; --ticket-rule: #2b3a33;
+  --shadow: 0 1px 0 rgba(13, 24, 19, .04), 0 10px 30px -18px rgba(13, 24, 19, .35);
+  --f-display: "Archivo", "Arial Black", system-ui, sans-serif;
+  --f-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 14px; --r-sm: 9px; --gut: 16px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0a100e; --card: #111916; --sunk: #0d1411; --ink: #e8efeb; --ink-2: #9fb0a7; --ink-3: #6f7f77;
+    --rule: #22302a; --rule-2: #1a2520;
+    --cobalt: #8297ff; --cobalt-ink: #0a100e; --cobalt-soft: rgba(130, 151, 255, .12); --cobalt-line: rgba(130, 151, 255, .4);
+    --pitch: #3ccf8e; --pitch-soft: rgba(60, 207, 142, .12); --red: #ff7a63; --red-soft: rgba(255, 122, 99, .12);
+    --yellow: #f2c84b; --yellow-soft: rgba(242, 200, 75, .13);
+    --h: #8297ff; --d: #4a5a52; --a: #ff9a5c;
+    --ticket: #eaf1ec; --ticket-2: #dde6e0; --ticket-ink: #0d1813; --ticket-mute: #52645b; --ticket-rule: #c5d1ca;
+    --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 14px 34px -20px rgba(0, 0, 0, .9);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0a100e; --card: #111916; --sunk: #0d1411; --ink: #e8efeb; --ink-2: #9fb0a7; --ink-3: #6f7f77;
+  --rule: #22302a; --rule-2: #1a2520;
+  --cobalt: #8297ff; --cobalt-ink: #0a100e; --cobalt-soft: rgba(130, 151, 255, .12); --cobalt-line: rgba(130, 151, 255, .4);
+  --pitch: #3ccf8e; --pitch-soft: rgba(60, 207, 142, .12); --red: #ff7a63; --red-soft: rgba(255, 122, 99, .12);
+  --yellow: #f2c84b; --yellow-soft: rgba(242, 200, 75, .13);
+  --h: #8297ff; --d: #4a5a52; --a: #ff9a5c;
+  --ticket: #eaf1ec; --ticket-2: #dde6e0; --ticket-ink: #0d1813; --ticket-mute: #52645b; --ticket-rule: #c5d1ca;
+  --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 14px 34px -20px rgba(0, 0, 0, .9);
+  color-scheme: dark;
+}
+@media (min-width: 760px) { :root { --gut: 28px; } }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.5 var(--f-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--cobalt); }
+:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
+.mono { font-family: var(--f-mono); font-stretch: 87.5%; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 var(--gut); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- header ---------- */
+.top { position: sticky; top: 0; z-index: 40; background: var(--paper); background: color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--rule); }
+.top .wrap { display: flex; align-items: center; gap: 18px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); flex: none; }
+.brand-mark { width: 30px; height: 30px; border-radius: 8px; background: #0d1813; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); display: grid; place-items: center; }
+.brand-mark svg { width: 20px; height: 20px; }
+.brand-name { font: 850 21px/1 var(--f-display); font-stretch: 125%; letter-spacing: -.03em; }
+.brand-name i { font-style: normal; color: var(--cobalt); }
+.tabs { display: none; gap: 2px; margin-left: 8px; }
+.tab { border: 0; background: none; padding: 8px 12px; border-radius: 99px; font-weight: 600; font-size: 14px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; }
+.tab:hover { color: var(--ink); background: var(--sunk); }
+.tab[aria-current="page"] { color: var(--ink); background: var(--card); box-shadow: inset 0 0 0 1px var(--rule); }
+.count { font: 600 10.5px/1 var(--f-mono); background: var(--cobalt); color: var(--cobalt-ink); padding: 3px 6px; border-radius: 99px; }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.live { display: inline-flex; align-items: center; gap: 8px; font: 500 11px/1 var(--f-mono); font-stretch: 87.5%; color: var(--ink-2); padding: 7px 10px; border: 1px solid var(--rule); border-radius: 99px; background: var(--card); white-space: nowrap; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
+.live.on .dot { background: var(--pitch); box-shadow: 0 0 0 0 var(--pitch); animation: ping 2.4s infinite; }
+.live.warn .dot { background: var(--yellow); }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pitch) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+.icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--rule); background: var(--card); display: grid; place-items: center; color: var(--ink-2); }
+.icon-btn svg { width: 17px; height: 17px; }
+.live .long { display: none; }
+@media (min-width: 980px) { .tabs { display: flex; } .live .long { display: inline; } }
+
+/* bottom nav on phones */
+.bnav { position: fixed; z-index: 45; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--rule); display: grid; grid-template-columns: repeat(6, 1fr); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+.bnav button { border: 0; background: none; display: grid; justify-items: center; gap: 3px; padding: 4px 0; font-size: 10.5px; font-weight: 600; color: var(--ink-3); position: relative; }
+.bnav svg { width: 21px; height: 21px; }
+.bnav button[aria-current="page"] { color: var(--cobalt); }
+.bnav .count { position: absolute; top: 0; left: calc(50% + 6px); font-size: 9px; padding: 2px 5px; }
+@media (min-width: 980px) { .bnav { display: none; } }
+main { padding-bottom: 96px; }
+@media (min-width: 980px) { main { padding-bottom: 40px; } }
+
+/* ---------- hero ---------- */
+.hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--rule); }
+.hero-lines { position: absolute; inset: 0; pointer-events: none; color: var(--rule); }
+.hero-lines svg { position: absolute; right: -120px; top: -40px; width: 760px; height: auto; opacity: .9; }
+.hero .wrap { position: relative; display: grid; gap: 28px; padding-top: 34px; padding-bottom: 34px; }
+@media (min-width: 980px) { .hero .wrap { grid-template-columns: 1.15fr .85fr; align-items: center; padding-top: 52px; padding-bottom: 52px; } }
+.kicker { display: inline-flex; align-items: center; gap: 8px; font: 600 11px/1 var(--f-mono); font-stretch: 87.5%; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.kicker b { width: 18px; height: 2px; background: var(--cobalt); display: inline-block; }
+h1 { font: 850 clamp(34px, 6.4vw, 66px)/.95 var(--f-display); font-stretch: 118%; letter-spacing: -.035em; margin: 16px 0 16px; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--cobalt); }
+.lede { color: var(--ink-2); font-size: 16.5px; max-width: 52ch; margin: 0; text-wrap: pretty; }
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; margin-top: 26px; max-width: 620px; }
+@media (min-width: 560px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+.kpi { background: var(--card); padding: 13px 14px; }
+.kpi-v { font: 700 24px/1 var(--f-display); font-stretch: 110%; letter-spacing: -.02em; }
+.kpi-l { font-size: 12px; color: var(--ink-2); margin-top: 6px; }
+
+/* ticket */
+.ticket { position: relative; background: var(--ticket); color: var(--ticket-ink); border-radius: 18px; padding: 20px 20px 18px; box-shadow: 0 30px 60px -30px rgba(13, 24, 19, .55); max-width: 460px; width: 100%; justify-self: center; }
+@media (min-width: 980px) { .ticket { justify-self: end; transform: rotate(1.2deg); } }
+.ticket::before, .ticket::after { content: ""; position: absolute; top: 118px; width: 22px; height: 22px; border-radius: 50%; background: var(--paper); }
+.ticket::before { left: -11px; } .ticket::after { right: -11px; }
+.t-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.t-kick { font: 600 10.5px/1.3 var(--f-mono); font-stretch: 87.5%; letter-spacing: .07em; text-transform: uppercase; color: var(--ticket-mute); }
+.t-title { font: 800 22px/1.05 var(--f-display); font-stretch: 112%; letter-spacing: -.02em; margin-top: 6px; }
+.t-odds { text-align: right; }
+.t-odds .v { font: 700 34px/1 var(--f-mono); font-stretch: 87.5%; letter-spacing: -.04em; }
+.t-odds .l { font-size: 11px; color: var(--ticket-mute); margin-top: 4px; }
+.t-perf { border-top: 2px dashed var(--ticket-rule); margin: 22px -4px 12px; }
+.t-legs { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.t-legs li { cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 13.5px; }
+.t-legs .sel { font-weight: 650; }
+.t-legs .tfx { color: var(--ticket-mute); font-size: 12px; grid-column: 1; }
+.t-legs .pr { font: 600 13px/1.3 var(--f-mono); font-stretch: 87.5%; grid-row: 1 / span 2; grid-column: 2; align-self: center; text-align: right; }
+.t-legs .pr small { display: block; font-size: 10.5px; color: var(--ticket-mute); font-weight: 400; }
+.t-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ticket-rule); font-size: 12.5px; color: var(--ticket-mute); }
+.t-foot button { border: 0; background: var(--cobalt); color: var(--cobalt-ink); padding: 9px 14px; border-radius: 99px; font-weight: 700; font-size: 13px; }
+.t-more { font-size: 12px; color: var(--ticket-mute); }
+
+/* tape */
+.tape { background: var(--ink); color: var(--paper); overflow: hidden; border-bottom: 1px solid var(--rule); }
+.tape-in { display: flex; gap: 34px; width: max-content; padding: 11px 0; animation: tape 70s linear infinite; }
+.tape:hover .tape-in { animation-play-state: paused; }
+.tape-item { display: inline-flex; gap: 8px; align-items: baseline; font-size: 13px; white-space: nowrap; }
+.tape-item b { font-weight: 650; }
+.tape-item .mono { font-size: 12px; opacity: .8; }
+.tape-tag { font: 600 10px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px; background: rgba(255,255,255,.1); }
+.up { color: var(--pitch); } .down { color: var(--red); }
+.tape .up { color: #46d896; } .tape .down { color: #ff8a73; }
+:root[data-theme="dark"] .tape .up, :root[data-theme="dark"] .tape .down { filter: saturate(1.1) brightness(.75); }
+@keyframes tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .tape { overflow-x: auto; } .tape-in { animation: none; } .live.on .dot { animation: none; } }
+
+/* ---------- sections & controls ---------- */
+.section { padding-top: 26px; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin-bottom: 16px; }
+h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; letter-spacing: -.03em; margin: 0; }
+.sub { color: var(--ink-2); font-size: 14px; margin: 6px 0 0; max-width: 70ch; }
+.days { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 calc(-1 * var(--gut)); padding-left: var(--gut); padding-right: var(--gut); }
+.days::-webkit-scrollbar { display: none; }
+.day { flex: none; border: 1px solid var(--rule); background: var(--card); border-radius: 12px; padding: 8px 12px; text-align: left; min-width: 74px; }
+.day .d1 { font: 700 13px/1.1 var(--f-body); }
+.day .d2 { font: 500 10.5px/1.2 var(--f-mono); font-stretch: 87.5%; color: var(--ink-3); margin-top: 4px; }
+.day[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.day[aria-pressed="true"] .d2 { color: color-mix(in srgb, var(--paper) 70%, transparent); }
+.day.empty { opacity: .5; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.field { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--rule); border-radius: 11px; padding: 0 12px; height: 40px; min-width: 0; }
+.field svg { width: 16px; height: 16px; color: var(--ink-3); flex: none; }
+.field input, .field select { border: 0; background: transparent; outline: none; height: 38px; min-width: 0; font-size: 14px; }
+.field select { padding-right: 4px; }
+.field.grow { flex: 1 1 220px; }
+.field:not(.grow) { flex: 1 1 150px; }
+@media (min-width: 760px) { .field:not(.grow) { flex: 0 1 auto; } }
+.field select { width: 100%; }
+.field input { width: 100%; }
+.seg { display: inline-flex; background: var(--sunk); border: 1px solid var(--rule); border-radius: 11px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: none; padding: 6px 11px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08), inset 0 0 0 1px var(--rule); }
+.seg .mono { font-size: 12px; }
+.lbl { font-size: 12px; color: var(--ink-3); font-weight: 600; letter-spacing: .02em; }
+.ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- match list ---------- */
+.comp { margin-top: 20px; }
+.comp-h { display: flex; align-items: baseline; gap: 10px; padding: 0 2px 8px; }
+.comp-h h3 { font: 750 15px/1.2 var(--f-display); font-stretch: 108%; letter-spacing: -.01em; margin: 0; }
+.comp-h span { font-size: 12px; color: var(--ink-3); }
+.comp-list { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+.fx { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; padding: 12px 14px; border-top: 1px solid var(--rule-2); cursor: pointer; position: relative; }
+.fx:first-child { border-top: 0; }
+.fx:hover { background: color-mix(in srgb, var(--sunk) 55%, transparent); }
+.fx-meta { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font: 500 11.5px/1 var(--f-mono); font-stretch: 87.5%; color: var(--ink-3); }
+.fx-meta time { color: var(--ink); font-weight: 600; }
+.badge { white-space: nowrap; font: 700 9.5px/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; padding: 3px 6px; border-radius: 4px; }
+.b-live { background: var(--red); color: #fff; }
+.b-done { background: var(--sunk); color: var(--ink-3); }
+.b-clash { background: var(--yellow-soft); color: var(--yellow); }
+.b-est { background: var(--sunk); color: var(--ink-3); }
+.fx-teams { display: grid; gap: 5px; min-width: 0; grid-row: 2; grid-column: 1; }
+.tm { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tm .pos { font: 600 10.5px/1 var(--f-mono); color: var(--ink-3); width: 20px; flex: none; text-align: right; }
+.tm .nm { font-weight: 650; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm .xg { font: 500 11px/1 var(--f-mono); font-stretch: 87.5%; color: var(--ink-3); margin-left: auto; flex: none; }
+.form { display: inline-flex; gap: 2px; flex: none; }
+.form i { width: 6px; height: 6px; border-radius: 2px; background: var(--d); }
+.form i.W { background: var(--pitch); } .form i.L { background: var(--red); }
+.fx-odds { display: grid; grid-template-columns: repeat(3, 54px); gap: 5px; align-self: center; grid-row: 2; grid-column: 2; }
+.fx .form, .fx .xg { display: none; }
+.ob { border: 1px solid var(--rule); background: var(--paper); border-radius: 9px; padding: 6px 4px 5px; text-align: center; line-height: 1.1; position: relative; }
+.ob .k { display: block; font: 600 9.5px/1 var(--f-mono); color: var(--ink-3); }
+.ob .v { display: block; font: 600 14px/1.25 var(--f-mono); font-stretch: 87.5%; margin-top: 3px; }
+.ob .p { display: block; font: 500 9.5px/1 var(--f-mono); color: var(--ink-3); margin-top: 2px; }
+.ob.est .v { color: var(--ink-3); font-style: italic; font-weight: 500; }
+.ob.val { border-color: color-mix(in srgb, var(--pitch) 55%, transparent); background: var(--pitch-soft); }
+.ob.val .p { color: var(--pitch); font-weight: 700; }
+.ob[aria-pressed="true"] { background: var(--cobalt); border-color: var(--cobalt); color: var(--cobalt-ink); }
+.ob[aria-pressed="true"] .k, .ob[aria-pressed="true"] .p { color: inherit; opacity: .85; }
+.ob.flash-up { animation: fu 1.6s ease-out; } .ob.flash-down { animation: fd 1.6s ease-out; }
+@keyframes fu { from { box-shadow: 0 0 0 3px var(--pitch); } to { box-shadow: 0 0 0 0 transparent; } }
+@keyframes fd { from { box-shadow: 0 0 0 3px var(--red); } to { box-shadow: 0 0 0 0 transparent; } }
+.fx-bar { grid-column: 1 / -1; grid-row: 3; display: flex; align-items: center; gap: 10px; }
+.pbar { flex: 1; display: flex; height: 6px; border-radius: 99px; overflow: hidden; background: var(--sunk); gap: 2px; }
+.pbar i { display: block; height: 100%; }
+.pbar .h { background: var(--h); } .pbar .d { background: var(--d); } .pbar .a { background: var(--a); }
+.pick { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 62%; }
+.pick b { color: var(--ink); font-weight: 650; }
+.tier { font: 700 9.5px/1 var(--f-mono); letter-spacing: .05em; padding: 3px 6px; border-radius: 4px; margin-right: 4px; vertical-align: 1px; }
+.tier-A { background: var(--pitch-soft); color: var(--pitch); } .tier-B { background: var(--cobalt-soft); color: var(--cobalt); } .tier-C { background: var(--yellow-soft); color: var(--yellow); }
+@media (min-width: 760px) {
+  .fx { grid-template-columns: 86px minmax(0, 1fr) 230px auto; align-items: center; padding: 12px 16px; }
+  .fx-meta { grid-column: 1; grid-row: 1; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .fx-teams { grid-column: 2; grid-row: 1; }
+  .fx-bar { grid-column: 3; grid-row: 1; flex-direction: column; align-items: stretch; gap: 7px; }
+  .pick { max-width: none; }
+  .fx-bar .pbar { flex: none; }
+  .fx-odds { grid-column: 4; grid-row: 1; grid-template-columns: repeat(3, 64px); }
+  .fx .form, .fx .xg { display: inline-flex; }
+}
+.empty-state { text-align: center; padding: 48px 20px; color: var(--ink-2); background: var(--card); border: 1px dashed var(--rule); border-radius: var(--r); margin-top: 18px; }
+.empty-state b { display: block; color: var(--ink); font: 750 18px/1.2 var(--f-display); font-stretch: 110%; margin-bottom: 6px; }
+.more-btn { display: block; margin: 14px auto 0; border: 1px solid var(--rule); background: var(--card); border-radius: 99px; padding: 9px 16px; font-weight: 600; font-size: 13px; }
+
+/* ---------- sheet ---------- */
+.scrim { position: fixed; inset: 0; z-index: 60; background: rgba(8, 14, 11, .45); opacity: 0; pointer-events: none; transition: opacity .2s; }
+.scrim.open { opacity: 1; pointer-events: auto; }
+.sheet { position: fixed; z-index: 61; left: 0; right: 0; bottom: 0; max-height: 92vh; background: var(--paper); border-radius: 20px 20px 0 0; transform: translateY(102%); transition: transform .28s cubic-bezier(.2, .8, .2, 1); display: flex; flex-direction: column; box-shadow: 0 -20px 60px -20px rgba(0,0,0,.4); }
+.sheet.open { transform: none; }
+@media (min-width: 980px) { .sheet { left: auto; top: 0; width: 600px; max-height: none; border-radius: 0; transform: translateX(102%); border-left: 1px solid var(--rule); } }
+.sheet-bar { display: flex; align-items: center; gap: 10px; padding: 14px var(--gut) 12px; border-bottom: 1px solid var(--rule); }
+.sheet-bar .t { font: 500 12px/1.3 var(--f-mono); font-stretch: 87.5%; color: var(--ink-2); flex: 1; min-width: 0; }
+.sheet-body { overflow-y: auto; padding: 18px var(--gut) 40px; -webkit-overflow-scrolling: touch; }
+.grab { width: 40px; height: 4px; border-radius: 4px; background: var(--rule); margin: 8px auto 0; }
+@media (min-width: 980px) { .grab { display: none; } }
+.vs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: start; }
+.vs .side { min-width: 0; }
+.vs .side.r { text-align: right; }
+.vs .team { font: 800 clamp(20px, 5vw, 26px)/1.05 var(--f-display); font-stretch: 108%; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.vs .meta { font-size: 12px; color: var(--ink-3); margin-top: 6px; display: flex; gap: 6px; align-items: center; }
+.vs .side.r .meta { justify-content: flex-end; }
+.vs .mid { text-align: center; padding-top: 2px; }
+.xg-big { font: 600 22px/1 var(--f-mono); font-stretch: 87.5%; letter-spacing: -.03em; white-space: nowrap; }
+.xg-l { font: 600 9.5px/1 var(--f-mono); color: var(--ink-3); letter-spacing: .08em; margin-top: 6px; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); padding: 16px; margin-top: 14px; box-shadow: var(--shadow); }
+.card h4 { margin: 0 0 12px; font: 750 13px/1.2 var(--f-display); font-stretch: 108%; letter-spacing: .01em; text-transform: uppercase; color: var(--ink-2); display: flex; justify-content: space-between; gap: 10px; }
+.card h4 span { text-transform: none; font: 500 11.5px/1.2 var(--f-body); color: var(--ink-3); letter-spacing: 0; }
+.cmp { display: grid; gap: 10px; }
+.cmp-row { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: center; font-size: 12.5px; }
+.cmp-row .n { color: var(--ink-2); font-weight: 600; }
+.sbar { display: flex; height: 24px; border-radius: 7px; overflow: hidden; gap: 2px; }
+.sbar i { display: flex; align-items: center; justify-content: center; font: 600 10.5px/1 var(--f-mono); font-stretch: 87.5%; font-style: normal; color: #fff; min-width: 0; overflow: hidden; white-space: nowrap; }
+.sbar .h { background: var(--h); } .sbar .d { background: var(--d); color: var(--ink); } .sbar .a { background: var(--a); }
+:root[data-theme="dark"] .sbar .h, :root[data-theme="dark"] .sbar .a { color: #0a100e; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sbar .h, :root:not([data-theme="light"]) .sbar .a { color: #0a100e; } }
+.legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--ink-3); margin-top: 10px; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.chip { font-size: 12px; padding: 5px 9px; border-radius: 99px; background: var(--sunk); color: var(--ink-2); border: 1px solid var(--rule); }
+.chip.warn { background: var(--yellow-soft); color: var(--yellow); border-color: transparent; }
+.chip.good { background: var(--pitch-soft); color: var(--pitch); border-color: transparent; }
+.heat { display: grid; grid-template-columns: 26px repeat(6, 1fr); gap: 3px; font: 500 10.5px/1 var(--f-mono); font-stretch: 87.5%; }
+.heat .ax { color: var(--ink-3); display: grid; place-items: center; height: 26px; }
+.heat .c { aspect-ratio: 1.35; border-radius: 6px; display: grid; place-items: center; color: var(--ink); position: relative; }
+.heat .c.top { box-shadow: inset 0 0 0 2px var(--ink); font-weight: 700; }
+.heat-cap { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); margin-top: 8px; }
+.dist { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 110px; }
+.dist .col { display: grid; gap: 5px; justify-items: center; align-self: end; }
+.dist .bar { width: 100%; border-radius: 6px 6px 2px 2px; background: var(--cobalt); opacity: .85; }
+.dist .bar.lo { background: var(--d); }
+.dist .v { font: 600 10px/1 var(--f-mono); color: var(--ink-2); }
+.dist .k { font: 600 10.5px/1 var(--f-mono); color: var(--ink-3); }
+table { width: 100%; border-collapse: collapse; }
+.mt th { text-align: left; font: 600 10.5px/1 var(--f-mono); color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; padding: 0 6px 8px; white-space: nowrap; }
+.mt td { padding: 9px 6px; border-top: 1px solid var(--rule-2); font-size: 13px; vertical-align: middle; }
+.mt td.n, .mt th.n { text-align: right; font-family: var(--f-mono); font-stretch: 87.5%; font-size: 12px; white-space: nowrap; }
+.mt .grp td { padding-top: 14px; font: 700 10.5px/1 var(--f-mono); color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; border-top: 0; }
+.mt .sel { font-weight: 600; }
+@media (max-width: 420px) { .mt .fair { display: none; } }
+.mt small { color: var(--ink-3); font-size: 10.5px; display: block; }
+.edge-pos { color: var(--pitch); font-weight: 700; } .edge-neg { color: var(--ink-3); }
+.add { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--rule); background: var(--paper); display: grid; place-items: center; font-weight: 700; color: var(--cobalt); margin-left: auto; }
+.add[aria-pressed="true"] { background: var(--cobalt); color: var(--cobalt-ink); border-color: var(--cobalt); }
+.spark { width: 100%; height: 120px; display: block; }
+.spark text { font: 500 10px var(--f-mono); fill: var(--ink-3); }
+.note { font-size: 12.5px; color: var(--ink-2); margin: 10px 0 0; }
+
+/* ---------- value ---------- */
+.vlist { display: grid; gap: 10px; }
+.vrow { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; padding: 14px 16px; background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); box-shadow: var(--shadow); cursor: pointer; }
+.vrow .fxl { font-size: 12px; color: var(--ink-3); font-family: var(--f-mono); font-stretch: 87.5%; }
+.vrow .sel { font-weight: 700; font-size: 15px; }
+.vrow .nums { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); grid-column: 1 / -1; }
+.vrow .nums b { font-family: var(--f-mono); font-stretch: 87.5%; color: var(--ink); font-weight: 600; }
+.vrow .edge { text-align: right; }
+.vrow .edge .v { font: 700 20px/1 var(--f-mono); font-stretch: 87.5%; color: var(--pitch); }
+.vrow .edge .l { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+.ebar { grid-column: 1 / -1; height: 4px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
+.ebar i { display: block; height: 100%; background: var(--pitch); }
+@media (min-width: 760px) { .vlist { grid-template-columns: 1fr 1fr; } }
+
+/* ---------- slips ---------- */
+.slips { display: grid; gap: 16px; margin-top: 18px; }
+@media (min-width: 980px) { .slips { grid-template-columns: repeat(3, 1fr); align-items: start; } }
+.slip { background: var(--card); border: 1px solid var(--rule); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.slip-h { padding: 16px 18px 14px; border-bottom: 2px dashed var(--rule); position: relative; }
+.slip-h .name { font: 800 19px/1.1 var(--f-display); font-stretch: 112%; letter-spacing: -.02em; display: flex; align-items: center; gap: 8px; }
+.slip-h .band { font: 500 11px/1.4 var(--f-mono); font-stretch: 87.5%; color: var(--ink-3); margin-top: 4px; }
+.slip-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.slip-nums .v { font: 700 20px/1 var(--f-mono); font-stretch: 87.5%; letter-spacing: -.03em; }
+.slip-nums .l { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+.slip ol { list-style: none; margin: 0; padding: 6px 0; counter-reset: leg; }
+.slip li { display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 10px; padding: 9px 18px; font-size: 13.5px; counter-increment: leg; cursor: pointer; }
+.slip li:hover { background: var(--sunk); }
+.slip li::before { content: counter(leg); font: 600 10.5px/1.7 var(--f-mono); color: var(--ink-3); grid-row: 1 / span 2; }
+.slip li .sel { font-weight: 650; }
+.slip li .fxl { font-size: 11.5px; color: var(--ink-3); grid-column: 2; }
+.slip li .pr { grid-column: 3; grid-row: 1 / span 2; text-align: right; font: 600 13px/1.3 var(--f-mono); font-stretch: 87.5%; align-self: center; }
+.slip li .pr small { display: block; font-size: 10.5px; color: var(--ink-3); font-weight: 400; }
+.slip-f { padding: 12px 18px 16px; border-top: 1px solid var(--rule-2); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.slip-f .w { font-size: 12px; color: var(--yellow); }
+.btn { border: 1px solid var(--rule); background: var(--card); border-radius: 99px; padding: 9px 15px; font-weight: 650; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.btn.pri { background: var(--cobalt); color: var(--cobalt-ink); border-color: var(--cobalt); }
+.btn:disabled { opacity: .45; cursor: default; }
+.callout { margin-top: 18px; padding: 14px 16px; border-radius: var(--r); background: var(--cobalt-soft); color: var(--ink); font-size: 13.5px; border: 1px solid var(--cobalt-line); }
+
+/* ---------- coupon ---------- */
+.cp { display: grid; gap: 16px; }
+@media (min-width: 980px) { .cp { grid-template-columns: 1.4fr 1fr; align-items: start; } }
+.cp-item { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 12px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--rule-2); }
+.cp-item:first-child { border-top: 0; }
+.cp-item .sel { font-weight: 650; }
+.cp-item .fxl { font-size: 12px; color: var(--ink-3); grid-column: 1; }
+.cp-item input { width: 74px; height: 36px; border: 1px solid var(--rule); background: var(--paper); border-radius: 9px; text-align: center; font-family: var(--f-mono); font-stretch: 87.5%; font-size: 13px; grid-row: 1 / span 2; grid-column: 2; }
+.cp-item .x { grid-row: 1 / span 2; grid-column: 3; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--rule); background: var(--card); color: var(--ink-3); }
+.sum { display: grid; gap: 10px; }
+.sum-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.sum-row b { font: 600 15px/1 var(--f-mono); font-stretch: 87.5%; }
+.sum-row.big b { font-size: 26px; letter-spacing: -.03em; }
+.inp { display: flex; align-items: center; gap: 8px; border: 1px solid var(--rule); border-radius: 11px; background: var(--paper); padding: 0 12px; height: 42px; }
+.inp input { border: 0; background: none; outline: none; width: 100%; font-family: var(--f-mono); font-stretch: 87.5%; }
+.warnline { font-size: 12.5px; color: var(--yellow); background: var(--yellow-soft); padding: 9px 12px; border-radius: 10px; }
+
+/* ---------- tables ---------- */
+.lt { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); overflow-x: auto; box-shadow: var(--shadow); }
+.lt table { min-width: 640px; }
+.lt th { text-align: right; font: 600 10.5px/1 var(--f-mono); color: var(--ink-3); padding: 12px 8px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.lt th.l, .lt td.l { text-align: left; }
+.lt td { text-align: right; padding: 9px 8px; border-top: 1px solid var(--rule-2); font: 500 12.5px/1.2 var(--f-mono); font-stretch: 87.5%; white-space: nowrap; }
+.lt td.team { font: 650 14px/1.2 var(--f-body); }
+.lt tr.zone td:first-child { box-shadow: inset 3px 0 0 var(--cobalt); }
+.rbar { display: inline-block; width: 46px; height: 5px; border-radius: 4px; background: var(--sunk); vertical-align: middle; margin-left: 6px; overflow: hidden; }
+.rbar i { display: block; height: 100%; background: var(--cobalt); }
+.rbar.def i { background: var(--a); }
+
+/* ---------- method ---------- */
+.flow { display: grid; gap: 10px; margin-top: 18px; }
+@media (min-width: 760px) { .flow { grid-template-columns: repeat(4, 1fr); } }
+.step { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); padding: 16px; position: relative; }
+.step .n { font: 700 11px/1 var(--f-mono); color: var(--cobalt); }
+.step h3 { font: 750 16px/1.2 var(--f-display); font-stretch: 108%; margin: 10px 0 6px; }
+.step p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.prose { max-width: 74ch; }
+.prose h3 { font: 750 19px/1.2 var(--f-display); font-stretch: 110%; letter-spacing: -.01em; margin: 30px 0 8px; }
+.prose p, .prose li { color: var(--ink-2); font-size: 15px; }
+.prose code { font-family: var(--f-mono); font-size: 12.5px; background: var(--sunk); padding: 2px 5px; border-radius: 5px; }
+.status { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; margin-top: 14px; }
+.status div { background: var(--card); padding: 12px 14px; display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
+.status b { font-family: var(--f-mono); font-stretch: 87.5%; font-weight: 500; font-size: 12.5px; text-align: right; }
+footer { border-top: 1px solid var(--rule); margin-top: 48px; padding: 22px 0 30px; color: var(--ink-3); font-size: 12.5px; }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+.toast { position: fixed; z-index: 70; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: .2s; }
+.toast.show { opacity: 1; transform: translateX(-50%); }
+@media (min-width: 980px) { .toast { bottom: 28px; } }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5l3.6 2.6-1.4 4.2H9.8L8.4 10.1z" fill="currentColor"/><path d="M12 3v4.5M20.6 9.4l-5 .7M17.4 19.4l-3.2-5.1M6.6 19.4l3.2-5.1M3.4 9.4l5 .7" stroke="currentColor" stroke-width="1.4" fill="none"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 8-10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 5h5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M4 6h16v4a2 2 0 000 4v4H4v-4a2 2 0 000-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 6v12" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 2"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M9 4v16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#" data-tab="matches" aria-label="Statpad home">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="#eef3ef" stroke-width="1.6"/><path d="M12 5v14" stroke="#eef3ef" stroke-width="1.4"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="#eef3ef" stroke-width="1.4"/><rect x="15.5" y="9" width="3" height="6" fill="#6f86ff"/></svg></span>
+      <span class="brand-name">stat<i>pad</i></span>
+    </a>
+    <nav class="tabs" aria-label="Sections" id="tabs"></nav>
+    <div class="top-right">
+      <span class="live" id="live" role="status"><span class="dot"></span><span id="liveText">Loading</span></span>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch colour theme"><svg><use href="#i-moon"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" id="hero" hidden>
+    <div class="hero-lines" aria-hidden="true">
+      <svg viewBox="0 0 760 520" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="40" y="30" width="680" height="460" rx="4"/><path d="M380 30v460"/><circle cx="380" cy="260" r="82"/><circle cx="380" cy="260" r="3" fill="currentColor"/>
+        <rect x="40" y="140" width="120" height="240"/><rect x="40" y="200" width="44" height="120"/><path d="M160 210a62 62 0 010 100"/>
+        <rect x="600" y="140" width="120" height="240"/><rect x="676" y="200" width="44" height="120"/><path d="M600 210a62 62 0 000 100"/>
+      </svg>
+    </div>
+    <div class="wrap">
+      <div>
+        <div class="kicker"><b></b><span id="heroKicker">Football model · live prices</span></div>
+        <h1>Every fixture, <em>priced by the numbers.</em></h1>
+        <p class="lede">A goals model fitted to every league table, blended with the sharpest market prices and refreshed through the day. Probabilities for every market, value against the best price, and slips built to a target.</p>
+        <div class="kpis" id="kpis"></div>
+      </div>
+      <div id="heroTicket"></div>
+    </div>
+  </section>
+  <div class="tape" id="tape" hidden aria-label="Market movers"><div class="tape-in" id="tapeIn"></div></div>
+
+  <div class="wrap">
+    <section id="v-matches" class="section" data-view="matches">
+      <div class="sec-head">
+        <div><h2>Matches</h2><p class="sub" id="matchesSub">Tap a match for the full read: scorelines, every market, price history.</p></div>
+      </div>
+      <div class="days" id="days-matches" role="group" aria-label="Day"></div>
+      <div class="filters">
+        <label class="field grow"><svg><use href="#i-search"/></svg><span class="sr">Search teams</span><input id="q" type="search" placeholder="Search a team" autocomplete="off"></label>
+        <label class="field"><svg><use href="#i-filter"/></svg><span class="sr">Competition</span><select id="league"></select></label>
+        <label class="field"><span class="sr">Sort</span><select id="sort">
+          <option value="ko">Kick-off</option><option value="conf">Most confident</option><option value="edge">Best value</option><option value="comp">Competition</option></select></label>
+      </div>
+      <div id="matchList"></div>
+    </section>
+
+    <section id="v-value" class="section" data-view="value" hidden>
+      <div class="sec-head">
+        <div><h2>Value board</h2><p class="sub">Real prices that beat Statpad's probability. Edge = probability × best price − 1. Estimated prices never appear here.</p></div>
+        <div class="ctl"><span class="lbl">Min edge</span><div class="seg" id="minEdge"></div></div>
+      </div>
+      <div class="days" id="days-value" role="group" aria-label="Day"></div>
+      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="vscope"><option value="all">All competitions</option><option value="big">Big leagues</option><option value="cups">Europe &amp; cups</option></select></label></div>
+      <div class="vlist" id="valueList" style="margin-top:14px"></div>
+    </section>
+
+    <section id="v-slips" class="section" data-view="slips" hidden>
+      <div class="sec-head">
+        <div><h2>Slips</h2><p class="sub">For the chosen day, the combination with the highest chance of landing that still pays the target. One leg per match, kicked-off games removed.</p></div>
+        <div class="ctl"><span class="lbl">Target odds</span><div class="seg" id="target"></div></div>
+      </div>
+      <div class="days" id="days-slips" role="group" aria-label="Day"></div>
+      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="priced">Matches with live prices</option></select></label></div>
+      <div class="slips" id="slips"></div>
+      <div class="callout"><b>Read this before you stake.</b> A slip's hit chance is the product of its legs, and every leg can lose. The tiers only describe how likely each leg is; none of them is safe. Estimated prices (marked “est”) are what a fair book would offer. Check the real price before betting.</div>
+    </section>
+
+    <section id="v-coupon" class="section" data-view="coupon" hidden>
+      <div class="sec-head"><div><h2>Your coupon</h2><p class="sub">Add picks from any match. Type the price you can actually get and the maths updates.</p></div></div>
+      <div id="coupon"></div>
+    </section>
+
+    <section id="v-tables" class="section" data-view="tables" hidden>
+      <div class="sec-head">
+        <div><h2>Tables &amp; ratings</h2><p class="sub">Standings from results. Attack and defence are the model's goal multipliers against a league-average side.</p></div>
+        <label class="field"><span class="sr">Competition</span><select id="tleague"></select></label>
+      </div>
+      <div id="tableBox"></div>
+    </section>
+
+    <section id="v-method" class="section" data-view="method" hidden>
+      <div class="sec-head"><div><h2>How Statpad works</h2><p class="sub">Every number on the site comes from the four steps below.</p></div></div>
+      <div class="flow">
+        <div class="step"><div class="n">01 · FETCH</div><h3>Results, fixtures, prices</h3><p>Results and fixtures from football-data.co.uk; fixtures and bookmaker prices for leagues, European competitions and cups from The Odds API.</p></div>
+        <div class="step"><div class="n">02 · RATE</div><h3>Attack &amp; defence</h3><p>A Poisson model with home advantage gives every team an attack and defence rating. Recent games count more, and small samples are pulled towards average.</p></div>
+        <div class="step"><div class="n">03 · BLEND</div><h3>Model meets market</h3><p>The bookmakers' consensus is stripped of margin, with sharp books weighted up. Expected goals are fitted to it and blended 80/20 with the model.</p></div>
+        <div class="step"><div class="n">04 · PRICE</div><h3>Every market</h3><p>A Dixon–Coles scoreline grid gives every market. Edge is measured against the best real price, and slips are optimised for hit chance.</p></div>
+      </div>
+      <div class="prose" id="methodProse"></div>
+    </section>
+  </div>
+</main>
+
+<footer><div class="wrap"><span>Statpad · probabilities, not promises. 18+ only. Never stake more than you can afford to lose.</span><span id="footData"></span></div></footer>
+
+<nav class="bnav" id="bnav" aria-label="Sections"></nav>
+<div class="scrim" id="scrim"></div>
+<aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
+  <div class="grab"></div>
+  <div class="sheet-bar"><div class="t" id="sheetTitle"></div><button class="icon-btn" id="sheetClose" type="button" aria-label="Close"><svg><use href="#i-x"/></svg></button></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</aside>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
+const ENGINE = (() => {
+  const N = 11, RHO = -0.07, W_MKT = 0.8, W_EXT = 0.5, HAIR = 0.03;
+  const M_DC = 0.05, M_EST = 0.06, M_DER = 0.065, STALE_H = 36;
+  const TIERS = {
+    C: { name: 'Possible', lo: 0.58, hi: 0.70, max: 8 },
+    B: { name: 'Highly possible', lo: 0.70, hi: 0.82, max: 14 },
+    A: { name: 'Nearly definite', lo: 0.82, hi: 1.01, max: 25 },
+  };
+  const STEP = 0.002;
+
+  function pois(l) { const p = new Float64Array(N); p[0] = Math.exp(-l); for (let k = 1; k < N; k++) p[k] = p[k - 1] * l / k; return p; }
+  function matrix(lh, la) {
+    const a = pois(lh), b = pois(la), M = []; let s = 0;
+    for (let i = 0; i < N; i++) { const r = new Float64Array(N); for (let j = 0; j < N; j++) r[j] = a[i] * b[j]; M.push(r); }
+    M[0][0] *= 1 - lh * la * RHO; M[0][1] *= 1 + lh * RHO; M[1][0] *= 1 + la * RHO; M[1][1] *= 1 - RHO;
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) s += M[i][j];
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) M[i][j] /= s;
+    return M;
+  }
+  function markets(M) {
+    const p = { H: 0, D: 0, A: 0, BTTS: 0, H_O05: 0, A_O05: 0, H_O15: 0, A_O15: 0 }; const over = [0, 0, 0, 0, 0];
+    const tot = new Float64Array(7);
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const v = M[i][j];
+      if (i > j) p.H += v; else if (i === j) p.D += v; else p.A += v;
+      for (let k = 0; k < 5; k++) if (i + j > k) over[k] += v;
+      tot[Math.min(6, i + j)] += v;
+      if (i > 0 && j > 0) p.BTTS += v;
+      if (i > 0) p.H_O05 += v; if (j > 0) p.A_O05 += v; if (i > 1) p.H_O15 += v; if (j > 1) p.A_O15 += v;
+    }
+    p['1X'] = p.H + p.D; p.X2 = p.A + p.D; p['12'] = p.H + p.A;
+    p.O15 = over[1]; p.O25 = over[2]; p.O35 = over[3]; p.U25 = 1 - over[2]; p.U35 = 1 - over[3]; p.BTTS_N = 1 - p.BTTS;
+    p.tot = Array.from(tot);
+    return p;
+  }
+  function nelder(f, x0) {
+    let S = [x0.slice(), [x0[0] + 0.15, x0[1]], [x0[0], x0[1] + 0.15]];
+    let F = S.map(f);
+    for (let it = 0; it < 300; it++) {
+      const ord = [0, 1, 2].sort((a, b) => F[a] - F[b]); S = ord.map((i) => S[i]); F = ord.map((i) => F[i]);
+      if (Math.abs(F[2] - F[0]) < 1e-12) break;
+      const c = [(S[0][0] + S[1][0]) / 2, (S[0][1] + S[1][1]) / 2];
+      const xr = [2 * c[0] - S[2][0], 2 * c[1] - S[2][1]], fr = f(xr);
+      if (fr < F[0]) { const xe = [3 * c[0] - 2 * S[2][0], 3 * c[1] - 2 * S[2][1]], fe = f(xe); if (fe < fr) { S[2] = xe; F[2] = fe; } else { S[2] = xr; F[2] = fr; } }
+      else if (fr < F[1]) { S[2] = xr; F[2] = fr; }
+      else {
+        const xc = [c[0] + 0.5 * (S[2][0] - c[0]), c[1] + 0.5 * (S[2][1] - c[1])], fc = f(xc);
+        if (fc < F[2]) { S[2] = xc; F[2] = fc; }
+        else for (let i = 1; i < 3; i++) { S[i] = [S[0][0] + 0.5 * (S[i][0] - S[0][0]), S[0][1] + 0.5 * (S[i][1] - S[0][1])]; F[i] = f(S[i]); }
+      }
+    }
+    return S[0];
+  }
+  // fit expected goals to target probabilities {H, A, O (over 2.5, optional)}
+  function fit(t, start) {
+    const f = (x) => {
+      const m = markets(matrix(Math.exp(x[0]), Math.exp(x[1])));
+      return (m.H - t.H) ** 2 + (m.A - t.A) ** 2 + (t.O != null ? 0.5 * (m.O25 - t.O) ** 2 : 0);
+    };
+    const x = nelder(f, [Math.log(start[0]), Math.log(start[1])]);
+    return [Math.exp(x[0]), Math.exp(x[1])];
+  }
+  const blend = (a, b, w) => Math.exp(w * Math.log(a) + (1 - w) * Math.log(b));
+  const r2 = (x) => Math.max(1.01, Math.round(x * 100) / 100);
+
+  const LABELS = [
+    ['H', (m) => `${m.h} to win`, '1X2'], ['D', () => 'Draw', '1X2'], ['A', (m) => `${m.a} to win`, '1X2'],
+    ['1X', (m) => `${m.h} or draw`, 'Double chance'], ['X2', (m) => `${m.a} or draw`, 'Double chance'],
+    ['O15', () => 'Over 1.5 goals', 'Goals'], ['O25', () => 'Over 2.5 goals', 'Goals'], ['U25', () => 'Under 2.5 goals', 'Goals'],
+    ['U35', () => 'Under 3.5 goals', 'Goals'], ['BTTS', () => 'Both teams to score', 'BTTS'], ['BTTS_N', () => 'Both teams to score: no', 'BTTS'],
+    ['H_O05', (m) => `${m.h} to score`, 'Team goals'], ['A_O05', (m) => `${m.a} to score`, 'Team goals'],
+    ['H_O15', (m) => `${m.h} 2+ goals`, 'Team goals'], ['A_O15', (m) => `${m.a} 2+ goals`, 'Team goals'],
+  ];
+
+  function analyse(m, now) {
+    now = now || Date.now();
+    const lm = m.lm && m.lm[0] > 0 && m.lm[1] > 0 ? m.lm : null;
+    const mk = m.mkt && m.mkt.p && m.mkt.p.length === 3 ? m.mkt : null;
+    const pMod = lm ? markets(matrix(lm[0], lm[1])) : null;
+    let lh, la, src;
+    if (mk) {
+      const t = { H: mk.p[0], A: mk.p[2], O: mk.ou && mk.ou.pO ? mk.ou.pO : null };
+      const [fh, fa] = fit(t, lm || [1.4, 1.1]);
+      if (lm) { lh = blend(fh, lm[0], W_MKT); la = blend(fa, lm[1], W_MKT); src = 'blend'; } else { lh = fh; la = fa; src = 'market'; }
+    } else if (m.ext && m.ext.length === 3) {
+      const [eh, ea] = fit({ H: m.ext[0], A: m.ext[2], O: null }, lm || [1.4, 1.1]);
+      if (lm) { lh = blend(eh, lm[0], W_EXT); la = blend(ea, lm[1], W_EXT); } else { lh = eh; la = ea; }
+      src = 'external';
+    } else if (lm) { [lh, la] = lm; src = 'model'; }
+    else return null;
+
+    const M = matrix(lh, la), p = markets(M);
+    const diverge = pMod && mk ? Math.abs(pMod.H - mk.p[0]) : null;
+    const ageH = mk && mk.upd ? (now - Date.parse(mk.upd)) / 3600e3 : null;
+    let hair = src === 'model' || src === 'external' ? HAIR : 0;
+    if (diverge != null && diverge > 0.12) hair += HAIR;
+    if (ageH != null && ageH > STALE_H) hair += 0.01;
+    if (m.xl && src === 'model') hair += 0.02;
+
+    let best = null, bi = -1;
+    const sels = LABELS.map(([key, lab, group]) => {
+      const prob = p[key]; let price, real = false, bk = null;
+      const i = { H: 0, D: 1, A: 2 }[key];
+      if (i != null && mk && mk.best && mk.best[i] > 1) { price = mk.best[i]; real = true; bk = mk.bk ? mk.bk[i] : null; }
+      else if ((key === 'O25' || key === 'U25') && mk && mk.ou && mk.ou.best && mk.ou.best[key === 'O25' ? 0 : 1] > 1) {
+        price = mk.ou.best[key === 'O25' ? 0 : 1]; real = true;
+      } else if (key === '1X' || key === 'X2') {
+        const base = mk ? (key === '1X' ? mk.p[0] + mk.p[1] : mk.p[2] + mk.p[1]) : prob;
+        price = 1 / (base * (1 + M_DC));
+      } else if (i != null) price = 1 / (prob * (1 + M_EST));
+      else price = 1 / (prob * (1 + M_DER));
+      price = real ? price : r2(price);
+      const pAdj = Math.max(0, prob - hair);
+      const s = { key, label: lab(m), group, p: prob, pAdj, fair: 1 / prob, price, real, bk, edge: real ? prob * price - 1 : null };
+      return s;
+    });
+    for (let k = 0; k < sels.length; k++) {
+      const s = sels[k];
+      if (s.key === 'D' || s.price < 1.05) continue;
+      if (!best || s.pAdj > best.pAdj) { best = s; bi = k; }
+    }
+    // most likely scorelines
+    const scores = [];
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) scores.push([i, j, M[i][j]]);
+    scores.sort((x, y) => y[2] - x[2]);
+    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, sels, top: best, scores: scores.slice(0, 5) };
+  }
+
+  function tierOf(p) { return p >= 0.82 ? 'A' : p >= 0.70 ? 'B' : p >= 0.58 ? 'C' : null; }
+
+  // list: [{m, a}] ; target: combined odds aimed for
+  function buildSlip(list, t, target) {
+    const cfg = TIERS[t];
+    target = target || 10;
+    const WIN_LO = Math.log(target * 0.95), WIN_HI = Math.log(target * 1.10);
+    let opts = list.map(({ m, a }) => ({
+      m, a,
+      legs: a.sels.filter((s) => s.key !== 'D' && s.pAdj >= cfg.lo && s.pAdj < cfg.hi && s.price >= 1.05 && !(m.clash && (t === 'A' || t === 'B')))
+        .sort((x, y) => y.pAdj - x.pAdj).slice(0, 3),
+    })).filter((o) => o.legs.length);
+    opts.sort((x, y) => y.legs[0].pAdj - x.legs[0].pAdj);
+    opts = opts.slice(0, 40);
+    let states = new Map([[0, { sc: 0, legs: [], b: 0, n: 0 }]]);
+    const maxB = Math.floor(WIN_HI / STEP) + 1;
+    for (const o of opts) {
+      const next = new Map(states);
+      for (const st of states.values()) {
+        if (st.n >= cfg.max) continue;
+        for (const s of o.legs) {
+          const b = st.b + Math.round(Math.log(s.price) / STEP); if (b > maxB) continue;
+          const key = b * 64 + st.n + 1, sc = st.sc + Math.log(s.pAdj), cur = next.get(key);
+          if (!cur || cur.sc < sc) next.set(key, { sc, b, n: st.n + 1, legs: st.legs.concat([{ m: o.m, a: o.a, s }]) });
+        }
+      }
+      states = next;
+    }
+    let best = null; const all = [...states.values()].filter((s) => s.legs.length);
+    for (const s of all) if (s.b * STEP >= WIN_LO - 1e-9 && s.b * STEP <= WIN_HI + 1e-9 && (!best || s.sc > best.sc)) best = s;
+    const feasible = !!best;
+    if (!best && all.length) { const bmax = Math.max(...all.map((s) => s.b)); best = all.filter((s) => s.b >= bmax - 5).sort((x, y) => y.sc - x.sc)[0]; }
+    if (!best) return { tier: t, name: cfg.name, feasible: false, legs: [], odds: 1, prob: 0, target };
+    const legs = best.legs.slice().sort((x, y) => (x.m.ko > y.m.ko ? 1 : x.m.ko < y.m.ko ? -1 : 0));
+    const odds = legs.reduce((acc, l) => acc * l.s.price, 1), prob = legs.reduce((acc, l) => acc * l.s.pAdj, 1);
+    return { tier: t, name: cfg.name, feasible, legs, odds, prob, target, real: legs.filter((l) => l.s.real).length };
+  }
+
+  function value(list, minEdge) {
+    const out = [];
+    for (const { m, a } of list) for (const s of a.sels) {
+      if (!s.real || s.edge == null || s.edge < (minEdge || 0.02) || s.p < 0.18) continue;
+      out.push({ m, a, s, kelly: s.edge / (s.price - 1) });
+    }
+    return out.sort((x, y) => y.s.edge - x.s.edge);
+  }
+
+  return { analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit };
+})();
+if (typeof module !== 'undefined') module.exports = ENGINE;
+
+(() => {
+  'use strict';
+  const $ = (s, el = document) => el.querySelector(s);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('sp_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('sp_' + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
+  };
+  const odds = (x) => (x == null || !isFinite(x) ? '–' : x >= 100 ? x.toFixed(0) : x.toFixed(2));
+  const pct = (p, d) => (p == null ? '–' : (p * 100).toFixed(d != null ? d : p < 0.095 ? 1 : 0) + '%');
+  const sgn = (x, d = 1) => (x > 0 ? '+' : '') + (x * 100).toFixed(d) + '%';
+  const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const pad = (n) => String(n).padStart(2, '0');
+  const dayKey = (t) => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  const tFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+  const wdFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const dFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+  const longFmt = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const ord = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+  const GROUPS = [['big', 'Big leagues'], ['cups', 'Europe & cups'], ['second', 'Second tiers'], ['more', 'More leagues']];
+  const TABS = [['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['slips', 'Slips', 'i-ticket'], ['coupon', 'Coupon', 'i-cart'], ['tables', 'Tables', 'i-table'], ['method', 'Method', 'i-info']];
+  const TARGETS = [2, 5, 10, 20];
+  const EDGES = [0.02, 0.04, 0.07];
+
+  const S = {
+    data: null, rows: [], byId: new Map(), cache: new Map(), now: Date.now(),
+    tab: store.get('tab', 'matches'), day: null, league: store.get('league', 'all'), q: '', sort: store.get('sort', 'ko'),
+    target: store.get('target', 10), scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), minEdge: store.get('minEdge', 0.02),
+    coupon: store.get('coupon', []), bank: store.get('bank', 100), stakeMode: store.get('stakeMode', 'qk'), tleague: store.get('tleague', null),
+    open: null, shown: 60, lastFetch: null, lastOk: null, live: false, legacy: false, err: null,
+  };
+  if (!TABS.some((t) => t[0] === S.tab)) S.tab = 'matches';
+
+  // ---------------- data ----------------
+  function sig(m) { return JSON.stringify([m.lm, m.ext, m.mkt && [m.mkt.p, m.mkt.best, m.mkt.ou, m.mkt.upd]]); }
+  function analyseAll() {
+    const now = S.now, rows = [];
+    for (const m of S.data.matches) {
+      if (!m.ko) continue;
+      const ko = Date.parse(m.ko);
+      if (!(ko + 150 * 60e3 > now)) continue;
+      const sg = sig(m); let c = S.cache.get(m.id);
+      if (!c || c.sig !== sg) { c = { sig: sg, a: ENGINE.analyse(m, now) }; S.cache.set(m.id, c); }
+      rows.push({ m, a: c.a, ko, day: dayKey(ko), started: now >= ko, live: now >= ko && now < ko + 115 * 60e3 });
+    }
+    rows.sort((x, y) => x.ko - y.ko || lgName(x.m.lk).localeCompare(lgName(y.m.lk)) || x.m.h.localeCompare(y.m.h));
+    S.rows = rows; S.byId = new Map(rows.map((r) => [r.m.id, r]));
+  }
+  const lgInfo = (lk) => (S.data && S.data.leagues && S.data.leagues[lk]) || { name: lk, group: 'more', country: '' };
+  const lgName = (lk) => lgInfo(lk).name;
+  const realMkt = (m) => !!(m.mkt && m.mkt.best && m.mkt.src !== 'none');
+  function days() {
+    const out = [], base = new Date(S.now); base.setHours(12, 0, 0, 0);
+    for (let i = 0; i < 7; i++) { const d = new Date(base.getTime() + i * 864e5); out.push({ key: dayKey(d), d, i }); }
+    const extra = [...new Set(S.rows.map((r) => r.day))].filter((k) => !out.some((o) => o.key === k)).sort();
+    for (const k of extra) { const [y, mo, dd] = k.split('-').map(Number); out.push({ key: k, d: new Date(y, mo - 1, dd, 12), i: 99 }); }
+    out.sort((a, b) => (a.key < b.key ? -1 : 1));
+    return out;
+  }
+  function pickDefaultDay() {
+    const ds = days();
+    for (const d of ds) if (S.rows.some((r) => r.day === d.key && !r.started && r.a)) return d.key;
+    return ds[0] ? ds[0].key : null;
+  }
+
+  // ---------------- top / nav ----------------
+  function renderNav() {
+    const cc = S.coupon.length;
+    const html = (cls) => TABS.map(([k, label, ic]) => `<button type="button" class="${cls}" data-tab="${k}" ${S.tab === k ? 'aria-current="page"' : ''}>${cls === 'b' ? `<svg><use href="#${ic}"/></svg>` : ''}${label}${k === 'coupon' && cc ? `<span class="count">${cc}</span>` : ''}</button>`).join('');
+    $('#tabs').innerHTML = html('tab');
+    $('#bnav').innerHTML = html('b');
+    for (const v of document.querySelectorAll('[data-view]')) v.hidden = v.dataset.view !== S.tab;
+    $('#hero').hidden = S.tab !== 'matches' || !S.data;
+    $('#tape').hidden = S.tab !== 'matches' || !S.data || !$('#tapeIn').children.length;
+  }
+  function renderLive() {
+    const el = $('#live'), t = $('#liveText');
+    el.classList.remove('on', 'warn');
+    if (S.err && !S.data) { t.textContent = 'Offline'; el.classList.add('warn'); return; }
+    if (!S.data) { t.textContent = 'Loading'; return; }
+    const gen = Date.parse(S.data.generated), age = (S.now - gen) / 60e3;
+    const ago = age < 1 ? 'just now' : age < 60 ? Math.round(age) + ' min ago' : age < 48 * 60 ? Math.round(age / 60) + ' h ago' : Math.round(age / 1440) + ' d ago';
+    const stale = age > 6 * 60 && !S.legacy;
+    el.classList.add(stale || S.err ? 'warn' : 'on');
+    t.innerHTML = `${S.legacy ? 'Live prices' : 'Data'} ${esc(ago)}<span class="long"> · checks every minute</span>`;
+    el.title = 'Data generated ' + new Date(gen).toLocaleString() + (S.lastOk ? ' · last checked ' + tFmt.format(S.lastOk) : '');
+  }
+
+  // ---------------- hero ----------------
+  function slipFor(dayKeyStr, target, scope) {
+    const list = S.rows.filter((r) => r.day === dayKeyStr && !r.started && r.a && inScope(r, scope)).map((r) => ({ m: r.m, a: r.a }));
+    return ['C', 'B', 'A'].map((t) => ENGINE.buildSlip(list, t, target));
+  }
+  function inScope(r, scope) {
+    if (scope === 'big') return lgInfo(r.m.lk).group === 'big';
+    if (scope === 'cups') return lgInfo(r.m.lk).group === 'cups';
+    if (scope === 'priced') return realMkt(r.m);
+    return true;
+  }
+  function renderHero() {
+    const up = S.rows.filter((r) => !r.started);
+    const priced = up.filter((r) => realMkt(r.m)).length;
+    const vals = ENGINE.value(up.filter((r) => r.a).map((r) => ({ m: r.m, a: r.a })), 0.03).length;
+    const comps = new Set(up.map((r) => r.m.lk)).size;
+    $('#kpis').innerHTML = [[up.length, 'fixtures ahead'], [priced, 'with live prices'], [vals, 'value spots ≥3%'], [comps, 'competitions']]
+      .map(([v, l]) => `<div class="kpi"><div class="kpi-v mono">${v}</div><div class="kpi-l">${l}</div></div>`).join('');
+    // ticket: first day with enough games, highly-possible tier preferred
+    let best = null, dk = null;
+    for (const d of days()) {
+      const n = S.rows.filter((r) => r.day === d.key && !r.started && r.a).length;
+      if (n < 4) continue;
+      const sl = slipFor(d.key, S.target, 'all');
+      best = sl.find((s) => s.tier === 'B' && s.feasible) || sl.filter((s) => s.feasible).sort((a, b) => b.prob - a.prob)[0] || null;
+      dk = d; if (best) break;
+    }
+    const box = $('#heroTicket');
+    if (!best) { box.innerHTML = ''; return; }
+    const legs = best.legs.slice(0, 5);
+    box.innerHTML = `<div class="ticket">
+      <div class="t-head"><div><div class="t-kick">${esc(dayLabel(dk.key, true))} · ${esc(best.name)}</div><div class="t-title">Best ${best.target}-odds slip</div></div>
+      <div class="t-odds"><div class="v">${odds(best.odds)}</div><div class="l">${pct(best.prob, 1)} to land</div></div></div>
+      <div class="t-perf"></div>
+      <ul class="t-legs">${legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pAdj)}${l.s.real ? '' : ' · est'}</small></span><span class="tfx">${esc(l.m.h)} v ${esc(l.m.a)} · ${tFmt.format(Date.parse(l.m.ko))}</span></li>`).join('')}</ul>
+      ${best.legs.length > 5 ? `<div class="t-more" style="margin-top:8px">+ ${best.legs.length - 5} more legs</div>` : ''}
+      <div class="t-foot"><span>${best.legs.length} legs · one per match</span><button type="button" data-goslips="${esc(dk.key)}">See all slips</button></div></div>`;
+  }
+  function renderTape() {
+    const items = [];
+    for (const r of S.rows) {
+      const h = r.m.hist;
+      if (r.started || !h || h.length < 2) continue;
+      const f = h[0], l = h[h.length - 1];
+      for (const [i, who] of [[1, r.m.h], [3, r.m.a]]) {
+        if (!(f[i] > 1 && l[i] > 1)) continue;
+        const ch = l[i] / f[i] - 1;
+        if (Math.abs(ch) >= 0.02) items.push({ r, who, from: f[i], to: l[i], ch });
+      }
+    }
+    items.sort((a, b) => Math.abs(b.ch) - Math.abs(a.ch));
+    let html = '';
+    if (items.length >= 3) {
+      html = items.slice(0, 14).map((x) => `<span class="tape-item"><span class="tape-tag">${x.ch < 0 ? 'Steam' : 'Drift'}</span><b>${esc(x.who)}</b><span class="mono">${odds(x.from)} → ${odds(x.to)}</span><span class="${x.ch < 0 ? 'up' : 'down'}">${x.ch < 0 ? '▼' : '▲'} ${Math.abs(x.ch * 100).toFixed(1)}%</span><span class="mono">${esc(x.r.m.h)} v ${esc(x.r.m.a)}</span></span>`).join('');
+    } else {
+      const tops = S.rows.filter((r) => !r.started && r.a && r.a.top).sort((a, b) => b.a.top.pAdj - a.a.top.pAdj).slice(0, 14);
+      html = tops.map((r) => `<span class="tape-item"><span class="tape-tag">${tierTag(r.a.top.pAdj)}</span><b>${esc(r.a.top.label)}</b><span class="mono">${pct(r.a.top.pAdj)} · ${odds(r.a.top.price)}</span><span class="mono">${esc(r.m.h)} v ${esc(r.m.a)}</span></span>`).join('');
+    }
+    $('#tapeIn').innerHTML = html ? html + html : '';
+  }
+  const tierTag = (p) => ({ A: 'Near-certain', B: 'Highly likely', C: 'Likely' }[ENGINE.tierOf(p)] || 'Lean');
+
+  // ---------------- day strip ----------------
+  function dayLabel(k, long) {
+    const [y, mo, dd] = k.split('-').map(Number); const d = new Date(y, mo - 1, dd, 12);
+    const today = dayKey(S.now), tom = dayKey(S.now + 864e5);
+    if (k === today) return long ? 'Today' : 'Today';
+    if (k === tom) return 'Tomorrow';
+    return wdFmt.format(d) + ' ' + d.getDate();
+  }
+  function renderDays(id, allowAll) {
+    const el = $('#' + id); if (!el) return;
+    const ds = days();
+    let h = ds.map((d) => {
+      const n = S.rows.filter((r) => r.day === d.key && !r.started).length;
+      return `<button type="button" class="day${n ? '' : ' empty'}" data-day="${d.key}" aria-pressed="${S.day === d.key}"><div class="d1">${esc(dayLabel(d.key))}</div><div class="d2">${dFmt.format(d.d)} · ${n}</div></button>`;
+    }).join('');
+    if (allowAll) h = `<button type="button" class="day" data-day="all" aria-pressed="${S.day === 'all'}"><div class="d1">All week</div><div class="d2">${S.rows.filter((r) => !r.started).length} games</div></button>` + h;
+    el.innerHTML = h;
+  }
+
+  // ---------------- matches ----------------
+  function leagueOptions(sel, val, withAll) {
+    const present = new Set(S.rows.map((r) => r.m.lk));
+    let h = withAll ? `<option value="all">All competitions</option><option value="g:big">Big leagues</option><option value="g:cups">Europe &amp; cups</option>` : '';
+    for (const [g, gl] of GROUPS) {
+      const ks = [...present].filter((k) => lgInfo(k).group === g).sort((a, b) => lgName(a).localeCompare(lgName(b)));
+      if (ks.length) h += `<optgroup label="${esc(gl)}">${ks.map((k) => `<option value="${esc(k)}">${esc(lgName(k))}</option>`).join('')}</optgroup>`;
+    }
+    sel.innerHTML = h; sel.value = val; if (sel.value !== val) sel.value = withAll ? 'all' : (sel.options[0] && sel.options[0].value);
+  }
+  function filtered() {
+    const q = fold(S.q.trim());
+    return S.rows.filter((r) => {
+      if (S.day !== 'all' && r.day !== S.day) return false;
+      if (S.league !== 'all') { if (S.league.startsWith('g:')) { if (lgInfo(r.m.lk).group !== S.league.slice(2)) return false; } else if (r.m.lk !== S.league) return false; }
+      if (q && !fold(r.m.h + ' ' + r.m.a + ' ' + lgName(r.m.lk)).includes(q)) return false;
+      return true;
+    });
+  }
+  function maxEdge(r) { return r.a ? Math.max(-1, ...r.a.sels.filter((s) => s.real).map((s) => s.edge)) : -1; }
+  function formDots(f) { return f ? `<span class="form" aria-label="Form ${esc(f)}">${[...f].map((c) => `<i class="${c}"></i>`).join('')}</span>` : ''; }
+  function inCoupon(id, key) { return S.coupon.some((c) => c.id === id && c.key === key); }
+  function fxCard(r) {
+    const { m, a } = r;
+    const status = r.live ? '<span class="badge b-live">Live</span>' : r.started ? '<span class="badge b-done">Started</span>' : '';
+    const bar = a ? `<div class="pbar" aria-hidden="true"><i class="h" style="width:${a.p.H * 100}%"></i><i class="d" style="width:${a.p.D * 100}%"></i><i class="a" style="width:${a.p.A * 100}%"></i></div>` : '';
+    const btn = (k, lab) => {
+      if (!a) return `<span class="ob est"><span class="k">${lab}</span><span class="v">–</span></span>`;
+      const s = a.sels.find((x) => x.key === k);
+      const val = s.real && s.edge >= 0.02;
+      return `<button type="button" class="ob${s.real ? '' : ' est'}${val ? ' val' : ''}" data-add="${esc(m.id)}|${k}" aria-pressed="${inCoupon(m.id, k)}" aria-label="${esc(s.label)} at ${odds(s.price)}"><span class="k">${lab}</span><span class="v">${odds(s.price)}</span><span class="p">${val ? sgn(s.edge, 0) : pct(s.p)}</span></button>`;
+    };
+    const pick = a && a.top ? `<span class="pick"><span class="tier tier-${ENGINE.tierOf(a.top.pAdj) || 'C'}">${pct(a.top.pAdj)}</span><b>${esc(a.top.label)}</b> · ${odds(a.top.price)}${a.top.real ? '' : ' est'}</span>` : `<span class="pick">No prediction yet: no ratings or prices</span>`;
+    return `<article class="fx" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}">
+      <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${a && !realMkt(m) ? '<span class="badge b-est">Model only</span>' : ''}</div>
+      <div class="fx-teams">
+        <div class="tm"><span class="pos">${m.ph || ''}</span><span class="nm">${esc(m.h)}</span>${formDots(m.fh)}<span class="xg">${a ? a.lh.toFixed(2) : ''}</span></div>
+        <div class="tm"><span class="pos">${m.pa || ''}</span><span class="nm">${esc(m.a)}</span>${formDots(m.fa)}<span class="xg">${a ? a.la.toFixed(2) : ''}</span></div>
+      </div>
+      <div class="fx-bar">${bar}${pick}</div>
+      <div class="fx-odds">${btn('H', '1')}${btn('D', 'X')}${btn('A', '2')}</div>
+    </article>`;
+  }
+  function renderMatches() {
+    renderDays('days-matches', true);
+    leagueOptions($('#league'), S.league, true);
+    $('#sort').value = S.sort;
+    const rows = filtered();
+    const box = $('#matchList');
+    if (!rows.length) {
+      box.innerHTML = `<div class="empty-state"><b>No matches here</b>${S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`; return;
+    }
+    let html = '';
+    if (S.sort === 'ko' || S.sort === 'comp') {
+      // group by competition (ordered by first kick-off, or by group/name)
+      const groups = new Map();
+      for (const r of rows) { if (!groups.has(r.m.lk)) groups.set(r.m.lk, []); groups.get(r.m.lk).push(r); }
+      let keys = [...groups.keys()];
+      if (S.sort === 'comp') keys.sort((a, b) => GROUPS.findIndex((g) => g[0] === lgInfo(a).group) - GROUPS.findIndex((g) => g[0] === lgInfo(b).group) || lgName(a).localeCompare(lgName(b)));
+      let shown = 0;
+      for (const k of keys) {
+        if (shown >= S.shown) break;
+        const list = groups.get(k).slice(0, Math.max(0, S.shown - shown)); shown += list.length;
+        const info = lgInfo(k);
+        html += `<div class="comp"><div class="comp-h"><h3>${esc(info.name)}</h3><span>${esc(info.country || '')}${S.day === 'all' ? '' : ' · ' + groups.get(k).length + (groups.get(k).length === 1 ? ' game' : ' games')}</span></div><div class="comp-list">${list.map(fxCard).join('')}</div></div>`;
+      }
+      if (rows.length > S.shown) html += `<button class="more-btn" type="button" data-more="1">Show ${Math.min(60, rows.length - S.shown)} more of ${rows.length - S.shown}</button>`;
+    } else {
+      const sorted = rows.slice().sort(S.sort === 'conf' ? (x, y) => ((y.a && y.a.top ? y.a.top.pAdj : 0) - (x.a && x.a.top ? x.a.top.pAdj : 0)) : (x, y) => maxEdge(y) - maxEdge(x));
+      html = `<div class="comp"><div class="comp-list">${sorted.slice(0, S.shown).map((r) => fxCard(r).replace('<div class="fx-meta">', `<div class="fx-meta"><span>${esc(lgName(r.m.lk))}</span>`)).join('')}</div></div>`;
+      if (rows.length > S.shown) html += `<button class="more-btn" type="button" data-more="1">Show more</button>`;
+    }
+    box.innerHTML = html;
+  }
+
+  // ---------------- detail sheet ----------------
+  function openMatch(id, opener) {
+    const r = S.byId.get(id); if (!r) return;
+    S.open = id; S.opener = opener || document.activeElement;
+    renderSheet();
+    $('#sheet').classList.add('open'); $('#scrim').classList.add('open'); $('#sheet').setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => $('#sheetClose').focus(), 60);
+  }
+  function closeSheet() {
+    S.open = null;
+    $('#sheet').classList.remove('open'); $('#scrim').classList.remove('open'); $('#sheet').setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    if (S.opener && S.opener.focus) S.opener.focus();
+  }
+  function sbar(ps) {
+    return `<div class="sbar">${['h', 'd', 'a'].map((c, i) => `<i class="${c}" style="width:${ps[i] * 100}%">${ps[i] > 0.09 ? pct(ps[i]) : ''}</i>`).join('')}</div>`;
+  }
+  function spark(hist, m) {
+    if (!hist || hist.length < 2) return '<p class="note">No price history yet. Movement appears here as prices refresh.</p>';
+    const W = 520, H = 120, P = 28;
+    const ts = hist.map((h) => Date.parse(h[0])), t0 = Math.min(...ts), t1 = Math.max(...ts) || t0 + 1;
+    const vals = hist.flatMap((h) => [h[1], h[2], h[3]]).filter((v) => v > 1);
+    const lo = Math.min(...vals) * 0.97, hi = Math.max(...vals) * 1.03;
+    const x = (t) => P + (W - P - 8) * (t1 === t0 ? 1 : (t - t0) / (t1 - t0));
+    const y = (v) => 8 + (H - 26) * (1 - (Math.log(v) - Math.log(lo)) / (Math.log(hi) - Math.log(lo)));
+    const line = (i, c) => `<polyline fill="none" stroke="var(--${c})" stroke-width="2" stroke-linejoin="round" points="${hist.map((h, k) => `${x(ts[k]).toFixed(1)},${y(h[i]).toFixed(1)}`).join(' ')}"/>`;
+    const last = hist[hist.length - 1];
+    return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Price history">
+      ${[lo * 1.01, Math.sqrt(lo * hi), hi / 1.01].map((v) => `<line x1="${P}" x2="${W - 8}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)" stroke-dasharray="3 4"/><text x="0" y="${y(v) + 3}">${odds(v)}</text>`).join('')}
+      ${line(1, 'h')}${line(2, 'd')}${line(3, 'a')}
+      <text x="${P}" y="${H - 4}">${esc(new Date(t0).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + tFmt.format(t0))}</text>
+      <text x="${W - 8}" y="${H - 4}" text-anchor="end">${esc(tFmt.format(t1))}</text></svg>
+      <div class="legend"><span><i style="background:var(--h)"></i>${esc(m.h)} ${odds(last[1])}</span><span><i style="background:var(--d)"></i>Draw ${odds(last[2])}</span><span><i style="background:var(--a)"></i>${esc(m.a)} ${odds(last[3])}</span></div>`;
+  }
+  function renderSheet() {
+    const r = S.byId.get(S.open); if (!r) { closeSheet(); return; }
+    const { m, a } = r, info = lgInfo(m.lk);
+    $('#sheetTitle').textContent = `${info.name} · ${longFmt.format(r.ko)}`;
+    if (!a) {
+      $('#sheetBody').innerHTML = `<div class="vs"><div class="side"><div class="team">${esc(m.h)}</div></div><div class="mid"><div class="xg-l">VS</div></div><div class="side r"><div class="team">${esc(m.a)}</div></div></div><div class="empty-state"><b>No prediction yet</b>Neither team has ratings in Statpad's data and no prices are in yet. It fills in automatically once either arrives.</div>`;
+      return;
+    }
+    const pos = (p, f, dom) => `${p ? `<span>${ord(p)}${dom ? ' in ' + esc(lgName(dom)) : ''}</span>` : ''}${formDots(f)}`;
+    const chips = [];
+    chips.push({ blend: ['Model 20% · market 80%', ''], market: ['Market-implied', ''], model: ['Model only: no prices yet', 'warn'], external: ['External forecast blend', ''] }[a.src]);
+    if (m.mkt) chips.push([`${m.mkt.n > 1 ? m.mkt.n + ' bookmakers' : m.mkt.src === 'football-data' ? 'Average of bookmakers' : 'Single price feed'}${a.ageH != null ? ' · ' + (a.ageH < 1 ? 'fresh' : a.ageH < 48 ? Math.round(a.ageH) + ' h old' : Math.round(a.ageH / 24) + ' d old') : ''}`, '']);
+    if (a.hair > 0) chips.push([`Safety haircut −${Math.round(a.hair * 100)} pts on picks`, 'warn']);
+    if (a.diverge != null && a.diverge > 0.12) chips.push([`Model and market disagree by ${Math.round(a.diverge * 100)} pts`, 'warn']);
+    if (m.clash) chips.push(['Big game: kept out of the two safest slip tiers', 'warn']);
+    if (m.xl) chips.push(['Cross-league ratings', '']);
+    const hm = [];
+    let mx = 0; for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) mx = Math.max(mx, a.M[i][j]);
+    const topSet = new Set(a.scores.slice(0, 3).map((s) => s[0] + '-' + s[1]));
+    hm.push('<div class="ax"></div>' + [0, 1, 2, 3, 4, 5].map((j) => `<div class="ax">${j}</div>`).join(''));
+    for (let i = 0; i < 6; i++) {
+      hm.push(`<div class="ax">${i}</div>` + [0, 1, 2, 3, 4, 5].map((j) => {
+        const v = a.M[i][j], t = Math.pow(v / mx, 0.8);
+        const col = i > j ? 'var(--h)' : i === j ? 'var(--d)' : 'var(--a)';
+        return `<div class="c${topSet.has(i + '-' + j) ? ' top' : ''}" style="background:color-mix(in srgb, ${col} ${Math.round(8 + t * 72)}%, var(--card))" title="${i}-${j}: ${pct(v, 1)}">${v >= 0.005 ? (v * 100).toFixed(v < 0.1 ? 1 : 0) : ''}</div>`;
+      }).join(''));
+    }
+    const tot = a.p.tot, tmax = Math.max(...tot);
+    const groups = {};
+    for (const s of a.sels) (groups[s.group] = groups[s.group] || []).push(s);
+    const mrows = Object.entries(groups).map(([g, ss]) => `<tr class="grp"><td colspan="5">${esc(g)}</td></tr>` + ss.map((s) => `<tr>
+      <td class="sel">${esc(s.label)}${s.real && s.bk ? `<small>best: ${esc(s.bk)}</small>` : ''}</td>
+      <td class="n">${pct(s.p, 1)}</td><td class="n fair">${odds(s.fair)}</td>
+      <td class="n">${odds(s.price)}${s.real ? '' : '<small>est</small>'}</td>
+      <td class="n ${s.edge > 0 ? 'edge-pos' : 'edge-neg'}">${s.edge == null ? '–' : sgn(s.edge)}</td>
+      <td><button type="button" class="add" data-add="${esc(m.id)}|${s.key}" aria-pressed="${inCoupon(m.id, s.key)}" aria-label="Add ${esc(s.label)} to coupon">${inCoupon(m.id, s.key) ? '✓' : '+'}</button></td></tr>`).join('')).join('');
+    const mk = m.mkt;
+    $('#sheetBody').innerHTML = `
+      <div class="vs">
+        <div class="side"><div class="team">${esc(m.h)}</div><div class="meta">${pos(m.ph, m.fh, m.dh)}</div></div>
+        <div class="mid"><div class="xg-big">${a.lh.toFixed(2)} – ${a.la.toFixed(2)}</div><div class="xg-l">EXPECTED GOALS</div></div>
+        <div class="side r"><div class="team">${esc(m.a)}</div><div class="meta">${pos(m.pa, m.fa, m.da)}</div></div>
+      </div>
+      <div class="chips">${chips.map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>
+      <div class="card"><h4>Who wins <span>home · draw · away</span></h4><div class="cmp">
+        <div class="cmp-row"><span class="n">Statpad</span>${sbar([a.p.H, a.p.D, a.p.A])}</div>
+        ${mk ? `<div class="cmp-row"><span class="n">Market</span>${sbar(mk.p)}</div>` : ''}
+        ${a.pMod ? `<div class="cmp-row"><span class="n">Model</span>${sbar([a.pMod.H, a.pMod.D, a.pMod.A])}</div>` : ''}
+      </div><div class="legend"><span><i style="background:var(--h)"></i>${esc(m.h)}</span><span><i style="background:var(--d)"></i>Draw</span><span><i style="background:var(--a)"></i>${esc(m.a)}</span></div></div>
+      <div class="card"><h4>Scorelines <span>most likely: ${a.scores.slice(0, 3).map((s) => `${s[0]}-${s[1]} (${pct(s[2], 0)})`).join(', ')}</span></h4>
+        <div class="heat">${hm.join('')}</div><div class="heat-cap"><span>Rows: ${esc(m.h)} goals</span><span>Columns: ${esc(m.a)} goals</span></div></div>
+      <div class="card"><h4>Total goals <span>over 2.5: ${pct(a.p.O25)}</span></h4>
+        <div class="dist">${tot.map((v, k) => `<div class="col"><span class="v">${pct(v)}</span><div class="bar${k < 3 ? ' lo' : ''}" style="height:${Math.max(3, (v / tmax) * 70)}px"></div><span class="k">${k === 6 ? '6+' : k}</span></div>`).join('')}</div></div>
+      <div class="card"><h4>Markets <span>price = best real price, or a fair-plus-margin estimate</span></h4>
+        <table class="mt"><thead><tr><th>Selection</th><th class="n">Prob</th><th class="n fair">Fair</th><th class="n">Price</th><th class="n">Edge</th><th></th></tr></thead><tbody>${mrows}</tbody></table></div>
+      <div class="card"><h4>Price history <span>average 1X2 price</span></h4>${spark(m.hist, m)}</div>`;
+  }
+
+  // ---------------- value ----------------
+  function renderValue() {
+    renderDays('days-value', true);
+    $('#minEdge').innerHTML = EDGES.map((e) => `<button type="button" data-edge="${e}" aria-pressed="${S.minEdge === e}"><span class="mono">${Math.round(e * 100)}%</span></button>`).join('');
+    $('#vscope').value = S.vscope;
+    const list = S.rows.filter((r) => !r.started && r.a && (S.day === 'all' || r.day === S.day) && inScope(r, S.vscope)).map((r) => ({ m: r.m, a: r.a }));
+    const v = ENGINE.value(list, S.minEdge).slice(0, 80);
+    const box = $('#valueList');
+    if (!v.length) {
+      const anyReal = list.some((x) => realMkt(x.m));
+      box.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>${anyReal ? 'No edges at this threshold' : 'No live prices for this selection'}</b>${anyReal ? 'Lower the minimum edge or pick another day.' : 'Value needs real bookmaker prices. They arrive once the price feed covers these games.'}</div>`;
+      return;
+    }
+    const emax = Math.max(...v.map((x) => x.s.edge));
+    box.innerHTML = v.map(({ m, s, kelly }) => {
+      const ko = Date.parse(m.ko);
+      return `<div class="vrow" data-open="${esc(m.id)}" tabindex="0">
+        <div><div class="fxl">${esc(lgName(m.lk))} · ${esc(dayLabel(dayKey(ko)))} ${tFmt.format(ko)}</div><div class="sel">${esc(s.label)}</div><div class="fxl">${esc(m.h)} v ${esc(m.a)}</div></div>
+        <div class="edge"><div class="v">${sgn(s.edge)}</div><div class="l">edge</div><button type="button" class="add" style="margin-top:8px" data-add="${esc(m.id)}|${s.key}" aria-pressed="${inCoupon(m.id, s.key)}" aria-label="Add to coupon">${inCoupon(m.id, s.key) ? '✓' : '+'}</button></div>
+        <div class="ebar"><i style="width:${(s.edge / emax) * 100}%"></i></div>
+        <div class="nums"><span>Price <b>${odds(s.price)}</b>${s.bk ? ' at ' + esc(s.bk) : ''}</span><span>Fair <b>${odds(s.fair)}</b></span><span>Chance <b>${pct(s.p)}</b></span><span>¼ Kelly <b>${(Math.max(0, kelly) * 25).toFixed(1)}%</b> of bank</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---------------- slips ----------------
+  function renderSlips() {
+    if (S.day === 'all') S.day = pickDefaultDay();
+    renderDays('days-slips', false);
+    $('#target').innerHTML = TARGETS.map((t) => `<button type="button" data-target="${t}" aria-pressed="${S.target === t}"><span class="mono">${t}</span></button>`).join('');
+    $('#scope').value = S.scope;
+    const slips = slipFor(S.day, S.target, S.scope);
+    const n = S.rows.filter((r) => r.day === S.day && !r.started && r.a && inScope(r, S.scope)).length;
+    const box = $('#slips');
+    if (!n) { box.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>No open games for this day</b>Pick another day, or widen the scope.</div>`; return; }
+    box.innerHTML = slips.map((s) => {
+      const cfg = ENGINE.TIERS[s.tier];
+      const ev = s.legs.length ? s.prob * s.odds - 1 : null;
+      return `<article class="slip">
+        <div class="slip-h"><div class="name"><span class="tier tier-${s.tier}">${s.tier === 'A' ? 'A' : s.tier === 'B' ? 'B' : 'C'}</span>${esc(cfg.name)}</div>
+        <div class="band">Each leg ${Math.round(cfg.lo * 100)}–${cfg.hi > 1 ? '100' : Math.round(cfg.hi * 100)}% · up to ${cfg.max} legs</div>
+        <div class="slip-nums"><div><div class="v">${s.legs.length ? odds(s.odds) : '–'}</div><div class="l">total odds</div></div><div><div class="v">${s.legs.length ? pct(s.prob, 1) : '–'}</div><div class="l">to land</div></div><div><div class="v">${s.legs.length}</div><div class="l">legs</div></div></div></div>
+        ${s.legs.length ? `<ol>${s.legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pAdj)}${l.s.real ? '' : ' · est'}</small></span><span class="fxl">${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</span></li>`).join('')}</ol>` : '<p class="note" style="padding:0 18px 12px">No legs fall in this band for the day.</p>'}
+        <div class="slip-f"><span class="${s.feasible ? 'lbl' : 'w'}">${s.legs.length ? (s.feasible ? `${s.real}/${s.legs.length} legs at real prices${ev != null ? ' · EV ' + sgn(ev, 0) : ''}` : `Can't reach ${s.target} in this band; closest shown`) : ''}</span>
+        <button type="button" class="btn pri" data-addslip="${s.tier}" ${s.legs.length ? '' : 'disabled'}>Add to coupon</button></div>
+      </article>`;
+    }).join('');
+    S.lastSlips = slips;
+  }
+
+  // ---------------- coupon ----------------
+  function couponRows() {
+    return S.coupon.map((c) => {
+      const r = S.byId.get(c.id); if (!r || !r.a) return null;
+      const s = r.a.sels.find((x) => x.key === c.key); if (!s) return null;
+      return { c, r, s, price: c.price > 1 ? c.price : s.price };
+    }).filter(Boolean);
+  }
+  function renderCoupon() {
+    const rows = couponRows();
+    const box = $('#coupon');
+    if (!rows.length) { box.innerHTML = `<div class="empty-state"><b>Your coupon is empty</b>Tap a price on any match, or add a whole slip from the Slips tab.</div>`; return; }
+    const tOdds = rows.reduce((a, x) => a * x.price, 1), tP = rows.reduce((a, x) => a * x.s.p, 1);
+    const ev = tP * tOdds - 1, b = tOdds - 1, kelly = b > 0 ? Math.max(0, (b * tP - (1 - tP)) / b) : 0;
+    const frac = { flat: 0.01, qk: Math.min(0.05, kelly * 0.25), hk: Math.min(0.05, kelly * 0.5) }[S.stakeMode];
+    const stake = S.bank * frac;
+    const ids = rows.map((x) => x.c.id), dup = ids.length !== new Set(ids).size;
+    const started = rows.some((x) => x.r.started);
+    box.innerHTML = `<div class="cp">
+      <div class="comp-list">${rows.map((x, i) => `<div class="cp-item"><span class="sel">${esc(x.s.label)}</span><span class="fxl">${esc(x.r.m.h)} v ${esc(x.r.m.a)} · ${esc(dayLabel(x.r.day))} ${tFmt.format(x.r.ko)} · ${pct(x.s.p)}${x.s.real ? '' : ' · est price'}</span>
+        <input type="text" inputmode="decimal" value="${odds(x.price)}" data-price="${i}" aria-label="Price for ${esc(x.s.label)}"><button type="button" class="x" data-rm="${i}" aria-label="Remove">✕</button></div>`).join('')}</div>
+      <div class="card" style="margin-top:0"><div class="sum">
+        <div class="sum-row big"><span>Total odds</span><b>${odds(tOdds)}</b></div>
+        <div class="sum-row"><span>Chance to land (Statpad)</span><b>${pct(tP, 1)}</b></div>
+        <div class="sum-row"><span>Expected value</span><b class="${ev > 0 ? 'edge-pos' : ''}">${sgn(ev)}</b></div>
+        ${dup ? '<div class="warnline">Two picks from the same match are correlated. The real chance differs from the product shown.</div>' : ''}
+        ${started ? '<div class="warnline">A pick on this coupon has already kicked off.</div>' : ''}
+        <label class="lbl" for="bank">Bankroll</label><div class="inp"><input id="bank" type="text" inputmode="decimal" value="${esc(S.bank)}"></div>
+        <span class="lbl">Staking</span><div class="seg" id="stakeMode">${[['flat', 'Flat 1%'], ['qk', '¼ Kelly'], ['hk', '½ Kelly']].map(([k, l]) => `<button type="button" data-stake="${k}" aria-pressed="${S.stakeMode === k}">${l}</button>`).join('')}</div>
+        <div class="sum-row"><span>Suggested stake</span><b>${stake.toFixed(2)}</b></div>
+        <div class="sum-row"><span>Returns if it lands</span><b>${(stake * tOdds).toFixed(2)}</b></div>
+        ${S.stakeMode !== 'flat' && kelly <= 0 ? '<div class="warnline">Kelly says no stake: these prices are below Statpad\'s fair odds.</div>' : ''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn pri" id="copyCoupon">Copy coupon</button><button type="button" class="btn" id="clearCoupon">Clear</button></div>
+      </div></div></div>`;
+  }
+  function saveCoupon() { store.set('coupon', S.coupon); renderNav(); }
+  function toggleCoupon(id, key) {
+    const i = S.coupon.findIndex((c) => c.id === id && c.key === key);
+    if (i >= 0) { S.coupon.splice(i, 1); toast('Removed from coupon'); } else { S.coupon.push({ id, key, price: null }); toast('Added to coupon'); }
+    saveCoupon();
+    for (const b of document.querySelectorAll(`[data-add="${CSS.escape(id + '|' + key)}"]`)) { const on = inCoupon(id, key); b.setAttribute('aria-pressed', on); if (b.classList.contains('add')) b.textContent = on ? '✓' : '+'; }
+  }
+
+  // ---------------- tables ----------------
+  function renderTables() {
+    const lgs = Object.entries(S.data.leagues || {}).filter(([, v]) => v.table && v.table.length);
+    const sel = $('#tleague');
+    let h = '';
+    for (const [g, gl] of GROUPS) {
+      const ks = lgs.filter(([, v]) => v.group === g).sort((a, b) => a[1].name.localeCompare(b[1].name));
+      if (ks.length) h += `<optgroup label="${esc(gl)}">${ks.map(([k, v]) => `<option value="${esc(k)}">${esc(v.name)}</option>`).join('')}</optgroup>`;
+    }
+    sel.innerHTML = h;
+    if (!S.tleague || !lgs.some(([k]) => k === S.tleague)) S.tleague = lgs.some(([k]) => k === 'EPL') ? 'EPL' : (lgs[0] && lgs[0][0]);
+    sel.value = S.tleague;
+    const L = S.data.leagues[S.tleague];
+    if (!L) { $('#tableBox').innerHTML = '<div class="empty-state"><b>No tables yet</b>Tables appear once results load.</div>'; return; }
+    const hasR = L.table.some((r) => r[9] != null), hasW = L.table.some((r) => r[2] != null);
+    const amax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[9] || 0))) : 1, dmax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[10] || 0))) : 1;
+    $('#tableBox').innerHTML = `<div class="lt"><table><thead><tr><th class="l">#</th><th class="l">Team</th><th>P</th>${hasW ? '<th>W</th><th>D</th><th>L</th>' : ''}<th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th class="l">Form</th>${hasR ? '<th>Attack</th><th>Defence</th>' : ''}</tr></thead><tbody>
+      ${L.table.map((r, i) => `<tr class="${i < 4 ? 'zone' : ''}"><td class="l">${i + 1}</td><td class="l team">${esc(r[0])}</td><td>${r[1]}</td>${hasW ? `<td>${r[2] ?? ''}</td><td>${r[3] ?? ''}</td><td>${r[4] ?? ''}</td>` : ''}<td>${r[5]}</td><td>${r[6]}</td><td>${r[5] - r[6] > 0 ? '+' : ''}${r[5] - r[6]}</td><td><b>${r[7]}</b></td><td class="l">${formDots(r[8]) || ''}</td>
+      ${hasR ? `<td>${r[9] != null ? Math.exp(r[9]).toFixed(2) + '×' : ''}<span class="rbar"><i style="width:${r[9] != null ? (Math.exp(r[9]) / amax) * 100 : 0}%"></i></span></td><td>${r[10] != null ? Math.exp(r[10]).toFixed(2) + '×' : ''}<span class="rbar def"><i style="width:${r[10] != null ? (Math.exp(r[10]) / dmax) * 100 : 0}%"></i></span></td>` : ''}</tr>`).join('')}
+    </tbody></table></div><p class="note">${esc(L.name)}${L.season ? ' · ' + esc(L.season) : ''}. ${hasR ? 'Attack above 1.00 scores more than an average side; defence below 1.00 concedes less. ' : ''}Points deductions are not applied.</p>`;
+  }
+
+  // ---------------- method ----------------
+  function renderMethod() {
+    const d = S.data, src = d.sources || {}, o = d.odds || {};
+    const st = (k, label) => { const s = src[k]; return s ? `<div><span>${label}</span><b>${s.ok ? 'OK' : 'Failed'} · ${new Date(s.at).toLocaleString()}${s.note ? ' · ' + esc(s.note) : ''}</b></div>` : ''; };
+    $('#methodProse').innerHTML = `
+      <h3>Data status</h3>
+      <div class="status">
+        <div><span>Data generated</span><b>${new Date(d.generated).toLocaleString()}</b></div>
+        ${st('results', 'Results &amp; tables')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('snapshot', 'Starter snapshot')}
+        <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.interval_min ? ' · refresh every ' + (o.interval_min >= 120 ? Math.round(o.interval_min / 60) + ' h' : Math.round(o.interval_min) + ' min') : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
+        <div><span>Matches loaded</span><b>${d.matches.length} · ${Object.keys(d.leagues || {}).length} competitions</b></div>
+      </div>
+      <h3>The model</h3>
+      <p>Each league's results feed a Poisson model: home goals = μ × home advantage × home attack × away defence, and the same for the away side without the home bonus. Games are weighted with a 180-day half-life, last season counts 60%, and every team is pulled towards average by six phantom games so a hot fortnight doesn't swing the ratings. Newly promoted sides start slightly below average.</p>
+      <p>When a match has prices, the bookmakers' margin is removed and the consensus is formed with Pinnacle and the exchanges weighted up. Statpad fits the two expected-goals numbers that reproduce that consensus, including the over/under 2.5 line where available, and blends them 80/20 with the model in log space. The market is sharper than any table-based model, so it gets the larger share. Every market comes from a Dixon–Coles scoreline grid, which corrects the 0-0, 1-0, 0-1 and 1-1 cells that a plain Poisson model gets wrong.</p>
+      <h3>Confidence tiers</h3>
+      <p><b>Nearly definite</b> legs are 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. Picks lose a 3-point safety haircut when they rest on the model alone, another 3 when model and market disagree by more than 12 points, and 1 more when prices are over a day and a half old. Big games between two top-six sides are kept out of the two safest tiers.</p>
+      <h3>Slips</h3>
+      <p>For each tier and day, a dynamic-programming search finds the combination with the highest chance of landing whose total odds sit between 95% and 110% of your target. It takes one leg per match, skips games that have kicked off, and uses at most 25 legs. Chasing a target with short-priced legs usually lowers the hit chance, so compare tiers before you stake.</p>
+      <h3>Value</h3>
+      <p>Edge compares Statpad's probability with the best real price on offer. Much of it is line-shopping: the best price beats the sharp-weighted consensus. Only real prices count, and estimates never appear on the Value board.</p>
+      <h3>Responsible play</h3>
+      <p>These are probabilities, not guarantees. Even an 85% leg loses about one time in seven, and accumulators multiply that risk. Set a budget, keep stakes small (¼ Kelly or a flat 1% is plenty), and stop if it stops being fun. For support, contact a local gambling help service.</p>`;
+    $('#footData').textContent = d.generated ? 'Data ' + new Date(d.generated).toLocaleString() : '';
+  }
+
+  // ---------------- render orchestration ----------------
+  function render() {
+    if (!S.data) return;
+    renderNav(); renderLive();
+    if (S.tab === 'matches') { renderHero(); renderTape(); renderNav(); renderMatches(); }
+    else if (S.tab === 'value') renderValue();
+    else if (S.tab === 'slips') renderSlips();
+    else if (S.tab === 'coupon') renderCoupon();
+    else if (S.tab === 'tables') renderTables();
+    else if (S.tab === 'method') renderMethod();
+    if (S.open) renderSheet();
+  }
+  function setTab(t) {
+    if (S.tab === t) return;
+    S.tab = t; store.set('tab', t);
+    if (t === 'slips' && S.day === 'all') S.day = pickDefaultDay();
+    S.shown = 60; render(); window.scrollTo(0, 0);
+  }
+  let toastT;
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1600); }
+
+  // ---------------- events ----------------
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-tab],[data-add],[data-open],[data-day],[data-target],[data-edge],[data-stake],[data-rm],[data-addslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn');
+    if (!t) return;
+    if (t.dataset.tab) { e.preventDefault(); setTab(t.dataset.tab); return; }
+    if (t.dataset.add) { e.stopPropagation(); const [id, key] = t.dataset.add.split('|'); toggleCoupon(id, key); if (S.tab === 'coupon') renderCoupon(); return; }
+    if (t.dataset.goslips) { S.day = t.dataset.goslips; setTab('slips'); return; }
+    if (t.dataset.open) { openMatch(t.dataset.open, t); return; }
+    if (t.dataset.day) { S.day = t.dataset.day; S.shown = 60; render(); return; }
+    if (t.dataset.target) { S.target = +t.dataset.target; store.set('target', S.target); render(); return; }
+    if (t.dataset.edge) { S.minEdge = +t.dataset.edge; store.set('minEdge', S.minEdge); renderValue(); return; }
+    if (t.dataset.stake) { S.stakeMode = t.dataset.stake; store.set('stakeMode', S.stakeMode); renderCoupon(); return; }
+    if (t.dataset.rm) { S.coupon.splice(+t.dataset.rm, 1); saveCoupon(); renderCoupon(); return; }
+    if (t.dataset.more) { S.shown += 60; renderMatches(); return; }
+    if (t.dataset.addslip) {
+      const s = (S.lastSlips || []).find((x) => x.tier === t.dataset.addslip); if (!s) return;
+      for (const l of s.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: null });
+      saveCoupon(); toast(`${s.legs.length} legs added to coupon`); return;
+    }
+    if (t.id === 'copyCoupon') {
+      const rows = couponRows(); const tot = rows.reduce((a, x) => a * x.price, 1);
+      const txt = rows.map((x) => `${x.r.m.h} v ${x.r.m.a} (${dayLabel(x.r.day)} ${tFmt.format(x.r.ko)}): ${x.s.label} @ ${odds(x.price)}`).join('\n') + `\nTotal odds ${odds(tot)} · Statpad`;
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Coupon copied'), () => toast('Copy not available here'));
+      return;
+    }
+    if (t.id === 'clearCoupon') { S.coupon = []; saveCoupon(); renderCoupon(); return; }
+    if (t.id === 'scrim' || t.id === 'sheetClose') { closeSheet(); return; }
+    if (t.id === 'themeBtn') {
+      const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      const next = cur === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; store.set('theme', next);
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && S.open) closeSheet();
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.fx,.vrow')) { e.preventDefault(); openMatch(e.target.dataset.open, e.target); }
+  });
+  $('#q').addEventListener('input', (e) => { S.q = e.target.value; S.shown = 60; renderMatches(); });
+  $('#league').addEventListener('change', (e) => { S.league = e.target.value; store.set('league', S.league); S.shown = 60; renderMatches(); });
+  $('#sort').addEventListener('change', (e) => { S.sort = e.target.value; store.set('sort', S.sort); renderMatches(); });
+  $('#scope').addEventListener('change', (e) => { S.scope = e.target.value; store.set('scope', S.scope); renderSlips(); });
+  $('#vscope').addEventListener('change', (e) => { S.vscope = e.target.value; store.set('vscope', S.vscope); renderValue(); });
+  $('#tleague').addEventListener('change', (e) => { S.tleague = e.target.value; store.set('tleague', S.tleague); renderTables(); });
+  document.addEventListener('change', (e) => {
+    if (e.target.dataset.price != null) { const i = +e.target.dataset.price, v = parseFloat(String(e.target.value).replace(',', '.')); if (S.coupon[i]) { S.coupon[i].price = v > 1 ? v : null; saveCoupon(); renderCoupon(); } }
+    if (e.target.id === 'bank') { const v = parseFloat(String(e.target.value).replace(',', '.')); S.bank = v > 0 ? v : 100; store.set('bank', S.bank); renderCoupon(); }
+  });
+
+  // ---------------- loading & live updates ----------------
+  function priceSnapshot() { const m = new Map(); for (const r of S.rows) if (r.a) for (const k of ['H', 'D', 'A']) { const s = r.a.sels.find((x) => x.key === k); if (s && s.real) m.set(r.m.id + '|' + k, s.price); } return m; }
+  function flash(before) {
+    if (!before) return;
+    for (const r of S.rows) if (r.a) for (const k of ['H', 'D', 'A']) {
+      const s = r.a.sels.find((x) => x.key === k), old = before.get(r.m.id + '|' + k);
+      if (!s || !s.real || old == null || Math.abs(old - s.price) < 0.005) continue;
+      const el = document.querySelector(`.ob[data-add="${CSS.escape(r.m.id + '|' + k)}"]`);
+      if (el) { el.classList.remove('flash-up', 'flash-down'); void el.offsetWidth; el.classList.add(s.price < old ? 'flash-down' : 'flash-up'); }
+    }
+  }
+  function ingest(doc) {
+    const before = S.data ? priceSnapshot() : null;
+    S.data = doc; S.err = null; S.now = Date.now();
+    analyseAll();
+    if (!S.day || (S.day !== 'all' && !days().some((d) => d.key === S.day))) S.day = pickDefaultDay();
+    render(); flash(before);
+  }
+  async function load(first) {
+    S.lastFetch = Date.now();
+    try {
+      const res = await fetch('matches.json?t=' + Math.floor(Date.now() / 30e3), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const doc = await res.json();
+      S.lastOk = new Date();
+      if (!S.data || doc.generated !== S.fileGen || first) { S.fileGen = doc.generated; if (S.legacyDoc) overlayLegacy(doc, S.legacyDoc); ingest(doc); }
+      else renderLive();
+    } catch (err) {
+      S.err = String(err.message || err);
+      if (!S.data) $('#matchList').innerHTML = `<div class="empty-state"><b>Couldn't load match data</b>matches.json didn't load (${esc(S.err)}). It retries every minute.</div>`;
+      renderLive();
+    }
+  }
+  // Optional live price feed when this page runs as a claude.ai artifact (database document market/current)
+  function demargin(o) { const inv = o.map((x) => 1 / x), s = inv[0] + inv[1] + inv[2]; return inv.map((x) => x / s); }
+  function overlayLegacy(doc, legacy) {
+    const by = new Map(doc.matches.map((m) => [m.id, m])); let n = 0;
+    for (const [id, v] of Object.entries(legacy.matches || {})) {
+      const m = by.get(id); if (!m || !v.odds || !v.odds.every((x) => x > 1)) continue;
+      const hist = (v.hist || []).map((h) => [h[0], h[1], h[2], h[3]]);
+      m.mkt = { p: demargin(v.odds), avg: v.odds, best: v.odds, bk: null, n: 1, ou: null, src: 'snapshot', upd: hist.length ? hist[hist.length - 1][0] : legacy.updated_at };
+      if (hist.length) m.hist = hist; n++;
+    }
+    if (legacy.updated_at && Date.parse(legacy.updated_at) > Date.parse(doc.generated || 0)) doc.generated = legacy.updated_at;
+    return n;
+  }
+  async function connectLegacy() {
+    try {
+      if (!window.claude || !window.claude.use) return;
+      const db = await window.claude.use('db'); if (!db) return;
+      db.doc('market/current').onSnapshot((snap) => {
+        if (!snap.exists) return;
+        S.legacyDoc = snap.data(); S.legacy = true;
+        if (S.data) { const doc = JSON.parse(JSON.stringify(S.data)); overlayLegacy(doc, S.legacyDoc); ingest(doc); }
+      }, () => { S.legacy = false; renderLive(); });
+    } catch (e) { /* not running as an artifact */ }
+  }
+
+  try { const th = store.get('theme', null); if (th) document.documentElement.dataset.theme = th; } catch (e) { /* ignore */ }
+  renderNav();
+  load(true);
+  connectLegacy();
+  setInterval(() => { load(false); }, 60e3);
+  setInterval(() => { S.now = Date.now(); if (S.data) { analyseAll(); render(); } }, 5 * 60e3);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - (S.lastFetch || 0) > 20e3) load(false); });
+})();
+</script>
+</body>
+</html>
