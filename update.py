@@ -151,6 +151,24 @@ X_COUNTRY = {'Austria': 'AUT1', 'Switzerland': 'SUI1', 'Denmark': 'DEN1', 'Norwa
              'Argentina': 'ARG1', 'Mexico': 'MEX1', 'USA': 'USA1', 'Japan': 'JPN1', 'China': 'CHN1'}
 OA_KEY = {k: lk for lk, v in L.items() for k in v['oa']}
 CUP_WORDS = ('uefa', 'cup', 'pokal', 'copa', 'coppa', 'coupe', 'taca', 'beker', 'trophy', 'shield', 'super_cup')
+# auto-added competitions: UEFA club competitions and domestic cups of covered countries only
+NO_AUTO = ('women', 'qualif', 'nations', 'world_cup', 'friendl', 'international', 'olympic', 'u17', 'u19', 'u20',
+           'u21', 'u23', 'youth', 'euro_', 'copa_america', 'africa', 'asia', 'concacaf', 'conmebol', 'club_world',
+           'gold_cup', 'afc_', 'caf_')
+CUP_COUNTRIES = ('england', 'scotland', 'germany', 'spain', 'italy', 'france', 'netherlands', 'portugal', 'belgium',
+                 'turkey', 'greece', 'austria', 'switzerland', 'denmark', 'norway', 'sweden', 'poland', 'czech',
+                 'serbia', 'saudi', 'fa', 'efl')
+
+
+def auto_competition(key):
+    k = key.replace('soccer_', '')
+    if any(w in k for w in NO_AUTO):
+        return False
+    if k.startswith('uefa_'):
+        return True
+    return any(w in k for w in CUP_WORDS) and k.split('_')[0] in CUP_COUNTRIES
+
+
 SHARP = {'pinnacle': 3.0, 'betfair_ex_eu': 2.0, 'betfair_ex_uk': 2.0, 'matchbook': 2.0, 'smarkets': 2.0}
 EXCHANGES = {'betfair_ex_eu', 'betfair_ex_uk', 'betfair_ex_au', 'matchbook', 'smarkets'}
 
@@ -696,7 +714,7 @@ def sport_plan(state, quiet=False):
             continue
         if key in OA_KEY:
             plan[key] = OA_KEY[key]
-        elif any(w in key for w in CUP_WORDS) or SPORTS_MODE == 'all':
+        elif SPORTS_MODE == 'all' or auto_competition(key):
             lk = 'X_' + key.replace('soccer_', '')[:28]
             if lk not in L:
                 grp = 'cups' if any(w in key for w in CUP_WORDS) else 'more'
@@ -1026,7 +1044,7 @@ def build(state, prev, seed=None):
             pt = [iso(NOW)[:16] + 'Z', *[round(x, 2) for x in mkt['avg']]]
             if not hist or hist[-1][1:] != pt[1:] or NOW - parse_iso(hist[-1][0]) > timedelta(hours=6):
                 hist.append(pt)
-            hist = hist[-60:]
+            hist = hist[-40:]
         matches.append({
             'id': mid, 'lk': f['lk'], 'ko': iso(ko), 'h': pretty(f['h']), 'a': pretty(f['a']),
             'ph': ph[0] if ph else None, 'pa': pa[0] if pa else None,

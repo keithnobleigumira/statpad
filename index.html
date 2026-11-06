@@ -560,9 +560,9 @@ const ENGINE = (() => {
   function nelder(f, x0) {
     let S = [x0.slice(), [x0[0] + 0.15, x0[1]], [x0[0], x0[1] + 0.15]];
     let F = S.map(f);
-    for (let it = 0; it < 300; it++) {
+    for (let it = 0; it < 160; it++) {
       const ord = [0, 1, 2].sort((a, b) => F[a] - F[b]); S = ord.map((i) => S[i]); F = ord.map((i) => F[i]);
-      if (Math.abs(F[2] - F[0]) < 1e-12) break;
+      if (F[0] < 1e-9 || Math.abs(F[2] - F[0]) < 1e-11) break;
       const c = [(S[0][0] + S[1][0]) / 2, (S[0][1] + S[1][1]) / 2];
       const xr = [2 * c[0] - S[2][0], 2 * c[1] - S[2][1]], fr = f(xr);
       if (fr < F[0]) { const xe = [3 * c[0] - 2 * S[2][0], 3 * c[1] - 2 * S[2][1]], fe = f(xe); if (fe < fr) { S[2] = xe; F[2] = fe; } else { S[2] = xr; F[2] = fr; } }
@@ -664,26 +664,29 @@ const ENGINE = (() => {
     })).filter((o) => o.legs.length);
     opts.sort((x, y) => y.legs[0].pAdj - x.legs[0].pAdj);
     opts = opts.slice(0, 40);
-    let states = new Map([[0, { sc: 0, legs: [], b: 0, n: 0 }]]);
+    // dynamic programme over (odds bucket, legs used); each state points at its parent instead of copying legs
+    let states = new Map([[0, { sc: 0, b: 0, n: 0, leg: null, up: null }]]);
     const maxB = Math.floor(WIN_HI / STEP) + 1;
     for (const o of opts) {
+      const steps = o.legs.map((s) => ({ s, db: Math.round(Math.log(s.price) / STEP), lp: Math.log(s.pAdj), leg: { m: o.m, a: o.a, s } }));
       const next = new Map(states);
       for (const st of states.values()) {
         if (st.n >= cfg.max) continue;
-        for (const s of o.legs) {
-          const b = st.b + Math.round(Math.log(s.price) / STEP); if (b > maxB) continue;
-          const key = b * 64 + st.n + 1, sc = st.sc + Math.log(s.pAdj), cur = next.get(key);
-          if (!cur || cur.sc < sc) next.set(key, { sc, b, n: st.n + 1, legs: st.legs.concat([{ m: o.m, a: o.a, s }]) });
+        for (const x of steps) {
+          const b = st.b + x.db; if (b > maxB) continue;
+          const key = b * 64 + st.n + 1, sc = st.sc + x.lp, cur = next.get(key);
+          if (!cur || cur.sc < sc) next.set(key, { sc, b, n: st.n + 1, leg: x.leg, up: st });
         }
       }
       states = next;
     }
-    let best = null; const all = [...states.values()].filter((s) => s.legs.length);
+    let best = null; const all = [...states.values()].filter((s) => s.n > 0);
     for (const s of all) if (s.b * STEP >= WIN_LO - 1e-9 && s.b * STEP <= WIN_HI + 1e-9 && (!best || s.sc > best.sc)) best = s;
     const feasible = !!best;
-    if (!best && all.length) { const bmax = Math.max(...all.map((s) => s.b)); best = all.filter((s) => s.b >= bmax - 5).sort((x, y) => y.sc - x.sc)[0]; }
+    if (!best && all.length) { let bmax = -Infinity; for (const s of all) if (s.b > bmax) bmax = s.b; for (const s of all) if (s.b >= bmax - 5 && (!best || s.sc > best.sc)) best = s; }
     if (!best) return { tier: t, name: cfg.name, feasible: false, legs: [], odds: 1, prob: 0, target };
-    const legs = best.legs.slice().sort((x, y) => (x.m.ko > y.m.ko ? 1 : x.m.ko < y.m.ko ? -1 : 0));
+    const chain = []; for (let st = best; st && st.leg; st = st.up) chain.push(st.leg);
+    const legs = chain.sort((x, y) => (x.m.ko > y.m.ko ? 1 : x.m.ko < y.m.ko ? -1 : 0));
     const odds = legs.reduce((acc, l) => acc * l.s.price, 1), prob = legs.reduce((acc, l) => acc * l.s.pAdj, 1);
     return { tier: t, name: cfg.name, feasible, legs, odds, prob, target, real: legs.filter((l) => l.s.real).length };
   }
@@ -731,23 +734,48 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     target: store.get('target', 10), scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), minEdge: store.get('minEdge', 0.02),
     coupon: store.get('coupon', []), bank: store.get('bank', 100), stakeMode: store.get('stakeMode', 'qk'), tleague: store.get('tleague', null),
     open: null, shown: 60, lastFetch: null, lastOk: null, live: false, legacy: false, err: null,
+    ready: false, token: 0, ver: 0, slipCache: new Map(), bad: 0, progress: null,
   };
   if (!TABS.some((t) => t[0] === S.tab)) S.tab = 'matches';
 
   // ---------------- data ----------------
   function sig(m) { return JSON.stringify([m.lm, m.ext, m.mkt && [m.mkt.p, m.mkt.best, m.mkt.ou, m.mkt.upd]]); }
-  function analyseAll() {
-    const now = S.now, rows = [];
-    for (const m of S.data.matches) {
-      if (!m.ko) continue;
+  const yieldUI = () => new Promise((r) => setTimeout(r, 0));
+  // Works through the matches in slices of ~25 ms so the page never freezes, however big the board is.
+  async function analyseAll(token) {
+    const now = S.now, rows = [], list = S.data.matches || [];
+    let t0 = performance.now(), done = 0, fresh = 0;
+    for (const m of list) {
+      done++;
+      if (!m || !m.ko || !m.id || !m.h || !m.a) continue;
       const ko = Date.parse(m.ko);
       if (!(ko + 150 * 60e3 > now)) continue;
       const sg = sig(m); let c = S.cache.get(m.id);
-      if (!c || c.sig !== sg) { c = { sig: sg, a: ENGINE.analyse(m, now) }; S.cache.set(m.id, c); }
+      if (!c || c.sig !== sg) {
+        let a = null;
+        try { a = ENGINE.analyse(m, now); } catch (e) { S.bad++; }
+        c = { sig: sg, a }; S.cache.set(m.id, c); fresh++;
+      }
       rows.push({ m, a: c.a, ko, day: dayKey(ko), started: now >= ko, live: now >= ko && now < ko + 115 * 60e3 });
+      if (performance.now() - t0 > 25) {
+        S.progress = done / list.length; showProgress();
+        await yieldUI();
+        if (token !== S.token) return false;
+        t0 = performance.now();
+      }
     }
-    rows.sort((x, y) => x.ko - y.ko || lgName(x.m.lk).localeCompare(lgName(y.m.lk)) || x.m.h.localeCompare(y.m.h));
+    rows.sort((x, y) => x.ko - y.ko || lgName(x.m.lk).localeCompare(lgName(y.m.lk)) || String(x.m.h).localeCompare(String(y.m.h)));
     S.rows = rows; S.byId = new Map(rows.map((r) => [r.m.id, r]));
+    const fp = [fresh, rows.length, rows.filter((r) => r.started).length, S.data.generated].join(':');
+    if (fresh || fp !== S.fp) { S.ver++; S.slipCache.clear(); }
+    S.fp = fp; S.progress = null; S.ready = true;
+    return true;
+  }
+  function showProgress() {
+    if (S.ready) { renderLive(); return; }
+    const pc = Math.round((S.progress || 0) * 100);
+    $('#liveText').textContent = 'Analysing ' + pc + '%';
+    $('#matchList').innerHTML = `<div class="empty-state"><b>Crunching the numbers… ${pc}%</b>Running the model over ${S.data.matches.length} matches. This takes a few seconds the first time.</div>`;
   }
   const lgInfo = (lk) => (S.data && S.data.leagues && S.data.leagues[lk]) || { name: lk, group: 'more', country: '' };
   const lgName = (lk) => lgInfo(lk).name;
@@ -790,10 +818,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
 
   // ---------------- hero ----------------
-  function slipFor(dayKeyStr, target, scope) {
-    const list = S.rows.filter((r) => r.day === dayKeyStr && !r.started && r.a && inScope(r, scope)).map((r) => ({ m: r.m, a: r.a }));
-    return ['C', 'B', 'A'].map((t) => ENGINE.buildSlip(list, t, target));
+  function slipTier(dayKeyStr, target, scope, tier) {
+    const open = S.rows.filter((r) => r.day === dayKeyStr && !r.started && r.a && inScope(r, scope));
+    const key = [S.ver, dayKeyStr, target, scope, tier, open.length].join('|');
+    let v = S.slipCache.get(key);
+    if (!v) { v = ENGINE.buildSlip(open.map((r) => ({ m: r.m, a: r.a })), tier, target); S.slipCache.set(key, v); }
+    return v;
   }
+  function slipFor(dayKeyStr, target, scope) { return ['C', 'B', 'A'].map((t) => slipTier(dayKeyStr, target, scope, t)); }
   function inScope(r, scope) {
     if (scope === 'big') return lgInfo(r.m.lk).group === 'big';
     if (scope === 'cups') return lgInfo(r.m.lk).group === 'cups';
@@ -807,16 +839,25 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const comps = new Set(up.map((r) => r.m.lk)).size;
     $('#kpis').innerHTML = [[up.length, 'fixtures ahead'], [priced, 'with live prices'], [vals, 'value spots ≥3%'], [comps, 'competitions']]
       .map(([v, l]) => `<div class="kpi"><div class="kpi-v mono">${v}</div><div class="kpi-l">${l}</div></div>`).join('');
-    // ticket: first day with enough games, highly-possible tier preferred
-    let best = null, dk = null;
-    for (const d of days()) {
-      const n = S.rows.filter((r) => r.day === d.key && !r.started && r.a).length;
-      if (n < 4) continue;
-      const sl = slipFor(d.key, S.target, 'all');
-      best = sl.find((s) => s.tier === 'B' && s.feasible) || sl.filter((s) => s.feasible).sort((a, b) => b.prob - a.prob)[0] || null;
-      dk = d; if (best) break;
-    }
+    // ticket: the first day with enough open games; built after the list is on screen
     const box = $('#heroTicket');
+    const dk = days().find((d) => S.rows.filter((r) => r.day === d.key && !r.started && r.a).length >= 4);
+    if (!dk) { box.innerHTML = ''; return; }
+    const ver = S.ver, tgt = S.target;
+    if (!box.firstChild) box.innerHTML = `<div class="ticket"><div class="t-kick">${esc(dayLabel(dk.key, true))}</div><div class="t-title">Building the best ${tgt}-odds slip…</div></div>`;
+    clearTimeout(S.heroT);
+    S.heroT = setTimeout(async () => {
+      let best = slipTier(dk.key, tgt, 'all', 'B');
+      if (!best.feasible) {
+        await yieldUI(); if (ver !== S.ver) return;
+        const others = ['C', 'A'].map((t) => slipTier(dk.key, tgt, 'all', t)).filter((x) => x.feasible).sort((a, b) => b.prob - a.prob);
+        best = others[0] || (best.legs.length ? best : null);
+      }
+      if (ver !== S.ver || S.tab !== 'matches') return;
+      paintTicket(box, best, dk);
+    }, 60);
+  }
+  function paintTicket(box, best, dk) {
     if (!best) { box.innerHTML = ''; return; }
     const legs = best.legs.slice(0, 5);
     box.innerHTML = `<div class="ticket">
@@ -914,6 +955,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     </article>`;
   }
   function renderMatches() {
+    if (!S.ready) { showProgress(); return; }
     renderDays('days-matches', true);
     leagueOptions($('#league'), S.league, true);
     $('#sort').value = S.sort;
@@ -1040,6 +1082,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
 
   // ---------------- value ----------------
   function renderValue() {
+    if (!S.ready) { showProgress(); return; }
     renderDays('days-value', true);
     $('#minEdge').innerHTML = EDGES.map((e) => `<button type="button" data-edge="${e}" aria-pressed="${S.minEdge === e}"><span class="mono">${Math.round(e * 100)}%</span></button>`).join('');
     $('#vscope').value = S.vscope;
@@ -1065,14 +1108,30 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
 
   // ---------------- slips ----------------
   function renderSlips() {
+    if (!S.ready) { showProgress(); return; }
     if (S.day === 'all') S.day = pickDefaultDay();
     renderDays('days-slips', false);
     $('#target').innerHTML = TARGETS.map((t) => `<button type="button" data-target="${t}" aria-pressed="${S.target === t}"><span class="mono">${t}</span></button>`).join('');
     $('#scope').value = S.scope;
-    const slips = slipFor(S.day, S.target, S.scope);
     const n = S.rows.filter((r) => r.day === S.day && !r.started && r.a && inScope(r, S.scope)).length;
     const box = $('#slips');
     if (!n) { box.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>No open games for this day</b>Pick another day, or widen the scope.</div>`; return; }
+    const want = [S.day, S.target, S.scope, S.ver].join('|');
+    S.slipWant = want;
+    const cached = ['C', 'B', 'A'].every((t) => S.slipCache.has([S.ver, S.day, S.target, S.scope, t, n].join('|')));
+    if (!cached) box.innerHTML = ['C', 'B', 'A'].map((t) => `<article class="slip"><div class="slip-h"><div class="name"><span class="tier tier-${t}">${t}</span>${esc(ENGINE.TIERS[t].name)}</div><div class="band">Building…</div></div></article>`).join('');
+    setTimeout(async () => {
+      const out = [];
+      for (const t of ['C', 'B', 'A']) {
+        if (S.slipWant !== want) return;
+        out.push(slipTier(S.day, S.target, S.scope, t));
+        await yieldUI();
+      }
+      if (S.slipWant !== want || S.tab !== 'slips') return;
+      paintSlips(box, out);
+    }, cached ? 0 : 40);
+  }
+  function paintSlips(box, slips) {
     box.innerHTML = slips.map((s) => {
       const cfg = ENGINE.TIERS[s.tier];
       const ev = s.legs.length ? s.prob * s.odds - 1 : null;
@@ -1097,6 +1156,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }).filter(Boolean);
   }
   function renderCoupon() {
+    if (!S.ready) { showProgress(); return; }
     const rows = couponRows();
     const box = $('#coupon');
     if (!rows.length) { box.innerHTML = `<div class="empty-state"><b>Your coupon is empty</b>Tap a price on any match, or add a whole slip from the Slips tab.</div>`; return; }
@@ -1133,6 +1193,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
 
   // ---------------- tables ----------------
   function renderTables() {
+    if (!S.ready) { showProgress(); return; }
     const lgs = Object.entries(S.data.leagues || {}).filter(([, v]) => v.table && v.table.length);
     const sel = $('#tleague');
     let h = '';
@@ -1182,6 +1243,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // ---------------- render orchestration ----------------
   function render() {
     if (!S.data) return;
+    if (!S.ready) { renderNav(); showProgress(); return; }
     renderNav(); renderLive();
     if (S.tab === 'matches') { renderHero(); renderTape(); renderNav(); renderMatches(); }
     else if (S.tab === 'value') renderValue();
@@ -1258,12 +1320,22 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (el) { el.classList.remove('flash-up', 'flash-down'); void el.offsetWidth; el.classList.add(s.price < old ? 'flash-down' : 'flash-up'); }
     }
   }
-  function ingest(doc) {
-    const before = S.data ? priceSnapshot() : null;
-    S.data = doc; S.err = null; S.now = Date.now();
-    analyseAll();
-    if (!S.day || (S.day !== 'all' && !days().some((d) => d.key === S.day))) S.day = pickDefaultDay();
-    render(); flash(before);
+  async function ingest(doc) {
+    const token = ++S.token;
+    const before = S.ready ? priceSnapshot() : null;
+    try {
+      if (!doc || !Array.isArray(doc.matches)) throw new Error('matches.json has no match list');
+      S.data = doc; S.err = null; S.now = Date.now();
+      if (!(await analyseAll(token))) return;
+      if (!S.day || (S.day !== 'all' && !days().some((d) => d.key === S.day))) S.day = pickDefaultDay();
+      render(); flash(before);
+    } catch (e) { showFatal(e); }
+  }
+  function showFatal(e) {
+    S.err = String((e && e.message) || e);
+    const el = $('#live'); el.classList.remove('on'); el.classList.add('warn'); $('#liveText').textContent = 'Error';
+    $('#matchList').innerHTML = `<div class="empty-state"><b>Something went wrong</b>${esc(S.err)}<br><br>Pull down to reload. If it keeps happening, screenshot this message.</div>`;
+    if (window.console) console.error(e);
   }
   async function load(first) {
     S.lastFetch = Date.now();
@@ -1310,7 +1382,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   load(true);
   connectLegacy();
   setInterval(() => { load(false); }, 60e3);
-  setInterval(() => { S.now = Date.now(); if (S.data) { analyseAll(); render(); } }, 5 * 60e3);
+  setInterval(async () => { if (!S.data || !S.ready) return; S.now = Date.now(); const tk = ++S.token; try { if (await analyseAll(tk)) render(); } catch (e) { showFatal(e); } }, 5 * 60e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - (S.lastFetch || 0) > 20e3) load(false); });
 })();
 </script>
