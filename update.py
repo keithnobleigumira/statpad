@@ -19,7 +19,8 @@ Environment (all optional):
   ODDS_API_KEY          The Odds API key (store it as a GitHub Actions secret, never in the repo)
   ODDS_REGIONS          bookmaker regions, default "eu"            (each region costs credits)
   ODDS_MARKETS          markets, default "h2h"  (add ",totals" for over/under; doubles the cost)
-  ODDS_MIN_INTERVAL     minutes between price refreshes per competition, default 30
+  ODDS_MIN_INTERVAL     fastest refresh per competition in minutes, default 5 (the credit budget
+                        decides the real pace; games kicking off soonest are refreshed first)
   ODDS_MONTHLY_CREDITS  your plan's monthly credits, default 500 (the free plan)
   ODDS_RESET_DAY        day of month the credits reset, default 1
   ODDS_SPORTS           "mapped" (default: listed leagues + any UEFA/cup competition) or "all"
@@ -66,11 +67,11 @@ DAYS = float(ENV('STATPAD_DAYS') or 7)
 RESULTS_EVERY = 6      # hours
 FIXTURES_EVERY = 1     # hours
 SPORTS_EVERY = 12      # hours
-EVENTS_EVERY = 60      # minutes
+EVENTS_EVERY = 30      # minutes
 API_KEY = (ENV('ODDS_API_KEY') or '').strip()
 REGIONS = [r.strip() for r in (ENV('ODDS_REGIONS') or 'eu').split(',') if r.strip()]
 MARKETS = [m.strip() for m in (ENV('ODDS_MARKETS') or 'h2h').split(',') if m.strip()]
-MIN_INTERVAL = max(5.0, float(ENV('ODDS_MIN_INTERVAL') or 30))
+MIN_INTERVAL = max(3.0, float(ENV('ODDS_MIN_INTERVAL') or 5))
 MONTHLY = float(ENV('ODDS_MONTHLY_CREDITS') or 500)
 RESET_DAY = int(ENV('ODDS_RESET_DAY') or 1)
 SPORTS_MODE = (ENV('ODDS_SPORTS') or 'mapped').lower()
@@ -830,7 +831,8 @@ def refresh_odds_api(state):
             api.setdefault(key, {})['events'] = [parse_api_event(e, old.get(e.get('id'))) for e in evs]
         last['events'] = iso(NOW)
 
-    # paid price refreshes, paced to the budget
+    # paid price refreshes: an even daily budget (unused credits roll forward), spent on the
+    # competitions whose next game is closest; nothing refreshes more often than ODDS_MIN_INTERVAL
     cost = len(MARKETS) * len(REGIONS)
     active = []
     for key in plan:
@@ -844,32 +846,60 @@ def refresh_odds_api(state):
     remaining = q.get('remaining')
     if remaining is None:
         remaining = MONTHLY
-    # minutes until credits reset
     y, m = NOW.year, NOW.month
     reset = datetime(y, m, min(RESET_DAY, 28), tzinfo=UTC)
     if reset <= NOW:
         reset = datetime(y + (m == 12), (m % 12) + 1, min(RESET_DAY, 28), tzinfo=UTC)
-    minutes_left = max(60.0, (reset - NOW).total_seconds() / 60)
-    # demand at the base interval (competitions more than 2 days away refresh 4x less often)
-    def interval_for(nxt, scale):
-        far = (nxt - NOW) > timedelta(hours=48)
-        return MIN_INTERVAL * scale * (4 if far else 1)
-    demand = sum(cost * minutes_left / interval_for(nxt, 1.0) for _, nxt in active)
-    usable = max(0.0, remaining - 5)
-    scale = max(1.0, demand / usable) if usable > 0 else float('inf')
-    state['odds_interval'] = round(MIN_INTERVAL * scale, 1) if math.isfinite(scale) else None
-    if not math.isfinite(scale):
+    day0 = NOW.replace(hour=0, minute=0, second=0, microsecond=0)
+    days_left = max(1.0, (reset - day0).total_seconds() / 86400)
+    today = day0.strftime('%Y-%m-%d')
+    spend = state.get('spend') or {}
+    spent = float(spend.get(today, 0))
+    # weight each day by its games (plus half of the next day's), so busy weekends get more credits
+    games = {}
+    for key in plan:
+        for e in (api.get(key) or {}).get('events') or []:
+            if e.get('ko'):
+                d = parse_iso(e['ko']).strftime('%Y-%m-%d')
+                games[d] = games.get(d, 0) + 1
+    def weight(d):
+        nxt = (datetime.strptime(d, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+        return games.get(d, 0) + 0.5 * games.get(nxt, 0)
+    known = [weight((day0 + timedelta(days=i)).strftime('%Y-%m-%d')) for i in range(min(8, int(days_left) + 1))]
+    avg_w = sum(known) / len(known) if known and sum(known) > 0 else 1.0
+    total_w = sum(known) + avg_w * max(0.0, days_left - len(known))
+    share = weight(today) / total_w if total_w > 0 else 1 / days_left
+    share = min(1.0, max(share, 0.25 / days_left))
+    daily = max(0.0, remaining - 5 + spent) * min(share, 3.0 / days_left)   # never more than 3x an even day
+    elapsed = ((NOW - day0).total_seconds() / 60 + 90) / 1440          # pro-rata through the day
+    allowed = daily * min(1.0, elapsed) - spent
+
+    def tier(nxt):   # how much less often than the base interval
+        h = (nxt - NOW).total_seconds() / 3600
+        return 1 if h <= 6 else 3 if h <= 24 else 6 if h <= 48 else 18
+
+    near = sum(1 for _, nxt in active if tier(nxt) == 1)
+    state['odds_interval'] = round(max(MIN_INTERVAL, 1440 * max(1, near) * cost / daily), 1) if daily > 0 else None
+    if remaining < cost + 5 and not FORCE:
         return 'out of credits'
+    cands = []
+    for key, nxt in active:
+        last = (api.get(key) or {}).get('odds_at')
+        age = (NOW - parse_iso(last)).total_seconds() / 60 if last else 1e9
+        if FORCE or age >= MIN_INTERVAL * tier(nxt) - 1:
+            cands.append((tier(nxt), nxt, -age, key))
+    cands.sort()
     done = 0
-    for key, nxt in sorted(active, key=lambda kv: (L[plan[kv[0]]]['group'] not in ('big', 'cups'), kv[1])):
-        due_at = (api.get(key) or {}).get('odds_at')
-        if not FORCE and due_at and NOW - parse_iso(due_at) < timedelta(minutes=interval_for(nxt, scale) - 1):
-            continue
+    for _, nxt, _, key in cands:
+        if not FORCE and allowed < cost:
+            break
         if (state.get('quota') or {}).get('remaining') is not None and state['quota']['remaining'] < cost + 5:
             break
         data = oa_get(f'/sports/{key}/odds', {'regions': ','.join(REGIONS), 'markets': ','.join(MARKETS),
                                               'oddsFormat': 'decimal', 'dateFormat': 'iso',
                                               'commenceTimeFrom': frm, 'commenceTimeTo': to}, state)
+        allowed -= cost
+        spent += cost
         if not isinstance(data, list):
             continue
         cur = {e['id']: e for e in (api.get(key) or {}).get('events', [])}
@@ -879,6 +909,7 @@ def refresh_odds_api(state):
         blob['events'] = list(cur.values())
         blob['odds_at'] = iso(NOW)
         done += 1
+    state['spend'] = {today: spent}
     return f'{done} competitions priced'
 
 
@@ -1027,6 +1058,9 @@ def build(state, prev, seed=None):
             continue
         seen.add(mid)
         mkt = f['api_mkt'] or f['fd_mkt'] or old.get('mkt')
+        om = old.get('mkt') or {}
+        if mkt and mkt.get('src') == 'football-data' and om.get('src') == 'football-data' and om.get('avg') == mkt.get('avg') and om.get('best') == mkt.get('best'):
+            mkt = dict(mkt, upd=om.get('upd'))   # same prices re-read: keep when they were first seen
         lam, cross = expected_goals(f['lk'], f['h'], f['a'], leagues, teams)
         ph = pos.get((f['lk'], f['h']))
         pa = pos.get((f['lk'], f['a']))
@@ -1142,8 +1176,7 @@ def main():
             state['fd_fixtures'] = fx
             last['fixtures'] = iso(NOW)
         ofx, ok2 = safe(load_openfootball, ([], False))
-        if ok2:
-            state['of_fixtures'] = ofx
+        state['of_fixtures'] = ofx if ok2 else state.get('of_fixtures') or []
         src['fixtures'] = {'ok': ok or ok2, 'at': iso(NOW), 'count': len(fx) + len(ofx)}
         log('football-data fixtures:', len(fx), '| openfootball schedule fixtures:', len(ofx))
 
