@@ -93,8 +93,8 @@ a { color: var(--cobalt); }
 @media (min-width: 980px) { .tabs { display: flex; } .live .long { display: inline; } }
 
 /* bottom nav on phones */
-.bnav { position: fixed; z-index: 45; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--rule); display: grid; grid-template-columns: repeat(6, 1fr); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
-.bnav button { border: 0; background: none; display: grid; justify-items: center; gap: 3px; padding: 4px 0; font-size: 10.5px; font-weight: 600; color: var(--ink-3); position: relative; }
+.bnav { position: fixed; z-index: 45; left: 0; right: 0; bottom: 0; background: var(--card); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--rule); display: grid; grid-template-columns: repeat(7, 1fr); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+.bnav button { border: 0; background: none; display: grid; justify-items: center; gap: 3px; padding: 4px 0; font-size: 10px; min-width: 0; font-weight: 600; color: var(--ink-3); position: relative; }
 .bnav svg { width: 21px; height: 21px; }
 .bnav button[aria-current="page"] { color: var(--cobalt); }
 .bnav .count { position: absolute; top: 0; left: calc(50% + 6px); font-size: 9px; padding: 2px 5px; }
@@ -395,6 +395,47 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .toast { position: fixed; z-index: 70; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: .2s; }
 .toast.show { opacity: 1; transform: translateX(-50%); }
 @media (min-width: 980px) { .toast { bottom: 28px; } }
+/* ---------- track record ---------- */
+.trk-grid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.trk-grid > * { min-width: 0; }
+@media (min-width: 980px) { .trk-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } .trk-grid .wide { grid-column: 1 / -1; } }
+.trk-grid .card { margin-top: 0; }
+.tt-wrap { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+@media (max-width: 420px) { .tt th, .tt td { padding-left: 4px; padding-right: 4px; } .tt .hide-sm { display: none; } }
+.tt { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tt th { text-align: right; font: 600 10.5px/1 var(--f-mono); color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; padding: 0 6px 8px; white-space: nowrap; }
+.tt th:first-child, .tt td:first-child { text-align: left; }
+.tt td { text-align: right; padding: 9px 6px; border-top: 1px solid var(--rule-2); font-family: var(--f-mono); font-stretch: 87.5%; font-size: 12.5px; white-space: nowrap; }
+.tt td:first-child { font-family: var(--f-body); font-stretch: 100%; font-size: 13.5px; font-weight: 600; }
+.hit { display: block; position: relative; height: 8px; border-radius: 4px; background: var(--sunk); margin-top: 6px; min-width: 72px; }
+.hit i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--cobalt); }
+.hit b { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 1px; background: var(--ink); box-shadow: 0 0 0 2px var(--card); }
+.cal { width: 100%; height: auto; display: block; max-width: 420px; margin: 0 auto; touch-action: manipulation; }
+.cal text { font: 500 10px var(--f-mono); fill: var(--ink-3); }
+.cal .pt { fill: var(--cobalt); stroke: var(--card); stroke-width: 2; cursor: pointer; }
+.cal .pt:hover, .cal .pt.on { fill: var(--ink); }
+.ll { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 11px; overflow: hidden; }
+.ll div { background: var(--card); padding: 12px; }
+.ll .v { font: 600 19px/1 var(--f-mono); font-stretch: 87.5%; letter-spacing: -.03em; }
+.ll .l { font-size: 11.5px; color: var(--ink-2); margin-top: 5px; }
+.ll .best { box-shadow: inset 0 -3px 0 var(--cobalt); }
+.res { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--rule-2); font-size: 13px; }
+.res:first-child { border-top: 0; }
+.res .sel { font-weight: 650; }
+.res .fxl { font-size: 11.5px; color: var(--ink-3); grid-column: 2; }
+.res .pr { grid-column: 3; grid-row: 1 / span 2; text-align: right; font: 600 12.5px/1.3 var(--f-mono); font-stretch: 87.5%; }
+.res .pr small { display: block; font-weight: 400; color: var(--ink-3); font-size: 10.5px; }
+.wl { grid-row: 1 / span 2; font: 700 10px/1 var(--f-mono); letter-spacing: .05em; text-transform: uppercase; padding: 5px 7px; border-radius: 5px; min-width: 44px; text-align: center; }
+.wl.w { background: var(--pitch-soft); color: var(--pitch); } .wl.l { background: var(--red-soft); color: var(--red); } .wl.o { background: var(--sunk); color: var(--ink-3); }
+.sliprow { padding: 12px 0; border-top: 1px solid var(--rule-2); }
+.sliprow:first-child { border-top: 0; }
+.sliprow .hd { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 650; }
+.sliprow .hd .mono { margin-left: auto; font-size: 12.5px; font-weight: 600; }
+.legdots { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.legdots span { font: 600 10.5px/1 var(--f-mono); padding: 4px 6px; border-radius: 4px; background: var(--sunk); color: var(--ink-3); }
+.legdots .w { background: var(--pitch-soft); color: var(--pitch); } .legdots .l { background: var(--red-soft); color: var(--red); }
+.tip { position: fixed; z-index: 80; pointer-events: none; background: var(--ink); color: var(--paper); font-size: 12px; line-height: 1.35; padding: 7px 10px; border-radius: 8px; max-width: 240px; opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .12s; }
+.tip.show { opacity: 1; transform: none; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -404,6 +445,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   <symbol id="i-spark" viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 8-10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 5h5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M4 6h16v4a2 2 0 000 4v4H4v-4a2 2 0 000-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 6v12" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 2"/></symbol>
   <symbol id="i-cart" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-track" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7.5 15l3.5-4 3 2.5L19 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="19" cy="7.5" r="1.6" fill="currentColor"/></symbol>
   <symbol id="i-table" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M9 4v16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
@@ -468,7 +510,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
         <div class="ctl"><span class="lbl">Min edge</span><div class="seg" id="minEdge"></div></div>
       </div>
       <div class="days" id="days-value" role="group" aria-label="Day"></div>
-      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="vscope"><option value="all">All competitions</option><option value="big">Big leagues</option><option value="cups">Europe &amp; cups</option></select></label></div>
+      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="vscope"><option value="all">All competitions</option><option value="big">Big leagues</option><option value="cups">Europe &amp; cups</option><option value="intl">Internationals</option></select></label></div>
       <div class="vlist" id="valueList" style="margin-top:14px"></div>
     </section>
 
@@ -486,6 +528,13 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     <section id="v-coupon" class="section" data-view="coupon" hidden>
       <div class="sec-head"><div><h2>Your coupon</h2><p class="sub">Add picks from any match. Type the price you can actually get and the maths updates.</p></div></div>
       <div id="coupon"></div>
+    </section>
+
+    <section id="v-track" class="section" data-view="track" hidden>
+      <div class="sec-head">
+        <div><h2>Track record</h2><p class="sub">Every prediction is saved before kick-off and graded after the final whistle. Nothing is edited afterwards.</p></div>
+      </div>
+      <div id="trackBox"></div>
     </section>
 
     <section id="v-tables" class="section" data-view="tables" hidden>
@@ -519,6 +568,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   <div class="sheet-body" id="sheetBody"></div>
 </aside>
 <div class="toast" id="toast" role="status"></div>
+<div class="tip" id="tip" role="tooltip"></div>
 
 <script>
 /* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
@@ -620,6 +670,7 @@ const ENGINE = (() => {
     if (diverge != null && diverge > 0.12) hair += HAIR;
     if (ageH != null && ageH > STALE_H) hair += 0.01;
     if (m.xl && src === 'model') hair += 0.02;
+    if (m.fr) hair += 0.03;   // friendlies: rotated line-ups and uneven effort
 
     let best = null, bi = -1;
     const sels = LABELS.map(([key, lab, group]) => {
@@ -659,7 +710,7 @@ const ENGINE = (() => {
     const WIN_LO = Math.log(target * 0.95), WIN_HI = Math.log(target * 1.10);
     let opts = list.map(({ m, a }) => ({
       m, a,
-      legs: a.sels.filter((s) => s.key !== 'D' && s.pAdj >= cfg.lo && s.pAdj < cfg.hi && s.price >= 1.05 && !(m.clash && (t === 'A' || t === 'B')))
+      legs: a.sels.filter((s) => s.key !== 'D' && s.pAdj >= cfg.lo && s.pAdj < cfg.hi && s.price >= 1.05 && !((m.clash || m.fr) && (t === 'A' || t === 'B')))
         .sort((x, y) => y.pAdj - x.pAdj).slice(0, 3),
     })).filter((o) => o.legs.length);
     opts.sort((x, y) => y.legs[0].pAdj - x.legs[0].pAdj);
@@ -723,8 +774,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const dFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
   const longFmt = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   const ord = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
-  const GROUPS = [['big', 'Big leagues'], ['cups', 'Europe & cups'], ['second', 'Second tiers'], ['more', 'More leagues']];
-  const TABS = [['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['slips', 'Slips', 'i-ticket'], ['coupon', 'Coupon', 'i-cart'], ['tables', 'Tables', 'i-table'], ['method', 'Method', 'i-info']];
+  const GROUPS = [['big', 'Big leagues'], ['cups', 'Europe & cups'], ['intl', 'Internationals'], ['second', 'Second tiers'], ['more', 'More leagues']];
+  const TABS = [['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['slips', 'Slips', 'i-ticket'], ['coupon', 'Coupon', 'i-cart'], ['track', 'Track', 'i-track'], ['tables', 'Tables', 'i-table'], ['method', 'Method', 'i-info']];
   const TARGETS = [2, 5, 10, 20];
   const EDGES = [0.02, 0.04, 0.07];
 
@@ -829,6 +880,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function inScope(r, scope) {
     if (scope === 'big') return lgInfo(r.m.lk).group === 'big';
     if (scope === 'cups') return lgInfo(r.m.lk).group === 'cups';
+    if (scope === 'intl') return lgInfo(r.m.lk).group === 'intl';
     if (scope === 'priced') return realMkt(r.m);
     return true;
   }
@@ -914,7 +966,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // ---------------- matches ----------------
   function leagueOptions(sel, val, withAll) {
     const present = new Set(S.rows.map((r) => r.m.lk));
-    let h = withAll ? `<option value="all">All competitions</option><option value="g:big">Big leagues</option><option value="g:cups">Europe &amp; cups</option>` : '';
+    let h = withAll ? `<option value="all">All competitions</option><option value="g:big">Big leagues</option><option value="g:cups">Europe &amp; cups</option><option value="g:intl">Internationals</option>` : '';
     for (const [g, gl] of GROUPS) {
       const ks = [...present].filter((k) => lgInfo(k).group === g).sort((a, b) => lgName(a).localeCompare(lgName(b)));
       if (ks.length) h += `<optgroup label="${esc(gl)}">${ks.map((k) => `<option value="${esc(k)}">${esc(lgName(k))}</option>`).join('')}</optgroup>`;
@@ -1030,13 +1082,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       $('#sheetBody').innerHTML = `<div class="vs"><div class="side"><div class="team">${esc(m.h)}</div></div><div class="mid"><div class="xg-l">VS</div></div><div class="side r"><div class="team">${esc(m.a)}</div></div></div><div class="empty-state"><b>No prediction yet</b>Neither team has ratings in Statpad's data and no prices are in yet. It fills in automatically once either arrives.</div>`;
       return;
     }
-    const pos = (p, f, dom) => `${p ? `<span>${ord(p)}${dom ? ' in ' + esc(lgName(dom)) : ''}</span>` : ''}${formDots(f)}`;
+    const intl = info.group === 'intl';
+    const pos = (p, f, dom) => `${p ? `<span>${ord(p)}${intl ? ' in world ratings' : dom ? ' in ' + esc(lgName(dom)) : ''}</span>` : ''}${formDots(f)}`;
     const chips = [];
     chips.push({ blend: ['Model 20% · market 80%', ''], market: ['Market-implied', ''], model: ['Model only: no prices yet', 'warn'], external: ['External forecast blend', ''] }[a.src]);
     if (m.mkt) chips.push([`${m.mkt.n > 1 ? m.mkt.n + ' bookmakers' : m.mkt.src === 'football-data' ? 'Average of bookmakers' : 'Single price feed'}${a.ageH != null ? ' · ' + (a.ageH < 1 ? 'fresh' : a.ageH < 48 ? Math.round(a.ageH) + ' h old' : Math.round(a.ageH / 24) + ' d old') : ''}`, '']);
     if (a.hair > 0) chips.push([`Safety haircut −${Math.round(a.hair * 100)} pts on picks`, 'warn']);
     if (a.diverge != null && a.diverge > 0.12) chips.push([`Model and market disagree by ${Math.round(a.diverge * 100)} pts`, 'warn']);
     if (m.clash) chips.push(['Big game: kept out of the two safest slip tiers', 'warn']);
+    if (m.fr) chips.push(['Friendly: rotated line-ups, extra caution and kept out of the two safest tiers', 'warn']);
     if (m.xl) chips.push(['Cross-league ratings', '']);
     const hm = [];
     let mx = 0; for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) mx = Math.max(mx, a.M[i][j]);
@@ -1214,6 +1268,132 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     </tbody></table></div><p class="note">${esc(L.name)}${L.season ? ' · ' + esc(L.season) : ''}. ${hasR ? 'Attack above 1.00 scores more than an average side; defence below 1.00 concedes less. ' : ''}Points deductions are not applied.</p>`;
   }
 
+  // ---------------- track record ----------------
+  // pick rows: [id, lk, ko, home, away, home goals, away goals, source, key, stated chance, price, real, tier, won, CLV, pH, pD, pA]
+  const KEY_LABEL = { H: (h) => h + ' to win', D: () => 'Draw', A: (h, a) => a + ' to win', '1X': (h) => h + ' or draw', X2: (h, a) => a + ' or draw',
+    O15: () => 'Over 1.5 goals', O25: () => 'Over 2.5 goals', U25: () => 'Under 2.5 goals', U35: () => 'Under 3.5 goals', BTTS: () => 'Both teams to score',
+    BTTS_N: () => 'Both teams to score: no', H_O05: (h) => h + ' to score', A_O05: (h, a) => a + ' to score', H_O15: (h) => h + ' 2+ goals', A_O15: (h, a) => a + ' 2+ goals' };
+  const keyLabel = (k, h, a) => (KEY_LABEL[k] ? KEY_LABEL[k](h, a) : k);
+  const TIER_NAME = { A: 'Nearly definite', B: 'Highly possible', C: 'Possible' };
+  async function loadTrack(force) {
+    if (S.trackBusy || (!force && S.trackAt && Date.now() - S.trackAt < 5 * 60e3)) return;
+    S.trackBusy = true;
+    try {
+      const r = await fetch('track.json?t=' + Math.floor(Date.now() / 60e3), { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      S.track = await r.json(); S.trackErr = null;
+    } catch (e) { S.trackErr = String(e.message || e); }
+    S.trackBusy = false; S.trackAt = Date.now();
+    if (S.tab === 'track') renderTrack();
+  }
+  const rate = (w, n) => (n ? w / n : null);
+  function renderTrack() {
+    const box = $('#trackBox');
+    if (!S.trackAt) { box.innerHTML = '<div class="empty-state"><b>Loading the track record…</b></div>'; loadTrack(); return; }
+    loadTrack();
+    const T = S.track;
+    if (!T) { box.innerHTML = `<div class="empty-state"><b>No track record here yet</b>Your GitHub site keeps the track record. It appears after the site's next update.</div>`; return; }
+    const g = T.agg || {}, tiers = g.tiers || {}, sl = g.slips || {};
+    const since = T.since ? new Date(T.since).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    if (!g.n && !(T.slips || []).length) {
+      box.innerHTML = `<div class="empty-state"><b>The track record has started</b>${T.pending || 0} predictions are saved and waiting for results. The first grades appear once results come in. football-data.co.uk publishes them twice a week, so allow 2–4 days.${(T.open || []).length ? `<br><br>${T.open.length} slips are in play.` : ''}</div>${openSlipsCard(T)}`;
+      return;
+    }
+    let tn = 0, tw = 0, tp = 0;
+    for (const t of ['A', 'B', 'C']) { const r = tiers[t] || [0, 0, 0]; tn += r[0]; tw += r[1]; tp += r[2]; }
+    let sn = 0, sw = 0, su = 0;
+    for (const t of ['A', 'B', 'C']) { const r = sl[t] || [0, 0, 0, 0]; sn += r[0]; sw += r[1]; su += r[2]; }
+    const clv = g.clv || [0, 0, 0];
+    const kpi = [
+      [g.n || 0, 'matches graded'],
+      [tn ? pct(tw / tn, 0) : '–', tn ? `tier picks landed (said ${pct(tp / tn, 0)})` : 'tier picks landed'],
+      [sn ? `${sw}/${sn}` : '–', sn ? `slips landed · ${su >= 0 ? '+' : ''}${su.toFixed(1)} units` : 'slips landed'],
+      [clv[0] ? sgn(clv[1] / clv[0]) : '–', clv[0] ? `closing-line value (${clv[0]} picks)` : 'closing-line value'],
+    ];
+    const tierRows = ['A', 'B', 'C'].map((t) => {
+      const r = tiers[t] || [0, 0, 0]; const hr = rate(r[1], r[0]), ex = r[0] ? r[2] / r[0] : null;
+      return `<tr><td><span class="tier tier-${t}">${t}</span>${TIER_NAME[t]}<span class="hit" data-tip="${r[0]} picks · landed ${hr == null ? '–' : pct(hr, 1)} · Statpad said ${ex == null ? '–' : pct(ex, 1)}"><i style="width:${(hr || 0) * 100}%"></i>${ex != null ? `<b style="left:calc(${ex * 100}% - 1px)"></b>` : ''}</span></td>
+        <td>${r[0]}</td><td>${hr == null ? '–' : pct(hr, 0)}</td><td>${ex == null ? '–' : pct(ex, 0)}</td><td class="${hr != null && hr - ex >= 0 ? 'edge-pos' : ''}">${hr == null ? '–' : sgn(hr - ex, 0).replace('%', ' pts')}</td></tr>`;
+    }).join('');
+    const slipRows = ['A', 'B', 'C'].map((t) => {
+      const r = sl[t] || [0, 0, 0, 0];
+      return `<tr><td><span class="tier tier-${t}">${t}</span>${TIER_NAME[t]}</td><td>${r[0]}</td><td>${r[1]}</td><td>${r[0] ? pct(r[1] / r[0], 0) : '–'}</td><td class="hide-sm">${r[0] ? pct(r[3] / r[0], 1) : '–'}</td><td class="${r[2] > 0 ? 'edge-pos' : ''}">${r[0] ? (r[2] >= 0 ? '+' : '') + r[2].toFixed(2) : '–'}</td></tr>`;
+    }).join('');
+    const ll = g.ll || [0, 0, 0, 0];
+    let llHtml = '<p class="note">Needs at least 30 graded games with market prices.</p>';
+    if (ll[0] >= 30) {
+      const v = [['Statpad', ll[1] / ll[0]], ['Market', ll[2] / ll[0]], ['Model only', ll[3] / ll[0]]];
+      const best = Math.min(...v.map((x) => x[1]));
+      const verdict = v[0][1] <= v[1][1] ? 'Statpad has been sharper than the bookmakers’ consensus.' : 'The bookmakers’ consensus has been sharper than Statpad so far.';
+      llHtml = `<div class="ll">${v.map(([n, x]) => `<div class="${x === best ? 'best' : ''}"><div class="v">${x.toFixed(3)}</div><div class="l">${n}</div></div>`).join('')}</div><p class="note">Log loss on 1X2 over ${ll[0]} games (lower is better). ${verdict}</p>`;
+    }
+    const picks = (T.picks || []).slice(-40).reverse();
+    const pickRows = picks.map((p) => {
+      const ko = Date.parse(p[2]);
+      return `<div class="res"><span class="wl ${p[13] ? 'w' : 'l'}">${p[13] ? 'Won' : 'Lost'}</span><span class="sel">${esc(keyLabel(p[8], p[3], p[4]))}</span>
+        <span class="pr">${odds(p[10])}${p[11] ? '' : ' est'}<small>${pct(p[9])}${p[12] !== '-' ? ' · ' + p[12] : ''}</small></span>
+        <span class="fxl">${esc(dFmt.format(ko))} · ${esc(p[3])} ${p[5]}–${p[6]} ${esc(p[4])} · ${esc(lgName(p[1]))}</span></div>`;
+    }).join('');
+    box.innerHTML = `
+      <div class="kpis" style="max-width:none;margin:0 0 14px">${kpi.map(([v, l]) => `<div class="kpi"><div class="kpi-v mono">${v}</div><div class="kpi-l">${esc(l)}</div></div>`).join('')}</div>
+      <div class="trk-grid">
+        <div class="card"><h4>Top picks by tier <span>bar = landed · mark = Statpad's chance</span></h4>
+          <div class="tt-wrap"><table class="tt"><thead><tr><th>Tier</th><th>Picks</th><th>Landed</th><th>Said</th><th>Diff</th></tr></thead><tbody>${tierRows}</tbody></table></div></div>
+        <div class="card"><h4>Slips at ${T.target || 10} odds <span>1 unit on each</span></h4>
+          <div class="tt-wrap"><table class="tt"><thead><tr><th>Tier</th><th>Played</th><th>Won</th><th>Hit</th><th class="hide-sm">Said</th><th>Units</th></tr></thead><tbody>${slipRows}</tbody></table></div>
+          ${g.void ? `<p class="note">${g.void} slips voided after a postponed game.</p>` : ''}</div>
+        <div class="card"><h4>Calibration <span>tap a dot</span></h4>${calChart(g.cal || [])}</div>
+        <div class="card"><h4>Statpad vs the market</h4>${llHtml}</div>
+        ${openSlipsCard(T)}
+        <div class="card"><h4>Latest results <span>top pick on each card</span></h4>${pickRows || '<p class="note">No graded picks yet.</p>'}</div>
+        <div class="card"><h4>Recent slips</h4>${slipList((T.slips || []).slice(-12).reverse()) || '<p class="note">No settled slips yet.</p>'}</div>
+      </div>
+      <p class="note">Recording since ${esc(since)}. A match's top pick is the one on its card at the last update before kick-off. Slips are the ${T.target || 10}-odds slips as they stood before their first game, with days counted in ${esc(T.tz || 'UTC')}. Results come from football-data.co.uk, usually within 2–4 days. Detail covers the last 90 days; the totals are all-time.</p>`;
+  }
+  function slipList(list) {
+    return list.map((s) => {
+      const res = s.res || 'open';
+      const lab = { won: 'Won', lost: 'Lost', void: 'Void', open: 'In play' }[res];
+      return `<div class="sliprow"><div class="hd"><span class="wl ${res === 'won' ? 'w' : res === 'lost' ? 'l' : 'o'}">${lab}</span><span class="tier tier-${s.t}">${s.t}</span>${esc(TIER_NAME[s.t])}<span class="mono">${odds(s.o)} · ${pct(s.p)}</span></div>
+        <div class="legdots">${s.legs.map((l) => `<span class="${l[6] === 1 ? 'w' : l[6] === 0 ? 'l' : ''}" data-tip="${esc(keyLabel(l[1], l[2], l[3]))} · ${esc(l[2])} v ${esc(l[3])} · ${odds(l[5])}${l[6] === 1 ? ' · won' : l[6] === 0 ? ' · lost' : ' · waiting'}">${l[6] === 1 ? '✓' : l[6] === 0 ? '✕' : '•'} ${esc(String(l[2]).slice(0, 12))}</span>`).join('')}</div>
+        <div class="fxl" style="font-size:11.5px;color:var(--ink-3);margin-top:6px">${esc(s.d)} · ${s.legs.length} legs</div></div>`;
+    }).join('');
+  }
+  function openSlipsCard(T) {
+    const o = (T.open || []).slice(-6).reverse();
+    return o.length ? `<div class="card"><h4>Slips in play</h4>${slipList(o)}</div>` : '';
+  }
+  function calChart(bins) {
+    const pts = bins.map((b, i) => ({ i, n: b[0], x: b[0] ? b[1] / b[0] : null, y: b[0] ? b[2] / b[0] : null })).filter((p) => p.n >= 5);
+    if (!pts.length) return '<p class="note">Needs a few graded games first.</p>';
+    const W = 320, H = 240, L = 34, B = 26, R = 10, T = 10;
+    const x = (v) => L + v * (W - L - R), y = (v) => H - B - v * (H - B - T);
+    const nmax = Math.max(...pts.map((p) => p.n));
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule-2)"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v * 100}%</text><text x="${x(v)}" y="${H - 8}" text-anchor="middle">${v * 100}%</text>`).join('');
+    const dots = pts.map((p) => `<circle class="pt" cx="${x(p.x).toFixed(1)}" cy="${y(p.y).toFixed(1)}" r="${(5 + 6 * Math.sqrt(p.n / nmax)).toFixed(1)}" data-tip="Statpad said ${pct(p.x, 1)} · happened ${pct(p.y, 1)} · ${p.n} outcomes"/>`).join('');
+    return `<svg class="cal" viewBox="0 0 ${W} ${H}" role="img" aria-label="Calibration: predicted against actual frequency">${grid}
+      <line x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(1)}" stroke="var(--ink-3)" stroke-dasharray="4 4"/>${dots}</svg>
+      <p class="note">Each dot groups home, draw and away outcomes Statpad gave a similar chance. Dots on the dashed line mean its percentages come true as often as stated; dots below it mean it was too confident. Bigger dots hold more games.</p>
+      <table class="tt" style="margin-top:6px"><thead><tr><th>Statpad said</th><th>Happened</th><th>Outcomes</th></tr></thead><tbody>${pts.map((p) => `<tr><td style="font-family:var(--f-mono);font-weight:500;font-size:12.5px">${pct(p.x)}</td><td>${pct(p.y)}</td><td>${p.n}</td></tr>`).join('')}</tbody></table>`;
+  }
+  // tap / hover tooltips for chart marks
+  (() => {
+    const tip = $('#tip'); let cur = null;
+    const show = (el) => {
+      cur = el; tip.textContent = el.dataset.tip; tip.classList.add('show');
+      const r = el.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+      let left = r.left + r.width / 2 - tw / 2; left = Math.max(8, Math.min(window.innerWidth - tw - 8, left));
+      let top = r.top - th - 8; if (top < 8) top = r.bottom + 8;
+      tip.style.left = left + 'px'; tip.style.top = top + 'px';
+      document.querySelectorAll('.pt.on').forEach((n) => n.classList.remove('on')); if (el.classList.contains('pt')) el.classList.add('on');
+    };
+    const hide = () => { cur = null; tip.classList.remove('show'); document.querySelectorAll('.pt.on').forEach((n) => n.classList.remove('on')); };
+    document.addEventListener('pointerover', (e) => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el && e.pointerType === 'mouse') show(el); });
+    document.addEventListener('pointerout', (e) => { if (cur && e.pointerType === 'mouse' && !e.relatedTarget?.closest?.('[data-tip]')) hide(); });
+    document.addEventListener('click', (e) => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el) show(el); else if (cur) hide(); });
+    window.addEventListener('scroll', hide, { passive: true });
+  })();
+
   // ---------------- method ----------------
   function renderMethod() {
     const d = S.data, src = d.sources || {}, o = d.odds || {};
@@ -1222,12 +1402,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Data status</h3>
       <div class="status">
         <div><span>Data generated</span><b>${new Date(d.generated).toLocaleString()}</b></div>
-        ${st('results', 'Results &amp; tables')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('snapshot', 'Starter snapshot')}
+        ${st('results', 'Results &amp; tables')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('snapshot', 'Starter snapshot')}
         <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.interval_min ? ' · refresh every ' + (o.interval_min >= 120 ? Math.round(o.interval_min / 60) + ' h' : Math.round(o.interval_min) + ' min') : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
         <div><span>Matches loaded</span><b>${d.matches.length} · ${Object.keys(d.leagues || {}).length} competitions</b></div>
       </div>
       <h3>The model</h3>
       <p>Each league's results feed a Poisson model: home goals = μ × home advantage × home attack × away defence, and the same for the away side without the home bonus. Games are weighted with a 180-day half-life, last season counts 60%, and every team is pulled towards average by six phantom games so a hot fortnight doesn't swing the ratings. Newly promoted sides start slightly below average.</p>
+      <p>National teams in the Nations League and friendlies are rated the same way, from every international result of the last six years. Neutral venues get no home bonus, and friendlies count 60% because line-ups are rotated. Friendly picks lose an extra 3 points and are kept out of the two safest slip tiers.</p>
       <p>When a match has prices, the bookmakers' margin is removed and the consensus is formed with Pinnacle and the exchanges weighted up. Statpad fits the two expected-goals numbers that reproduce that consensus, including the over/under 2.5 line where available, and blends them 80/20 with the model in log space. The market is sharper than any table-based model, so it gets the larger share. Every market comes from a Dixon–Coles scoreline grid, which corrects the 0-0, 1-0, 0-1 and 1-1 cells that a plain Poisson model gets wrong.</p>
       <h3>Confidence tiers</h3>
       <p><b>Nearly definite</b> legs are 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. Picks lose a 3-point safety haircut when they rest on the model alone, another 3 when model and market disagree by more than 12 points, and 1 more when prices are over a day and a half old. Big games between two top-six sides are kept out of the two safest tiers.</p>
@@ -1242,6 +1423,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
 
   // ---------------- render orchestration ----------------
   function render() {
+    if (S.tab === 'track') { renderNav(); renderTrack(); return; }
     if (!S.data) return;
     if (!S.ready) { renderNav(); showProgress(); return; }
     renderNav(); renderLive();

@@ -145,6 +145,8 @@ comp('DFB', 'DFB-Pokal', 'Germany', 'cups', 0, oa=['soccer_germany_dfb_pokal'])
 comp('CDR', 'Copa del Rey', 'Spain', 'cups', 0, oa=['soccer_spain_copa_del_rey'])
 comp('CI', 'Coppa Italia', 'Italy', 'cups', 0, oa=['soccer_italy_coppa_italia'])
 comp('CDF', 'Coupe de France', 'France', 'cups', 0, oa=['soccer_france_coupe_de_france'])
+comp('UNL', 'UEFA Nations League', 'Europe', 'intl', 0, oa=['soccer_uefa_nations_league'])
+comp('INTF', 'International friendlies', 'World', 'intl', 0)
 
 FD_DIV = {v['fd']: k for k, v in L.items() if v['fd']}
 X_COUNTRY = {'Austria': 'AUT1', 'Switzerland': 'SUI1', 'Denmark': 'DEN1', 'Norway': 'NOR1', 'Sweden': 'SWE1',
@@ -715,6 +717,8 @@ def sport_plan(state, quiet=False):
             continue
         if key in OA_KEY:
             plan[key] = OA_KEY[key]
+        elif intl_lk(key, s.get('title')):
+            plan[key] = intl_lk(key, s.get('title'))
         elif SPORTS_MODE == 'all' or auto_competition(key):
             lk = 'X_' + key.replace('soccer_', '')[:28]
             if lk not in L:
@@ -963,6 +967,7 @@ def build(state, prev, seed=None):
         for row in lg.get('table') or []:
             teams.add(lk, row[0])
     pos = table_pos(leagues)
+    it = IntlTeams(state.get('intl'))
     lo, hi = NOW - timedelta(hours=2.5), NOW + timedelta(days=DAYS)
 
     fx = []   # {'lk','ko','h','a','fd_mkt','api_mkt','api_id'}
@@ -1010,6 +1015,9 @@ def build(state, prev, seed=None):
                 rh, ra = teams.resolve_global(e['h']), teams.resolve_global(e['a'])
                 h = rh[1] if rh else e['h']
                 a = ra[1] if ra else e['a']
+            elif L[lk]['group'] == 'intl':
+                h = it.resolve(e['h']) or e['h']
+                a = it.resolve(e['a']) or e['a']
             else:
                 h = teams.resolve(lk, e['h']) or e['h']
                 a = teams.resolve(lk, e['a']) or e['a']
@@ -1073,6 +1081,15 @@ def build(state, prev, seed=None):
         clash = bool(ph and pa and ph[0] <= 6 and pa[0] <= 6 and ph[1] >= 10 and pa[1] >= 10)
         if clash and L[f['lk']]['group'] == 'cups':
             clash = all(d and L[d]['strength'] >= -0.40 for d in (dom_h, dom_a))
+        fr = False
+        if L[f['lk']]['group'] == 'intl':
+            lam, cross = it.expected(f['lk'], f['h'], f['a']), False
+            rk_h, rk_a = it.rank.get(f['h']), it.rank.get(f['a'])
+            form = (state.get('intl') or {}).get('form') or {}
+            ph = (rk_h, 300, form.get(f['h'])) if rk_h else None     # position = world rank in Statpad's ratings
+            pa = (rk_a, 300, form.get(f['a'])) if rk_a else None
+            clash = bool(f['lk'] == 'UNL' and rk_h and rk_a and rk_h <= 12 and rk_a <= 12)
+            fr = f['lk'] == 'INTF'
         hist = list(old.get('hist') or [])
         if mkt and mkt.get('avg'):
             pt = [iso(NOW)[:16] + 'Z', *[round(x, 2) for x in mkt['avg']]]
@@ -1084,7 +1101,7 @@ def build(state, prev, seed=None):
             'ph': ph[0] if ph else None, 'pa': pa[0] if pa else None,
             'fh': ph[2] if ph else None, 'fa': pa[2] if pa else None,
             'dh': dom_h, 'da': dom_a,
-            'lm': lam, 'xl': cross, 'mkt': mkt, 'hist': hist, 'clash': clash, 'tbc': tbc, 'ks': ks,
+            'lm': lam, 'xl': cross, 'mkt': mkt, 'hist': hist, 'clash': clash, 'tbc': tbc, 'ks': ks, 'fr': fr,
         })
 
     # competitions no source covered this run keep their previous (or starter) fixtures until kick-off
@@ -1120,6 +1137,443 @@ def build(state, prev, seed=None):
         'leagues': out_leagues,
         'matches': matches,
     }
+
+
+# ----------------------------------------------------------------------------------------------
+# National teams: UEFA Nations League and international friendlies. Fixtures and prices come
+# from The Odds API (fixture lists are free with a key); ratings and results come from the open
+# international results dataset (martj42/international_results on GitHub).
+# ----------------------------------------------------------------------------------------------
+INTL_URL = 'https://raw.githubusercontent.com/martj42/international_results/master/results.csv'
+INTL_LKS = ('UNL', 'INTF')
+INTL_TOURN = {'UEFA Nations League': 'UNL', 'Friendly': 'INTF'}
+INTL_HALF_LIFE = 540.0      # days: national teams play ~10 games a year
+INTL_YEARS = 6
+INTL_K = 4.0
+INTL_ALIAS = {'czechia': 'czech republic', 'ireland': 'republic of ireland', 'eire': 'republic of ireland',
+              'usa': 'united states', 'korea republic': 'south korea', 'republic of korea': 'south korea',
+              'korea dpr': 'north korea', 'cote divoire': 'ivory coast', 'turkiye': 'turkey', 'holland': 'netherlands',
+              'bosnia herzegovina': 'bosnia and herzegovina', 'macedonia': 'north macedonia', 'fyr macedonia': 'north macedonia',
+              'congo dr': 'dr congo', 'democratic republic of congo': 'dr congo', 'cape verde islands': 'cape verde',
+              'chinese taipei': 'taiwan', 'china pr': 'china', 'ir iran': 'iran', 'curacao': 'curacao',
+              'united states of america': 'united states', 'swaziland': 'eswatini'}
+
+
+def intl_key(name):
+    k = norm(name)
+    return INTL_ALIAS.get(k, k)
+
+
+def intl_lk(key, title=''):
+    """Map an Odds API competition to UNL / INTF (men's senior national teams only)."""
+    k = (key + ' ' + (title or '')).lower()
+    if any(w in k for w in ('women', 'u17', 'u19', 'u20', 'u21', 'u23', 'youth', 'olympic', 'club')):
+        return None
+    if 'nations' in k and 'uefa' in k:
+        return 'UNL'
+    if 'friendl' in k:
+        return 'INTF'
+    return None
+
+
+def fit_intl(games):
+    """games: (date, home, away, hg, ag, neutral, weight). Same Poisson model as the leagues, with a
+    home bonus only when the game isn't at a neutral venue."""
+    xi = math.log(2) / INTL_HALF_LIFE
+    teams = sorted({g[1] for g in games} | {g[2] for g in games})
+    ix = {t: i for i, t in enumerate(teams)}
+    W = []
+    for d, h, a, hg, ag, neu, wt in games:
+        age = max(0.0, (NOW - d).total_seconds() / 86400)
+        W.append((ix[h], ix[a], hg, ag, 0.0 if neu else 1.0, math.exp(-xi * age) * wt))
+    n = len(teams)
+    att, dfn = [0.0] * n, [0.0] * n
+    sw = sum(w for *_, w in W)
+    mu = math.log(max(0.3, sum(w * ag for _, _, _, ag, _, w in W) / sw))
+    home = 0.25
+    for _ in range(150):
+        g0 = math.exp(mu + home / 2)
+        num, den = [0.0] * n, [0.0] * n
+        for h, a, hg, ag, ho, w in W:
+            num[h] += w * hg; den[h] += w * math.exp(mu + home * ho + dfn[a])
+            num[a] += w * ag; den[a] += w * math.exp(mu + dfn[h])
+        na = [math.log((num[i] + INTL_K * g0) / (den[i] + INTL_K * g0)) for i in range(n)]
+        num, den = [0.0] * n, [0.0] * n
+        for h, a, hg, ag, ho, w in W:
+            num[a] += w * hg; den[a] += w * math.exp(mu + home * ho + na[h])
+            num[h] += w * ag; den[h] += w * math.exp(mu + na[a])
+        nd = [math.log((num[i] + INTL_K * g0) / (den[i] + INTL_K * g0)) for i in range(n)]
+        ma, md = sum(na) / n, sum(nd) / n
+        na = [x - ma for x in na]
+        nd = [x - md for x in nd]
+        # mu from neutral + away goals, home bonus from the remaining home goals
+        e_away = sum(w * math.exp(na[a] + nd[h]) for h, a, _, _, _, w in W)
+        g_away = sum(w * ag for _, _, _, ag, _, w in W)
+        e_hn = sum(w * math.exp(na[h] + nd[a]) for h, a, _, _, ho, w in W if not ho)
+        g_hn = sum(w * hg for _, _, hg, _, ho, w in W if not ho)
+        new_mu = math.log((g_away + g_hn) / (e_away + e_hn))
+        e_hh = sum(w * math.exp(new_mu + na[h] + nd[a]) for h, a, _, _, ho, w in W if ho)
+        g_hh = sum(w * hg for _, _, hg, _, ho, w in W if ho)
+        new_home = math.log(g_hh / e_hh) if e_hh > 0 and g_hh > 0 else 0.25
+        delta = max(max(abs(x - y) for x, y in zip(na, att)), max(abs(x - y) for x, y in zip(nd, dfn)), abs(new_mu - mu), abs(new_home - home))
+        att, dfn, mu, home = na, nd, new_mu, new_home
+        if delta < 1e-6:
+            break
+    return {'mu': round(mu, 5), 'home': round(home, 5), 'ratings': {t: [round(att[ix[t]], 4), round(dfn[ix[t]], 4)] for t in teams}}
+
+
+def load_intl():
+    r = fetch(INTL_URL)
+    if r.status != 200 or not r.body:
+        return None
+    rows = list(csv.DictReader(io.StringIO(text_of(r.body))))
+    since = NOW - timedelta(days=365 * INTL_YEARS)
+    games, recent, forms = [], {}, {}
+    for row in rows:
+        d = parse_date(row.get('date'))
+        hg, ag = fnum(row.get('home_score')), fnum(row.get('away_score'))
+        h, a, tour = (row.get('home_team') or '').strip(), (row.get('away_team') or '').strip(), (row.get('tournament') or '').strip()
+        if not d or d < since or d > NOW or hg is None or ag is None or not h or not a:
+            continue
+        neutral = (row.get('neutral') or '').strip().upper() == 'TRUE'
+        games.append((d, h, a, int(hg), int(ag), neutral, 0.6 if tour == 'Friendly' else 1.0))
+        lk = INTL_TOURN.get(tour)
+        if lk and NOW - d < timedelta(days=45):
+            recent.setdefault(lk, []).append([d.strftime('%Y-%m-%d'), h, a, int(hg), int(ag)])
+    if len(games) < 500:
+        return None
+    games.sort(key=lambda g: g[0])
+    for d, h, a, hg, ag, _n, _w in games:
+        for t, gf, ga in ((h, hg, ag), (a, ag, hg)):
+            forms[t] = (forms.get(t, '') + ('W' if gf > ga else 'D' if gf == ga else 'L'))[-5:]
+    fit = fit_intl(games)
+    fit['form'] = forms
+    fit['games'] = len(games)
+    fit['last'] = games[-1][0].strftime('%Y-%m-%d')
+    return fit, recent
+
+
+class IntlTeams:
+    def __init__(self, fit):
+        self.fit = fit or {}
+        self.by_key = {intl_key(t): t for t in (self.fit.get('ratings') or {})}
+        strength = sorted((self.fit.get('ratings') or {}).items(), key=lambda kv: kv[1][1] - kv[1][0])
+        self.rank = {t: i + 1 for i, (t, _) in enumerate(strength)}
+
+    def resolve(self, raw):
+        k = intl_key(raw)
+        if k in self.by_key:
+            return self.by_key[k]
+        m = difflib.get_close_matches(k, list(self.by_key), n=1, cutoff=0.88)
+        return self.by_key[m[0]] if m else None
+
+    def expected(self, lk, h, a):
+        r = self.fit.get('ratings') or {}
+        if h not in r or a not in r:
+            return None
+        home = self.fit['home'] * (0.6 if lk == 'INTF' else 1.0)   # friendlies are often at neutral or half-empty venues
+        return [round(math.exp(self.fit['mu'] + home + r[h][0] + r[a][1]), 4), round(math.exp(self.fit['mu'] + r[a][0] + r[h][1]), 4)]
+
+
+# ----------------------------------------------------------------------------------------------
+# Track record: every prediction is saved before kick-off (using the site's own engine, run with
+# Node from index.html, so the record is exactly what the page showed), graded once the result is
+# in, and kept in track.json. The workflow commits that file, which also keeps GitHub's schedule
+# alive (GitHub pauses scheduled runs after 60 days without a commit).
+# ----------------------------------------------------------------------------------------------
+TRACK_FILE = Path(ENV('STATPAD_TRACK_FILE') or ROOT / 'track.json')
+INDEX_FILE = Path(ENV('STATPAD_INDEX') or ROOT / 'index.html')
+TRACK_TZ = (ENV('STATPAD_TIMEZONE') or 'UTC').strip() or 'UTC'
+TRACK_TARGET = 10          # slips are recorded at the site's default 10-odds target
+TRACK_KEEP_DAYS = 90       # detail rows kept; the summary counts are all-time
+SAVE_EVERY_H = 6           # commit new grades at most this often
+KEEPALIVE_DAYS = 20        # commit at least this often even when nothing changed
+
+NODE_ENGINE = r"""
+const fs = require('fs');
+const [, , htmlPath, inPath] = process.argv;
+const html = fs.readFileSync(htmlPath, 'utf8');
+const s = html.indexOf('/* Statpad engine'), e = html.indexOf('module.exports = ENGINE;', s);
+if (s < 0 || e < 0) { console.error('engine not found in index.html'); process.exit(2); }
+const mod = { exports: null };
+new Function('module', html.slice(s, e) + 'module.exports = ENGINE;')(mod);
+const E = mod.exports;
+const inp = JSON.parse(fs.readFileSync(inPath, 'utf8'));
+const now = Date.parse(inp.now);
+let fmt;
+try { fmt = new Intl.DateTimeFormat('en-CA', { timeZone: inp.tz, year: 'numeric', month: '2-digit', day: '2-digit' }); }
+catch (err) { fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }); }
+const out = { picks: {}, slips: {} }, byDay = {};
+for (const m of inp.matches) {
+  let a = null;
+  try { a = E.analyse(m, now); } catch (err) { a = null; }
+  if (!a) continue;
+  out.picks[m.id] = {
+    src: a.src, p: [a.p.H, a.p.D, a.p.A], pm: a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A] : null, m: a.mkt ? a.mkt.p : null,
+    k: a.top ? a.top.key : null, pp: a.top ? a.top.pAdj : null, pr: a.top ? a.top.price : null, r: a.top ? !!a.top.real : false,
+  };
+  if (Date.parse(m.ko) > now) { const d = fmt.format(new Date(m.ko)); (byDay[d] = byDay[d] || []).push({ m, a }); }
+}
+for (const [d, list] of Object.entries(byDay)) {
+  out.slips[d] = ['C', 'B', 'A'].map((t) => {
+    const sl = E.buildSlip(list, t, inp.target);
+    return { t, f: sl.feasible, o: sl.odds, p: sl.prob,
+      legs: sl.legs.map((l) => ({ id: l.m.id, k: l.s.key, pr: l.s.price, pp: l.s.pAdj, r: !!l.s.real, ko: l.m.ko, h: l.m.h, a: l.m.a })) };
+  });
+}
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+def run_engine(doc):
+    import shutil
+    import subprocess
+    import tempfile
+    node = shutil.which('node')
+    if not node or not INDEX_FILE.exists():
+        log('track: skipped (needs node and index.html)')
+        return None
+    with tempfile.TemporaryDirectory() as td:
+        js, inp = Path(td) / 'engine_run.js', Path(td) / 'in.json'
+        js.write_text(NODE_ENGINE)
+        inp.write_text(json.dumps({'now': iso(NOW), 'tz': TRACK_TZ, 'target': TRACK_TARGET, 'matches': doc['matches']}))
+        r = subprocess.run([node, str(js), str(INDEX_FILE), str(inp)], capture_output=True, text=True, timeout=300)
+        if r.returncode != 0:
+            log('track: engine failed', (r.stderr or '')[-300:])
+            return None
+        return json.loads(r.stdout)
+
+
+def settle(k, hs, as_):
+    t = hs + as_
+    return {'H': hs > as_, 'D': hs == as_, 'A': as_ > hs, '1X': hs >= as_, 'X2': as_ >= hs, 'O15': t > 1, 'O25': t > 2,
+            'U25': t < 3, 'U35': t < 4, 'BTTS': hs > 0 and as_ > 0, 'BTTS_N': not (hs > 0 and as_ > 0),
+            'H_O05': hs > 0, 'A_O05': as_ > 0, 'H_O15': hs > 1, 'A_O15': as_ > 1}.get(k)
+
+
+def tier_of(p):
+    return None if p is None else 'A' if p >= 0.82 else 'B' if p >= 0.70 else 'C' if p >= 0.58 else None
+
+
+def recent_results(res):
+    """Last three weeks of results per league from the football-data download: [date, home, away, hg, ag]."""
+    out = {}
+    for lk, (games, _) in res.items():
+        rows = [[d.strftime('%Y-%m-%d'), h, a, hg, ag] for d, h, a, hg, ag, _c in games if NOW - d < timedelta(days=21)]
+        if rows:
+            out[lk] = rows
+    return out
+
+
+def refresh_scores(state):
+    """Results for competitions football-data doesn't cover (UEFA, cups, Saudi...), from The Odds API.
+    Costs 2 credits per competition, so it only runs on paid plans (plenty of credits left)."""
+    rem = (state.get('quota') or {}).get('remaining')
+    if not API_KEY or rem is None or rem < 1500:
+        return 0
+    pend = state.get('track_pending') or {}
+    covered = set(state.get('recent_results') or {})
+    need = {r['lk'] for r in pend.values() if r['lk'] not in covered
+            and NOW - timedelta(days=3) < parse_iso(r['ko']) < NOW - timedelta(hours=2)}
+    plan = sport_plan(state, quiet=True)
+    by_lk = {}
+    for key, lk in plan.items():
+        by_lk.setdefault(lk, key)
+    done = 0
+    sc_at = state.setdefault('scores_at', {})
+    store = state.setdefault('api_scores', {})
+    for lk in need:
+        key = by_lk.get(lk)
+        if not key or (sc_at.get(key) and NOW - parse_iso(sc_at[key]) < timedelta(hours=12)):
+            continue
+        data = oa_get(f'/sports/{key}/scores', {'daysFrom': 3, 'dateFormat': 'iso'}, state)
+        sc_at[key] = iso(NOW)
+        if not isinstance(data, list):
+            continue
+        rows = [r for r in store.get(lk, []) if NOW - parse_iso(r[0] + 'T00:00:00Z') < timedelta(days=10)]
+        for ev in data:
+            if not ev.get('completed') or not ev.get('scores'):
+                continue
+            sc = {s.get('name'): s.get('score') for s in ev['scores']}
+            try:
+                hg, ag = int(sc.get(ev['home_team'])), int(sc.get(ev['away_team']))
+            except (TypeError, ValueError):
+                continue
+            rows.append([ev['commence_time'][:10], ev['home_team'], ev['away_team'], hg, ag])
+        store[lk] = rows
+        done += 1
+    return done
+
+
+def find_result(rec, state):
+    d0 = parse_iso(rec['ko']).date()
+    for source in ((state.get('recent_results') or {}).get(rec['lk']) or [], (state.get('intl_recent') or {}).get(rec['lk']) or [],
+                   (state.get('api_scores') or {}).get(rec['lk']) or []):
+        for dd, h, a, hg, ag in source:
+            dt = datetime.strptime(dd[:10], '%Y-%m-%d').date()
+            if abs((dt - d0).days) <= 1 and same_team(h, rec['h']) and same_team(a, rec['a']):
+                return int(hg), int(ag)
+    return None
+
+
+def new_agg():
+    return {'n': 0, 'nr': 0, 'void': 0,
+            'tiers': {t: [0, 0, 0.0] for t in ('A', 'B', 'C', '-')},          # picks, wins, sum of stated chance
+            'cal': [[0, 0.0, 0] for _ in range(10)],                          # 1X2 outcomes: count, sum p, happened
+            'll': [0, 0.0, 0.0, 0.0],                                         # games, log loss: Statpad, market, model
+            'clv': [0, 0.0, 0],                                               # picks, sum CLV, beat the close
+            'slips': {t: [0, 0, 0.0, 0.0] for t in ('A', 'B', 'C')}}          # played, won, units profit, sum chance
+
+
+def load_track(state):
+    tr = state.get('track')
+    repo = load_json(TRACK_FILE)
+    if repo and (not tr or (repo.get('updated') or '') > (tr.get('updated') or '')):
+        tr = {'since': repo.get('since') or iso(NOW), 'updated': repo.get('updated') or iso(NOW),
+              'saved_at': repo.get('saved_at'), 'agg': repo.get('agg') or new_agg(),
+              'picks': repo.get('picks') or [], 'slips': repo.get('slips') or [], 'new': 0}
+        if not state.get('slips_open') and repo.get('open'):
+            state['slips_open'] = repo['open']
+    if not tr:
+        tr = {'since': iso(NOW), 'updated': iso(NOW), 'saved_at': None, 'agg': new_agg(), 'picks': [], 'slips': [], 'new': 0}
+    state['track'] = tr
+    return tr, repo
+
+
+def track_update(doc, state):
+    tr, repo = load_track(state)
+    agg = tr['agg']
+    pend = state.setdefault('track_pending', {})
+    open_ = state.setdefault('slips_open', [])
+    days = state.setdefault('slip_days', {})
+    eng = run_engine(doc)
+    by_id = {m['id']: m for m in doc['matches']}
+    r4 = lambda xs: [round(x, 4) for x in xs] if xs else None
+
+    # 1) snapshot every open match (the last snapshot before kick-off is the one that gets graded)
+    if eng:
+        for mid, e in eng['picks'].items():
+            m = by_id.get(mid)
+            if not m or not e.get('k') or parse_iso(m['ko']) <= NOW:
+                continue
+            best = (m.get('mkt') or {}).get('best')
+            rec = pend.get(mid) or {'id': mid, 'op': None}
+            rec.update({'lk': m['lk'], 'ko': m['ko'], 'h': m['h'], 'a': m['a'], 'src': e['src'], 'p': r4(e['p']),
+                        'pm': r4(e['pm']), 'm': r4(e['m']), 'k': e['k'], 'pp': round(e['pp'], 4), 'pr': e['pr'],
+                        'r': bool(e['r']), 'cl': best})
+            if rec.get('op') is None and best:
+                rec['op'] = best
+            pend[mid] = rec
+
+        # 2) slips: keep the latest version for each day, freeze it once its first game kicks off
+        for d in sorted(set(days) | set(eng['slips'])):
+            rec = days.setdefault(d, {'latest': None, 'frozen': False})
+            if rec['frozen']:
+                continue
+            lat = rec.get('latest')
+            begun = lat and any(parse_iso(l['ko']) <= NOW for s in lat for l in s['legs'])
+            if lat and (begun or d not in eng['slips']):
+                for s in lat:
+                    if s['f'] and s['legs']:
+                        open_.append({'d': d, 't': s['t'], 'o': round(s['o'], 3), 'p': round(s['p'], 4),
+                                      'legs': [[l['id'], l['k'], l['h'], l['a'], l['ko'], l['pr'], None] for l in s['legs']]})
+                rec['frozen'] = True
+            elif d in eng['slips']:
+                rec['latest'] = eng['slips'][d]
+        cutoff = (NOW - timedelta(days=12)).strftime('%Y-%m-%d')
+        for d in [d for d in days if d < cutoff]:
+            del days[d]
+
+    # 3) grade finished matches
+    changed = False
+    scores = state.setdefault('scores', {})
+    for mid, rec in list(pend.items()):
+        ko = parse_iso(rec['ko'])
+        if ko > NOW - timedelta(hours=2):
+            continue
+        res = find_result(rec, state)
+        if res is None:
+            if NOW - ko > timedelta(days=30 if rec['lk'] in INTL_LKS else 10):
+                del pend[mid]
+                agg['nr'] += 1
+                changed = True
+            continue
+        hs, as_ = res
+        won = bool(settle(rec['k'], hs, as_))
+        t = tier_of(rec['pp']) or '-'
+        agg['n'] += 1
+        tt = agg['tiers'][t]
+        tt[0] += 1; tt[1] += int(won); tt[2] = round(tt[2] + rec['pp'], 4)
+        oc = 0 if hs > as_ else 1 if hs == as_ else 2
+        for i in range(3):
+            b = agg['cal'][min(9, int(rec['p'][i] * 10))]
+            b[0] += 1; b[1] = round(b[1] + rec['p'][i], 4); b[2] += int(i == oc)
+        if rec.get('m') and rec.get('pm'):
+            ll = agg['ll']
+            ll[0] += 1
+            ll[1] = round(ll[1] - math.log(max(1e-6, rec['p'][oc])), 5)
+            ll[2] = round(ll[2] - math.log(max(1e-6, rec['m'][oc])), 5)
+            ll[3] = round(ll[3] - math.log(max(1e-6, rec['pm'][oc])), 5)
+        clv = None
+        side = {'H': 0, 'D': 1, 'A': 2}.get(rec['k'])
+        if side is not None and rec.get('r') and rec.get('op') and rec.get('cl') and rec['cl'][side] > 1:
+            clv = round(rec['op'][side] / rec['cl'][side] - 1, 4)
+            c = agg['clv']
+            c[0] += 1; c[1] = round(c[1] + clv, 4); c[2] += int(clv > 0)
+        tr['picks'].append([mid, rec['lk'], rec['ko'], rec['h'], rec['a'], hs, as_, rec['src'], rec['k'], rec['pp'],
+                            rec['pr'], int(bool(rec['r'])), t, int(won), clv] + rec['p'])
+        scores[mid] = [hs, as_, rec['ko']]
+        del pend[mid]
+        changed = True
+
+    # 4) settle slips leg by leg
+    for s in list(open_):
+        legs = s['legs']
+        for l in legs:
+            if l[6] is None and l[0] in scores:
+                l[6] = int(bool(settle(l[1], scores[l[0]][0], scores[l[0]][1])))
+        res = None
+        if any(l[6] == 0 for l in legs):
+            res = 'lost'
+        elif all(l[6] == 1 for l in legs):
+            res = 'won'
+        elif any(l[6] is None and NOW - parse_iso(l[4]) > timedelta(days=30 if l[0].split('-')[0] in INTL_LKS else 10) for l in legs):
+            res = 'void'
+        if res:
+            s['res'] = res
+            open_.remove(s)
+            tr['slips'].append(s)
+            if res == 'void':
+                agg['void'] += 1
+            else:
+                a = agg['slips'][s['t']]
+                a[0] += 1; a[1] += int(res == 'won'); a[2] = round(a[2] + (s['o'] - 1 if res == 'won' else -1), 3)
+                a[3] = round(a[3] + s['p'], 4)
+            changed = True
+
+    for k in [k for k, v in scores.items() if NOW - parse_iso(v[2]) > timedelta(days=30)]:
+        del scores[k]
+    keep_from = iso(NOW - timedelta(days=TRACK_KEEP_DAYS))
+    tr['picks'] = [p for p in tr['picks'] if p[2] >= keep_from]
+    keep_day = (NOW - timedelta(days=TRACK_KEEP_DAYS)).strftime('%Y-%m-%d')
+    tr['slips'] = [s for s in tr['slips'] if s['d'] >= keep_day]
+    if changed:
+        tr['updated'] = iso(NOW)
+        tr['new'] = tr.get('new', 0) + 1
+
+    pub = {'app': 'Statpad', 'schema': 1, 'since': tr['since'], 'updated': tr['updated'], 'saved_at': tr.get('saved_at'),
+           'tz': TRACK_TZ, 'target': TRACK_TARGET, 'agg': agg, 'picks': tr['picks'], 'slips': tr['slips'],
+           'open': open_, 'pending': len(pend)}
+    # commit to the repo: new grades at most every few hours, and a keep-alive commit regardless
+    saved = parse_iso(tr['saved_at']) if tr.get('saved_at') else None
+    keepalive = repo is None or saved is None or NOW - saved >= timedelta(days=KEEPALIVE_DAYS)
+    if keepalive or (tr.get('new') and NOW - saved >= timedelta(hours=SAVE_EVERY_H)):
+        tr['saved_at'] = pub['saved_at'] = iso(NOW)
+        tr['new'] = 0
+        TRACK_FILE.write_text(json.dumps(pub, ensure_ascii=False, separators=(',', ':')))
+        log('track: saved track.json for commit' + (' (keep-alive)' if keepalive else ''))
+    log(f"track: {len(pend)} predictions waiting, {agg['n']} graded, {len(open_)} slips in play")
+    return pub
 
 
 # ----------------------------------------------------------------------------------------------
@@ -1160,15 +1614,26 @@ def main():
             log('source error in', fn.__name__, '->', repr(e))
             return default
 
-    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues'):
+    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state:
         res = safe(load_results, {})
         if res:
             state['leagues'] = safe(lambda: compute_leagues(res, Teams()), state.get('leagues') or {})
+            state['recent_results'] = safe(lambda: recent_results(res), state.get('recent_results') or {})
             last['results'] = iso(NOW)
             src['results'] = {'ok': True, 'at': iso(NOW), 'leagues': len(res)}
         else:
             src['results'] = {'ok': False, 'at': iso(NOW)}
         log('results:', len(res), 'leagues')
+
+    if due(state, 'intl', RESULTS_EVERY):
+        last['intl'] = iso(NOW)   # on its own timer, so a failed download can't trigger reloads every run
+        got = safe(load_intl, None)
+        if got:
+            state['intl'], state['intl_recent'] = got
+            src['intl'] = {'ok': True, 'at': iso(NOW), 'note': f"{len(state['intl']['ratings'])} national teams, results to {state['intl']['last']}"}
+            log('national teams:', len(state['intl']['ratings']), 'rated, results to', state['intl']['last'])
+        else:
+            src['intl'] = {'ok': False, 'at': iso(NOW)}
 
     if due(state, 'fixtures', FIXTURES_EVERY) or 'of_fixtures' not in state:
         fx, ok = safe(load_fd_fixtures, ([], False))
@@ -1188,6 +1653,17 @@ def main():
     changed = prev is None or stable(doc) != stable(prev) or FORCE
     if not doc['matches'] and prev and prev.get('matches') and not FORCE:
         changed = False   # never replace a live board with an empty one
+
+    n_sc = safe(lambda: refresh_scores(state), 0)
+    if n_sc:
+        log('results from The Odds API for', n_sc, 'competitions')
+    track = safe(lambda: track_update(doc, state), None)
+    if track:
+        (OUT_DIR / 'track.json').write_text(json.dumps(track, ensure_ascii=False, separators=(',', ':')))
+        sig = json.dumps([track['agg'], len(track['picks']), len(track['slips']), track['open'], track['pending']])
+        if sig != state.get('track_sig'):
+            state['track_sig'] = sig
+            changed = True
     body = json.dumps(doc, ensure_ascii=False, separators=(',', ':'))
     (OUT_DIR / 'matches.json').write_text(body)
     if changed:
