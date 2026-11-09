@@ -1,0 +1,100 @@
+name: Statpad update
+
+on:
+  schedule:
+    - cron: "2-59/5 * * * *"
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Refresh every source now (uses odds credits)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: statpad
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Restore state
+        uses: actions/cache/restore@v4
+        with:
+          path: .statpad
+          key: statpad-state-${{ github.run_id }}
+          restore-keys: statpad-state-
+
+      - name: Fetch data and fit the model
+        id: update
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDS_REGIONS: ${{ vars.ODDS_REGIONS }}
+          ODDS_MARKETS: ${{ vars.ODDS_MARKETS }}
+          ODDS_MIN_INTERVAL: ${{ vars.ODDS_MIN_INTERVAL }}
+          ODDS_MONTHLY_CREDITS: ${{ vars.ODDS_MONTHLY_CREDITS }}
+          ODDS_RESET_DAY: ${{ vars.ODDS_RESET_DAY }}
+          ODDS_SPORTS: ${{ vars.ODDS_SPORTS }}
+          STATPAD_TIMEZONE: ${{ vars.STATPAD_TIMEZONE }}
+          STATPAD_FORCE: ${{ inputs.force && '1' || '0' }}
+        run: python update.py
+
+      - name: Save state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .statpad
+          key: statpad-state-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # Commits the track record. This also keeps the schedule alive: GitHub pauses
+      # scheduled runs in a repo that has had no commits for 60 days.
+      - name: Commit track record
+        run: |
+          if [ -n "$(git status --porcelain -- track.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add track.json
+            git commit -m "Track record update"
+            git pull --rebase origin "${GITHUB_REF_NAME}" || git rebase --abort || true
+            git push origin "HEAD:${GITHUB_REF_NAME}" || echo "Push failed; the next run will try again."
+          fi
+
+      - name: Assemble site
+        if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
+        run: |
+          cp index.html _site/index.html
+          touch _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+        if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
+        uses: actions/deploy-pages@v4
