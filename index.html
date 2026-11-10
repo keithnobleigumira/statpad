@@ -84,9 +84,10 @@ a { color: var(--cobalt); }
 .top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .live { display: inline-flex; align-items: center; gap: 8px; font: 500 11px/1 var(--f-mono); font-stretch: 87.5%; color: var(--ink-2); padding: 7px 10px; border: 1px solid var(--rule); border-radius: 99px; background: var(--card); white-space: nowrap; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
-.live.on .dot { background: var(--pitch); box-shadow: 0 0 0 0 var(--pitch); animation: ping 2.4s infinite; }
+.live.on .dot { background: var(--pitch); position: relative; }
+.live.on .dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--pitch); animation: ping 2.4s infinite; will-change: transform, opacity; }
 .live.warn .dot { background: var(--yellow); }
-@keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pitch) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+@keyframes ping { 0% { transform: scale(1); opacity: .55; } 70%, 100% { transform: scale(3); opacity: 0; } }
 .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--rule); background: var(--card); display: grid; place-items: center; color: var(--ink-2); }
 .icon-btn svg { width: 17px; height: 17px; }
 .live .long { display: none; }
@@ -104,16 +105,21 @@ main { padding-bottom: 96px; }
 
 /* ---------- hero ---------- */
 .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--rule); }
-.hero-lines { position: absolute; inset: 0; pointer-events: none; color: var(--rule); }
-.hero-lines svg { position: absolute; right: -120px; top: -40px; width: 760px; height: auto; opacity: .9; }
-.hero .wrap { position: relative; display: grid; gap: 28px; padding-top: 34px; padding-bottom: 34px; }
+.hero .wrap { position: relative; display: grid; gap: 24px; padding-top: 26px; padding-bottom: 30px; }
 @media (min-width: 980px) { .hero .wrap { grid-template-columns: 1.15fr .85fr; align-items: center; padding-top: 52px; padding-bottom: 52px; } }
 .kicker { display: inline-flex; align-items: center; gap: 8px; font: 600 11px/1 var(--f-mono); font-stretch: 87.5%; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
 .kicker b { width: 18px; height: 2px; background: var(--cobalt); display: inline-block; }
-h1 { font: 850 clamp(34px, 6.4vw, 66px)/.95 var(--f-display); font-stretch: 118%; letter-spacing: -.035em; margin: 16px 0 16px; text-wrap: balance; }
+h1 { font: 850 clamp(32px, 5.6vw, 58px)/.95 var(--f-display); font-stretch: 118%; letter-spacing: -.035em; margin: 0; text-wrap: balance; }
+/* hero motion graphic: data points assemble the Statpad logo (canvas) */
+.hero.no-ticket .wrap { grid-template-columns: minmax(0, 1fr); }
+.hero.no-ticket .holo, .hero.no-ticket .kpis { max-width: 820px; }
+.holo { position: relative; margin-top: 20px; max-width: 640px; border-radius: 16px; overflow: hidden; background: #050a08;
+  border: 1px solid var(--rule); border-color: color-mix(in srgb, var(--cobalt) 22%, var(--rule));
+  box-shadow: 0 1px 0 rgba(13, 24, 19, .04), 0 22px 44px -26px rgba(10, 16, 40, .65); }
+.holo canvas { display: block; width: 100%; height: 196px; }
 h1 em { font-style: normal; color: var(--cobalt); }
 .lede { color: var(--ink-2); font-size: 16.5px; max-width: 52ch; margin: 0; text-wrap: pretty; }
-.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; margin-top: 26px; max-width: 620px; }
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; margin-top: 14px; max-width: 620px; }
 @media (min-width: 560px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
 .kpi { background: var(--card); padding: 13px 14px; }
 .kpi-v { font: 700 24px/1 var(--f-display); font-stretch: 110%; letter-spacing: -.02em; }
@@ -143,7 +149,7 @@ h1 em { font-style: normal; color: var(--cobalt); }
 
 /* tape */
 .tape { background: var(--ink); color: var(--paper); overflow: hidden; border-bottom: 1px solid var(--rule); }
-.tape-in { display: flex; gap: 34px; width: max-content; padding: 11px 0; animation: tape 70s linear infinite; }
+.tape-in { display: flex; gap: 34px; width: max-content; padding: 11px 0; animation: tape 70s linear infinite; will-change: transform; }
 .tape:hover .tape-in { animation-play-state: paused; }
 .tape-item { display: inline-flex; gap: 8px; align-items: baseline; font-size: 13px; white-space: nowrap; }
 .tape-item b { font-weight: 650; }
@@ -153,7 +159,7 @@ h1 em { font-style: normal; color: var(--cobalt); }
 .tape .up { color: #46d896; } .tape .down { color: #ff8a73; }
 :root[data-theme="dark"] .tape .up, :root[data-theme="dark"] .tape .down { filter: saturate(1.1) brightness(.75); }
 @keyframes tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@media (prefers-reduced-motion: reduce) { .tape { overflow-x: auto; } .tape-in { animation: none; } .live.on .dot { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tape { overflow-x: auto; } .tape-in { animation: none; } .live.on .dot::after { animation: none; opacity: 0; } }
 
 /* ---------- sections & controls ---------- */
 .section { padding-top: 26px; }
@@ -192,6 +198,8 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .comp-h span { font-size: 12px; color: var(--ink-3); }
 .comp-list { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
 .fx { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; padding: 12px 14px; border-top: 1px solid var(--rule-2); cursor: pointer; position: relative; }
+.fx { content-visibility: auto; contain-intrinsic-size: auto 102px; }   /* off-screen cards skip rendering; size excludes padding */
+@media (min-width: 760px) { .fx { contain-intrinsic-size: auto 55px; } }
 .fx:first-child { border-top: 0; }
 .fx:hover { background: color-mix(in srgb, var(--sunk) 55%, transparent); }
 .fx-meta { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font: 500 11.5px/1 var(--f-mono); font-stretch: 87.5%; color: var(--ink-3); }
@@ -470,18 +478,10 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 
 <main id="main">
   <section class="hero" id="hero" hidden>
-    <div class="hero-lines" aria-hidden="true">
-      <svg viewBox="0 0 760 520" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="40" y="30" width="680" height="460" rx="4"/><path d="M380 30v460"/><circle cx="380" cy="260" r="82"/><circle cx="380" cy="260" r="3" fill="currentColor"/>
-        <rect x="40" y="140" width="120" height="240"/><rect x="40" y="200" width="44" height="120"/><path d="M160 210a62 62 0 010 100"/>
-        <rect x="600" y="140" width="120" height="240"/><rect x="676" y="200" width="44" height="120"/><path d="M600 210a62 62 0 000 100"/>
-      </svg>
-    </div>
     <div class="wrap">
-      <div>
-        <div class="kicker"><b></b><span id="heroKicker">Football model · live prices</span></div>
+      <div class="hero-main">
         <h1>Every fixture, <em>priced by the numbers.</em></h1>
-        <p class="lede">A goals model fitted to every league table, blended with the sharpest market prices and refreshed through the day. Probabilities for every market, value against the best price, and slips built to a target.</p>
+        <div class="holo" aria-hidden="true"><canvas id="holo"></canvas></div>
         <div class="kpis" id="kpis"></div>
       </div>
       <div id="heroTicket"></div>
@@ -492,7 +492,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   <div class="wrap">
     <section id="v-matches" class="section" data-view="matches">
       <div class="sec-head">
-        <div><h2>Matches</h2><p class="sub" id="matchesSub">Tap a match for the full read: scorelines, every market, price history.</p></div>
+        <div><h2>Matches</h2><p class="sub" id="matchesSub">Tap a match for the full breakdown.</p></div>
       </div>
       <div class="days" id="days-matches" role="group" aria-label="Day"></div>
       <div class="filters">
@@ -889,11 +889,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const priced = up.filter((r) => realMkt(r.m)).length;
     const vals = ENGINE.value(up.filter((r) => r.a).map((r) => ({ m: r.m, a: r.a })), 0.03).length;
     const comps = new Set(up.map((r) => r.m.lk)).size;
-    $('#kpis').innerHTML = [[up.length, 'fixtures ahead'], [priced, 'with live prices'], [vals, 'value spots ≥3%'], [comps, 'competitions']]
+    if (window.__holo) window.__holo.stats({ fixtures: up.length, comps });
+    $('#kpis').innerHTML = [[up.length, 'fixtures'], [priced, 'live prices'], [vals, 'value spots'], [comps, 'competitions']]
       .map(([v, l]) => `<div class="kpi"><div class="kpi-v mono">${v}</div><div class="kpi-l">${l}</div></div>`).join('');
     // ticket: the first day with enough open games; built after the list is on screen
     const box = $('#heroTicket');
     const dk = days().find((d) => S.rows.filter((r) => r.day === d.key && !r.started && r.a).length >= 4);
+    $('#hero').classList.toggle('no-ticket', !dk);
     if (!dk) { box.innerHTML = ''; return; }
     const ver = S.ver, tgt = S.target;
     if (!box.firstChild) box.innerHTML = `<div class="ticket"><div class="t-kick">${esc(dayLabel(dk.key, true))}</div><div class="t-title">Building the best ${tgt}-odds slip…</div></div>`;
@@ -910,6 +912,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }, 60);
   }
   function paintTicket(box, best, dk) {
+    $('#hero').classList.toggle('no-ticket', !best);
     if (!best) { box.innerHTML = ''; return; }
     const legs = best.legs.slice(0, 5);
     box.innerHTML = `<div class="ticket">
@@ -1566,6 +1569,475 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   setInterval(() => { load(false); }, 60e3);
   setInterval(async () => { if (!S.data || !S.ready) return; S.now = Date.now(); const tk = ++S.token; try { if (await analyseAll(tk)) render(); } catch (e) { showFatal(e); } }, 5 * 60e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - (S.lastFetch || 0) > 20e3) load(false); });
+})();
+/* Hero motion graphic: data points gather into a spinning ball, burst, and assemble the
+   Statpad logo, which a scan beam then turns into the real, solid lockup.
+   Canvas 2D. Every frame is a pure function of the loop time, so the loop is seamless
+   and any moment can be drawn on its own (reduced motion shows one still frame). */
+(() => {
+  const cv = document.getElementById('holo');
+  if (!cv || !cv.getContext) return;
+  const ctx = cv.getContext('2d', { alpha: false });
+  const box = cv.parentNode;
+  const LOOP = 12, TAU = Math.PI * 2, STILL = 7.4;
+  // timeline (seconds): cloud → ball → burst into the logo → beam reveals the solid logo → hold → beam back to points → cloud
+  const T = { cs: 0.45, csD: 1.0, sw: 3.2, swD: 0.85, rev: 4.4, revD: 0.62, out: 9.05, outD: 0.5, wcD: 1.3 };
+  const INK = '#e8efeb', COB = '#8297ff', BAR = '#6f86ff', MUTE = 'rgba(159,176,167,.85)', LIVE = '#3ccf8e';
+  const COLS = [INK, COB, '#ffffff'];          // particle colours; the last is the scan beam
+  const LEVELS = [0.2, 0.45, 0.72, 1];
+  const FONT = '"Archivo", "Arial Black", "Helvetica Neue", Arial, sans-serif';
+  const MONO = '"Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace';
+  const TAG = 'PROBABILITIES · VALUE · SLIPS';
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+  const eio = (x) => (x = clamp(x, 0, 1), x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const eout = (x) => (x = clamp(x, 0, 1), 1 - Math.pow(1 - x, 3));
+  const ss = (a, b, x) => { x = clamp((x - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
+  const rng = (s) => () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
+  const TILT = 0.36, CT = Math.cos(TILT), ST = Math.sin(TILT);
+
+  let w = 0, h = 0, dpr = 1, N = 0, dot = 1.6, ready = false, fontUsed = false, stats = null;
+  let quality = 2;   // 2 = full, 1 = no bloom, 0 = no bloom at 1x resolution (stepped down on slow devices)
+  let wx, wy, cx, cy, fx, fy, fz, ph, d1, d2, d3, xn, col, KX, KY, KS, KK, TX, TY, ORD;
+  const CNT = new Int32Array(13);
+  let SC, R, YH, LB, overlay, logo, mask, scratch, b1, b2, b3, c1, c2, c3;
+
+  const buf = (cw, ch) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(cw)); c.height = Math.max(1, Math.round(ch)); return c; };
+  function rrect(o, x, y, s, r) {
+    o.beginPath(); o.moveTo(x + r, y); o.arcTo(x + s, y, x + s, y + s, r); o.arcTo(x + s, y + s, x, y + s, r);
+    o.arcTo(x, y + s, x, y, r); o.arcTo(x, y, x + s, y, r); o.closePath();
+  }
+
+  // The lockup exactly as in the header: mark, then "stat" in ink and "pad" in cobalt.
+  // mode: 'solid' (the real thing), 'mask' (white silhouette), 'dots' (bolder strokes, for sampling)
+  function lockup(o, L, mode) {
+    const solid = mode === 'solid', white = mode === 'mask';
+    const { x, y, M, fs } = L;
+    // mark
+    rrect(o, x, y - M / 2, M, M * 8 / 30);
+    if (solid) { o.fillStyle = '#101d17'; o.fill(); }
+    o.strokeStyle = solid ? 'rgba(232,239,235,.24)' : white ? 'rgba(255,255,255,.5)' : INK;
+    o.lineWidth = Math.max(1, M / (solid ? 30 : 16)); o.stroke();
+    {
+      const k = (M * 20 / 30) / 24, ix = x + M / 2 - 12 * k, iy = y - 12 * k, bold = solid || white ? 1 : 1.7;
+      o.save(); o.translate(ix, iy); o.scale(k, k);
+      o.strokeStyle = white ? '#fff' : '#eef3ef'; o.lineWidth = 1.6 * bold;
+      o.beginPath(); o.moveTo(5, 5); o.arcTo(21, 5, 21, 19, 2); o.arcTo(21, 19, 3, 19, 2); o.arcTo(3, 19, 3, 5, 2); o.arcTo(3, 5, 21, 5, 2); o.closePath(); o.stroke();
+      o.lineWidth = 1.4 * bold; o.beginPath(); o.moveTo(12, 5); o.lineTo(12, 19); o.stroke();
+      o.beginPath(); o.arc(12, 12, 2.6, 0, TAU); o.stroke();
+      o.fillStyle = white ? '#fff' : BAR; o.fillRect(15.5, 9, 3, 6);
+      o.restore();
+    }
+    // name
+    setFont(o, fs);
+    o.textBaseline = 'middle'; o.textAlign = 'left';
+    o.fillStyle = white ? '#fff' : INK; o.fillText('stat', L.tx, y);
+    o.fillStyle = white ? '#fff' : COB; o.fillText('pad', L.tx + L.statW, y);
+  }
+  function setFont(o, fs) {
+    o.font = `850 ${fs}px ${FONT}`;
+    if (!/850/.test(o.font)) o.font = `800 ${fs}px ${FONT}`;
+    if ('fontStretch' in o) o.fontStretch = 'expanded';
+    if ('letterSpacing' in o) o.letterSpacing = `${(-0.03 * fs).toFixed(2)}px`;
+  }
+
+  function setup() {
+    const cw = Math.round(box.clientWidth);
+    if (!cw) return false;
+    w = cw; h = Math.round(clamp(cw * 0.5, 196, 410));
+    dpr = Math.min(window.devicePixelRatio || 1, quality ? 2 : 1);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + 'px';
+    SC = { x: w / 2, y: h * 0.42 }; R = Math.min(h * 0.25, w * 0.17); YH = h * 0.72;
+    b1 = buf(cv.width / 2, cv.height / 2); b2 = buf(cv.width / 4, cv.height / 4); b3 = buf(cv.width / 8, cv.height / 8);
+    c1 = b1.getContext('2d'); c2 = b2.getContext('2d'); c3 = b3.getContext('2d');
+    // static backdrop, painted once per size (kept dark: the glow pass roughly doubles it)
+    overlay = buf(cv.width, cv.height);
+    const o = overlay.getContext('2d'); o.scale(dpr, dpr);
+    const bg = o.createRadialGradient(w / 2, h * 0.44, 0, w / 2, h * 0.44, Math.max(w, h) * 0.7);
+    bg.addColorStop(0, '#0b1511'); bg.addColorStop(0.5, '#050a08'); bg.addColorStop(1, '#020403');
+    o.fillStyle = bg; o.fillRect(0, 0, w, h);
+    const glow = o.createRadialGradient(0, 0, 0, 0, 0, 1);
+    glow.addColorStop(0, 'rgba(130,151,255,.14)'); glow.addColorStop(0.5, 'rgba(130,151,255,.04)'); glow.addColorStop(1, 'rgba(130,151,255,0)');
+    o.save(); o.translate(w / 2, YH); o.scale(w * 0.5, h * 0.28); o.fillStyle = glow; o.beginPath(); o.arc(0, 0, 1, 0, TAU); o.fill(); o.restore();
+    const hz = o.createLinearGradient(0, 0, w, 0);
+    hz.addColorStop(0, 'rgba(130,151,255,0)'); hz.addColorStop(0.5, 'rgba(190,200,255,.7)'); hz.addColorStop(1, 'rgba(130,151,255,0)');
+    o.fillStyle = hz; o.fillRect(0, YH - 0.6, w, 1.2);
+    const vg = o.createRadialGradient(w / 2, h / 2, h * 0.35, w / 2, h / 2, Math.max(w, h) * 0.72);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.5)');
+    o.fillStyle = vg; o.fillRect(0, 0, w, h);
+    layout();
+    sample();
+    // the solid lockup and its silhouette, pre-rendered at screen resolution
+    logo = buf(cv.width, cv.height); const lo = logo.getContext('2d'); lo.scale(dpr, dpr); lockup(lo, LB, 'solid');
+    mask = buf(cv.width, cv.height); const mo = mask.getContext('2d'); mo.scale(dpr, dpr); lockup(mo, LB, 'mask');
+    scratch = buf((LB.x1 - LB.x0 + 8) * dpr, (LB.y1 - LB.y0 + 8) * dpr);
+    return true;
+  }
+
+  // Size the lockup to the panel: mark is 30/21 of the type size, with a 10/21 gap, as in the header.
+  function layout() {
+    const o = buf(8, 8).getContext('2d');
+    const measure = (fs) => { setFont(o, fs); const sw = o.measureText('stat').width; return { sw, tw: sw + o.measureText('pad').width }; };
+    const m100 = measure(100), ratio = 30 / 21, gap = 10 / 21;
+    let fs = Math.min(w * 0.76 / ((m100.tw / 100) + ratio + gap), h * 0.36 / ratio);
+    fs = Math.floor(fs);
+    const m = measure(fs), M = fs * ratio, total = M + fs * gap + m.tw;
+    const x = (w - total) / 2, y = h * 0.42;
+    LB = { x, y, M, fs, tx: x + M + fs * gap, statW: m.sw, x0: x, x1: x + total, y0: y - M / 2, y1: y + M / 2 };
+  }
+
+  // Scatter dots over the lockup's pixels and remember each dot's colour.
+  function sample() {
+    const oc = buf(w, h), o = oc.getContext('2d', { willReadFrequently: true });
+    lockup(o, LB, 'dots');
+    fontUsed = !document.fonts || document.fonts.check(`850 40px "Archivo"`);
+    const img = o.getImageData(0, 0, w, h).data;
+    let area = 0;
+    for (let i = 3; i < img.length; i += 4) if (img[i] > 128) area++;
+    const target = clamp(Math.round(w * 1.9), 700, 1600);
+    const step = Math.max(1.6, Math.sqrt(area / target));
+    dot = clamp(step * 0.62, 1.2, 2.6);
+    const r = rng(20261110), pts = [];
+    for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
+      const px = Math.min(w - 1, Math.round(x + r() * step)), py = Math.min(h - 1, Math.round(y + r() * step)), k = (py * w + px) * 4;
+      if (img[k + 3] > 128) pts.push(px, py, img[k + 2] - img[k] > 50 ? 1 : 0);
+    }
+    N = pts.length / 3;
+    const F = (n) => new Float32Array(n);
+    wx = F(N); wy = F(N); cx = F(N); cy = F(N); fx = F(N); fy = F(N); fz = F(N); ph = F(N); d1 = F(N); d2 = F(N); d3 = F(N); xn = F(N);
+    KX = F(N); KY = F(N); KS = F(N); TX = F(N); TY = F(N); KK = new Uint8Array(N); col = new Uint8Array(N); ORD = new Uint32Array(N);
+    for (let i = 0; i < N; i++) {
+      wx[i] = pts[3 * i]; wy[i] = pts[3 * i + 1]; col[i] = pts[3 * i + 2];
+      xn[i] = clamp((wx[i] - LB.x0) / Math.max(1, LB.x1 - LB.x0), 0, 1);
+      cx[i] = w * (0.03 + 0.94 * r()); cy[i] = h * (0.05 + 0.6 * r());
+      ph[i] = r() * TAU; d1[i] = r() * 0.5;
+      d2[i] = xn[i] * 0.4 + r() * 0.08;
+      d3[i] = T.out + T.outD * beamX(wx[i]) + 0.04 + r() * 0.16;   // leaves just after the outgoing beam passes
+    }
+    // Points on a sphere, matched to the logo left to right as seen at the moment of the burst,
+    // so the ball unfolds into the logo instead of scrambling.
+    const sp = [], A0 = angle(T.sw);
+    for (let k = 0; k < N; k++) {
+      const y = 1 - 2 * (k + 0.5) / N, rr = Math.sqrt(1 - y * y), th = k * 2.399963;
+      const X = Math.cos(th) * rr, Z = Math.sin(th) * rr;
+      sp.push([X, y, Z, X * Math.cos(A0) + Z * Math.sin(A0)]);
+    }
+    sp.sort((a, b) => a[3] - b[3]);
+    const byX = Array.from({ length: N }, (_, i) => i).sort((a, b) => wx[a] - wx[b]);
+    byX.forEach((i, j) => { fx[i] = sp[j][0]; fy[i] = sp[j][1]; fz[i] = sp[j][2]; });
+  }
+
+  const angle = (t) => 0.8 * t + 0.9 * Math.max(0, t - 2) ** 2;   // the ball spins up before the burst
+  // the beams sweep the lockup left to right at a steady pace; beamX gives the progress (0–1) at a point
+  const BX0 = () => LB.x0 - 24, BX1 = () => LB.x1 + 24;
+  const beamX = (x) => clamp((x - BX0()) / (BX1() - BX0()), 0, 1);
+  const beamAt = (a, d, t) => (t > a && t < a + d ? BX0() + (BX1() - BX0()) * (t - a) / d : null);
+
+  // Position, opacity and size of particle i at time t (written to X, Y, A, S).
+  let X = 0, Y = 0, A = 0, S = 0;
+  function pos(i, t) {
+    const k = TAU / LOOP;
+    const cX = cx[i] + 9 * Math.sin(k * t + ph[i]), cY = cy[i] + 6 * Math.sin(2 * k * t + ph[i] * 1.7);
+    const cA = 0.14 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.1 + ph[i] * 3)), cS = dot * 0.8;
+    if (t < T.cs + d1[i]) { X = cX; Y = cY; A = cA; S = cS; return; }
+    const a = angle(t), ca = Math.cos(a), sa = Math.sin(a);
+    const x3 = fx[i] * ca + fz[i] * sa, z3 = -fx[i] * sa + fz[i] * ca;
+    const y2 = fy[i] * CT - z3 * ST, z2 = fy[i] * ST + z3 * CT;
+    const pp = 2.8 / (2.8 + z2), front = (1 - z2) / 2;
+    const sX = SC.x + x3 * R * pp, sY = SC.y + y2 * R * pp;
+    const sA = 0.16 + 0.84 * front, sS = dot * (0.65 + 0.6 * front);
+    if (t < T.sw) {
+      const e = eio((t - T.cs - d1[i]) / T.csD);
+      X = cX + (sX - cX) * e; Y = cY + (sY - cY) * e; A = cA + (sA - cA) * e; S = cS + (sS - cS) * e; return;
+    }
+    if (t < d3[i]) {
+      const e = eio((t - T.sw - d2[i]) / T.swD);
+      if (e >= 1) { X = wx[i]; Y = wy[i]; A = 1; S = dot; return; }
+      const dx = sX - SC.x, dy = sY - SC.y, dl = Math.hypot(dx, dy) || 1, b = Math.sin(Math.PI * e) * R * 0.8;
+      X = sX + (wx[i] - sX) * e + dx / dl * b; Y = sY + (wy[i] - sY) * e + dy / dl * b;
+      A = sA + (1 - sA) * e; S = sS + (dot - sS) * e; return;
+    }
+    const e = eio((t - d3[i]) / T.wcD), lift = Math.sin(Math.PI * e);
+    X = wx[i] + (cX - wx[i]) * e + lift * 28; Y = wy[i] + (cY - wy[i]) * e - lift * 16;
+    A = 1 + (cA - 1) * e; S = dot + (cS - dot) * e;
+  }
+
+  function drawFloor(t) {
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    const g = ctx.createLinearGradient(0, YH, 0, h);
+    g.addColorStop(0, 'rgba(130,151,255,0)'); g.addColorStop(0.35, 'rgba(130,151,255,.13)'); g.addColorStop(1, 'rgba(160,178,255,.36)');
+    ctx.strokeStyle = g; ctx.lineWidth = 1;
+    ctx.beginPath();
+    const sp = w / 6.5;
+    for (let k = -14; k <= 14; k++) { ctx.moveTo(w / 2 + k * sp * 0.12, YH); ctx.lineTo(w / 2 + k * sp, h); }
+    const f = (t * 1.25) % 1;   // 15 rows per loop, so the scroll wraps cleanly
+    for (let j = 0; j < 18; j++) {
+      const z = j + 1 - f; if (z < 0.6) continue;
+      const y = YH + (h - YH) * (0.8 / z); if (y > h) continue;
+      ctx.moveTo(0, y); ctx.lineTo(w, y);
+    }
+    ctx.stroke();
+  }
+
+  // particle visibility: they hand over to the solid logo as the reveal beam passes, and come back with the outgoing beam
+  function particles(t) {
+    const moving = (t > T.cs && t < T.cs + 1.6) || (t > T.sw && t < T.sw + 1.4) || (t > T.out && t < T.out + T.outD + 1.6);
+    const bIn = beamAt(T.rev, T.revD, t), bOut = beamAt(T.out, T.outD, t);
+    CNT.fill(0);
+    let n = 0;
+    for (let i = 0; i < N; i++) {
+      const pIn = T.rev + T.revD * beamX(wx[i]), pOut = T.out + T.outD * beamX(wx[i]);
+      let vis = 1, c = col[i];
+      if (t > pIn && t < pOut) { vis = 1 - (t - pIn) / 0.16; if (vis <= 0) continue; }
+      pos(i, t);
+      let a = A * vis;
+      if ((bIn !== null && Math.abs(wx[i] - bIn) < 9) || (bOut !== null && Math.abs(wx[i] - bOut) < 9)) { c = 2; a = 1; }
+      const l = a < 0.32 ? 0 : a < 0.58 ? 1 : a < 0.86 ? 2 : 3;
+      KX[i] = X; KY[i] = Y; KS[i] = S; KK[i] = c * 4 + l; CNT[c * 4 + l + 1]++;
+      if (moving) { pos(i, t - 0.04); TX[i] = X; TY[i] = Y; }
+      ORD[n++] = i;   // visible particles, sorted into colour/opacity groups below
+    }
+    if (!n) return;
+    for (let k = 1; k < 13; k++) CNT[k] += CNT[k - 1];
+    const at = CNT.slice(0, 12), vis = ORD.slice(0, n);
+    for (const i of vis) ORD[at[KK[i]]++] = i;
+    ctx.globalCompositeOperation = 'lighter';
+    if (moving) {
+      ctx.lineWidth = dot * 0.8; ctx.globalAlpha = 0.28;
+      for (let c = 0; c < 3; c++) {
+        ctx.strokeStyle = COLS[c]; ctx.beginPath();
+        for (let j = CNT[c * 4]; j < CNT[c * 4 + 4]; j++) {
+          const i = ORD[j];
+          if (Math.abs(KX[i] - TX[i]) + Math.abs(KY[i] - TY[i]) > 2) { ctx.moveTo(TX[i], TY[i]); ctx.lineTo(KX[i], KY[i]); }
+        }
+        ctx.stroke();
+      }
+    }
+    for (let key = 0; key < 12; key++) {
+      if (CNT[key + 1] === CNT[key]) continue;
+      ctx.globalAlpha = LEVELS[key & 3]; ctx.fillStyle = COLS[key >> 2]; ctx.beginPath();
+      for (let j = CNT[key]; j < CNT[key + 1]; j++) { const i = ORD[j], s = KS[i]; ctx.rect(KX[i] - s / 2, KY[i] - s / 2, s, s); }
+      ctx.fill();
+    }
+  }
+
+  // the solid lockup: wiped in by the reveal beam, wiped out by the outgoing one, with a glint while it holds
+  function solid(t) {
+    let x0 = null, x1 = null;
+    if (t >= T.rev && t < T.out + T.outD) {
+      const bIn = beamAt(T.rev, T.revD, t), bOut = beamAt(T.out, T.outD, t);
+      x0 = bOut !== null ? bOut : (t >= T.out + T.outD ? w : 0);
+      x1 = bIn !== null ? bIn : w;
+    }
+    if (x0 === null || x1 <= x0) return;
+    const sx = Math.max(0, Math.floor(x0 * dpr)), ex = Math.min(cv.width, Math.ceil(x1 * dpr)), sy = Math.floor((LB.y0 - 4) * dpr), ey = Math.ceil((LB.y1 + 4) * dpr);
+    if (ex <= sx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    ctx.drawImage(logo, sx, sy, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);
+    // glint: a soft diagonal band of light across the letters, twice per hold
+    const gl = [6.1, 7.95].map((a) => (t - a) / 0.8).find((p) => p > 0 && p < 1);
+    if (gl !== undefined && scratch) {
+      const s = scratch.getContext('2d'), ox = (LB.x0 - 4) * dpr, oy = (LB.y0 - 4) * dpr;
+      s.setTransform(1, 0, 0, 1, 0, 0); s.globalCompositeOperation = 'copy'; s.globalAlpha = 1;
+      s.drawImage(mask, ox, oy, scratch.width, scratch.height, 0, 0, scratch.width, scratch.height);
+      s.globalCompositeOperation = 'source-in';
+      const bw = (LB.x1 - LB.x0) * dpr, gx = -0.3 * bw + gl * 1.6 * bw, gr = s.createLinearGradient(gx - 60 * dpr, 0, gx + 60 * dpr, scratch.height * 0.5);
+      gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      s.fillStyle = gr; s.fillRect(0, 0, scratch.width, scratch.height);
+      ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(scratch, ox, oy);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function beams(t) {
+    const y0 = LB.y0 - 16, y1 = LB.y1 + 16;
+    [beamAt(T.rev, T.revD, t), beamAt(T.out, T.outD, t)].forEach((b) => {
+      if (b === null) return;
+      const g = ctx.createLinearGradient(0, y0, 0, y1);
+      g.addColorStop(0, 'rgba(130,151,255,0)'); g.addColorStop(0.5, 'rgba(225,232,255,.95)'); g.addColorStop(1, 'rgba(130,151,255,0)');
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(b - 1, y0, 2, y1 - y0);
+      ctx.globalAlpha = 0.12; ctx.fillRect(b - 20, y0, 40, y1 - y0);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    });
+  }
+
+  // ambient dust drifting up through the sky (one full lap per loop)
+  let DU = null;
+  function dust(t) {
+    if (!DU) { const r = rng(77); DU = Array.from({ length: 70 }, () => [r(), r(), r() * TAU, 1 + Math.floor(r() * 2)]); }
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#c9d3ff';
+    const top = h * 0.04, span = YH - top;
+    for (const [x, y, p, n] of DU) {
+      const yy = top + (((y - n * t / LOOP) % 1) + 1) % 1 * span, fade = Math.min(1, (yy - top) / 30, (YH - yy) / 30);
+      ctx.globalAlpha = Math.max(0, fade) * (0.1 + 0.16 * (0.5 + 0.5 * Math.sin(t * 3 + p)));
+      ctx.fillRect(x * w, yy, 1.2, 1.2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function bloom() {
+    if (quality < 2) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    c1.globalCompositeOperation = 'copy'; c1.drawImage(cv, 0, 0, b1.width, b1.height);
+    c2.globalCompositeOperation = 'copy'; c2.drawImage(b1, 0, 0, b2.width, b2.height);
+    c3.globalCompositeOperation = 'copy'; c3.drawImage(b2, 0, 0, b3.width, b3.height);
+    c2.globalCompositeOperation = 'source-over'; c2.globalAlpha = 0.5; c2.fillStyle = '#000'; c2.fillRect(0, 0, b2.width, b2.height);
+    c2.globalCompositeOperation = 'lighter'; c2.globalAlpha = 0.6; c2.drawImage(b3, 0, 0, b2.width, b2.height);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.72; ctx.drawImage(b2, 0, 0, cv.width, cv.height);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+  function hud(t) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    const fsz = clamp(w / 66, 7, 10), m = Math.round(clamp(w * 0.03, 10, 18)), L = m * 0.85;
+    ctx.font = `500 ${fsz}px ${MONO}`; ctx.textBaseline = 'middle';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    // frame corners
+    ctx.strokeStyle = 'rgba(232,239,235,.3)'; ctx.lineWidth = 1; ctx.beginPath();
+    [[m, m, 1, 1], [w - m, m, -1, 1], [m, h - m, 1, -1], [w - m, h - m, -1, -1]].forEach(([x, y, sx, sy]) => {
+      ctx.moveTo(x + 0.5 * sx, y + L * sy); ctx.lineTo(x + 0.5 * sx, y + 0.5 * sy); ctx.lineTo(x + L * sx, y + 0.5 * sy);
+    });
+    ctx.stroke();
+    const ty = m + fsz * 0.7;
+    ctx.fillStyle = MUTE; ctx.textAlign = 'left';
+    ctx.fillText(w < 420 ? 'MATCH ENGINE' : 'STATPAD · MATCH ENGINE', m + L * 0.4 + 4, ty);
+    const d = new Date(Date.now() + 3 * 3600e3), clock = `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())} GMT+3`;   // Uganda (EAT)
+    ctx.textAlign = 'right'; ctx.fillText(clock, w - m - L * 0.4 - 4, ty);
+    const cw = ctx.measureText(clock).width;
+    ctx.fillStyle = LIVE; ctx.globalAlpha = t % 1 < 0.55 ? 1 : 0.3;
+    ctx.beginPath(); ctx.arc(w - m - L * 0.4 - 4 - cw - 7, ty, 2.2, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+
+    // the ball: orbit ring, target brackets and a progress readout while the model "fits"
+    const sa = ss(1.0, 1.5, t) * (1 - ss(T.sw - 0.05, T.sw + 0.3, t));
+    if (sa > 0.01) {
+      ctx.globalAlpha = sa;
+      ctx.save(); ctx.translate(SC.x, SC.y); ctx.rotate(-0.22);
+      ctx.strokeStyle = 'rgba(130,151,255,.6)'; ctx.setLineDash([2, 5]); ctx.lineDashOffset = -t * 26;
+      ctx.beginPath(); ctx.ellipse(0, 0, R * 1.55, R * 0.36, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      const oa = t * 2.3;
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(Math.cos(oa) * R * 1.55, Math.sin(oa) * R * 0.36, 2.2, 0, TAU); ctx.fill();
+      ctx.restore();
+      const q = R * 1.22, ql = R * 0.28, sq = 1 + 0.12 * (1 - eout((t - 1.0) / 0.8));
+      ctx.strokeStyle = 'rgba(232,239,235,.55)'; ctx.beginPath();
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
+        const x = SC.x + sx * q * sq, y = SC.y + sy * q * sq;
+        ctx.moveTo(x, y - sy * ql); ctx.lineTo(x, y); ctx.lineTo(x - sx * ql, y);
+      });
+      ctx.stroke();
+      const pct = Math.round(100 * eio((t - 1.2) / 1.9)), ly = SC.y + q * sq + fsz * 1.6;
+      ctx.textAlign = 'center'; ctx.fillStyle = INK;
+      ctx.fillText(`FITTING MODEL  ${String(pct).padStart(3, ' ')}%`, SC.x, ly);
+      const bw = Math.min(120, w * 0.3);
+      ctx.fillStyle = 'rgba(130,151,255,.2)'; ctx.fillRect(SC.x - bw / 2, ly + fsz, bw, 2);
+      ctx.fillStyle = COB; ctx.fillRect(SC.x - bw / 2, ly + fsz, bw * pct / 100, 2);
+      ctx.globalAlpha = 1;
+    }
+
+    // reveal: a shock ring and a light flash as the beam finishes
+    const ring = T.rev + T.revD - 0.05;
+    if (t > ring && t < ring + 0.75) {
+      const p = (t - ring) / 0.75;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (1 - p) * 0.6; ctx.strokeStyle = COB; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(w / 2, LB.y, (LB.x1 - LB.x0) * 0.5 + p * w * 0.35, LB.M * 0.6 + p * h * 0.3, 0, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = Math.max(0, 1 - p * 4) * 0.08; ctx.fillStyle = '#dfe6ff'; ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.lineWidth = 1;
+    }
+
+    // tagline types out under the logo, then readouts count up
+    const wa = 1 - ss(T.out - 0.15, T.out + 0.3, t), t0 = T.rev + T.revD + 0.15;
+    if (t > t0 && wa > 0.01) {
+      ctx.globalAlpha = wa;
+      const tf = clamp(w / 56, 8, 11.5);
+      ctx.font = `500 ${tf}px ${MONO}`; ctx.textAlign = 'left';
+      if ('letterSpacing' in ctx) ctx.letterSpacing = `${(tf * 0.12).toFixed(2)}px`;
+      const full = ctx.measureText(TAG).width, n = Math.floor(TAG.length * clamp((t - t0) / 1.0, 0, 1));
+      const x0 = w / 2 - full / 2, y = LB.y1 + clamp(h * 0.085, 14, 30);
+      ctx.fillStyle = MUTE; ctx.fillText(TAG.slice(0, n), x0, y);
+      if (n < TAG.length || t % 0.9 < 0.5) {
+        const cxp = x0 + ctx.measureText(TAG.slice(0, n)).width + 2;
+        ctx.fillStyle = COB; ctx.fillRect(cxp, y - tf * 0.55, tf * 0.5, tf * 1.1);
+      }
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+      ctx.font = `500 ${fsz}px ${MONO}`;
+      const ra = ss(t0 + 0.2, t0 + 0.6, t), by = h - m - fsz * 0.7;
+      if (ra > 0.01) {
+        ctx.globalAlpha = wa * ra; ctx.fillStyle = MUTE;
+        const cnt = (v) => Math.round(v * eout((t - t0 - 0.2) / 0.9));
+        if (stats && stats.fixtures) {
+          ctx.textAlign = 'right';
+          ctx.fillText(`${cnt(stats.fixtures).toLocaleString('en-US')} FIXTURES · ${cnt(stats.comps || 0)} COMPS`, w - m - L * 0.4 - 4, by);
+        }
+        if (w >= 460 || !(stats && stats.fixtures)) { ctx.textAlign = 'left'; ctx.fillText('MODEL 20 · MARKET 80', m + L * 0.4 + 4, by); }
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function render(t) {
+    t = ((t % LOOP) + LOOP) % LOOP;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'copy'; ctx.globalAlpha = 1;
+    ctx.drawImage(overlay, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawFloor(t);
+    dust(t);
+    solid(t);
+    if (N) particles(t);
+    beams(t);
+    bloom();
+    hud(t);
+  }
+
+  // clock and loop: runs only while the hero is on screen and the tab is visible
+  let raf = 0, last = 0, clock = 0.2, inView = true, seen = 0, slow = 0;
+  const frame = (now) => {
+    raf = 0;
+    const raw = last ? (now - last) / 1000 : 0, dt = Math.min(0.05, raw);
+    last = now; clock = (clock + dt) % LOOP;
+    render(clock); kick();
+    // if most frames stay slow for a few seconds, drop the glow, then the resolution
+    if (raw > 0 && raw < 0.25 && ++seen > 240) {
+      slow = slow * 0.97 + (raw > 0.03 ? 0.03 : 0);
+      if (slow > 0.6 && quality > 0) { quality--; seen = 0; slow = 0; if (quality === 0) boot(); }
+    }
+  };
+  const kick = () => { if (!raf && ready && inView && !document.hidden && !reduce.matches) raf = requestAnimationFrame(frame); };
+  const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; last = 0; };
+  const still = () => { if (ready && reduce.matches) render(STILL); };
+  const boot = () => {
+    seen = 0; slow = 0;
+    if (!setup()) return;
+    ready = true;
+    if (reduce.matches) still(); else { render(clock); kick(); }
+  };
+  // (re)build on size changes, in a task of its own so it never lengthens the page's own work
+  let lastW = 0, bootT = 0;
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => {
+      const cw = Math.round(box.clientWidth);
+      if (!cw || cw === lastW) return;
+      lastW = cw; clearTimeout(bootT); bootT = setTimeout(boot, 40);
+    }).observe(box);
+  }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((es) => { inView = es[es.length - 1].isIntersecting; if (inView) kick(); else stop(); }, { threshold: 0.02 }).observe(cv);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); else kick(); });
+  if (reduce.addEventListener) reduce.addEventListener('change', () => { if (reduce.matches) { stop(); still(); } else kick(); });
+  // start once the display font is in (or after a short wait), and rebuild if it arrives late
+  const fontReady = document.fonts && document.fonts.load
+    ? Promise.race([document.fonts.load(`850 40px "Archivo"`).catch(() => {}), new Promise((r) => setTimeout(r, 1500))])
+    : Promise.resolve();
+  fontReady.then(() => { lastW = Math.round(box.clientWidth); boot(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (ready && !fontUsed) boot(); });
+  cv.__render = (t) => { if (!ready) { setup(); ready = true; } render(t); };
+  cv.__quality = () => quality;
+  window.__holo = { stats: (s) => { stats = s; if (reduce.matches) still(); } };
 })();
 </script>
 </body>
