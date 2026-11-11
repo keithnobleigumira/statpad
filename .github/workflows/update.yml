@@ -142,3 +142,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deploy
         if: steps.update.outputs.changed =
+        uses: actions/deploy-pages@v4
