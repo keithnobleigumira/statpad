@@ -141,5 +141,6 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deploy
-        if: steps.update.outputs.changed =
+        if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
+        
         uses: actions/deploy-pages@v4
