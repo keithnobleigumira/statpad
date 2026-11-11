@@ -438,16 +438,17 @@ K_SHRINK = 6.0      # pseudo-games of prior per team
 NEW_TEAM_PRIOR = (-0.12, 0.12)   # newcomers start a bit below average
 
 
-def fit_ratings(games, current_teams):
+def fit_ratings(games, current_teams, asof=None, init=None):
     if len(games) < 20:
         return None
+    ref = asof or NOW
     xi = math.log(2) / HALF_LIFE
     teams = sorted({g[1] for g in games} | {g[2] for g in games})
     ix = {t: i for i, t in enumerate(teams)}
     prev_teams = {g[1] for g in games if not g[5]} | {g[2] for g in games if not g[5]}
     W = []
     for d, h, a, hg, ag, cur in games:
-        age = max(0.0, (NOW - d).total_seconds() / 86400)
+        age = max(0.0, (ref - d).total_seconds() / 86400)
         W.append((ix[h], ix[a], hg, ag, math.exp(-xi * age) * (1.0 if cur else PREV_W)))
     n = len(teams)
     pa = [0.0] * n
@@ -462,6 +463,11 @@ def fit_ratings(games, current_teams):
     home = math.log(max(0.3, sh / sw)) - mu
     att = pa[:]
     dfn = pd[:]
+    if init:   # warm start from an earlier fit: converges in a few rounds
+        mu, home = init['mu'], init['home']
+        for t, (a_, d_) in init['teams'].items():
+            if t in ix:
+                att[ix[t]], dfn[ix[t]] = a_, d_
     cur_ix = [ix[t] for t in current_teams if t in ix] or list(range(n))
     for _ in range(200):
         g0 = math.exp(mu + home / 2)
@@ -2022,6 +2028,164 @@ def publish_results(state):
     return {'app': 'Statpad', 'generated': iso(NOW), 'scores': sc, 'void': void}
 
 
+
+# ----------------------------------------------------------------------------------------------
+# Backtest: last season replayed. Each week's ratings come only from games played before that
+# week, prices are football-data's pre-match averages and best prices, and the picks, tiers and
+# slips come from the same engine the site runs. Recomputed weekly; published as backtest.json.
+# ----------------------------------------------------------------------------------------------
+BT_EVERY_H = 7 * 24
+BT_SKIP_WEEKS = 4          # the first weeks of a season are left out while ratings settle
+
+NODE_BT = r"""
+const fs = require('fs');
+const [, , htmlPath, inPath] = process.argv;
+const html = fs.readFileSync(htmlPath, 'utf8');
+const s = html.indexOf('/* Statpad engine'), e = html.indexOf('module.exports = ENGINE;', s);
+const mod = { exports: null };
+new Function('module', html.slice(s, e) + 'module.exports = ENGINE;')(mod);
+const E = mod.exports;
+if (E.setCalib) E.setCalib(null);   // the backtest shows the engine's own, uncorrected chances
+const inp = JSON.parse(fs.readFileSync(inPath, 'utf8'));
+const out = { picks: {}, slips: {}, value: [] }, byDay = {};
+for (const m of inp.matches) {
+  let a = null;
+  try { a = E.analyse(m, Date.parse(m.ko) - 3600e3); } catch (err) { a = null; }
+  if (!a) continue;
+  out.picks[m.id] = { k: a.top ? a.top.key : null, pp: a.top ? a.top.pAdj : null, pr: a.top ? a.top.price : null,
+    p: [a.p.H, a.p.D, a.p.A], m: a.mkt ? a.mkt.p : null, pm: a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A] : null };
+  for (const v of E.value([{ m, a }], 0.03)) out.value.push([m.id, v.s.key, v.s.price, v.s.p]);
+  const d = m.ko.slice(0, 10); (byDay[d] = byDay[d] || []).push({ m, a });
+}
+for (const [d, list] of Object.entries(byDay)) {
+  out.slips[d] = ['C', 'B', 'A'].map((t) => { const sl = E.buildSlip(list, t, inp.target);
+    return { t, f: sl.feasible, o: sl.odds, p: sl.prob, legs: sl.legs.map((l) => [l.m.id, l.s.key]) }; });
+}
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+def load_bt_season():
+    """Last completed season for football-data's main leagues (with pre-match prices), plus the season before for ratings."""
+    code, prev = season_code(NOW, 1), season_code(NOW, 2)
+    out = {}
+    for lk, c in L.items():
+        if not c['fd']:
+            continue
+        rows = []
+        for cd, cur in ((code, True), (prev, False)):
+            r = fetch(f'{FD}/mmz4281/{cd}/{c["fd"]}.csv')
+            if r.status != 200 or not r.body:
+                continue
+            for row in read_csv(r.body):
+                d = parse_date(col(row, 'Date'))
+                h, a = col(row, 'HomeTeam', 'Home'), col(row, 'AwayTeam', 'Away')
+                hg, ag = fnum(col(row, 'FTHG', 'HG')), fnum(col(row, 'FTAG', 'AG'))
+                if d and h and a and hg is not None and ag is not None:
+                    ko = uk_to_utc(d, col(row, 'Time'))   # football-data times are UK time; 15:00 if missing
+                    rows.append((d, h, a, int(hg), int(ag), cur, fd_market(row, None) if cur else None, ko))
+        if any(r[5] for r in rows):
+            out[lk] = rows
+    return out, f'20{code[:2]}/{code[2:]}'
+
+
+def bt_matches(seasons):
+    """Engine input for every backtest game: expected goals from the ratings as they stood that week, plus its prices."""
+    ms, res = [], {}
+    for lk, rows in seasons.items():
+        cur = sorted([r for r in rows if r[5]], key=lambda r: r[0])
+        if len(cur) < 60:
+            continue
+        start = cur[0][0]
+        teams = sorted({r[1] for r in cur} | {r[2] for r in cur})
+        init, fits = None, {}
+        for w in sorted({(r[0] - start).days // 7 for r in cur}):
+            if w < BT_SKIP_WEEKS:
+                continue
+            cut = start + timedelta(days=7 * w)
+            games = [(d, h, a, hg, ag, c) for d, h, a, hg, ag, c, _m, _k in rows if d < cut]
+            rt = fit_ratings(games, teams, asof=cut, init=init)
+            if rt:
+                fits[w], init = rt, rt
+        for d, h, a, hg, ag, c, mkt, ko in cur:
+            rt = fits.get((d - start).days // 7)
+            if not rt or not mkt or h not in rt['teams'] or a not in rt['teams']:
+                continue
+            ah, dh = rt['teams'][h]
+            aa, da = rt['teams'][a]
+            lm = [round(math.exp(rt['mu'] + rt['home'] + ah + da), 4), round(math.exp(rt['mu'] + aa + dh), 4)]
+            mid = f"{lk}-{ko:%Y%m%d}-{slug(h)}-{slug(a)}"
+            ms.append({'id': mid, 'lk': lk, 'ko': iso(ko), 'h': h, 'a': a, 'lm': lm, 'mkt': mkt, 'xl': False, 'fr': False, 'clash': False})
+            res[mid] = (hg, ag)
+    return ms, res
+
+
+def run_backtest(state):
+    import shutil
+    import subprocess
+    import tempfile
+    t0 = time.time()
+    node = shutil.which('node')
+    if not node or not INDEX_FILE.exists():
+        return None
+    seasons, label = load_bt_season()
+    ms, res = bt_matches(seasons)
+    t1 = time.time()
+    if len(ms) < 200:
+        log('backtest: not enough games with prices', len(ms))
+        return None
+    with tempfile.TemporaryDirectory() as td:
+        js, inp = Path(td) / 'bt.js', Path(td) / 'in.json'
+        js.write_text(NODE_BT)
+        inp.write_text(json.dumps({'target': TRACK_TARGET, 'matches': ms}))
+        r = subprocess.run([node, str(js), str(INDEX_FILE), str(inp)], capture_output=True, text=True, timeout=600)
+        if r.returncode != 0:
+            log('backtest: engine failed', (r.stderr or '')[-300:])
+            return None
+        eng = json.loads(r.stdout)
+    agg = new_agg()
+    agg['value'] = [0, 0, 0.0]                 # bets, won, units at the best price
+    by_lg = {}
+    for mid, e in eng['picks'].items():
+        hs, as_ = res[mid]
+        oc = 0 if hs > as_ else 1 if hs == as_ else 2
+        lk = mid.split('-')[0]
+        if e['k']:
+            won = bool(settle(e['k'], hs, as_))
+            t = tier_of(e['pp']) or '-'
+            tt = agg['tiers'][t]
+            tt[0] += 1; tt[1] += int(won); tt[2] = round(tt[2] + e['pp'], 4)
+            if t != '-':
+                bl = by_lg.setdefault(lk, [0, 0, 0.0])
+                bl[0] += 1; bl[1] += int(won); bl[2] = round(bl[2] + e['pp'], 4)
+        agg['n'] += 1
+        for i in range(3):
+            b = agg['cal'][min(9, int(e['p'][i] * 10))]
+            b[0] += 1; b[1] = round(b[1] + e['p'][i], 4); b[2] += int(i == oc)
+        if e.get('m') and e.get('pm'):
+            ll = agg['ll']
+            ll[0] += 1
+            ll[1] = round(ll[1] - math.log(max(1e-6, e['p'][oc])), 4)
+            ll[2] = round(ll[2] - math.log(max(1e-6, e['m'][oc])), 4)
+            ll[3] = round(ll[3] - math.log(max(1e-6, e['pm'][oc])), 4)
+    for mid, key, price, p in eng['value']:
+        hs, as_ = res[mid]
+        won = bool(settle(key, hs, as_))
+        v = agg['value']
+        v[0] += 1; v[1] += int(won); v[2] = round(v[2] + (price - 1 if won else -1), 3)
+    for d, sl in eng['slips'].items():
+        for s_ in sl:
+            if not s_['f'] or not s_['legs']:
+                continue
+            won = all(settle(k, *res[i]) for i, k in s_['legs'])
+            a = agg['slips'][s_['t']]
+            a[0] += 1; a[1] += int(won); a[2] = round(a[2] + (s_['o'] - 1 if won else -1), 3); a[3] = round(a[3] + s_['p'], 4)
+    out = {'app': 'Statpad', 'season': label, 'at': iso(NOW), 'games': len(ms), 'leagues': len({m['lk'] for m in ms}),
+           'skip_weeks': BT_SKIP_WEEKS, 'target': TRACK_TARGET, 'agg': agg,
+           'by_league': dict(sorted(by_lg.items(), key=lambda x: -x[1][0]))}
+    log(f"backtest: {label}, {len(ms)} games in {out['leagues']} leagues (ratings {t1 - t0:.0f} s, total {time.time() - t0:.0f} s)")
+    return out
+
 # ----------------------------------------------------------------------------------------------
 def load_json(p):
     try:
@@ -2115,6 +2279,14 @@ def main():
     if n_sc:
         log('results from The Odds API for', n_sc, 'competitions')
     track = safe(lambda: track_update(doc, state), None)
+    if due(state, 'backtest', BT_EVERY_H) or not state.get('backtest'):
+        last['backtest'] = iso(NOW)
+        bt = safe(lambda: run_backtest(state), None)
+        if bt:
+            state['backtest'] = bt
+            changed = True
+    if state.get('backtest'):
+        (OUT_DIR / 'backtest.json').write_text(json.dumps(state['backtest'], ensure_ascii=False, separators=(',', ':')))
     results = safe(lambda: publish_results(state), None)
     if results is not None:
         (OUT_DIR / 'results.json').write_text(json.dumps(results, ensure_ascii=False, separators=(',', ':')))

@@ -13,6 +13,7 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 | `.github/workflows/update.yml` | Runs `update.py` every 5 minutes and redeploys the site whenever the data changes. |
 | `matches.json` | Starter data (5–9 Nov 2026). It is replaced on the first run. |
 | `track.json` | The track record. The workflow creates it and commits it; don't edit it by hand. |
+| `backtest.json`, `results.json` | Made by the workflow on each publish (last season replayed; recent final scores). Nothing to upload. |
 | `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. |
 | App icons | Drawn by the workflow each time it publishes, so there's nothing to upload. |
 | `og.jpg` | The picture shown when the link is shared on WhatsApp, Telegram or X. |
@@ -43,6 +44,18 @@ The record uses the same engine as the page, run with Node from `index.html`.
 **Results speed.** With an API-Football key, finished games are graded within a couple of hours: while games are waiting for a result, the workflow re-reads that day's results (at most hourly for today), and postponed games leave the queue straight away. This costs a few calls a day, and team-news line-ups always leave 20 calls spare for results. Without the key, results come from football-data.co.uk, which publishes them twice a week. The site also gets a `results.json` with the last three weeks' final scores, which **My bets** uses.
 
 **Self-tuning.** Once 150 top picks have been graded, every update compares the chances Statpad stated with what actually landed over the last 90 days, and fits a small correction. If Statpad has been over-confident, its stated chances, tiers and slips are trimmed; if under-confident, they're raised. The fit uses the chances as stated before any correction, so it never feeds on itself, and it stays close to "no change" until the evidence is strong. The Track tab shows its progress and the current correction. Results for UEFA, cup and Saudi games come from The Odds API and are only fetched on paid plans.
+
+**Last season, replayed.** Once a week the workflow replays the last full season of the main European leagues that football-data.co.uk covers (with the season before it for ratings), through the same engine. Each week's team ratings are rebuilt from earlier games only, every game is priced from the bookmakers' average odds before kick-off, the first four weeks are skipped while ratings settle, and self-tuning is off. The **Track** tab shows the result as **Last season, replayed**: hit rate against the stated chance for each tier, 10-odds slips, value bets at the best price, and log loss against the market. It appears from the first run, so the Track tab is useful before the live record has grown. It takes a few seconds and uses no API credits.
+
+## Combos, draw no bet and handicaps
+
+Each match page has a **Combos, draw no bet & handicaps** section with:
+
+- **Same-game combos.** Win and over 1.5 or 2.5, win and both teams score, win and under 3.5, win to nil, double chance and under 3.5 or both teams score, both teams score and over 2.5, and draw and under 2.5.
+- **Draw no bet.** Stake back on a draw; the chance shown is of winning when there's a winner.
+- **Handicaps ±1.5.** For example "Arsenal −1.5" (wins by 2+) and "Sunderland +1.5" (doesn't lose by 2+).
+
+They come from the same scoreline grid as every other market, so the link between the two parts of a combo is priced in, rather than multiplying two chances as if they were unrelated. Prices are estimates with a typical bet-builder margin: if your bookmaker offers less than the fair odds, it's poor value. You can add them to the coupon and save them to **My bets**, which settles them. They never appear in the top picks, the slips or the Value board.
 
 ## My bets
 
