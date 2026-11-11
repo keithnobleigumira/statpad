@@ -415,6 +415,85 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .mv-nums em.up { color: var(--pitch); } .mv-nums em.down { color: var(--red); }
 .mv-nums .muted { color: var(--ink-3); }
 .mv-take { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+/* season simulator */
+.sim { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.sim .card { min-width: 0; }
+.sim-load { display: grid; gap: 10px; }
+.sim-t td.zp { position: relative; font-family: var(--f-mono); }
+@media (max-width: 520px) { .sim-t .hide-sm { display: none; } }
+@media (max-width: 760px) { .sim-t .strip-c { display: none; } }
+@media (max-width: 420px) { .lt .hide-sm { display: none; } }
+.lt.sim-t table { width: 100%; min-width: 0; }
+.sim .lt { box-shadow: none; }
+@media (max-width: 520px) { .lt.sim-t td.team { white-space: normal; font-size: 13px; } .lt.sim-t th, .lt.sim-t td { padding-left: 4px; padding-right: 4px; } .lt.sim-t th { white-space: normal; line-height: 1.25; vertical-align: bottom; } .lt.sim-t td em { display: block; margin: 2px 0 0; } .lt.sim-t td.team .tlink { text-align: left; } }
+.sim-t td.zp span { position: relative; z-index: 1; }
+.sim-t td.zp::before { content: ''; position: absolute; inset: 3px 2px; border-radius: 6px; background: var(--pitch); opacity: calc(var(--p) * .55); }
+.sim-t td em, .tm-kpis em { font-style: normal; font: 700 10.5px var(--f-mono); margin-left: 4px; position: relative; z-index: 1; }
+.sim-t td em.up { color: var(--pitch); } .sim-t td em.down { color: var(--red); }
+.pstrip { display: inline-flex; gap: 1px; vertical-align: middle; }
+.pstrip i { width: 6px; height: 16px; background: var(--cobalt); border-radius: 2px; }
+.wi-on { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink-2); background: var(--yellow-soft); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+.wi-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+@media (min-width: 980px) { .wi-list { grid-template-columns: 1fr 1fr; } }
+.wi-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid var(--rule); padding-bottom: 8px; min-width: 0; }
+.wi-fx { display: grid; min-width: 0; font-weight: 600; font-size: 13.5px; }
+.wi-fx small { font-weight: 500; font-size: 11.5px; color: var(--ink-3); }
+.wi-seg { flex: none; }
+.wi-seg button { min-width: 34px; font-family: var(--f-mono); }
+.tlink { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+.tlink:hover { text-decoration-color: currentColor; }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--cobalt); font: inherit; cursor: pointer; text-decoration: underline; }
+/* team pages */
+.tm-head { display: grid; gap: 6px; margin-bottom: 14px; justify-items: start; }
+.tm-name { font: 800 30px/1.05 var(--f-display); font-stretch: 87.5%; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.tm-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.tback { padding: 6px 10px; font-size: 12.5px; }
+.tm-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+@media (min-width: 640px) { .tm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tm-kpis > div { background: var(--sunk); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+.tm-kpis span { font-size: 11.5px; color: var(--ink-3); }
+.tm-kpis b { font: 650 20px/1.1 var(--f-mono); font-stretch: 87.5%; }
+.tm-kpis small { font-size: 11.5px; color: var(--ink-3); }
+.tm-luck { margin: 0 0 14px; }
+.tm-out { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 640px) { .tm-out { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tm-out > div { background: var(--sunk); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.tm-out span { font-size: 11.5px; color: var(--ink-3); } .tm-out b { font: 650 18px var(--f-mono); font-stretch: 87.5%; }
+.rchart { height: 170px; }
+.lt.tm-ha table { min-width: 0; width: 100%; } .tm-ha { box-shadow: none; }
+.rs-list, .tn-next { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rs-list li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto 62px; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--rule); }
+.rs { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; font: 700 11.5px var(--f-mono); color: #fff; }
+.rs.W { background: var(--pitch); } .rs.D { background: var(--ink-3); } .rs.L { background: var(--red); }
+.rs-fx { display: grid; min-width: 0; } .rs-fx b { font-size: 13.5px; overflow-wrap: anywhere; } .rs-fx small { font-size: 11.5px; color: var(--ink-3); }
+.rs-sc { font-weight: 650; }
+.rs-p { display: grid; text-align: right; font: 600 13px var(--f-mono); } .rs-p small { font: 500 10px var(--f-body); color: var(--ink-3); }
+.rs-p.surprise { color: var(--yellow); }
+.tn-next li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.tn-next .tx { display: grid; min-width: 0; } .tn-next .tx b { font-size: 13.5px; } .tn-next .tx small { font-size: 11.5px; color: var(--ink-3); }
+.tn-next .tw { font-size: 12px; color: var(--ink-3); } .tn-next .tw b { font-family: var(--f-mono); color: var(--ink); }
+.tn-next .sbar { grid-column: 1 / -1; }
+/* listen mode */
+.btn.listen-b { display: inline-flex; align-items: center; gap: 6px; }
+.btn.listen-b svg { width: 17px; height: 17px; }
+.btn.listen-b.sm { padding: 4px 9px; font-size: 11.5px; text-transform: none; letter-spacing: 0; font-family: var(--f-body); }
+.btn.listen-b.sm svg { width: 14px; height: 14px; }
+.story h4 { align-items: center; }
+.tts-bar { position: fixed; z-index: 60; left: 10px; right: 10px; bottom: calc(70px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; background: var(--ink); color: var(--paper); border-radius: 16px; padding: 10px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25); max-width: 640px; margin: 0 auto; }
+@media (min-width: 980px) { .tts-bar { bottom: 18px; } }
+.tts-bar button { border: 0; background: none; color: inherit; display: grid; place-items: center; cursor: pointer; flex: none; }
+.tts-pp { width: 38px; height: 38px; border-radius: 50%; background: var(--pitch) !important; color: #fff !important; }
+.tts-pp svg, .tts-x svg { width: 18px; height: 18px; }
+.tts-t { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.tts-t b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tts-t span { font-size: 11px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tts-prog { height: 3px; background: rgba(255,255,255,.2); border-radius: 99px; overflow: hidden; margin-top: 3px; }
+.tts-prog i { display: block; height: 100%; background: var(--pitch); }
+.tts-sp { font: 700 12px var(--f-mono); padding: 6px 8px; border: 1px solid rgba(255,255,255,.3) !important; border-radius: 8px; }
+.tts-v { max-width: 110px; background: transparent; color: inherit; border: 1px solid rgba(255,255,255,.3); border-radius: 8px; font-size: 11px; padding: 5px 4px; }
+.tts-v option { color: #000; }
+@media (max-width: 430px) { .tts-bar { flex-wrap: wrap; } .tts-v { order: 5; flex: 1 1 100%; max-width: none; } }
+body.tts-on main, body.tts-on .wrap { padding-bottom: 76px; }
 .dist { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 110px; }
 .dist .col { display: grid; gap: 5px; justify-items: center; align-self: end; }
 .dist .bar { width: 100%; border-radius: 6px 6px 2px 2px; background: var(--cobalt); opacity: .85; }
@@ -721,6 +800,9 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M8 7.5L12 4l4 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10.5H6.5A1.5 1.5 0 005 12v7a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0019 19v-7a1.5 1.5 0 00-1.5-1.5H16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
   <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4.5 8.5A1.5 1.5 0 016 7h2.2l1.3-2h5l1.3 2H18a1.5 1.5 0 011.5 1.5v9A1.5 1.5 0 0118 19H6a1.5 1.5 0 01-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.8" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
   <symbol id="i-install" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15.5V18a2 2 0 002 2h10a2 2 0 002-2v-2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7.5 5.5h3v13h-3zM13.5 5.5h3v13h-3z" fill="currentColor"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
 </svg>
@@ -757,6 +839,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     <section id="v-matches" class="section" data-view="matches">
       <div class="sec-head">
         <div><h2>Matches</h2><p class="sub" id="matchesSub">Tap a match for the full breakdown.</p></div>
+        <div class="ctl"><button type="button" class="btn listen-b" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen to the briefing</button></div>
       </div>
       <div class="days" id="days-matches" role="group" aria-label="Day"></div>
       <div class="filters">
@@ -783,7 +866,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     <section id="v-slips" class="section" data-view="slips" hidden>
       <div class="sec-head">
         <div><h2>Slips</h2><p class="sub">For the chosen day, the combination with the highest chance of landing that still pays the target. One leg per match, kicked-off games removed.</p></div>
-        <div class="ctl"><span class="lbl">Target odds</span><div class="seg" id="target"></div></div>
+        <div class="ctl"><span class="lbl">Target odds</span><div class="seg" id="target"></div><button type="button" class="btn listen-b" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></div>
       </div>
       <div class="days" id="days-slips" role="group" aria-label="Day"></div>
       <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="priced">Matches with live prices</option></select></label></div>
@@ -808,8 +891,9 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 
     <section id="v-tables" class="section" data-view="tables" hidden>
       <div class="sec-head">
-        <div><h2>Tables &amp; ratings</h2><p class="sub">Standings from results. Attack and defence are the model's goal multipliers against a league-average side.</p></div>
-        <label class="field"><span class="sr">Competition</span><select id="tleague"></select></label>
+        <div><h2 id="tTitle">Tables &amp; ratings</h2><p class="sub" id="tSub">Standings from results. Attack and defence are the model's goal multipliers against a league-average side. Tap a team for its page.</p></div>
+        <div class="ctl"><div class="seg" id="tSeg" role="group" aria-label="Table or season simulator"><button type="button" data-tseg="table" aria-pressed="true">Table</button><button type="button" data-tseg="sim" aria-pressed="false">Season simulator</button></div>
+        <label class="field"><span class="sr">Competition</span><select id="tleague"></select></label></div>
       </div>
       <div id="tableBox"></div>
     </section>
@@ -1419,14 +1503,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function openMatch(id, opener) {
     const r = S.byId.get(id); if (!r) return;
     if (S.open !== id) Object.assign(S.qx, { r: '', g: '', b: '', m: '', hg: '', ag: '', s: [] });
-    S.open = id; S.opener = opener || document.activeElement;
+    const wasOpen = $('#sheet').classList.contains('open');
+    S.open = id; if (!wasOpen) S.opener = opener || document.activeElement;
+    $('#sheetBody').scrollTop = 0;
     renderSheet();
     $('#sheet').classList.add('open'); $('#scrim').classList.add('open'); $('#sheet').setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     setTimeout(() => $('#sheetClose').focus(), 60);
   }
   function closeSheet() {
-    S.open = null;
+    S.open = null; S.teamBack = null;
     $('#sheet').classList.remove('open'); $('#scrim').classList.remove('open'); $('#sheet').setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     if (S.opener && S.opener.focus) S.opener.focus();
@@ -1451,7 +1537,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <text x="${W - 8}" y="${H - 4}" text-anchor="end">${esc(tFmt.format(t1))}</text></svg>
       <div class="legend"><span><i style="background:var(--h)"></i>${esc(m.h)} ${odds(last[1])}</span><span><i style="background:var(--d)"></i>Draw ${odds(last[2])}</span><span><i style="background:var(--a)"></i>${esc(m.a)} ${odds(last[3])}</span></div>`;
   }
+  // a team's name links to its team page when Statpad has a league for it
+  function teamLink(m, name, dom) {
+    const g = lgInfo(m.lk).group, lk = dom || (g !== 'cups' && g !== 'intl' ? m.lk : null);
+    const L = lk && S.data.leagues && S.data.leagues[lk];
+    return L && L.table && L.table.some((r) => r[0] === name) ? `<button type="button" class="tlink" data-team="${esc(lk)}|${esc(name)}">${esc(name)}</button>` : esc(name);
+  }
   function renderSheet() {
+    if (String(S.open).startsWith('team:')) { renderTeamSheet(); return; }
     const r = S.byId.get(S.open); if (!r) { closeSheet(); return; }
     const { m, a } = r, info = lgInfo(m.lk);
     $('#sheetTitle').textContent = `${info.name} · ${longFmt.format(r.ko)}`;
@@ -1495,9 +1588,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const mk = m.mkt;
     $('#sheetBody').innerHTML = `
       <div class="vs">
-        <div class="side"><div class="team">${esc(m.h)}</div><div class="meta">${pos(m.ph, m.fh, m.dh)}</div></div>
+        <div class="side"><div class="team">${teamLink(m, m.h, m.dh)}</div><div class="meta">${pos(m.ph, m.fh, m.dh)}</div></div>
         <div class="mid"><div class="xg-big">${a.lh.toFixed(2)} – ${a.la.toFixed(2)}</div><div class="xg-l">EXPECTED GOALS</div></div>
-        <div class="side r"><div class="team">${esc(m.a)}</div><div class="meta">${pos(m.pa, m.fa, m.da)}</div></div>
+        <div class="side r"><div class="team">${teamLink(m, m.a, m.da)}</div><div class="meta">${pos(m.pa, m.fa, m.da)}</div></div>
       </div>
       <div class="chips">${chips.map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>
       <div id="sheetLive">${r.started ? liveCard(r) : ''}</div>
@@ -1667,10 +1760,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     sel.value = S.tleague;
     const L = S.data.leagues[S.tleague];
     if (!L) { $('#tableBox').innerHTML = '<div class="empty-state"><b>No tables yet</b>Tables appear once results load.</div>'; return; }
+    const sim = S.tseg === 'sim';
+    for (const b of document.querySelectorAll('[data-tseg]')) b.setAttribute('aria-pressed', String(b.dataset.tseg === (sim ? 'sim' : 'table')));
+    $('#tTitle').textContent = sim ? 'Season simulator' : 'Tables & ratings';
+    $('#tSub').textContent = sim ? 'The rest of the season played thousands of times from Statpad’s ratings and prices: each team’s chance of every finishing position. Set results for the next games to see what changes.'
+      : 'Standings from results. Attack and defence are the model’s goal multipliers against a league-average side. Tap a team for its page.';
+    if (sim) { renderSim(); return; }
     const hasR = L.table.some((r) => r[9] != null), hasW = L.table.some((r) => r[2] != null);
     const amax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[9] || 0))) : 1, dmax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[10] || 0))) : 1;
     $('#tableBox').innerHTML = `<div class="lt"><table><thead><tr><th class="l">#</th><th class="l">Team</th><th>P</th>${hasW ? '<th>W</th><th>D</th><th>L</th>' : ''}<th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th class="l">Form</th>${hasR ? '<th>Attack</th><th>Defence</th>' : ''}</tr></thead><tbody>
-      ${L.table.map((r, i) => `<tr class="${i < 4 ? 'zone' : ''}"><td class="l">${i + 1}</td><td class="l team">${esc(r[0])}</td><td>${r[1]}</td>${hasW ? `<td>${r[2] ?? ''}</td><td>${r[3] ?? ''}</td><td>${r[4] ?? ''}</td>` : ''}<td>${r[5]}</td><td>${r[6]}</td><td>${r[5] - r[6] > 0 ? '+' : ''}${r[5] - r[6]}</td><td><b>${r[7]}</b></td><td class="l">${formDots(r[8]) || ''}</td>
+      ${L.table.map((r, i) => `<tr class="${i < 4 ? 'zone' : ''}"><td class="l">${i + 1}</td><td class="l team"><button type="button" class="tlink" data-team="${esc(S.tleague)}|${esc(r[0])}">${esc(r[0])}</button></td><td>${r[1]}</td>${hasW ? `<td>${r[2] ?? ''}</td><td>${r[3] ?? ''}</td><td>${r[4] ?? ''}</td>` : ''}<td>${r[5]}</td><td>${r[6]}</td><td>${r[5] - r[6] > 0 ? '+' : ''}${r[5] - r[6]}</td><td><b>${r[7]}</b></td><td class="l">${formDots(r[8]) || ''}</td>
       ${hasR ? `<td>${r[9] != null ? Math.exp(r[9]).toFixed(2) + '×' : ''}<span class="rbar"><i style="width:${r[9] != null ? (Math.exp(r[9]) / amax) * 100 : 0}%"></i></span></td><td>${r[10] != null ? Math.exp(r[10]).toFixed(2) + '×' : ''}<span class="rbar def"><i style="width:${r[10] != null ? (Math.exp(r[10]) / dmax) * 100 : 0}%"></i></span></td>` : ''}</tr>`).join('')}
     </tbody></table></div><p class="note">${esc(L.name)}${L.season ? ' · ' + esc(L.season) : ''}. ${hasR ? 'Attack above 1.00 scores more than an average side; defence below 1.00 concedes less. ' : ''}Points deductions are not applied.</p>`;
   }
@@ -1905,6 +2004,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>Each match page explains the top pick in plain words, from the same numbers: the teams' attack and defence ranks on Statpad's ratings, recent form, expected goals, what the bookmakers and Statpad's own model each say, how the price has moved, team news, and any reason for caution.</p>
       <h3>Market movers</h3>
       <p>Under <b>Value → Market movers</b>, the games whose bookmaker prices moved most since Statpad first saw them, measured as the change in the margin-free chance. A shortening price usually means money is coming in, often from sharp bettors. Each move comes with Statpad's own model view (agreeing, going further, or not seeing it), team news, and whether a value price is still around.</p>
+      <h3>Season simulator</h3>
+      <p>Under <b>Tables → Season simulator</b>, Statpad plays the rest of a league season 5,000 times. Games with bookmaker prices use Statpad's blended expected goals; the rest use the team ratings, and each simulated season nudges every team's strength a little, since ratings are never exact. It shows each team's average final points and its chance of the title, the top places and the bottom places, plus a strip of every finishing position. Under <b>What if…</b>, set results for the next games and the whole season is replayed with them fixed: changes from the normal forecast are marked ▲▼. Teams level on points are split on goal difference, then goals scored; head-to-head records, points deductions and play-offs aren't modelled. It covers leagues where every team plays every other home and away, once the workflow has written the league's team file.</p>
+      <h3>Team pages</h3>
+      <p>Tap a team name in a table or on a match page. Each team page shows points against <b>expected points</b> (the chances Statpad gave before each game, added up), so you can see who is overperforming or unlucky; goals and shots on target for and against; how many goals they score per shot on target compared with the league; their attack and defence ratings through the season; home and away records; the season outlook from the simulator; the next games; and every result with the chance Statpad gave it beforehand. The pre-match chances are worked out again from the ratings each team had before that game, so they're fair, not hindsight. Team files are refreshed with the results, every 6 hours.</p>
+      <h3>Listen mode</h3>
+      <p>Tap <b>Listen</b> to have Statpad read out the day's briefing (safest picks, best value and the slips), the picks in each slip, a match page's story or a team page. It uses your phone's own voice, so nothing is downloaded; choose the voice and speed in the player. It's English only.</p>
       <h3>My bets</h3>
       <p>Save a coupon with your stake and your bookmaker's odds, and Statpad shows the chance of it landing, the odds you need to break even after the tax on winnings (15% in Uganda by default; change it in My bets), and what it's worth on average. Bets settle themselves from the same results, using the 90-minute score; a postponed leg counts at odds 1. Everything is stored on your device: use Back up to keep a copy or move to a new phone.</p>
       <h3>Slips</h3>
@@ -3161,7 +3266,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const h = m.hist;
     if (h && h.length > 1 && side != null) {
       const o0 = h[0][side + 1], o1 = h[h.length - 1][side + 1];
-      if (o0 > 1 && o1 > 1 && Math.abs(o1 / o0 - 1) >= 0.03) out.push(`${side === 1 ? 'The draw' : esc(nmS)}${side === 1 ? '' : "'s"} price has ${o1 < o0 ? 'shortened' : 'drifted'} from ${odds(o0)} to ${odds(o1)} since ${esc(dayLabel(dayKey(Date.parse(h[0][0]))))}${o1 < o0 ? ': money has been coming in.' : '.'}`);
+      if (o0 > 1 && o1 > 1 && Math.abs(o1 / o0 - 1) >= 0.03) out.push(`${side === 1 ? 'The draw' : esc(nmS)}${side === 1 ? '' : "'s"} price has ${o1 < o0 ? 'shortened' : 'drifted'} from ${odds(o0)} to ${odds(o1)} since ${esc(dayLabel(dayKey(Date.parse(h[0][0]))).replace(/^(Today|Yesterday|Tomorrow)$/, (x) => x.toLowerCase()))}${o1 < o0 ? ': money has been coming in.' : '.'}`);
     }
     const tn = m.tn;
     if (tn) {
@@ -3178,7 +3283,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (m.clash) why.push('it is a big game');
     if (m.fr) why.push('it is a friendly');
     if (why.length || t.pAdj - t.pLo > 0.04) out.push(`Caution: ${why.length ? why.join(', ') : 'the numbers have a wide spread'}, so the cautious chance is ${pct(t.pLo)}.`);
-    return `<div class="card story"><h4>Why this pick <span>the story in the numbers</span></h4><ul>${out.map((x) => `<li>${x}</li>`).join('')}</ul></div>`;
+    return `<div class="card story"><h4>Why this pick <button type="button" class="btn listen-b sm" data-listen="match"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></h4><ul>${out.map((x) => `<li>${x}</li>`).join('')}</ul></div>`;
   }
 
   // ---------------- live win probability ----------------
@@ -3284,6 +3389,398 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="mv-nums"><span class="mono">${odds(v.o0)} → ${odds(v.o1)}</span><span>chance <b>${pct(v.p0)} → ${pct(v.p1)}</b> <em class="${up ? 'up' : 'down'}">${up ? '+' : '−'}${Math.abs(v.d * 100).toFixed(1)} pts</em></span>${Math.abs(v.d6) >= 0.01 ? `<span class="muted">${v.d6 > 0 ? '+' : '−'}${Math.abs(v.d6 * 100).toFixed(1)} pts in the last 6 h</span>` : ''}</div>
         <p class="mv-take">${take}</p></article>`;
     }).join('');
+  }
+
+  // ---------------- team files: ratings week by week, results with the chances before each game, fixtures left ----------------
+  S.tf = {}; S.sim = {}; S.tseg = store.get('tseg', 'table'); S.whatif = {};
+  async function loadTeamFile(lk) {
+    const c = S.tf[lk];
+    if (c && c.d && Date.now() - c.at < 30 * 60e3) return c.d;
+    if (c && c.p) return c.p;
+    const p = fetch(`teams/${encodeURIComponent(lk)}.json?v=${Math.floor(Date.now() / (30 * 60e3))}`, { cache: 'no-store' })
+      .then((r) => { if (!r.ok) throw new Error(r.status === 404 ? 'not ready' : 'HTTP ' + r.status); return r.json(); })
+      .then((d) => { S.tf[lk] = { at: Date.now(), d }; return d; })
+      .catch((e) => { S.tf[lk] = null; throw e; });
+    S.tf[lk] = { p };
+    return p;
+  }
+
+  // ---------------- season simulator ----------------
+  // The rest of the season is played thousands of times. Each game's goals are Poisson draws from the two sides'
+  // expected goals (Statpad's blended numbers for games with prices this week, the ratings for later ones).
+  // Each simulated season also nudges every team's ratings a little, because form changes and ratings are estimates.
+  const SIM_N = 5000, SIM_SIG = 0.08;
+  function zonesFor(lk, n) {
+    const z = { ENG2: [['Top 2', 1, 2], ['Top 6', 1, 6], ['Bottom 3', -3]], ENG3: [['Top 2', 1, 2], ['Top 6', 1, 6], ['Bottom 4', -4]],
+      ENG4: [['Top 3', 1, 3], ['Top 7', 1, 7], ['Bottom 2', -2]], ESP2: [['Top 2', 1, 2], ['Top 6', 1, 6], ['Bottom 4', -4]], ITA2: [['Top 2', 1, 2], ['Top 8', 1, 8], ['Bottom 3', -3]],
+      GER2: [['Top 2', 1, 2], ['Top 3', 1, 3], ['Bottom 3', -3]], FRA2: [['Top 2', 1, 2], ['Top 5', 1, 5], ['Bottom 3', -3]] }[lk];
+    return z || (lgInfo(lk).group === 'second' ? [['Top 2', 1, 2], ['Top 6', 1, 6], ['Bottom 3', -3]] : [['Title', 1, 1], ['Top 4', 1, 4], ['Bottom 3', -3]]).map((x) => x.slice());
+  }
+  function simSetup(lk, tf) {
+    const L = S.data.leagues[lk]; if (!L || !L.table || !tf.rem) return null;
+    const names = tf.teams, n = names.length, row = new Map(L.table.map((r) => [r[0], r]));
+    if (!names.every((nm) => row.has(nm))) return null;
+    const base = names.map((nm) => { const r = row.get(nm); return { pts: r[7], gf: r[5], ga: r[6], att: r[9] || 0, def: r[10] || 0, p: r[1], pos: L.table.indexOf(r) + 1 }; });
+    const mu = L.mu != null ? L.mu : 0.3, home = L.home != null ? L.home : 0.25;
+    const live = new Map(S.rows.filter((x) => x.m.lk === lk && !x.started && x.a).map((x) => [x.m.h + '|' + x.m.a, x]));
+    const fx = tf.rem.map(([i, j]) => {
+      const r = live.get(names[i] + '|' + names[j]);
+      return { i, j, lh: r ? r.a.lh : Math.exp(mu + home + base[i].att + base[j].def), la: r ? r.a.la : Math.exp(mu + base[j].att + base[i].def), r };
+    });
+    return { lk, names, base, fx, n, zones: zonesFor(lk, n) };
+  }
+  async function runSim(st, fixed, N, onProg) {
+    const { n, base, fx } = st;
+    const pos = Array.from({ length: n }, () => new Uint32Array(n)), ptsSum = new Float64Array(n);
+    const pts = new Int32Array(n), gd = new Int32Array(n), gf = new Int32Array(n), nz = new Float64Array(2 * n), tie = new Float64Array(n), order = [...Array(n).keys()];
+    const pois = (l) => { const L = Math.exp(-l); let k = 0, p = Math.random(); while (p > L) { k++; p *= Math.random(); } return k; };
+    const gauss = () => { let u = 0; while (!u) u = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random()); };
+    const fix = fx.map((f) => fixed[f.i + '-' + f.j] || '');
+    const ok = (w, h, a) => (w === 'H' ? h > a : w === 'D' ? h === a : h < a);
+    for (let s0 = 0; s0 < N; s0 += 250) {
+      const s1 = Math.min(N, s0 + 250);
+      for (let s = s0; s < s1; s++) {
+        for (let t = 0; t < n; t++) { pts[t] = base[t].pts; gf[t] = base[t].gf; gd[t] = base[t].gf - base[t].ga; nz[2 * t] = gauss() * SIM_SIG; nz[2 * t + 1] = gauss() * SIM_SIG; tie[t] = Math.random(); }
+        for (let k = 0; k < fx.length; k++) {
+          const f = fx[k], w = fix[k];
+          const lh = f.lh * Math.exp(nz[2 * f.i] + nz[2 * f.j + 1]), la = f.la * Math.exp(nz[2 * f.j] + nz[2 * f.i + 1]);
+          let h = pois(lh), a = pois(la);
+          if (w) { for (let tries = 0; tries < 40 && !ok(w, h, a); tries++) { h = pois(lh); a = pois(la); } if (!ok(w, h, a)) { h = w === 'A' ? 0 : 1; a = w === 'H' ? 0 : 1; } }
+          gf[f.i] += h; gf[f.j] += a; gd[f.i] += h - a; gd[f.j] += a - h;
+          if (h > a) pts[f.i] += 3; else if (h < a) pts[f.j] += 3; else { pts[f.i]++; pts[f.j]++; }
+        }
+        order.sort((x, y) => pts[y] - pts[x] || gd[y] - gd[x] || gf[y] - gf[x] || tie[y] - tie[x]);
+        for (let p = 0; p < n; p++) pos[order[p]][p]++;
+        for (let t = 0; t < n; t++) ptsSum[t] += pts[t];
+      }
+      if (onProg) onProg(s1 / N);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    return { N, pos, ptsAvg: Array.from(ptsSum, (x) => x / N) };
+  }
+  function zoneP(res, t, z, n) {
+    const [, a, b] = z, row = res.pos[t];
+    let c = 0;
+    if (a < 0) for (let p = n + a; p < n; p++) c += row[p]; else for (let p = a - 1; p < b; p++) c += row[p];
+    return c / res.N;
+  }
+  const simPct = (p) => (p >= 0.995 ? '>99%' : p >= 0.0995 ? Math.round(p * 100) + '%' : p >= 0.005 ? (p * 100).toFixed(1) + '%' : p > 0 ? '<0.5%' : '–');
+  async function simLeague(lk, fixed) {
+    const tf = await loadTeamFile(lk), st = simSetup(lk, tf);
+    if (!st) return null;
+    const key = JSON.stringify(fixed || {});
+    const c = S.sim[lk];
+    if (c && c.key === key && c.ver === S.ver && c.gen === tf.gen) return c;
+    const res = await runSim(st, fixed || {}, SIM_N, (f) => { const el = $('#simProg'); if (el) el.style.width = Math.round(f * 100) + '%'; });
+    const out = { key, ver: S.ver, gen: tf.gen, st, res };
+    if (!fixed || !Object.keys(fixed).length) S.sim[lk] = Object.assign(out, { base: res }); else { out.base = S.sim[lk] && S.sim[lk].base; S.sim[lk] = out; }
+    return out;
+  }
+  async function renderSim() {
+    const box = $('#tableBox'), lk = S.tleague, L = S.data.leagues[lk];
+    if (!L) return;
+    box.innerHTML = `<div class="card sim-load"><b>Playing out the rest of the ${esc(L.name)} season ${SIM_N.toLocaleString('en-US')} times…</b><div class="ck-bar"><i id="simProg" style="width:0%"></i></div></div>`;
+    let base;
+    try {
+      if (!S.sim[lk] || !S.sim[lk].base || S.sim[lk].ver !== S.ver) { S.whatif[lk] = {}; await simLeague(lk, {}); }
+      base = S.sim[lk].base;
+      const wf = S.whatif[lk] || {};
+      if (Object.keys(wf).length) await simLeague(lk, wf);
+    } catch (e) {
+      box.innerHTML = `<div class="empty-state"><b>The simulator isn't ready for this league yet</b>${/not ready/.test(e.message) ? 'Its data file appears after the site’s next results update.' : 'Couldn’t load its data (' + esc(e.message) + '). Try again in a moment.'}</div>`;
+      return;
+    }
+    if (S.tseg !== 'sim' || S.tleague !== lk || S.tab !== 'tables') return;
+    const c = S.sim[lk];
+    if (!c || !c.st) { box.innerHTML = `<div class="empty-state"><b>No simulator for ${esc(L.name)}</b>The simulator covers leagues where every team plays every other once at home and once away, with no split into groups. This one ${simLeagueOK(lk) ? 'has no fixtures left' : 'has a different format'}.</div>`; return; }
+    const { st, res } = c, n = st.n, Z = st.zones, wf = S.whatif[lk] || {}, hasW = Object.keys(wf).length > 0 && base !== res;
+    const order = [...Array(n).keys()].sort((x, y) => res.ptsAvg[y] - res.ptsAvg[x]);
+    const delta = (t, f) => { if (!hasW) return ''; const d = f(res, t) - f(base, t); return Math.abs(d) >= 0.005 ? `<em class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}${Math.round(Math.abs(d) * 100)}</em>` : ''; };
+    const rows = order.map((t) => {
+      const b = st.base[t], strip = Array.from(res.pos[t], (c2) => c2 / res.N), mxp = Math.max(...strip);
+      return `<tr><td class="l hide-sm">${b.pos}</td><td class="l team"><button type="button" class="tlink" data-team="${esc(lk)}|${esc(st.names[t])}">${esc(st.names[t])}</button></td><td class="hide-sm">${b.pts}</td><td><b>${res.ptsAvg[t].toFixed(0)}</b>${delta(t, (r, x) => r.ptsAvg[x] / 100)}</td>
+        ${Z.map((z) => { const p = zoneP(res, t, z, n); return `<td class="zp" style="--p:${p}"><span>${simPct(p)}</span>${delta(t, (r, x) => zoneP(r, x, z, n))}</td>`; }).join('')}
+        <td class="hide-sm strip-c"><span class="pstrip" aria-label="Chance of each finishing position">${strip.map((p) => `<i style="opacity:${p ? Math.max(0.06, p / mxp) : 0}"></i>`).join('')}</span></td></tr>`;
+    }).join('');
+    const nextFx = st.fx.filter((f) => f.r).sort((a, b) => a.r.ko - b.r.ko).slice(0, 12);
+    const wiRows = nextFx.map((f) => {
+      const k = f.i + '-' + f.j, v = wf[k] || '';
+      return `<li><span class="wi-fx">${esc(st.names[f.i])} v ${esc(st.names[f.j])}<small>${esc(dayLabel(f.r.day))} ${tFmt.format(f.r.ko)}</small></span><span class="seg wi-seg">${[['H', '1'], ['D', 'X'], ['A', '2']].map(([o, l]) => `<button type="button" data-wi="${esc(lk)}|${k}|${o}" aria-pressed="${v === o}">${l}</button>`).join('')}</span></li>`;
+    }).join('');
+    const left = st.fx.length;
+    box.innerHTML = `<div class="sim">
+      <div class="card"><h4>${esc(L.name)}: the rest of the season, ${SIM_N.toLocaleString('en-US')} times <span>${left} game${left === 1 ? '' : 's'} left</span></h4>
+        ${hasW ? `<div class="wi-on">What-if results are set: changes from Statpad's normal forecast are marked ▲▼. <button type="button" class="btn ghost" data-wireset="${esc(lk)}">Clear what-ifs</button></div>` : ''}
+        <div class="lt sim-t"><table><thead><tr><th class="l hide-sm">Now</th><th class="l">Team</th><th class="hide-sm">Pts</th><th title="Average final points">Final pts</th>${Z.map((z) => `<th>${esc(z[0])}</th>`).join('')}<th class="hide-sm strip-c l">Finishing position: 1st → ${ord(n)}</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <p class="note">Sorted by average final points. Ties are split on goal difference, then goals scored; head-to-head records and points deductions aren't counted. Positions are just positions: what each place earns (Europe, promotion, play-offs, relegation) depends on the league.</p></div>
+      ${wiRows ? `<div class="card wi"><h4>What if… <span>pick results for the next games</span></h4><ul class="wi-list">${wiRows}</ul><p class="note">Statpad replays the season with those results fixed and shows what changes.</p></div>` : ''}
+    </div>`;
+  }
+  const simLeagueOK = (lk) => !!(S.tf[lk] && S.tf[lk].d && S.tf[lk].d.rem);
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-tseg],[data-wi],[data-wireset]'); if (!t) return;
+    if (t.dataset.tseg) { S.tseg = t.dataset.tseg; store.set('tseg', S.tseg); renderTables(); return; }
+    if (t.dataset.wireset) { S.whatif[t.dataset.wireset] = {}; if (S.sim[t.dataset.wireset]) S.sim[t.dataset.wireset].res = S.sim[t.dataset.wireset].base; renderSim(); return; }
+    const [lk, k, o] = t.dataset.wi.split('|'), wf = S.whatif[lk] = S.whatif[lk] || {};
+    if (wf[k] === o) delete wf[k]; else wf[k] = o;
+    if (!Object.keys(wf).length && S.sim[lk]) S.sim[lk].res = S.sim[lk].base;
+    renderSim();
+  });
+
+  // ---------------- team pages ----------------
+  function openTeam(lk, name, opener) {
+    if (S.open && !String(S.open).startsWith('team:')) S.teamBack = S.open;
+    else if (!S.open) S.teamBack = null;
+    const key = `team:${lk}|${name}`;
+    S.open = key; if (!S.opener || !$('#sheet').classList.contains('open')) S.opener = opener || document.activeElement;
+    renderSheet();
+    $('#sheet').classList.add('open'); $('#scrim').classList.add('open'); $('#sheet').setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden'; $('#sheetBody').scrollTop = 0;
+    loadTeamFile(lk).then(() => { if (S.open === key) renderSheet(); }).catch(() => { if (S.open === key) renderSheet(); });
+    if (simLeagueOKSoon(lk)) simLeague(lk, {}).then(() => { if (S.open === key) renderSheet(); }).catch(() => {});
+  }
+  const simLeagueOKSoon = (lk) => !S.sim[lk] || S.sim[lk].ver !== S.ver;
+  function teamStats(rows) {
+    const z = () => ({ p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, xp: 0, n: 0, sf: 0, sa: 0, sn: 0 });
+    const all = z(), home = z(), away = z();
+    for (const r of rows) {
+      for (const s of [all, r[2] ? home : away]) {
+        s.p++; s.gf += r[3]; s.ga += r[4];
+        if (r[3] > r[4]) { s.w++; s.pts += 3; } else if (r[3] === r[4]) { s.d++; s.pts++; } else s.l++;
+        if (r[5] != null) { s.xp += 3 * r[5] + r[6]; s.n++; }
+        if (r[8] != null && r[9] != null) { s.sf += r[8]; s.sa += r[9]; s.sn++; }
+      }
+    }
+    return { all, home, away };
+  }
+  function ratingChart(series, ranks) {
+    if (!series || series.length < 2) return '<p class="note">The ratings chart fills in as the season goes on.</p>';
+    const W = 560, H = 170, P = 34, B = 20;
+    const ts = series.map((s) => Date.parse(s[0])), t0 = ts[0], t1 = ts[ts.length - 1] || t0 + 1;
+    const av = series.map((s) => Math.exp(s[1])), dv = series.map((s) => Math.exp(s[2]));
+    const lo = Math.min(0.6, ...av, ...dv) * 0.95, hi = Math.max(1.5, ...av, ...dv) * 1.05;
+    const x = (t) => P + (W - P - 8) * (t - t0) / Math.max(1, t1 - t0), y = (v) => 8 + (H - B - 8) * (1 - (Math.log(v) - Math.log(lo)) / (Math.log(hi) - Math.log(lo)));
+    const line = (vals, c) => `<polyline fill="none" stroke="var(--${c})" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" points="${vals.map((v, k) => `${x(ts[k]).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}"/>`;
+    const ticks = [0.67, 1, 1.5].filter((v) => v > lo && v < hi);
+    const mFmt = new Intl.DateTimeFormat(undefined, { month: 'short' });
+    const months = []; let lastM = -1;
+    for (let k = 0; k < ts.length; k++) { const m = new Date(ts[k]).getMonth(); if (m !== lastM) { months.push(ts[k]); lastM = m; } }
+    return `<svg class="spark rchart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Attack and defence ratings over the season">
+      ${ticks.map((v) => `<line x1="${P}" x2="${W - 8}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)" stroke-dasharray="${v === 1 ? '0' : '3 4'}"/><text x="0" y="${y(v) + 3}">${v.toFixed(2)}×</text>`).join('')}
+      ${months.map((t) => `<text x="${x(t)}" y="${H - 4}">${mFmt.format(t)}</text>`).join('')}
+      ${line(av, 'pitch')}${line(dv, 'red')}</svg>
+      <div class="legend"><span><i style="background:var(--pitch)"></i>Attack ${av[av.length - 1].toFixed(2)}× ${ranks ? `(${ord(ranks[0])})` : ''}: higher scores more</span><span><i style="background:var(--red)"></i>Defence ${dv[dv.length - 1].toFixed(2)}× ${ranks ? `(${ord(ranks[1])})` : ''}: lower concedes less</span></div>`;
+  }
+  function renderTeamSheet() {
+    const [lk, name] = String(S.open).slice(5).split('|'), L = S.data.leagues[lk] || {}, info = lgInfo(lk);
+    $('#sheetTitle').textContent = `${info.name} · Team`;
+    const row = (L.table || []).find((r) => r[0] === name), pos = row ? L.table.indexOf(row) + 1 : null;
+    const c = S.tf[lk], tf = c && c.d, T = tf && tf.t && tf.t[name];
+    const back = S.teamBack && S.byId.get(S.teamBack) ? `<button type="button" class="btn ghost tback" data-open="${esc(S.teamBack)}">← Back to the match</button>` : '';
+    const head = `<div class="tm-head">${back}<div class="tm-name">${esc(name)}</div>
+      <div class="tm-meta">${pos ? `<span>${ord(pos)} of ${L.table.length}</span><span>${row[7]} pts from ${row[1]}</span>` : ''}${row ? formDots(row[8]) : ''}</div>
+      <button type="button" class="btn listen-b" data-listen="team"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></div>`;
+    if (!T) {
+      const msg = c && c.p ? '<div class="empty-state"><b>Loading…</b></div>' : '<div class="empty-state"><b>No team page yet</b>Team pages cover league teams; this one fills in after the site’s next results update.</div>';
+      $('#sheetBody').innerHTML = head + teamNext(name) + msg;
+      return;
+    }
+    const st = teamStats(T.r), a = st.all;
+    const att = (L.table || []).slice().sort((x, y) => (y[9] || 0) - (x[9] || 0)).map((x) => x[0]), def = (L.table || []).slice().sort((x, y) => (x[10] || 0) - (y[10] || 0)).map((x) => x[0]);
+    const ranks = att.includes(name) ? [att.indexOf(name) + 1, def.indexOf(name) + 1] : null;
+    // finishing: goals per shot on target, against the league's rate
+    let lgG = 0, lgS = 0; for (const t of Object.values(tf.t)) for (const r of t.r) if (r[8] != null) { lgG += r[3]; lgS += r[8]; }
+    const conv = a.sn && a.sf ? T.r.filter((r) => r[8] != null).reduce((s, r) => s + r[3], 0) / a.sf : null, lgConv = lgS ? lgG / lgS : null;
+    const luck = a.n ? a.pts - a.xp : null;
+    const sim = S.sim[lk] && S.sim[lk].base && S.sim[lk].st, ti = sim ? S.sim[lk].st.names.indexOf(name) : -1;
+    const out = ti >= 0 ? S.sim[lk].st.zones.map((z) => `<div><span>${esc(z[0])}</span><b>${simPct(zoneP(S.sim[lk].base, ti, z, S.sim[lk].st.n))}</b></div>`).join('') + `<div><span>Final points</span><b>${S.sim[lk].base.ptsAvg[ti].toFixed(0)}</b></div>` : '';
+    const split = (s, l) => `<tr><td class="l">${l}</td><td>${s.p}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td><td>${s.gf}</td><td>${s.ga}</td><td><b>${s.pts}</b></td><td class="hide-sm">${s.p ? (s.pts / s.p).toFixed(2) : '–'}</td></tr>`;
+    const res = T.r.slice().reverse().slice(0, 12).map((r) => {
+      const o = r[3] > r[4] ? 'W' : r[3] === r[4] ? 'D' : 'L', p = r[5] == null ? null : o === 'W' ? r[5] : o === 'D' ? r[6] : r[7];
+      return `<li><span class="rs ${o}">${o}</span><span class="rs-fx"><b>${r[2] ? 'v' : '@'} ${esc(r[1])}</b><small>${esc(new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(Date.parse(r[0])))}${r[8] != null ? ` · shots on target ${r[8]}–${r[9]}` : ''}</small></span><span class="rs-sc mono">${r[3]}–${r[4]}</span><span class="rs-p${p != null && p < 0.25 ? ' surprise' : ''}">${p != null ? `${pct(p, 0)}<small>pre-match</small>` : ''}</span></li>`;
+    }).join('');
+    $('#sheetBody').innerHTML = head + `
+      <div class="tm-kpis">
+        <div><span>Points</span><b>${a.pts}</b><small>${a.p} games</small></div>
+        ${luck != null ? `<div><span>Expected points</span><b>${a.xp.toFixed(1)}</b><small class="${luck >= 0 ? 'pl-pos' : 'pl-neg'}">${luck >= 0 ? '+' : '−'}${Math.abs(luck).toFixed(1)} vs expected</small></div>` : ''}
+        <div><span>Goals</span><b>${a.gf}–${a.ga}</b><small>${(a.gf / Math.max(1, a.p)).toFixed(2)} for, ${(a.ga / Math.max(1, a.p)).toFixed(2)} against a game</small></div>
+        ${a.sn ? `<div><span>Shots on target</span><b>${(a.sf / a.sn).toFixed(1)}–${(a.sa / a.sn).toFixed(1)}</b><small>a game, for and against</small></div>` : ''}
+      </div>
+      ${luck != null ? `<p class="note tm-luck">${luck >= 2 ? `${esc(name)} have ${luck.toFixed(1)} more points than the chances Statpad gave before each game add up to: better than their ratings knew, or lucky.` : luck <= -2 ? `${esc(name)} have ${Math.abs(luck).toFixed(1)} fewer points than the chances Statpad gave before each game add up to: unlucky, or worse than their ratings knew.` : `${esc(name)}'s points are about what Statpad's chances before each game added up to.`}${conv != null && lgConv ? ` They score ${conv.toFixed(2)} goals per shot on target, against ${lgConv.toFixed(2)} across the league${conv > lgConv * 1.15 ? ': sharp finishing that may not last' : conv < lgConv * 0.85 ? ': poor finishing that may turn' : ''}.` : ''}</p>` : ''}
+      ${out ? `<div class="card"><h4>Season outlook <span>${SIM_N.toLocaleString('en-US')} simulated seasons</span></h4><div class="tm-out">${out}</div><p class="note"><button type="button" class="linkbtn" data-gosim="${esc(lk)}">See the whole league in the season simulator</button></p></div>` : ''}
+      ${teamNext(name)}
+      <div class="card"><h4>Ratings through the season <span>${tf.sh ? 'goals and shots on target' : 'goals'}, recent games counting most</span></h4>${ratingChart(T.s, ranks)}</div>
+      <div class="card"><h4>Home and away</h4><div class="lt tm-ha"><table><thead><tr><th class="l"></th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th><th class="hide-sm">Per game</th></tr></thead><tbody>${split(st.home, 'Home')}${split(st.away, 'Away')}${split(a, 'All')}</tbody></table></div></div>
+      <div class="card"><h4>Results <span>latest first · the chance Statpad gave the result beforehand</span></h4><ul class="rs-list">${res}</ul></div>`;
+  }
+  function teamNext(name) {
+    const up = S.rows.filter((r) => !r.started && r.a && (r.m.h === name || r.m.a === name)).sort((x, y) => x.ko - y.ko).slice(0, 5);
+    if (!up.length) return '';
+    return `<div class="card"><h4>Next games</h4><ul class="tn-next">${up.map((r) => {
+      const home = r.m.h === name, p = r.a.p, ps = home ? [p.H, p.D, p.A] : [p.A, p.D, p.H];
+      return `<li data-open="${esc(r.m.id)}"><span class="tx"><b>${home ? 'v' : '@'} ${esc(home ? r.m.a : r.m.h)}</b><small>${esc(lgName(r.m.lk))} · ${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}</small></span><span class="tw">Win <b>${pct(ps[0])}</b></span>${sbar(ps)}</li>`;
+    }).join('')}</ul></div>`;
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-team],[data-gosim]'); if (!t) return;
+    e.stopPropagation();
+    if (t.dataset.gosim) { closeSheet(); S.tleague = t.dataset.gosim; S.tseg = 'sim'; store.set('tseg', 'sim'); setTab('tables'); return; }
+    const [lk, name] = t.dataset.team.split('|'); openTeam(lk, name, t);
+  });
+
+  // ---------------- listen mode: the phone's own voice reads Statpad aloud ----------------
+  const TTS = { q: [], i: 0, on: false, paused: false, rate: +(store.get('ttsRate', 1)) || 1, voice: null, title: '', gen: 0 };
+  const ttsOK = () => 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  function ttsVoices() { try { return speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)); } catch (e) { return []; } }
+  function ttsPickVoice() {
+    const vs = ttsVoices(), want = store.get('ttsVoice', '');
+    return vs.find((v) => v.name === want) || ['en-KE', 'en-NG', 'en-ZA', 'en-GB', 'en-IN', 'en-AU', 'en-US'].map((l) => vs.find((v) => v.lang.replace('_', '-') === l)).find(Boolean) || vs[0] || null;
+  }
+  // short sentences: some phones stop reading after about 15 seconds of one long one
+  const ttsSplit = (parts) => parts.flatMap((p) => String(p).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').split(/(?<=[.!?])\s+/))
+    .flatMap((x) => (x.length > 170 ? x.split(/(?<=[;:])\s+/) : [x])).map((x) => x.trim()).filter(Boolean);
+  function speak(title, parts) {
+    if (!ttsOK()) { toast('This browser can’t read aloud'); return; }
+    ttsStop(true);
+    TTS.q = ttsSplit(parts); TTS.i = 0; TTS.on = true; TTS.paused = false; TTS.title = title; TTS.gen++;
+    TTS.voice = ttsPickVoice();
+    ttsPlayer(); ttsNext(TTS.gen);
+  }
+  function ttsNext(gen) {
+    if (gen !== TTS.gen || !TTS.on || TTS.paused) return;
+    if (TTS.i >= TTS.q.length) { ttsStop(); return; }
+    const u = new SpeechSynthesisUtterance(TTS.q[TTS.i]);
+    u.rate = TTS.rate; u.pitch = 1;
+    if (TTS.voice) { u.voice = TTS.voice; u.lang = TTS.voice.lang; } else u.lang = 'en-GB';
+    u.onend = () => { if (gen !== TTS.gen || TTS.paused) return; TTS.i++; ttsPlayer(); ttsNext(gen); };
+    u.onerror = (e) => { if (gen !== TTS.gen || TTS.paused || /interrupted|canceled/.test(e.error)) return; TTS.i++; ttsNext(gen); };
+    speechSynthesis.speak(u);
+  }
+  function ttsStop(quiet) {
+    TTS.gen++; TTS.on = false; TTS.paused = false;
+    try { speechSynthesis.cancel(); } catch (e) { /* nothing playing */ }
+    if (!quiet) ttsPlayer();
+  }
+  function ttsPause() {   // pausing restarts the current sentence: phones don't all support a true pause
+    if (!TTS.on) return;
+    if (TTS.paused) { TTS.paused = false; TTS.gen++; ttsPlayer(); ttsNext(TTS.gen); }
+    else { TTS.paused = true; TTS.gen++; try { speechSynthesis.cancel(); } catch (e) { /* */ } ttsPlayer(); }
+  }
+  function ttsPlayer() {
+    let el = $('#ttsBar');
+    if (!TTS.on) { if (el) el.hidden = true; document.body.classList.remove('tts-on'); return; }
+    const vs = ttsVoices(), vkey = vs.map((v) => v.name).join('|');
+    if (!el || el.dataset.v !== vkey) {   // built once; each sentence only updates the text and the bar
+      if (!el) { el = document.createElement('div'); el.id = 'ttsBar'; el.className = 'tts-bar'; el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Listening'); document.body.appendChild(el); }
+      el.dataset.v = vkey;
+      el.innerHTML = `<button type="button" class="tts-pp" data-tts="pp" aria-label="Pause"><svg aria-hidden="true"><use href="#i-pause"/></svg></button>
+        <div class="tts-t"><b></b><span aria-live="off"></span><div class="tts-prog"><i></i></div></div>
+        <button type="button" class="tts-sp" data-tts="rate" aria-label="Reading speed"></button>
+        ${vs.length > 1 ? `<select class="tts-v" data-ttsvoice aria-label="Voice">${vs.map((v) => `<option value="${esc(v.name)}">${esc(v.name.replace(/^(Microsoft|Google)\s*/, '').slice(0, 26))} (${esc(v.lang)})</option>`).join('')}</select>` : ''}
+        <button type="button" class="tts-x" data-tts="stop" aria-label="Stop"><svg aria-hidden="true"><use href="#i-x"/></svg></button>`;
+    }
+    el.hidden = false; document.body.classList.add('tts-on');
+    const pp = el.querySelector('.tts-pp'); pp.setAttribute('aria-label', TTS.paused ? 'Play' : 'Pause'); pp.querySelector('use').setAttribute('href', TTS.paused ? '#i-play' : '#i-pause');
+    el.querySelector('.tts-t b').textContent = TTS.title;
+    el.querySelector('.tts-t span').textContent = `${Math.min(TTS.i + 1, TTS.q.length)} of ${TTS.q.length}: ${TTS.q[TTS.i] || ''}`;
+    el.querySelector('.tts-prog i').style.width = (TTS.i / Math.max(1, TTS.q.length)) * 100 + '%';
+    el.querySelector('.tts-sp').textContent = TTS.rate + '×';
+    const sel = el.querySelector('.tts-v'); if (sel && TTS.voice) sel.value = TTS.voice.name;
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-tts],[data-listen]'); if (!t) return;
+    if (t.dataset.listen) { e.stopPropagation(); listen(t.dataset.listen); return; }
+    const a = t.dataset.tts;
+    if (a === 'pp') ttsPause();
+    else if (a === 'stop') ttsStop();
+    else if (a === 'rate') { const R = [1, 1.2, 0.85]; TTS.rate = R[(R.indexOf(TTS.rate) + 1) % R.length]; store.set('ttsRate', TTS.rate); if (TTS.on && !TTS.paused) { TTS.gen++; try { speechSynthesis.cancel(); } catch (x) { /* */ } ttsNext(TTS.gen); } ttsPlayer(); }
+  });
+  document.addEventListener('change', (e) => {
+    if (!e.target.matches('[data-ttsvoice]')) return;
+    store.set('ttsVoice', e.target.value); TTS.voice = ttsPickVoice();
+    if (TTS.on && !TTS.paused) { TTS.gen++; try { speechSynthesis.cancel(); } catch (x) { /* */ } ttsNext(TTS.gen); }
+  });
+  if (ttsOK()) { try { speechSynthesis.onvoiceschanged = () => { if (TTS.on) ttsPlayer(); }; speechSynthesis.getVoices(); } catch (e) { /* */ } }
+  window.addEventListener('pagehide', () => ttsStop(true));
+  // what gets read
+  const sayScore = (h, a) => `${h === 0 ? 'nil' : h} ${a === 0 ? 'nil' : a}`;
+  const sayPct = (p) => (p >= 0.995 ? 'over 99 percent' : p > 0 && p < 0.005 ? 'under 1 percent' : `${Math.round(p * 100)} percent`);
+  const sayDay = (k) => dayLabel(k, true).replace(/^(Today|Tomorrow)$/, (x) => x.toLowerCase());
+  const sayOdds = (o) => (o >= 10 ? o.toFixed(1) : o.toFixed(2));
+  function briefingDay() {
+    const ds = days().filter((d) => S.rows.some((r) => r.day === d.key && !r.started && r.a));
+    return ds.find((d) => d.key === dayKey(Date.now())) || ds[0] || null;
+  }
+  function listenBriefing() {
+    const now = new Date(), hr = now.getHours(), d = briefingDay(), out = [];
+    out.push(`${hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'}. This is your Statpad briefing for ${new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(now)}.`);
+    const live = S.rows.filter((r) => r.live && S.live && S.live.games && S.live.games[r.m.id]);
+    if (live.length) {
+      out.push(`In play right now.`);
+      for (const r of live.slice(0, 5)) { const L = liveNow(r.m.id); out.push(`${r.m.h} ${L.h === 0 ? 'nil' : L.h}, ${r.m.a} ${L.a === 0 ? 'nil' : L.a}, ${L.st === 'HT' ? 'at half time' : 'after ' + Math.round(L.min) + ' minutes'}.`); }
+    }
+    if (!d) { out.push('There are no games with predictions in the next few days.'); return out; }
+    const rows = S.rows.filter((r) => r.day === d.key && !r.started && r.a);
+    out.push(`${d.key === dayKey(Date.now()) ? 'Today' : dayLabel(d.key, true)} there are ${rows.length} games with predictions.`);
+    const safe = rows.filter((r) => r.a.top).sort((x, y) => y.a.top.pLo - x.a.top.pLo).slice(0, 3);
+    if (safe.length) {
+      out.push(`The safest picks.`);
+      safe.forEach((r, k) => out.push(`${['One', 'Two', 'Three'][k]}: ${r.a.top.label}, in ${r.m.h} against ${r.m.a}, ${sayPct(r.a.top.pAdj)}.`));
+    }
+    const vals = ENGINE.value(rows.map((r) => ({ m: r.m, a: r.a })), 0.03).slice(0, 2);
+    if (vals.length) {
+      out.push(`Best value.`);
+      for (const v of vals) out.push(`${v.s.label}, in ${v.m.h} against ${v.m.a}, at ${sayOdds(v.s.price)}${v.s.bk ? ' with ' + v.s.bk : ''}: about ${Math.round(v.s.edge * 100)} percent better than fair.`);
+    }
+    const sl = slipFor(d.key, S.target, 'all').filter((x) => x.feasible);
+    if (sl.length) {
+      out.push(`The ${S.target}-odds slips.`);
+      for (const x of sl) out.push(`${x.name}: ${x.legs.length} picks at total odds of ${sayOdds(x.odds)}, with a ${sayPct(x.prob)} chance of landing.`);
+      out.push('Open the Slips tab to hear the picks in each slip.');
+    }
+    out.push('Remember: these are chances, not certainties. Only bet what you can afford to lose.');
+    return out;
+  }
+  function listenSlips() {
+    const dk = S.day && S.day !== 'all' ? S.day : (briefingDay() || {}).key; if (!dk) return ['There are no slips to read.'];
+    const out = [`The ${S.target}-odds slips for ${dayLabel(dk, true).replace(/^(Today|Tomorrow)$/, (x) => x.toLowerCase())}.`];
+    for (const x of slipFor(dk, S.target, S.scope)) {
+      if (!x.legs.length) continue;
+      out.push(`${x.name}: ${x.legs.length} picks, total odds ${sayOdds(x.odds)}, a ${sayPct(x.prob)} chance of landing${x.feasible ? '' : ', below the target'}.`);
+      x.legs.forEach((l, k) => out.push(`${k + 1}: ${l.s.label}, ${l.m.h} against ${l.m.a}, ${sayPct(l.s.pAdj)}, odds ${sayOdds(l.s.price)}.`));
+    }
+    return out;
+  }
+  function listenMatch() {
+    const r = S.byId.get(S.open); if (!r || !r.a) return ['No prediction for this game yet.'];
+    const out = [`${r.m.h} against ${r.m.a}, ${lgName(r.m.lk)}, ${longFmt.format(r.ko)}.`];
+    const L = r.started ? liveNow(r.m.id) : null;
+    if (L) { const p = liveP(r, L); out.push(L.ft ? `Full time: ${r.m.h} ${sayScore(L.h, L.a).split(' ')[0]}, ${r.m.a} ${sayScore(L.h, L.a).split(' ')[1]}.` : `Live, ${Math.round(L.min)} minutes: ${r.m.h} ${L.h}, ${r.m.a} ${L.a}. Chances now: ${r.m.h} ${sayPct(p.H)}, draw ${sayPct(p.D)}, ${r.m.a} ${sayPct(p.A)}.`); }
+    out.push(`Statpad's chances: ${r.m.h} to win ${sayPct(r.a.p.H)}, draw ${sayPct(r.a.p.D)}, ${r.m.a} to win ${sayPct(r.a.p.A)}.`);
+    const tmp = document.createElement('div'); tmp.innerHTML = storyCard(r);
+    out.push(...[...tmp.querySelectorAll('li')].map((li) => li.textContent.replace(/(\d)–(\d)/g, '$1 $2').replace(/%/g, ' percent')));
+    return out;
+  }
+  function listenTeam() {
+    const [lk, name] = String(S.open).slice(5).split('|'), L = S.data.leagues[lk] || {}, row = (L.table || []).find((r) => r[0] === name);
+    const out = [`${name}.`];
+    if (row) out.push(`${ord(L.table.indexOf(row) + 1)} in the ${lgName(lk)}, with ${row[7]} points from ${row[1]} games.${row[8] ? ' Form, most recent last: ' + [...row[8]].map((c) => ({ W: 'win', D: 'draw', L: 'loss' }[c] || c)).join(', ') + '.' : ''}`);
+    const T = S.tf[lk] && S.tf[lk].d && S.tf[lk].d.t && S.tf[lk].d.t[name];
+    if (T) {
+      const a = teamStats(T.r).all;
+      if (a.n) { const d = a.pts - a.xp; out.push(`Statpad's chances before each game add up to ${a.xp.toFixed(0)} points, so they are ${Math.abs(d) < 2 ? 'about where they should be' : Math.abs(d).toFixed(0) + ' points ' + (d > 0 ? 'ahead of' : 'behind') + ' expectations'}.`); }
+    }
+    const sim = S.sim[lk] && S.sim[lk].base && S.sim[lk].st, ti = sim ? S.sim[lk].st.names.indexOf(name) : -1;
+    if (ti >= 0) out.push(`In ${SIM_N} simulated seasons: ${S.sim[lk].st.zones.map((z) => `${z[0].toLowerCase()} ${((q) => (q > 0 ? sayPct(q) : 'in none of them'))(zoneP(S.sim[lk].base, ti, z, S.sim[lk].st.n))}`).join(', ')}, and about ${S.sim[lk].base.ptsAvg[ti].toFixed(0)} points.`);
+    const nx = S.rows.filter((r) => !r.started && r.a && (r.m.h === name || r.m.a === name)).sort((x, y) => x.ko - y.ko)[0];
+    if (nx) { const home = nx.m.h === name, p = home ? nx.a.p.H : nx.a.p.A; out.push(`Next: ${home ? 'at home to' : 'away at'} ${home ? nx.m.a : nx.m.h}, ${sayDay(nx.day)}. Statpad gives them ${sayPct(p)} to win.`); }
+    return out;
+  }
+  function listen(what) {
+    if (what === 'day') speak('Today’s briefing', listenBriefing());
+    else if (what === 'slips') speak('The slips', listenSlips());
+    else if (what === 'match') { const r = S.byId.get(S.open); speak(r ? `${r.m.h} v ${r.m.a}` : 'This match', listenMatch()); }
+    else if (what === 'team') speak(String(S.open).slice(5).split('|')[1] || 'Team', listenTeam());
   }
 
   // ---------------- events ----------------

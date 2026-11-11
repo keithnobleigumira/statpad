@@ -13,7 +13,7 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 | `.github/workflows/update.yml` | Runs `update.py` every 5 minutes and redeploys the site whenever the data changes. |
 | `matches.json` | Starter data (5–9 Nov 2026). It is replaced on the first run. |
 | `track.json` | The track record. The workflow creates it and commits it; don't edit it by hand. |
-| `backtest.json`, `results.json`, `live.json` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores). Nothing to upload. |
+| `backtest.json`, `results.json`, `live.json`, `teams/` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores; one file per league for team pages and the season simulator). Nothing to upload. |
 | `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. |
 | App icons | Drawn by the workflow each time it publishes, so there's nothing to upload. |
 | `og.jpg` | The picture shown when the link is shared on WhatsApp, Telegram or X. |
@@ -82,6 +82,30 @@ Each match page opens with the story behind the top pick: the teams' attack and 
 ## Market movers
 
 **Value → Market movers** lists the games whose bookmaker prices moved most since Statpad first saw them, measured as the change in the margin-free chance (not just the odds). A shortening price usually means money is coming in, often from sharp bettors; a drifting one the opposite. Each move shows a small price chart, the move in the last six hours, whether Statpad's own model agrees, team news, and whether a value price is still available. Tap one to open the match.
+
+## Season simulator
+
+**Tables → Season simulator** plays the rest of the league season 5,000 times on the phone, in about a quarter of a second. Games that already have bookmaker prices use Statpad's blended expected goals; the rest use the team ratings, and each simulated season nudges every team's strength a little, because ratings are never exact. You get each team's average final points, its chance of the title (or promotion places in second divisions), the top places and the bottom places, and a strip showing every finishing position.
+
+**What if…** lets you set results for the next games (1, X or 2). The season is replayed with those results fixed, and changes from the normal forecast are marked ▲▼. Clear them to go back.
+
+Teams level on points are split on goal difference, then goals scored. Head-to-head records, points deductions and play-offs aren't modelled. It covers leagues where every team plays every other home and away (up to 23 of them), not leagues with split seasons or cups.
+
+## Team pages
+
+Tap a team name in a table, the simulator or a match page. A team page shows:
+
+- points against **expected points**: the chances Statpad gave before each game, added up. A big gap means a team is doing better or worse than its play suggests, which tends not to last;
+- goals and shots on target for and against, and goals per shot on target compared with the league;
+- attack and defence ratings through the season, as a chart;
+- home and away records, the season outlook from the simulator, and the next games;
+- every result with the chance Statpad gave it beforehand. These are worked out again from the ratings the teams had before each game, so they aren't hindsight.
+
+The workflow writes one file per league to `teams/` with the results, every 6 hours.
+
+## Listen mode
+
+Tap **Listen** and Statpad reads out the day's briefing (the safest picks, the best value, the slips), the picks in a slip, a match page's story, or a team page. It uses the phone's own text-to-speech voice, so nothing is downloaded; pick the voice and the speed in the player at the bottom of the screen. English only.
 
 ## Combos, draw no bet and handicaps
 

@@ -647,6 +647,85 @@ def compute_leagues(results, teams):
 
 
 # ----------------------------------------------------------------------------------------------
+# Team pages and the season simulator: for each league, every team's ratings week by week this season,
+# its results with the chances Statpad's ratings gave before each game, and the fixtures still to play
+# ----------------------------------------------------------------------------------------------
+TEAMS_BUDGET_S = 180
+# leagues where every team plays every other once at home and once away, with no split: the season simulator works there
+SIM_LEAGUES = {'EPL', 'LaLiga', 'BUN', 'SA', 'L1', 'POR', 'ERE', 'ENG2', 'GER2', 'ITA2', 'ESP2', 'FRA2', 'ENG3', 'ENG4',
+               'TUR1', 'NED2', 'KSA', 'POL1', 'NOR1', 'SWE1', 'BRA1', 'JPN1', 'CHN1'}
+
+
+def team_file(lk, games, season):
+    cur = sorted([g for g in games if g[5]], key=lambda g: g[0])
+    if len(cur) < 6:
+        return None
+    shots = sum(1 for g in cur if len(g) > 7 and g[6] is not None)
+    P = MODEL if shots >= 0.8 * len(cur) else MODEL0
+    teams = sorted({g[1] for g in cur} | {g[2] for g in cur})
+    start = cur[0][0].replace(hour=0, minute=0, second=0, microsecond=0)
+    init, fits = None, {}
+    w = 0
+    while True:   # the ratings at the start of each week of the season, from earlier games only
+        cut = min(NOW, start + timedelta(days=7 * w))
+        rt = fit_ratings([g for g in games if g[0] < cut], teams, asof=cut, init=init, P=P)
+        if rt:
+            fits[w], init = rt, rt
+        if cut >= NOW:
+            break
+        w += 1
+    series = {t: [] for t in teams}
+    for w, rt in sorted(fits.items()):
+        d = min(NOW, start + timedelta(days=7 * w)).strftime('%Y-%m-%d')
+        for t in teams:
+            if t in rt['teams']:
+                series[t].append([d, round(rt['teams'][t][0], 3), round(rt['teams'][t][1], 3)])
+    rows = {t: [] for t in teams}
+    r3 = lambda x: None if x is None else round(x, 3)
+    for g in cur:
+        d, h, a, hg, ag = g[:5]
+        rt = fits.get((d - start).days // 7)
+        pH = pD = pA = None
+        if rt and h in rt['teams'] and a in rt['teams']:
+            (ah, dh), (aa, da) = rt['teams'][h], rt['teams'][a]
+            pH, pD, pA, _ = dc_probs(math.exp(rt['mu'] + rt['home'] + ah + da), math.exp(rt['mu'] + aa + dh))
+        hs, as_ = (g[6], g[7]) if len(g) > 7 else (None, None)
+        hs, as_ = (None if hs is None else int(hs)), (None if as_ is None else int(as_))
+        ds = d.strftime('%Y-%m-%d')
+        rows[h].append([ds, pretty(a), 1, hg, ag, r3(pH), r3(pD), r3(pA), hs, as_])
+        rows[a].append([ds, pretty(h), 0, ag, hg, r3(pA), r3(pD), r3(pH), as_, hs])
+    out = {'app': 'Statpad', 'lk': lk, 'season': season, 'gen': iso(NOW), 'sh': 1 if P is MODEL and shots else 0,
+           't': {pretty(t): {'s': series[t], 'r': rows[t]} for t in teams}}
+    if lk in SIM_LEAGUES:
+        played = {(g[1], g[2]) for g in cur}
+        n = len(teams)
+        if len(played) == len(cur) and len(cur) <= n * (n - 1):   # no pair has met twice at the same ground
+            idx = {t: i for i, t in enumerate(teams)}
+            out['teams'] = [pretty(t) for t in teams]
+            out['rem'] = [[idx[h], idx[a]] for h in teams for a in teams if h != a and (h, a) not in played]
+    return out
+
+
+def team_files(res):
+    t0, out = time.time(), {}
+    for lk, (games, season) in res.items():
+        if L[lk]['group'] in ('cups', 'intl'):
+            continue
+        if time.time() - t0 > TEAMS_BUDGET_S:
+            log('team pages: out of time, the rest next time')
+            break
+        try:
+            got = team_file(lk, games, season)
+        except Exception as e:
+            log('team pages:', lk, repr(e))
+            got = None
+        if got:
+            out[lk] = got
+    log(f'team pages: {len(out)} leagues in {time.time() - t0:.0f} s')
+    return out
+
+
+# ----------------------------------------------------------------------------------------------
 # Step 2: football-data fixtures (with average / best prices)
 # ----------------------------------------------------------------------------------------------
 def fd_market(row, upd):
@@ -2717,11 +2796,16 @@ def main():
         state['model_sig'] = model_sig
         retuned = True
 
-    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or retuned:
+    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or 'teamfiles' not in state or retuned:
         res = safe(load_results, {})
         if res:
             state['leagues'] = safe(lambda: compute_leagues(res, Teams()), state.get('leagues') or {})
             state['recent_results'] = safe(lambda: recent_results(res), state.get('recent_results') or {})
+            tf = safe(lambda: team_files(res), None)
+            state.setdefault('teamfiles', {})   # set even when nothing was made, so a failure doesn't reload results every run
+            if tf:
+                state['teamfiles'] = dict(state['teamfiles'], **tf)
+                state['teams_changed'] = True
             last['results'] = iso(NOW)
             src['results'] = {'ok': True, 'at': iso(NOW), 'leagues': len(res)}
         else:
@@ -2780,6 +2864,13 @@ def main():
             changed = True
     if state.get('backtest'):
         (OUT_DIR / 'backtest.json').write_text(json.dumps(dict(state['backtest'], tune=public_tune(state)), ensure_ascii=False, separators=(',', ':')))
+    # team pages and the season simulator read one small file per league
+    if state.get('teamfiles'):
+        (OUT_DIR / 'teams').mkdir(parents=True, exist_ok=True)
+        for lk, data in state['teamfiles'].items():
+            (OUT_DIR / 'teams' / f'{lk}.json').write_text(json.dumps(data, ensure_ascii=False, separators=(',', ':')))
+        if state.pop('teams_changed', False):
+            changed = True
     live = safe(lambda: publish_live(state), None)
     if live is not None:
         (OUT_DIR / 'live.json').write_text(json.dumps(live, ensure_ascii=False, separators=(',', ':')))
