@@ -445,6 +445,16 @@ details.xm .note { margin: 0 0 10px; }
 .ck-in textarea { width: 100%; min-height: 150px; resize: vertical; border: 1px solid var(--rule); border-radius: 12px; background: var(--paper); color: var(--ink); padding: 12px; font: 500 13.5px/1.5 var(--f-mono); font-stretch: 87.5%; }
 .ck-in textarea:focus { outline: 2px solid var(--cobalt); outline-offset: 1px; }
 .ck-in .bf-acts { margin-top: 10px; }
+.ck-pic { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 14px; }
+.ck-pic label.btn { cursor: pointer; }
+.ck-pic span { font-size: 12.5px; color: var(--ink-3); flex: 1 1 180px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ck-pic input:focus-visible + label { outline: 2px solid var(--cobalt); outline-offset: 2px; }
+.ck-pstate { display: flex; gap: 12px; align-items: center; background: var(--sunk); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
+.ck-pstate img { width: 54px; height: 80px; object-fit: cover; object-position: top; border-radius: 6px; border: 1px solid var(--rule); flex: none; }
+.ck-pmsg { display: grid; gap: 8px; font-size: 13px; color: var(--ink-2); min-width: 0; flex: 1; }
+.ck-bar { height: 6px; background: var(--rule); border-radius: 99px; overflow: hidden; }
+.ck-bar i { display: block; height: 100%; background: var(--pitch); border-radius: 99px; transition: width .25s; }
 .ck-sum { margin-top: 14px; display: grid; gap: 9px; }
 .ck-sum h4 { margin-bottom: 2px; }
 .ck-sum .sum-row b { text-align: right; }
@@ -650,6 +660,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
   <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M8 7.5L12 4l4 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10.5H6.5A1.5 1.5 0 005 12v7a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0019 19v-7a1.5 1.5 0 00-1.5-1.5H16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4.5 8.5A1.5 1.5 0 016 7h2.2l1.3-2h5l1.3 2H18a1.5 1.5 0 011.5 1.5v9A1.5 1.5 0 0118 19H6a1.5 1.5 0 01-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.8" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
   <symbol id="i-install" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15.5V18a2 2 0 002 2h10a2 2 0 002-2v-2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
@@ -1523,7 +1534,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const seg = ['coupon', 'mine', 'check'].includes(S.bseg) ? S.bseg : 'coupon', open = (S.bets || []).filter((b) => b.status === 'open').length;
     $('#betsTitle').textContent = { mine: 'My bets', check: 'Check a slip', coupon: 'Your coupon' }[seg];
     $('#betsSub').textContent = { mine: 'Bets you placed, at your bookmaker’s odds. They settle themselves as results come in, and stay on this device.',
-      check: 'Got a slip from WhatsApp, Telegram or a tipster? Paste it: Statpad finds each game and pick, and shows the real chance and whether the odds are worth it.',
+      check: 'Got a slip from WhatsApp, Telegram or a tipster? Add a screenshot or photo of it, or paste its text: Statpad finds each game and pick, and shows the real chance and whether the odds are worth it.',
       coupon: 'Add picks from any match. Type the price you can actually get and the maths updates.' }[seg];
     for (const b of document.querySelectorAll('[data-bseg]')) {
       b.setAttribute('aria-pressed', String(b.dataset.bseg === seg));
@@ -1810,7 +1821,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Results</h3>
       <p>With an API-Football key, finished games are graded within a couple of hours: the day's results are re-read while games are waiting, and postponed games are dropped straight away. Without it, results come from football-data.co.uk, usually within 2–4 days.</p>
       <h3>Check a slip</h3>
-      <p>Paste a slip from WhatsApp, Telegram or a tipster under <b>Bets → Check slip</b>. Statpad finds each game among its fixtures (team nicknames like Man Utd, Barca or Spurs work), reads the pick (1, X, 2, double chance, over/under, GG/NG, draw no bet, ±1.5 handicaps and same-game combos) and the odds, then prices each leg from the scoreline grid. You see the real chance of the whole slip, its fair odds, the odds needed to break even after tax, the weakest leg and what dropping it would do. Picks it can't read, or markets it doesn't price (half-time, corners, cards, scorers), are left for you to choose. Screenshots aren't read yet.</p>
+      <p>Add a screenshot or photo of a slip, or paste its text, under <b>Bets → Check slip</b>. Pictures are read on your phone by Tesseract, an open-source text reader (a one-time download of about 4.5 MB), so the picture itself is never uploaded. Before reading, Statpad turns it grey, flips dark-mode screenshots, evens out the light in photos and sizes it for the reader; the text it reads appears in the box, where anything misread can be fixed. Statpad finds each game among its fixtures (team nicknames like Man Utd, Barca or Spurs work), reads the pick (1, X, 2, double chance, over/under, GG/NG, draw no bet, ±1.5 handicaps and same-game combos) and the odds, then prices each leg from the scoreline grid. You see the real chance of the whole slip, its fair odds, the odds needed to break even after tax, the weakest leg and what dropping it would do. Picks it can't read, or markets it doesn't price (half-time, corners, cards, scorers), are left for you to choose, and a price far from the fair odds is flagged in case it was misread.</p>
       <h3>Live scores and cash-out</h3>
       <p>With an API-Football key, Statpad checks the scores of its games in play, spreading at most 40 checks a day over the hours games are being played (about every 10–20 minutes) and keeping calls in hand for line-ups and results. For each open bet in My bets it then shows the chance of each leg now and what the whole bet is worth on average: the rest of each game is played out from the score, the minute and both sides' expected goals, with goals coming a little faster late on. Type your bookmaker's cash-out offer and it says whether the offer is above or below that value. With no live score (no key, or between checks) you can type the score and minute yourself. Red cards and injuries aren't known to it, so treat it as a guide.</p>
       <h3>My bets</h3>
@@ -2355,13 +2366,44 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return CK;
   }
   // team mentions in a line: longest match wins, no overlaps
-  function ckHits(line) {
+  function ckLev(a, b, max) {   // edit distance, giving up once it passes max
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i]; let low = i;
+      for (let j = 1; j <= b.length; j++) { const v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); cur.push(v); if (v < low) low = v; }
+      if (low > max) return max + 1;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function ckHits(line, fuzzy) {
     const I = ckIndex(), toks = ckPlain(line).replace(/[+\-−–]/g, ' ').split(' ').filter(Boolean), hits = [];
     for (let i = 0; i < toks.length; i++) {
       for (let n = Math.min(5, toks.length - i); n >= 1; n--) {
         const v = toks.slice(i, i + n).join(' '), ts = I.vars.get(v) || I.vars.get(CK_ALIAS[v] || '');
         if (ts) { for (const t of ts) hits.push({ t, i, j: i + n, w: v.length }); i += n - 1; break; }
       }
+    }
+    // a name read slightly wrong from a picture ("Liverpoo1", "Manchester Unit…"): the closest spelling, one or two letters off
+    if (fuzzy && hits.length < 2 && (hits.length === 1 || /\b(vs?|versus|x)\b|\s[-–—]\s/i.test(line))) {
+      if (!I.byLen) { I.byLen = new Map(); for (const v of I.vars.keys()) if (v.length >= 5) { const k = v.length; if (!I.byLen.has(k)) I.byLen.set(k, []); I.byLen.get(k).push(v); } }
+      const taken = new Set(); hits.forEach((h) => { for (let k = h.i; k < h.j; k++) taken.add(k); });
+      for (let i = 0; i < toks.length; i++) {
+        let best = null;
+        for (let n = Math.min(3, toks.length - i); n >= 1; n--) {
+          let free = true; for (let k = i; k < i + n; k++) if (taken.has(k)) free = false;
+          const g = toks.slice(i, i + n).join(' ');
+          if (!free || g.length < 5 || /^\d/.test(g)) continue;
+          const max = g.length >= 9 ? 2 : 1;
+          for (let L = g.length - max; L <= g.length + max; L++) for (const v of I.byLen.get(L) || []) {
+            const d = ckLev(g, v, max);
+            if (d <= max && (!best || d < best.d || (d === best.d && v.length > best.v.length))) best = { d, v, n };
+          }
+        }
+        if (best) { for (const t of I.vars.get(best.v)) hits.push({ t, i, j: i + best.n, w: best.v.length - 3 * best.d, fz: true }); for (let k = i; k < i + best.n; k++) taken.add(k); i += best.n - 1; }
+      }
+      hits.sort((x, y) => x.i - y.i);
     }
     return { hits, toks };
   }
@@ -2429,7 +2471,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     t = t.replace(/(?:@|odds?\s*[:=]?|price\s*[:=]?)\s*(\d{1,3}(?:\.\d{1,3})?)/g, (_, x) => { if (odds == null) odds = parseFloat(x); return ' '; });
     // markets Statpad doesn't price: leave the pick for the reader to choose rather than guess
     if (/\b(ht|half|halftime|1st|2nd|first half|second half|corners?|cards?|bookings?|scorer|anytime|correct score|exact|odd|even)\b/.test(t)) return { key: null, odds };
+    t = t.replace(/draw no bet|\bdnb\b/g, ' dnb ');
     t = t.replace(/\b(1x2|ft|full ?time|match result|result|pick|tip|prediction|market|selection|bet|outcome|winner|fulltime)\b\s*[:=]?/g, ' ');
+    // market labels: "GG/NG" (often read as "GGING"), "Over/Under 2.5"
+    let bm = false;
+    t = t.replace(/\bgg\s*[\/|il1]?\s*ng\b|\bgging\b/g, () => { bm = true; return ' '; });
+    if (bm) t += /(^|\s)(no|n)(\s|$)/.test(t) ? ' bttsno ' : /(^|\s)(yes|y)(\s|$)/.test(t) ? ' btts ' : '';
+    let ouLine = null;
+    t = t.replace(/(?:total\s*goals\s*)?(?:over\s*\/\s*under|o\s*\/\s*u)\s*\(?\s*(?:([0-4])\.?5(?!\d))?/g, (_, n) => { if (n != null) ouLine = +n; return ' oumkt '; });
     t = t.replace(/both teams? to score|both teams? score|\bbts\b|\bgg\b/g, ' btts ').replace(/\bbtts\s*[:=-]?\s*(no|n)\b|\bng\b|no goals?\b/g, ' bttsno ').replace(/\bbtts\s*[:=-]?\s*(yes|y)\b/g, ' btts ');
     t = t.replace(/draw no bet|\bdnb\b/g, ' dnb ').replace(/double chance|\bdc\b/g, ' ').replace(/win to nil|to win to nil|clean sheet and win/g, ' nil ');
     t = t.replace(/\bhome or draw\b|\bhteam or draw\b|\bdraw or hteam\b|\b1 or x\b/g, ' 1x ').replace(/\baway or draw\b|\bdraw or away\b|\bateam or draw\b|\bdraw or ateam\b|\bx or 2\b/g, ' x2 ')
@@ -2443,9 +2492,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     });
     // goals lines
     const ou = [];
-    t = t.replace(/(hteam|ateam)?\s*(?:total\s*(?:goals)?\s*)?(over|under|ov|un|o|u)\s*\(?\s*([0-4])\.5(?!\d)\s*\)?(?:\s*goals?)?/g, (_, side, d, n) => { ou.push({ side: side || 't', d: d[0] === 'o' ? 'O' : 'U', n: +n }); return ' '; });
+    t = t.replace(/(hteam|ateam)?\s*(?:total\s*(?:goals)?\s*)?(over|under|ov|un|o|u)\s*\(?\s*([0-4])\.?5(?!\d)\s*\)?(?:\s*goals?)?/g, (_, side, d, n) => { ou.push({ side: side || 't', d: d[0] === 'o' ? 'O' : 'U', n: +n }); return ' '; });
+    if (!ou.length && ouLine != null) { const m = t.match(/\b(over|under)\b/); if (m) { ou.push({ side: 't', d: m[1] === 'over' ? 'O' : 'U', n: ouLine }); t = t.replace(m[0], ' '); } }
+    t = t.replace(/\boumkt\b/g, ' ');
     t = t.replace(/\b([0-4])\.5\s*(over|under|\+|-)/g, (_, n, d) => { ou.push({ side: 't', d: d === 'over' || d === '+' ? 'O' : 'U', n: +n }); return ' '; });
-    if (odds == null) { const m = t.match(/\b(\d{1,2}\.\d{1,2})\b(?!.*\d\.\d)/); if (m && +m[1] >= 1.01 && +m[1] <= 60) { odds = +m[1]; t = t.replace(m[0], ' '); } }
+    if (odds == null) { const m = t.match(/(?:^|\s)(\d{1,2}\.\d{1,2})(?=\s|$)/); if (m && +m[1] >= 1.01 && +m[1] <= 60) { odds = +m[1]; t = t.replace(m[1], ' '); } }   // the first price after the pick
     const has = (re) => re.test(t);
     const btts = has(/\bbttsno\b/) ? 'N' : has(/\bbtts\b/) ? 'Y' : null;
     const dnb = has(/\bdnb\b/), nil = has(/\bnil\b/);
@@ -2476,34 +2527,49 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (key && !SETTLE[key]) key = null;
     return { key, odds: odds > 1 ? odds : null };
   }
-  function ckParse(text) {
-    const lines = String(text || '').split(/\r?\n|;|\|/).map((x) => x.trim()).filter(Boolean);
+  // summary lines (potential win, tax, stake…) carry no pick; market words keep a line in
+  const CK_META = /\b(total|stake|amount|potential|possible|payout|winnings?|returns?|bonus|tax|excise|wht|balance|ticket|bet ?id|placed|cash ?out|accepted|booking|ugx|ush|shs|kes|multiple|single|system|bet ?slip|betslip|boost|rebet|book ?bet|my bets|selections?)\b/;
+  const CK_KEEP = /\b(over|under|goals?|btts|gg|ng|draw|home|away|1x|x2|dnb|handicap|yes|no)\b/;
+  // icons and list numbers read in front of a line: "✕ Home", "X Over", "1. Liverpool…"
+  const ckClean = (ln) => ln.replace(/^\s*(?:[xX✕✖×•▪●◦*>]|\d{1,2}\s*[.)])\s+(?=[A-Za-zÀ-ž])/, '').trim();
+  function ckParse(text, fromPicture) {
+    const lines = String(text || '').split(/\r?\n|;|\|/).map((x) => ckClean(x.trim())).filter(Boolean);
     let total = null, stake = null, code = null;
-    const body = [];
+    const items = [];
     for (const ln of lines) {
       const l = ln.toLowerCase().replace(/(\d),(\d{3})/g, '$1$2').replace(/(\d),(\d)/g, '$1.$2');
       let m;
       if ((m = l.match(/(?:total|tot\.?|overall)\s*(?:odds?)?\s*[:=@x]?\s*(\d+(?:\.\d+)?)/))) { total = +m[1]; continue; }
       if ((m = l.match(/(?:stake|amount|bet amount)\s*[:=]?\s*(?:ugx|ush|shs?|sh\.)?\s*(\d[\d ]*)/))) { stake = +m[1].replace(/\s/g, ''); continue; }
       if ((m = ln.match(/(?:booking\s*)?code\s*[:=#]?\s*([A-Z0-9]{4,14})/i))) { code = m[1].toUpperCase(); continue; }
-      body.push(ln);
+      const { hits } = ckHits(ln, fromPicture), f = hits.length ? ckFixture(hits) : null;
+      if (!f && CK_META.test(l) && !CK_KEEP.test(l.replace(new RegExp(CK_META.source, 'g'), ' '))) continue;
+      items.push({ ln, f });
     }
-    const legs = [], loose = [];
-    let cur = null;
-    for (const ln of body) {
-      const { hits } = ckHits(ln), f = hits.length ? ckFixture(hits) : null;
-      if (f) {
-        cur = { r: f.r, sure: f.sure, line: ln, more: [] };
-        legs.push(cur);
-      } else if (cur) cur.more.push(ln);
-      else loose.push(ln);
-    }
-    for (const g of legs) {
-      let pk = ckPick(ckSwap(g.line, g.r, true) + ' ' + ckSwap(g.more.join(' '), g.r, false));
-      if (!pk.key && loose.length && legs.indexOf(g) === 0) { const p2 = ckPick(ckSwap(loose.join(' '), g.r, false)); if (p2.key) pk = p2; }
-      g.key = pk.key; g.odds = pk.odds;
-    }
-    const unread = legs.length ? loose.filter((l) => /[a-z]{3}/i.test(l) && !/^\s*(\d{1,2}[:.]\d{2}|mon|tue|wed|thu|fri|sat|sun)/i.test(l)) : loose;
+    // a line naming one team next to the line naming its game is a pick ("Liverpool  1.30"), not another game
+    const sureNear = (i, id) => { for (let d = 1; d <= 3; d++) for (const j of [i - d, i + d]) { const o = items[j]; if (o && o.f && o.f.sure && o.f.r.m.id === id) return true; } return false; };
+    items.forEach((it, i) => {
+      if (!it.f) return;
+      if (it.f.sure) { it.leg = true; return; }
+      let dup = false; for (let d = 1; d <= 3; d++) { const o = items[i - d]; if (o && o.leg && o.f.r.m.id === it.f.r.m.id) dup = true; }
+      it.leg = !dup && !sureNear(i, it.f.r.m.id);
+    });
+    const pos = []; items.forEach((it, i) => { if (it.leg) pos.push(i); });
+    const legs = pos.map((p, k) => ({ r: items[p].f.r, sure: items[p].f.sure, line: items[p].ln,
+      before: items.slice(k ? pos[k - 1] + 1 : 0, p).map((x) => x.ln), after: items.slice(p + 1, k + 1 < pos.length ? pos[k + 1] : items.length).map((x) => x.ln) }));
+    // slips print the pick either after the game (most) or before it: read both ways, keep the one that finds more
+    const read = (g, side) => ckPick(ckSwap(g.line, g.r, true) + ' ' + ckSwap(g[side].join(' '), g.r, false));
+    const own = legs.map((g) => ckPick(ckSwap(g.line, g.r, true)));
+    const A = legs.map((g) => read(g, 'after')), B = legs.map((g) => read(g, 'before'));
+    const n = (P, f) => P.filter(f).length;
+    const pickB = n(B, (x) => x.key) > n(A, (x) => x.key), oB = n(B, (x) => x.odds), oA = n(A, (x) => x.odds), oddsB = oB > oA || (oB === oA && pickB);
+    legs.forEach((g, k) => {
+      g.key = own[k].key || (pickB ? B : A)[k].key;
+      g.odds = own[k].odds || (oddsB ? B : A)[k].odds;
+      g.more = pickB ? g.before : g.after;
+    });
+    const used = new Set(legs.flatMap((g) => [g.line, ...g.more]));
+    const unread = items.filter((it) => !used.has(it.ln)).map((it) => it.ln).filter((l) => /[a-z]{3}/i.test(l) && !/^\s*(\d{1,2}[:.]\d{2}|mon|tue|wed|thu|fri|sat|sun)/i.test(l));
     return { legs, total, stake, code, unread };
   }
   S.chk = null;
@@ -2543,10 +2609,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!S.ready) { box.innerHTML = '<div class="empty-state"><b>Loading fixtures…</b></div>'; return; }
     const ta = $('#chkText');
     if (!ta) {
-      box.innerHTML = `<div class="card ck-in"><label class="lbl" for="chkText">Paste a slip</label>
+      box.innerHTML = `<div class="card ck-in">
+        <div class="ck-pic"><input type="file" id="chkPic" accept="image/*" class="vh"><label class="btn pri" for="chkPic"><svg width="17" height="17" aria-hidden="true"><use href="#i-camera"/></svg>Screenshot or photo</label>
+          <span>Statpad reads the picture on your phone. It isn't sent anywhere.</span></div>
+        <div id="chkPicState" class="ck-pstate" hidden></div>
+        <label class="lbl" for="chkText">Or paste the slip's text</label>
         <textarea id="chkText" rows="7" spellcheck="false" placeholder="Arsenal vs Chelsea  1X @1.35&#10;Real Madrid - Getafe  Over 2.5 @1.60&#10;Bayern v Dortmund  GG @1.55&#10;Total odds 3.35"></textarea>
         <div class="bf-acts" style="justify-content:flex-start;flex-wrap:wrap"><button type="button" class="btn pri" id="chkGo">Check slip</button><button type="button" class="btn" id="chkEx">Try an example</button><button type="button" class="btn ghost" id="chkClear">Clear</button></div>
-        <p class="note">One game per line works best, with the pick and odds after it (1, X, 2, 1X, Over 2.5, GG, NG, DNB, "Arsenal win & over 1.5"…). The pick can also go on the next line. Screenshots can't be read yet: copy the text, or type it.</p></div>
+        <p class="note">One game per line works best, with the pick and odds after it (1, X, 2, 1X, Over 2.5, GG, NG, DNB, "Arsenal win & over 1.5"…). The pick can also go on the next line, or the line before.</p></div>
         <div id="chkOut"></div>`;
       $('#chkText').value = S.chkText || '';
     }
@@ -2561,7 +2631,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const v = E.be && E.tot ? verdict({ be: E.be }, E.tot) : null;
     const legs = E.rows.map((x) => {
       const m = x.r.m, opts = CK_KEYS.filter((k) => SETTLE[k] && (k === x.g.key || (x.r.a && gridP(x.r.a.M, k)))).map((k) => `<option value="${k}" ${k === x.g.key ? 'selected' : ''}>${esc(ckLabel(k, m))}</option>`).join('');
-      const tag = x.edge == null ? '' : x.edge >= 0.02 ? `<span class="ck-tag good">${sgn(x.edge, 0)} value</span>` : x.edge > -0.05 ? `<span class="ck-tag fair">about fair</span>` : `<span class="ck-tag poor">${Math.round(-x.edge * 100)}% short</span>`;
+      const odd = x.price && x.fair && (x.price > x.fair * 2.2 || x.price < x.fair * 0.55);
+      const tag = x.edge == null ? '' : odd ? `<span class="ck-tag poor">check this price</span>` : x.edge >= 0.02 ? `<span class="ck-tag good">${sgn(x.edge, 0)} value</span>` : x.edge > -0.05 ? `<span class="ck-tag fair">about fair</span>` : `<span class="ck-tag poor">${Math.round(-x.edge * 100)}% short</span>`;
       return `<li class="ck-leg${x.p == null ? ' bad' : ''}${E.weak && E.weak.i === x.i ? ' weak' : ''}">
         <div class="ck-fx"><b>${esc(m.h)} v ${esc(m.a)}</b><small>${esc(lgInfo(m.lk).name)} · ${esc(dayLabel(x.r.day || dayKey(x.r.ko)))} ${tFmt.format(x.r.ko)}${x.started ? ' · kicked off' : ''}${x.g.sure ? '' : ' · matched on one team, check it'}</small></div>
         <div class="ck-row"><select data-ckkey="${x.i}" aria-label="Pick for ${esc(m.h)} v ${esc(m.a)}"><option value="">${x.g.key ? '' : 'Pick not understood: choose it'}</option>${opts}</select>
@@ -2607,7 +2678,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function ckRun() {
     const ta = $('#chkText'); if (!ta) return;
     S.chkText = ta.value; store.set('chk', S.chkText);
-    S.chk = ta.value.trim() ? ckParse(ta.value) : null;
+    S.chk = ta.value.trim() ? ckParse(ta.value, true) : null;
     paintCheck();
     if (S.chk && S.chk.legs.length) $('#chkOut').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -2629,7 +2700,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!t) return;
     if (t.id === 'chkGo') ckRun();
     else if (t.id === 'chkEx') { const ex = ckExample(); if (!ex) { toast('No priced games to build an example from'); return; } $('#chkText').value = ex; ckRun(); }
-    else if (t.id === 'chkClear') { $('#chkText').value = ''; S.chk = null; S.chkText = ''; store.set('chk', ''); paintCheck(); $('#chkText').focus(); }
+    else if (t.id === 'chkClear') { $('#chkText').value = ''; S.chk = null; S.chkText = ''; store.set('chk', ''); paintCheck(); const ps = $('#chkPicState'); if (ps) { ps.hidden = true; ps.innerHTML = ''; } $('#chkText').focus(); }
     else if (t.id === 'chkToCoupon') ckToCoupon();
   });
   document.addEventListener('change', (e) => {
@@ -2640,6 +2711,123 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const k = e.target.dataset && e.target.dataset.ckodds;
     if (k != null && S.chk) { S.chk.legs[+k].over = oddsIn(e.target.value); clearTimeout(S.ckT); S.ckT = setTimeout(() => { const f = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.ckodds : null; paintCheck(); if (f != null) { const el = document.querySelector(`[data-ckodds="${f}"]`); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } } }, 500); }
     if (e.target.id === 'chkText') { S.chkText = e.target.value; store.set('chk', S.chkText); }
+  });
+
+  // ---------------- reading a slip from a picture ----------------
+  // Tesseract (open-source text recognition) runs in the browser, so the picture never leaves the phone. Its files
+  // (about 4.5 MB) download the first time; after that they come from the phone's cache.
+  const OCR_JS = 'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';
+  const OCR_OPT = { workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/worker.min.js',
+    corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@6.0.0', langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int' };
+  let ocrLib = null, ocrWorker = null, ocrBusy = false;
+  function ocrState(html, pct) {
+    const el = $('#chkPicState'); if (!el) return;
+    el.hidden = !html;
+    el.innerHTML = html ? `${S.chkThumb ? `<img src="${S.chkThumb}" alt="Your slip">` : ''}<div class="ck-pmsg"><span>${html}</span>${pct != null ? `<div class="ck-bar"><i style="width:${Math.round(pct * 100)}%"></i></div>` : ''}</div>` : '';
+  }
+  function loadOcrLib() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    if (ocrLib) return ocrLib;
+    ocrLib = new Promise((res, rej) => {
+      const sc = document.createElement('script'); sc.src = OCR_JS; sc.async = true; sc.crossOrigin = 'anonymous';
+      sc.onload = () => (window.Tesseract ? res(window.Tesseract) : rej(new Error('reader missing')));
+      sc.onerror = () => { ocrLib = null; rej(new Error('download failed')); };
+      document.head.appendChild(sc);
+    });
+    return ocrLib;
+  }
+  const OCR_STEPS = { 'loading tesseract core': 'Getting the reader ready', 'initializing tesseract': 'Getting the reader ready', 'loading language traineddata': 'Getting the reader ready',
+    'loading language traineddata (from cache)': 'Getting the reader ready', 'initializing api': 'Getting the reader ready', 'recognizing text': 'Reading your slip' };
+  async function ocrReady() {
+    if (ocrWorker) return ocrWorker;
+    const T = await loadOcrLib();
+    let first = true;
+    try { first = !localStorage.getItem('sp_ocr'); } catch (e) { /* private mode */ }
+    ocrWorker = await T.createWorker('eng', 1, Object.assign({}, OCR_OPT, {
+      logger: (m) => { const step = OCR_STEPS[m.status]; if (step) ocrState(`${step}${step === 'Getting the reader ready' && first ? ' (a one-time download of about 4.5 MB)' : ''}…`, step === 'Reading your slip' ? m.progress : null); },
+    }));
+    await ocrWorker.setParameters({ tessedit_pageseg_mode: '4', preserve_interword_spaces: '1' });   // read row by row, so a price stays with its pick
+    try { localStorage.setItem('sp_ocr', '1'); } catch (e) { /* private mode */ }
+    return ocrWorker;
+  }
+  // a clean, grey, evenly lit copy of the picture: dark-mode slips are flipped, shadows from a photo taken under a
+  // lamp are evened out, and the size is what the reader likes (big photos shrunk, small screenshots enlarged)
+  async function ocrPrep(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image(); img.src = url;
+      await (img.decode ? img.decode() : new Promise((r, j) => { img.onload = r; img.onerror = j; }));
+      const w0 = img.naturalWidth, h0 = img.naturalHeight;
+      if (!w0 || !h0) throw new Error('empty picture');
+      let sc = w0 > 1600 ? 1600 / w0 : w0 < 1000 ? Math.min(2, 1000 / w0) : 1;
+      sc = Math.min(sc, Math.sqrt(9e6 / (w0 * h0)));   // very long screenshots: keep memory in check on small phones
+      const W = Math.max(1, Math.round(w0 * sc)), H = Math.max(1, Math.round(h0 * sc));
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingQuality = 'high'; x.drawImage(img, 0, 0, W, H);
+      // a small preview for the page
+      const tc = document.createElement('canvas'), ts = Math.min(1, 160 / H); tc.width = Math.round(W * ts); tc.height = Math.round(H * ts);
+      tc.getContext('2d').drawImage(c, 0, 0, tc.width, tc.height); S.chkThumb = tc.toDataURL('image/jpeg', 0.7);
+      const id = x.getImageData(0, 0, W, H), d = id.data, N = W * H, g = new Float32Array(N);
+      let sum = 0;
+      for (let i = 0, k = 0; i < N; i++, k += 4) { const v = 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2]; g[i] = v; sum += v; }
+      if (sum / N < 110) for (let i = 0; i < N; i++) g[i] = 255 - g[i];   // light text on a dark screen
+      // background light: the picture shrunk 16 times, the brightest nearby value (the paper or screen), smoothed
+      const bw = Math.max(1, Math.ceil(W / 16)), bh = Math.max(1, Math.ceil(H / 16)), bg = new Float32Array(bw * bh), cnt = new Float32Array(bw * bh);
+      for (let y = 0; y < H; y++) { const by = (y >> 4) * bw; for (let xx = 0; xx < W; xx++) { const j = by + (xx >> 4); bg[j] += g[y * W + xx]; cnt[j]++; } }
+      for (let j = 0; j < bg.length; j++) bg[j] /= cnt[j] || 1;
+      const mx = new Float32Array(bg.length);
+      for (let y = 0; y < bh; y++) for (let xx = 0; xx < bw; xx++) { let m = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = y + dy, xq = xx + dx; if (yy >= 0 && yy < bh && xq >= 0 && xq < bw) m = Math.max(m, bg[yy * bw + xq]); } mx[y * bw + xx] = m; }
+      const sm = new Float32Array(bg.length);
+      for (let y = 0; y < bh; y++) for (let xx = 0; xx < bw; xx++) { let t = 0, n = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const yy = y + dy, xq = xx + dx; if (yy >= 0 && yy < bh && xq >= 0 && xq < bw) { t += mx[yy * bw + xq]; n++; } } sm[y * bw + xx] = t / n; }
+      const hist = new Uint32Array(256);
+      for (let y = 0; y < H; y++) {
+        const fy = Math.min(bh - 1, Math.max(0, (y - 8) / 16)), y0 = Math.floor(fy), y1 = Math.min(bh - 1, y0 + 1), ty = fy - y0;
+        for (let xx = 0; xx < W; xx++) {
+          const fx = Math.min(bw - 1, Math.max(0, (xx - 8) / 16)), x0 = Math.floor(fx), x1 = Math.min(bw - 1, x0 + 1), tx = fx - x0;
+          const b = (sm[y0 * bw + x0] * (1 - tx) + sm[y0 * bw + x1] * tx) * (1 - ty) + (sm[y1 * bw + x0] * (1 - tx) + sm[y1 * bw + x1] * tx) * ty;
+          const v = Math.min(255, (g[y * W + xx] / Math.max(1, b)) * 235); g[y * W + xx] = v; hist[v | 0]++;
+        }
+      }
+      let lo = 0, hi = 255, acc = 0; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= N * 0.01) { lo = v; break; } }
+      acc = 0; for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc >= N * 0.01) { hi = v; break; } }
+      const k = 255 / Math.max(1, hi - lo);
+      for (let i = 0, j = 0; i < N; i++, j += 4) { const v = Math.max(0, Math.min(255, (g[i] - lo) * k)); d[j] = d[j + 1] = d[j + 2] = v; d[j + 3] = 255; }
+      x.putImageData(id, 0, 0);
+      return c;
+    } finally { URL.revokeObjectURL(url); }
+  }
+  async function ckPicture(file) {
+    if (!file || ocrBusy) return;
+    if (!/^image\//.test(file.type || 'image/')) { toast('That isn’t a picture'); return; }
+    ocrBusy = true; S.chkThumb = null;
+    ocrState('Preparing the picture…');
+    try {
+      const canvas = await ocrPrep(file);
+      ocrState('Getting the reader ready…');
+      const w = await ocrReady();
+      ocrState('Reading your slip…', 0);
+      const { data } = await w.recognize(canvas);
+      const text = (data && data.text || '').split('\n').map((l) => l.replace(/\s{2,}/g, '  ').trim()).filter(Boolean).join('\n');
+      const ta = $('#chkText');
+      if (!text.trim() || !ta) { ocrState('No text found in that picture. Try a sharper screenshot, or a photo taken straight on in good light.'); return; }
+      ta.value = text; ckRun();
+      const n = S.chk ? S.chk.legs.length : 0;
+      ocrState(n ? `Read ${n} game${n === 1 ? '' : 's'} from your picture. Check the picks and prices below; anything misread can be fixed in the text box or the lists.`
+        : 'The picture was read, but no games matched Statpad’s fixtures. Check the text box: team names may have been misread, or the games may be outside the next few days.');
+    } catch (e) {
+      const msg = String(e && e.message || e);
+      ocrState(navigator.onLine === false ? 'You’re offline. The picture reader needs the internet the first time; paste the text instead, or try again when you’re online.'
+        : /download|fetch|network|load/i.test(msg) ? 'Couldn’t download the picture reader. Check your internet and try again, or paste the text instead.'
+        : 'Couldn’t read that picture (' + esc(msg).slice(0, 80) + '). Try again, or paste the text instead.');
+      if (/download|fetch|network|load/i.test(msg) && ocrWorker == null) ocrLib = window.Tesseract ? ocrLib : null;
+    } finally { ocrBusy = false; const inp = $('#chkPic'); if (inp) inp.value = ''; }
+  }
+  document.addEventListener('change', (e) => { if (e.target.id === 'chkPic' && e.target.files && e.target.files[0]) ckPicture(e.target.files[0]); });
+  // pasting a picture straight into the page works too (on a computer)
+  document.addEventListener('paste', (e) => {
+    if (S.tab !== 'coupon' || S.bseg !== 'check' || !e.clipboardData) return;
+    const it = [...e.clipboardData.items].find((x) => x.type && x.type.startsWith('image/'));
+    if (it) { e.preventDefault(); ckPicture(it.getAsFile()); }
   });
 
   // ---------------- live scores and the cash-out adviser ----------------
