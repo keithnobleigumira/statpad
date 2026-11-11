@@ -937,9 +937,12 @@ AF = 'https://v3.football.api-sports.io'
 AF_DAILY = int(float(ENV('API_FOOTBALL_DAILY') or 100))
 AF_FIX_EVERY = 6        # hours between fixture-list downloads, per day
 AF_INJ_EVERY = 4        # hours between injury downloads, per day
-AF_LU_FROM = 65         # minutes before kick-off to start asking for line-ups
-AF_LU_EVERY = 15        # minutes between line-up checks for a match
+AF_LU_FROM = 60         # minutes before kick-off to start asking for line-ups
+AF_LU_EVERY = 20        # minutes between line-up checks for a match
 AF_BATCH = 20           # fixtures per call (the API's maximum)
+AF_RESERVE = 20         # calls line-ups leave unused each day, so results always get through
+AF_DONE = ('FT', 'AET', 'PEN')                              # finished (scores are the 90-minute result)
+AF_OFF = ('PST', 'CANC', 'ABD', 'AWD', 'WO', 'SUSP')        # postponed, cancelled, abandoned or awarded
 
 
 def af_blocked(state):
@@ -947,15 +950,16 @@ def af_blocked(state):
     return bool(b and parse_iso(b) > NOW)
 
 
-def af_get(path, params, state):
-    """One API-Football call -> (response list or None, error text or None). Keeps to the daily allowance."""
+def af_get(path, params, state, reserve=2):
+    """One API-Football call -> (response list or None, error text or None). Keeps to the daily allowance,
+    leaving `reserve` calls unused (line-ups keep a bigger reserve so results always get through)."""
     af = state.setdefault('af', {})
     day = NOW.strftime('%Y-%m-%d')
     if af.get('day') != day:
         af.update({'day': day, 'used': 0, 'left': None})
     if af_blocked(state):
         return None, 'paused'
-    if af['used'] >= AF_DAILY - 2 or (af.get('left') is not None and af['left'] <= 2):
+    if af['used'] >= AF_DAILY - reserve or (af.get('left') is not None and af['left'] <= reserve):
         return None, 'daily allowance used'
     if af['used'] and not OFFLINE:
         time.sleep(0.4)   # stay well inside the per-minute limit
@@ -1009,15 +1013,9 @@ def team_sim(a, b):
 
 
 def af_link(state, matches):
-    """Pair Statpad's matches in the next ~40 h with API-Football fixture ids."""
+    """Pair Statpad's matches in the next ~40 h with API-Football fixture ids (for team news)."""
     tn = state.setdefault('tn', {})
-    fxs = []
-    for rec in ((state.get('af') or {}).get('fx') or {}).values():
-        fxs.extend(rec['list'])
-    fxs = [(parse_iso(f[1]), f) for f in fxs if f[1]]
-    fxs.sort(key=lambda x: x[0])
-    times = [x[0] for x in fxs]
-    import bisect
+    fxs = af_rows(state)
     linked = 0
     for m in matches:
         ko = parse_iso(m['ko'])
@@ -1027,20 +1025,9 @@ def af_link(state, matches):
         if r and r.get('fid'):
             linked += 1
             continue
-        best, best_s = None, 0.0
-        i0 = bisect.bisect_left(times, ko - timedelta(hours=3))
-        i1 = bisect.bisect_right(times, ko + timedelta(hours=3))
-        country = (L.get(m['lk']) or {}).get('country') or ''
-        for fko, f in fxs[i0:i1]:
-            dt = abs((fko - ko).total_seconds()) / 60
-            sh, sa = team_sim(f[2], m['h']), team_sim(f[3], m['a'])
-            if not (sh == 1 and sa == 1) and country and f[5] and f[5].lower() not in ('world', 'europe') and f[5].lower() != country.lower():
-                continue   # loose name matches must at least be in the same country
-            ok = (sh == 1 and sa == 1) or (dt <= 15 and ((sh == 1 and sa >= 0.5) or (sa == 1 and sh >= 0.5) or (sh >= 0.8 and sa >= 0.8)))
-            if ok and sh + sa - dt / 600 > best_s:
-                best, best_s = f, sh + sa - dt / 600
-        if best:
-            tn[m['id']] = {'fid': best[0], 'hid': best[6], 'aid': best[7], 'ko': m['ko'], 'lk': m['lk'], 'h': m['h'], 'a': m['a']}
+        f = af_match(m['lk'], ko, m['h'], m['a'], fxs)
+        if f:
+            tn[m['id']] = {'fid': f[0], 'hid': f[6], 'aid': f[7], 'ko': m['ko'], 'lk': m['lk'], 'h': m['h'], 'a': m['a']}
             linked += 1
     return linked
 
@@ -1100,7 +1087,7 @@ def af_lineups(state):
     found = 0
     for i in range(0, len(due), AF_BATCH):
         chunk = due[i:i + AF_BATCH]
-        resp, err = af_get('/fixtures', {'ids': '-'.join(str(r['fid']) for r in chunk)}, state)
+        resp, err = af_get('/fixtures', {'ids': '-'.join(str(r['fid']) for r in chunk)}, state, reserve=AF_RESERVE)
         if resp is None:
             break
         by = {(f.get('fixture') or {}).get('id'): f for f in resp}
@@ -1121,6 +1108,111 @@ def af_lineups(state):
     return found
 
 
+def af_fixture_row(f):
+    fi, te, lg, sc = f.get('fixture') or {}, f.get('teams') or {}, f.get('league') or {}, f.get('score') or {}
+    h, a = te.get('home') or {}, te.get('away') or {}
+    if not (fi.get('id') and fi.get('date') and h.get('name') and a.get('name')):
+        return None
+    st = (fi.get('status') or {}).get('short') or ''
+    ft = sc.get('fulltime') or {}
+    gl = f.get('goals') or {}
+    hs, as_ = ft.get('home'), ft.get('away')
+    if hs is None and st == 'FT':
+        hs, as_ = gl.get('home'), gl.get('away')
+    return [fi['id'], fi['date'], h['name'], a['name'], lg.get('name'), lg.get('country'), h.get('id'), a.get('id'), st, hs, as_]
+
+
+def af_day(state, ds, why):
+    fail = state['af'].setdefault('fail', {})
+    if fail.get(ds) and NOW - parse_iso(fail[ds]) < timedelta(minutes=60) and not FORCE:
+        return False   # a failed download waits an hour before it's tried again
+    resp, err = af_get('/fixtures', {'date': ds, 'timezone': 'UTC'}, state)
+    if resp is None:
+        if err not in ('paused', 'daily allowance used'):
+            fail[ds] = iso(NOW)
+        return False
+    fail.pop(ds, None)
+    lst = [r for r in (af_fixture_row(f) for f in resp) if r]
+    state['af'].setdefault('fx', {})[ds] = {'at': iso(NOW), 'list': lst}
+    log(f'API-Football: {len(lst)} fixtures on {ds} ({why})')
+    return True
+
+
+def af_match(lk, ko, h, a, fxs):
+    """The API-Football fixture for one of our matches. fxs: [(kick-off, row)] sorted by time."""
+    import bisect
+    times = [x[0] for x in fxs]
+    best, best_s = None, 0.0
+    country = (L.get(lk) or {}).get('country') or ''
+    for fko, f in fxs[bisect.bisect_left(times, ko - timedelta(hours=3)):bisect.bisect_right(times, ko + timedelta(hours=3))]:
+        dt = abs((fko - ko).total_seconds()) / 60
+        sh, sa = team_sim(f[2], h), team_sim(f[3], a)
+        if not (sh == 1 and sa == 1) and country and f[5] and f[5].lower() not in ('world', 'europe') and f[5].lower() != country.lower():
+            continue   # loose name matches must at least be in the same country
+        ok = (sh == 1 and sa == 1) or (dt <= 15 and ((sh == 1 and sa >= 0.5) or (sa == 1 and sh >= 0.5) or (sh >= 0.8 and sa >= 0.8)))
+        if ok and sh + sa - dt / 600 > best_s:
+            best, best_s = f, sh + sa - dt / 600
+    return best
+
+
+def af_rows(state):
+    fxs = []
+    for rec in ((state.get('af') or {}).get('fx') or {}).values():
+        fxs.extend((parse_iso(f[1]), f) for f in rec['list'] if f[1])
+    fxs.sort(key=lambda x: x[0])
+    return fxs
+
+
+def af_results(state):
+    """Fast results: grade finished games from API-Football's day lists, refetching a day's list
+    (at most hourly for today, every 3 h for the two days before) while its games await a result."""
+    af = state['af']
+    fx = af.setdefault('fx', {})
+    done = af.setdefault('scores', {})      # our match id -> [home, away, kick-off]
+    off = af.setdefault('void', {})         # our match id -> [status, kick-off]
+    miss = af.setdefault('nomatch', {})     # our match id -> kick-off (not in API-Football's lists)
+    pend = state.get('track_pending') or {}
+    lo, hi = NOW - timedelta(days=3), NOW - timedelta(minutes=110)
+
+    def waiting():
+        out = {}
+        for r in pend.values():
+            ko = parse_iso(r['ko'])
+            if lo <= ko <= hi and r['id'] not in done and r['id'] not in off and r['id'] not in miss:
+                out.setdefault(ko.strftime('%Y-%m-%d'), []).append(ko)
+        return out
+
+    today = NOW.strftime('%Y-%m-%d')
+    pulled = 0
+    for ds, kos in sorted(waiting().items(), reverse=True):
+        rec = fx.get(ds)
+        ended = max(kos) + timedelta(minutes=110)
+        gap = timedelta(minutes=60 if ds == today else 180)
+        if pulled < 3 and (not rec or (parse_iso(rec['at']) < ended and NOW - parse_iso(rec['at']) >= gap) or FORCE):
+            pulled += af_day(state, ds, 'results')
+    fxs = af_rows(state)
+    graded = 0
+    for r in pend.values():
+        ko = parse_iso(r['ko'])
+        if not (lo <= ko <= hi) or r['id'] in done or r['id'] in off or r['id'] in miss:
+            continue
+        rec = fx.get(r['ko'][:10])
+        f = af_match(r['lk'], ko, r['h'], r['a'], fxs)
+        if not f:
+            if rec and parse_iso(rec['at']) >= ko + timedelta(minutes=110):
+                miss[r['id']] = r['ko']   # a list from after the game doesn't have it: stop waiting for it here
+            continue
+        if f[8] in AF_DONE and f[9] is not None and f[10] is not None:
+            done[r['id']] = [int(f[9]), int(f[10]), r['ko']]
+            graded += 1
+        elif f[8] in AF_OFF:
+            off[r['id']] = [f[8], r['ko']]
+    for blob in (done, off, miss):
+        for k in [k for k, v in blob.items() if parse_iso(v[-1] if isinstance(v, list) else v) < NOW - timedelta(days=30)]:
+            del blob[k]
+    return graded
+
+
 def refresh_team_news(state, matches):
     if not AF_KEY:
         return 'no key'
@@ -1129,22 +1221,13 @@ def refresh_team_news(state, matches):
         return 'paused: ' + (af.get('note') or '')
     fx = af.setdefault('fx', {})
     days = [NOW.strftime('%Y-%m-%d'), (NOW + timedelta(days=1)).strftime('%Y-%m-%d')]
+    graded = af_results(state)    # results first: they matter more than news
     for ds in days:
         rec = fx.get(ds)
         if rec and NOW - parse_iso(rec['at']) < timedelta(hours=AF_FIX_EVERY) and not FORCE:
             continue
-        resp, err = af_get('/fixtures', {'date': ds, 'timezone': 'UTC'}, state)
-        if resp is None:
-            continue
-        lst = []
-        for f in resp:
-            fi, te, lg = f.get('fixture') or {}, f.get('teams') or {}, f.get('league') or {}
-            h, a = te.get('home') or {}, te.get('away') or {}
-            if fi.get('id') and fi.get('date') and h.get('name') and a.get('name'):
-                lst.append([fi['id'], fi['date'], h['name'], a['name'], lg.get('name'), lg.get('country'), h.get('id'), a.get('id')])
-        fx[ds] = {'at': iso(NOW), 'list': lst}
-        log('team news: API-Football lists', len(lst), 'fixtures on', ds)
-    for ds in [d for d in fx if d < days[0]]:
+        af_day(state, ds, 'team news')
+    for ds in [d for d in fx if d < (NOW - timedelta(days=3)).strftime('%Y-%m-%d')]:
         del fx[ds]
     linked = af_link(state, matches)
     af_injuries(state, days)
@@ -1155,7 +1238,8 @@ def refresh_team_news(state, matches):
     for lk in [k for k, v in (state.get('lineup_lk') or {}).items() if parse_iso(v) < NOW - timedelta(hours=6)]:
         del state['lineup_lk'][lk]
     n_lu = sum(1 for r in tn.values() if r.get('lu'))
-    note = f"{linked} matches linked, {n_lu} line-ups in{f' ({got} new)' if got else ''}, {af.get('used', 0)} calls today"
+    note = (f"{linked} matches linked, {n_lu} line-ups in{f' ({got} new)' if got else ''}, "
+            f"{graded} new results, {af.get('used', 0)} calls today")
     if af.get('note') and af_blocked(state):
         note += ' · paused: ' + af['note']
     return note
@@ -1738,6 +1822,9 @@ def refresh_scores(state):
 
 
 def find_result(rec, state):
+    fast = ((state.get('af') or {}).get('scores') or {}).get(rec.get('id'))
+    if fast:
+        return int(fast[0]), int(fast[1])
     d0 = parse_iso(rec['ko']).date()
     for source in ((state.get('recent_results') or {}).get(rec['lk']) or [], (state.get('intl_recent') or {}).get(rec['lk']) or [],
                    (state.get('api_scores') or {}).get(rec['lk']) or []):
@@ -1818,6 +1905,7 @@ def track_update(doc, state):
 
     # 3) grade finished matches
     changed = False
+    af_void = (state.get('af') or {}).get('void') or {}
     scores = state.setdefault('scores', {})
     for mid, rec in list(pend.items()):
         ko = parse_iso(rec['ko'])
@@ -1825,7 +1913,7 @@ def track_update(doc, state):
             continue
         res = find_result(rec, state)
         if res is None:
-            if NOW - ko > timedelta(days=30 if rec['lk'] in INTL_LKS else 10):
+            if mid in af_void or NOW - ko > timedelta(days=30 if rec['lk'] in INTL_LKS else 10):
                 del pend[mid]
                 agg['nr'] += 1
                 changed = True
@@ -1865,11 +1953,12 @@ def track_update(doc, state):
             if l[6] is None and l[0] in scores:
                 l[6] = int(bool(settle(l[1], scores[l[0]][0], scores[l[0]][1])))
         res = None
+        dead = lambda l: l[6] is None and (l[0] in af_void or NOW - parse_iso(l[4]) > timedelta(days=30 if l[0].split('-')[0] in INTL_LKS else 10))
         if any(l[6] == 0 for l in legs):
             res = 'lost'
         elif all(l[6] == 1 for l in legs):
             res = 'won'
-        elif any(l[6] is None and NOW - parse_iso(l[4]) > timedelta(days=30 if l[0].split('-')[0] in INTL_LKS else 10) for l in legs):
+        elif all(l[6] == 1 or dead(l) for l in legs) or any(dead(l) and NOW - parse_iso(l[4]) > timedelta(days=10) for l in legs):
             res = 'void'
         if res:
             s['res'] = res
@@ -1906,6 +1995,17 @@ def track_update(doc, state):
         log('track: saved track.json for commit' + (' (keep-alive)' if keepalive else ''))
     log(f"track: {len(pend)} predictions waiting, {agg['n']} graded, {len(open_)} slips in play")
     return pub
+
+
+def publish_results(state):
+    """Final scores (90 minutes) for the last three weeks, by Statpad match id, so the site can settle saved bets."""
+    cut = NOW - timedelta(days=21)
+    sc = {mid: [v[0], v[1]] for mid, v in (state.get('scores') or {}).items() if parse_iso(v[2]) >= cut}
+    for mid, v in ((state.get('af') or {}).get('scores') or {}).items():
+        if parse_iso(v[2]) >= cut:
+            sc.setdefault(mid, [v[0], v[1]])
+    void = {mid: v[0] for mid, v in ((state.get('af') or {}).get('void') or {}).items() if parse_iso(v[1]) >= cut}
+    return {'app': 'Statpad', 'generated': iso(NOW), 'scores': sc, 'void': void}
 
 
 # ----------------------------------------------------------------------------------------------
@@ -2001,6 +2101,13 @@ def main():
     if n_sc:
         log('results from The Odds API for', n_sc, 'competitions')
     track = safe(lambda: track_update(doc, state), None)
+    results = safe(lambda: publish_results(state), None)
+    if results is not None:
+        (OUT_DIR / 'results.json').write_text(json.dumps(results, ensure_ascii=False, separators=(',', ':')))
+        rsig = json.dumps([len(results['scores']), len(results['void'])])
+        if rsig != state.get('results_sig'):
+            state['results_sig'] = rsig
+            changed = True
     if track:
         (OUT_DIR / 'track.json').write_text(json.dumps(track, ensure_ascii=False, separators=(',', ':')))
         sig = json.dumps([track['agg'], len(track['picks']), len(track['slips']), track['open'], track['pending']])

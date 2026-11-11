@@ -30,7 +30,7 @@ On a computer you can unzip `statpad.zip` and drag every file, including the `.g
 
 ## Track record
 
-Every run saves each match's top pick before kick-off, along with the 10-odds slips for each day. The slips are frozen once their first game starts. When results arrive (football-data.co.uk publishes them twice a week), the picks are graded and the **Track** tab shows:
+Every run saves each match's top pick before kick-off, along with the 10-odds slips for each day. The slips are frozen once their first game starts. When results arrive, the picks are graded and the **Track** tab shows:
 
 - hit rates for each tier against the chance Statpad stated
 - the slips' record and profit, at 1 unit per slip
@@ -40,7 +40,20 @@ Every run saves each match's top pick before kick-off, along with the 10-odds sl
 
 The record uses the same engine as the page, run with Node from `index.html`.
 
+**Results speed.** With an API-Football key, finished games are graded within a couple of hours: while games are waiting for a result, the workflow re-reads that day's results (at most hourly for today), and postponed games leave the queue straight away. This costs a few calls a day, and team-news line-ups always leave 20 calls spare for results. Without the key, results come from football-data.co.uk, which publishes them twice a week. The site also gets a `results.json` with the last three weeks' final scores, which **My bets** uses.
+
 **Self-tuning.** Once 150 top picks have been graded, every update compares the chances Statpad stated with what actually landed over the last 90 days, and fits a small correction. If Statpad has been over-confident, its stated chances, tiers and slips are trimmed; if under-confident, they're raised. The fit uses the chances as stated before any correction, so it never feeds on itself, and it stays close to "no change" until the evidence is strong. The Track tab shows its progress and the current correction. Results for UEFA, cup and Saudi games come from The Odds API and are only fetched on paid plans.
+
+## My bets
+
+The **Bets** tab has two parts: **Coupon** (build a bet) and **My bets** (bets you placed).
+
+- **Save a bet.** In the coupon, tap **Save to My bets**. Enter your bookmaker's total odds, your stake (quick buttons for 1,000 to 20,000 UGX), the bookmaker, and optionally the booking code and any accumulator bonus.
+- **Price check.** Before you save, it shows Statpad's chance of the bet landing, its fair odds, the odds you need to break even after the tax on winnings, what you'd collect, and what the bet is worth on average. It also gives a verdict: good value, about fair or poor price.
+- **Settling.** Bets settle themselves from `results.json`, using the 90-minute score. A postponed leg counts at odds 1. You can also mark a bet won, lost, void or cashed out (with the amount) by hand.
+- **Your record.** It shows profit or loss, total staked, return on stakes and win rate, broken down by slip size, bookmaker and Statpad slips vs your own picks. A "Luck or choice?" panel compares your actual result with what Statpad's chances expected, and how your odds compare with fair odds.
+- **Budget and settings.** You can set a weekly or monthly budget, the tax rate (15% by default, Uganda's withholding tax on net winnings from July 2026) and the currency (UGX).
+- **Private.** Saved bets live only on that phone or browser. Use **Back up** to save a file, and **Restore** to load it on another device.
 
 ## App and sharing
 
