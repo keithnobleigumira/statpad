@@ -58,6 +58,7 @@ jobs:
           ODDS_SPORTS: ${{ vars.ODDS_SPORTS }}
           STATPAD_TIMEZONE: ${{ vars.STATPAD_TIMEZONE }}
           STATPAD_FORCE: ${{ inputs.force && '1' || '0' }}
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         run: python update.py
 
       - name: Save state
