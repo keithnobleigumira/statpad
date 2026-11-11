@@ -13,7 +13,7 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 | `.github/workflows/update.yml` | Runs `update.py` every 5 minutes and redeploys the site whenever the data changes. |
 | `matches.json` | Starter data (5–9 Nov 2026). It is replaced on the first run. |
 | `track.json` | The track record. The workflow creates it and commits it; don't edit it by hand. |
-| `backtest.json`, `results.json` | Made by the workflow on each publish (last season replayed; recent final scores). Nothing to upload. |
+| `backtest.json`, `results.json`, `live.json` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores). Nothing to upload. |
 | `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. |
 | App icons | Drawn by the workflow each time it publishes, so there's nothing to upload. |
 | `og.jpg` | The picture shown when the link is shared on WhatsApp, Telegram or X. |
@@ -46,6 +46,24 @@ The record uses the same engine as the page, run with Node from `index.html`.
 **Self-tuning.** Once 150 top picks have been graded, every update compares the chances Statpad stated with what actually landed over the last 90 days, and fits a small correction. If Statpad has been over-confident, its stated chances, tiers and slips are trimmed; if under-confident, they're raised. The fit uses the chances as stated before any correction, so it never feeds on itself, and it stays close to "no change" until the evidence is strong. The Track tab shows its progress and the current correction. Results for UEFA, cup and Saudi games come from The Odds API and are only fetched on paid plans.
 
 **Last season, replayed.** Once a week the workflow replays the last full season of the main European leagues that football-data.co.uk covers (with the season before it for ratings), through the same engine. Each week's team ratings are rebuilt from earlier games only, every game is priced from the bookmakers' average odds before kick-off, the first four weeks are skipped while ratings settle, and self-tuning is off. The **Track** tab shows the result as **Last season, replayed**: hit rate against the stated chance for each tier, 10-odds slips, value bets at the best price, and log loss against the market. It appears from the first run, so the Track tab is useful before the live record has grown. It takes a few seconds and uses no API credits.
+
+**Tuning.** Once a month (and on the first run) the workflow tunes the model's settings on football-data's main European leagues: how fast old games fade, how much last season counts, how hard teams are pulled towards average, how much shots on target count next to goals, and the bookmakers' share of the blend. It searches on two past seasons, then checks the result on the last full season, which the search never saw. New settings are switched on only if they beat the old ones there. Leagues without shot counts get their own goals-only settings. The run takes one to three minutes once a month and uses no API credits. The Track tab shows the settings before and after, and the error on the check season.
+
+**Shots on target.** Where football-data has shot counts, each side's goals are mixed with its shots on target (times the league's goals per shot on target) before the ratings are fitted. Shots are steadier than goals, so ratings react to how well a team plays, not just how lucky its finishing was.
+
+**Safer tiers.** Every chance now comes with a spread, from how much evidence is behind the ratings and how many bookmakers price the game. Tiers and slips use the cautious chance: the stated chance minus one standard deviation. A pick that rests on thin data drops a tier, so **Nearly definite** means more often what it says. The replay shows how the top tier did with and without this rule.
+
+## Check a slip
+
+Under **Bets → Check slip**, paste a slip from WhatsApp, Telegram or a tipster. Statpad finds each game among its fixtures for the next few days (nicknames like Man Utd, Barca, Spurs or Gladbach work) and reads the pick and odds: 1, X, 2, 1X, X2, 12, over/under, GG/NG, draw no bet, ±1.5 handicaps, win to nil and same-game combos such as "Arsenal win & over 1.5". The pick can sit on the same line as the game or the next one, and a "Total odds" line is read too.
+
+It shows each leg's real chance, fair odds and whether its price is value or short, then the whole slip: the chance it lands, its fair odds, the odds needed to break even after tax, the average result per 1,000 staked, and the weakest leg with what dropping it would do. Picks it can't read, and markets it doesn't price (half-time, corners, cards, scorers), are left for you to choose from a list. **Put on my coupon** moves the legs to your coupon, from where you can save the bet. Screenshots aren't read yet: copy the text, or type it.
+
+## Live scores and cash-out
+
+With the API-Football key, the workflow checks the live scores of Statpad's games while they're being played. One call covers every live game; at most 40 checks a day are spread over the hours games are in play (about every 10–20 minutes on a busy day), and line-ups and results always get their calls first. The scores go into `live.json`, and match cards show them.
+
+For each open bet in **My bets** with a game in play, Statpad shows each leg's chance now, the chance the whole bet lands, and what the bet is worth on average. It plays out the rest of each game from the score, the minute and both teams' expected goals. Type your bookmaker's **cash-out offer** and it tells you whether the offer is above or below that value, alongside the plain odds of holding. Without live scores (no key, or between checks), type the score and minute yourself. It doesn't know about red cards or injuries, so treat it as a guide.
 
 ## Combos, draw no bet and handicaps
 
@@ -81,7 +99,7 @@ The **Bets** tab has two parts: **Coupon** (build a bet) and **My bets** (bets y
 - **International results** (free, no key, on GitHub: `martj42/international_results`). Every national-team result, used to rate teams for the UEFA Nations League and international friendlies and to grade those games. The maintainer updates it after each international window, so those grades can take a few weeks.
 - **The Odds API** (optional key). Fixtures for leagues, UEFA competitions and cups come from a free listing that doesn't use credits. Prices from many bookmakers are paced to your monthly credit allowance. The free plan has 500 credits a month, which works out at roughly one price refresh per competition per day. A paid plan refreshes as often as `ODDS_MIN_INTERVAL` allows.
 
-- **API-Football** (optional key, free plan: 100 calls a day). Team news: injuries, suspensions and doubts for today and tomorrow, plus confirmed starting line-ups from about an hour before kick-off. The calls are rationed to fit the free plan, which only serves fixtures and results for yesterday, today and tomorrow; anything older comes from football-data. If your plan doesn't cover the current season at all, the site says so under **Method → Data status** and pauses team news for a day at a time, using only 1 call.
+- **API-Football** (optional key, free plan: 100 calls a day). Team news: injuries, suspensions and doubts for today and tomorrow, plus confirmed starting line-ups from about an hour before kick-off. Also fast results and live scores for the cash-out adviser. The calls are rationed to fit the free plan, which only serves fixtures and results for yesterday, today and tomorrow; anything older comes from football-data. If your plan doesn't cover the current season at all, the site says so under **Method → Data status** and pauses team news for a day at a time, using only 1 call.
 
 Without a key, the site still works from the model and the football-data prices. Saudi, Czech, Serbian and Eerste Divisie matches, the UEFA and cup matches, and the Nations League and friendlies all need the key, because their fixtures come from The Odds API.
 

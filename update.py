@@ -436,20 +436,44 @@ HALF_LIFE = 180.0   # days
 PREV_W = 0.6        # extra down-weight for last season's games
 K_SHRINK = 6.0      # pseudo-games of prior per team
 NEW_TEAM_PRIOR = (-0.12, 0.12)   # newcomers start a bit below average
+# the settings above, plus how much shots on target count next to goals. Replaced by settings tuned on
+# past seasons when those beat the defaults on a season the tuning never saw (see "Tuning" below).
+DEFAULT_MODEL = {'hl': HALF_LIFE, 'pw': PREV_W, 'k': K_SHRINK, 'sw': 0.0}
+MODEL = dict(DEFAULT_MODEL)
+MODEL0 = dict(DEFAULT_MODEL)   # for leagues without shot counts: goals only, so they need their own shrinkage
+MODEL_W = None      # the market's share in the blend when tuned; the engine's own default is 0.8
 
 
-def fit_ratings(games, current_teams, asof=None, init=None):
+def fit_ratings(games, current_teams, asof=None, init=None, P=None):
+    """games: (date, home, away, home goals, away goals, this season?, home shots on target, away shots on target).
+    With a shot weight, each side's goals count as (1 - w) x goals + w x shots on target x the league's
+    goals-per-shot-on-target, which is steadier than goals alone. Returns ratings plus standard errors."""
     if len(games) < 20:
         return None
+    P = P or MODEL
     ref = asof or NOW
-    xi = math.log(2) / HALF_LIFE
+    xi = math.log(2) / P['hl']
+    K = P['k']
+    sw = P.get('sw') or 0.0
     teams = sorted({g[1] for g in games} | {g[2] for g in games})
     ix = {t: i for i, t in enumerate(teams)}
     prev_teams = {g[1] for g in games if not g[5]} | {g[2] for g in games if not g[5]}
+    conv = None
+    if sw > 0:
+        gs = ss = 0
+        for g in games:
+            if len(g) > 7 and g[6] is not None and g[7] is not None:
+                gs += g[3] + g[4]
+                ss += g[6] + g[7]
+        conv = gs / ss if ss > 100 else None
     W = []
-    for d, h, a, hg, ag, cur in games:
+    for g in games:
+        d, h, a, hg, ag, cur = g[:6]
+        if conv and len(g) > 7 and g[6] is not None and g[7] is not None:
+            hg = (1 - sw) * hg + sw * conv * g[6]
+            ag = (1 - sw) * ag + sw * conv * g[7]
         age = max(0.0, (ref - d).total_seconds() / 86400)
-        W.append((ix[h], ix[a], hg, ag, math.exp(-xi * age) * (1.0 if cur else PREV_W)))
+        W.append((ix[h], ix[a], hg, ag, math.exp(-xi * age) * (1.0 if cur else P['pw'])))
     n = len(teams)
     pa = [0.0] * n
     pd = [0.0] * n
@@ -458,9 +482,9 @@ def fit_ratings(games, current_teams, asof=None, init=None):
             pa[i], pd[i] = NEW_TEAM_PRIOR
     sh = sum(w * hg for _, _, hg, _, w in W)
     sa = sum(w * ag for _, _, _, ag, w in W)
-    sw = sum(w for *_, w in W)
-    mu = math.log(max(0.3, sa / sw))
-    home = math.log(max(0.3, sh / sw)) - mu
+    sw_ = sum(w for *_, w in W)
+    mu = math.log(max(0.3, sa / sw_))
+    home = math.log(max(0.3, sh / sw_)) - mu
     att = pa[:]
     dfn = pd[:]
     if init:   # warm start from an earlier fit: converges in a few rounds
@@ -471,22 +495,25 @@ def fit_ratings(games, current_teams, asof=None, init=None):
     cur_ix = [ix[t] for t in current_teams if t in ix] or list(range(n))
     for _ in range(200):
         g0 = math.exp(mu + home / 2)
+        emh, em = math.exp(mu + home), math.exp(mu)
+        ed = [math.exp(x) for x in dfn]
         num = [0.0] * n
         den = [0.0] * n
         for h, a, hg, ag, w in W:
             num[h] += w * hg
-            den[h] += w * math.exp(mu + home + dfn[a])
+            den[h] += w * emh * ed[a]
             num[a] += w * ag
-            den[a] += w * math.exp(mu + dfn[h])
-        new_att = [math.log((num[i] + K_SHRINK * g0 * math.exp(pa[i])) / (den[i] + K_SHRINK * g0)) for i in range(n)]
+            den[a] += w * em * ed[h]
+        new_att = [math.log((num[i] + K * g0 * math.exp(pa[i])) / (den[i] + K * g0)) for i in range(n)]
+        ea_ = [math.exp(x) for x in new_att]
         num = [0.0] * n
         den = [0.0] * n
         for h, a, hg, ag, w in W:
             num[a] += w * hg
-            den[a] += w * math.exp(mu + home + new_att[h])
+            den[a] += w * emh * ea_[h]
             num[h] += w * ag
-            den[h] += w * math.exp(mu + new_att[a])
-        new_dfn = [math.log((num[i] + K_SHRINK * g0 * math.exp(pd[i])) / (den[i] + K_SHRINK * g0)) for i in range(n)]
+            den[h] += w * em * ea_[a]
+        new_dfn = [math.log((num[i] + K * g0 * math.exp(pd[i])) / (den[i] + K * g0)) for i in range(n)]
         ma = sum(new_att[i] for i in cur_ix) / len(cur_ix)
         md = sum(new_dfn[i] for i in cur_ix) / len(cur_ix)
         new_att = [x - ma for x in new_att]
@@ -500,13 +527,27 @@ def fit_ratings(games, current_teams, asof=None, init=None):
         att, dfn, mu, home = new_att, new_dfn, new_mu, new_home
         if delta < 1e-7:
             break
+    # standard errors: the information each rating gets is the (weighted) goals it was expected to explain,
+    # plus the prior's pseudo-games
+    g0 = math.exp(mu + home / 2)
+    emh, em = math.exp(mu + home), math.exp(mu)
+    ia, idf = [0.0] * n, [0.0] * n
+    for h, a, _, _, w in W:
+        lh = emh * math.exp(att[h] + dfn[a])
+        la = em * math.exp(att[a] + dfn[h])
+        ia[h] += w * lh
+        idf[a] += w * lh
+        ia[a] += w * la
+        idf[h] += w * la
     return {'mu': round(mu, 5), 'home': round(home, 5), 'games': len(games),
-            'teams': {t: [round(att[ix[t]], 5), round(dfn[ix[t]], 5)] for t in teams}}
+            'teams': {t: [round(att[ix[t]], 5), round(dfn[ix[t]], 5)] for t in teams},
+            'se': {t: [round(1 / math.sqrt(ia[ix[t]] + K * g0), 4), round(1 / math.sqrt(idf[ix[t]] + K * g0), 4)] for t in teams}}
 
 
 def build_table(games):
     T = {}
-    for d, h, a, hg, ag, cur in sorted(games, key=lambda g: g[0]):
+    for g in sorted(games, key=lambda g: g[0]):
+        d, h, a, hg, ag, cur = g[:6]
         if not cur:
             continue
         for t in (h, a):
@@ -550,8 +591,9 @@ def load_results():
                 d = parse_date(col(row, 'Date'))
                 h, a = col(row, 'HomeTeam', 'Home'), col(row, 'AwayTeam', 'Away')
                 hg, ag = fnum(col(row, 'FTHG', 'HG')), fnum(col(row, 'FTAG', 'AG'))
+                hst, ast = fnum(col(row, 'HST')), fnum(col(row, 'AST'))
                 if d and h and a and hg is not None and ag is not None:
-                    games.append((d, h, a, int(hg), int(ag), cur))
+                    games.append((d, h, a, int(hg), int(ag), cur, hst, ast))
         if games:
             out[lk] = (games, season_label)
         else:
@@ -575,7 +617,7 @@ def load_results():
         if not parsed:
             continue
         latest = max(parsed, key=lambda g: g[0])[5]
-        games = [(d, h, a, hg, ag, s == latest) for d, h, a, hg, ag, s in parsed]
+        games = [(d, h, a, hg, ag, s == latest, None, None) for d, h, a, hg, ag, s in parsed]
         out[lk] = (games, latest)
     return out
 
@@ -585,7 +627,9 @@ def compute_leagues(results, teams):
     for lk, (games, season) in results.items():
         table = build_table(games)
         cur_teams = [t for t, _ in table]
-        rt = fit_ratings(games, cur_teams)
+        cur_n = sum(1 for g in games if g[5])
+        with_shots = sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None)
+        rt = fit_ratings(games, cur_teams, P=MODEL if cur_n and with_shots >= 0.8 * cur_n else MODEL0)
         for t in cur_teams:
             teams.add(lk, t)
         rows = []
@@ -596,6 +640,8 @@ def compute_leagues(results, teams):
         leagues[lk] = {'season': season, 'table': rows,
                        'mu': rt['mu'] if rt else None, 'home': rt['home'] if rt else None,
                        'ratings': {t: v for t, v in (rt or {}).get('teams', {}).items() if t in cur_teams},
+                       'se': {t: v for t, v in (rt or {}).get('se', {}).items() if t in cur_teams},
+                       'shots': sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None),
                        'games': len(games)}
     return leagues
 
@@ -949,6 +995,9 @@ AF_BATCH = 20           # fixtures per call (the API's maximum)
 AF_RESERVE = 20         # calls line-ups leave unused each day, so results always get through
 AF_DONE = ('FT', 'AET', 'PEN')                              # finished (scores are the 90-minute result)
 AF_OFF = ('PST', 'CANC', 'ABD', 'AWD', 'WO', 'SUSP')        # postponed, cancelled, abandoned or awarded
+AF_LIVE_MAX = int(float(ENV('API_FOOTBALL_LIVE') or 40))     # live-score checks a day, at most
+AF_LIVE_MIN = 10        # minutes between live-score checks, at the fastest
+AF_LIVE_RESERVE = 25    # live scores stop when this many of the day's calls are left (line-ups and results come first)
 
 
 def af_blocked(state):
@@ -1230,6 +1279,71 @@ def af_results(state):
     return graded
 
 
+def af_live(state):
+    """Live scores for Statpad's matches that are in play, from one call that lists every live game. The day's
+    live checks are spread over the time games are still in play, so a busy Saturday gets fewer per hour."""
+    af = state['af']
+    tn = state.get('tn') or {}
+    lv = af.setdefault('live', {})
+    day = NOW.strftime('%Y-%m-%d')
+    if lv.get('day') != day:
+        lv.update({'day': day, 'used': 0})
+    games = lv.setdefault('games', {})
+    for mid in [k for k, v in games.items() if NOW - parse_iso(v[4]) > timedelta(hours=4)]:
+        del games[mid]
+    done = af.get('scores') or {}
+    off = af.get('void') or {}
+    span = lambda r: (parse_iso(r['ko']), parse_iso(r['ko']) + timedelta(minutes=125))
+    inplay = {mid: r for mid, r in tn.items() if r.get('fid') and span(r)[0] <= NOW <= span(r)[1] and mid not in done and mid not in off}
+    if not inplay:
+        return 0
+    end = (NOW + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    ivs = sorted((max(NOW, a), min(end, b)) for a, b in (span(r) for r in tn.values() if r.get('fid')) if b > NOW and a < end)
+    mins, cur = 0.0, None
+    for a, b in ivs:   # minutes of play still to come today (overlaps counted once)
+        if cur and a <= cur[1]:
+            cur[1] = max(cur[1], b)
+        else:
+            if cur:
+                mins += (cur[1] - cur[0]).total_seconds() / 60
+            cur = [a, b]
+    if cur:
+        mins += (cur[1] - cur[0]).total_seconds() / 60
+    left = AF_LIVE_MAX - lv.get('used', 0)
+    if left <= 0:
+        return 0
+    gap = max(AF_LIVE_MIN, mins / left)
+    if lv.get('at') and (NOW - parse_iso(lv['at'])).total_seconds() / 60 < gap - 1 and not FORCE:
+        return 0
+    resp, err = af_get('/fixtures', {'live': 'all'}, state, reserve=AF_LIVE_RESERVE)
+    if resp is None:
+        return 0
+    lv['used'] = lv.get('used', 0) + 1
+    lv['at'] = iso(NOW)
+    by_fid = {(f.get('fixture') or {}).get('id'): f for f in resp}
+    n = 0
+    for mid, r in inplay.items():
+        f = by_fid.get(r['fid'])
+        if not f:
+            continue
+        st = (f.get('fixture') or {}).get('status') or {}
+        gl = f.get('goals') or {}
+        if gl.get('home') is None or gl.get('away') is None:
+            continue
+        minute = int(st.get('elapsed') or 0) + int(st.get('extra') or 0)
+        games[mid] = [int(gl['home']), int(gl['away']), minute, st.get('short') or '', iso(NOW)]
+        n += 1
+    return n
+
+
+def publish_live(state):
+    """Scores of games in play (and the last seen state of games that just ended), for the cash-out adviser."""
+    lv = ((state.get('af') or {}).get('live') or {})
+    done = (state.get('af') or {}).get('scores') or {}
+    games = {mid: v for mid, v in (lv.get('games') or {}).items() if mid not in done}
+    return {'app': 'Statpad', 'generated': iso(NOW), 'checked': lv.get('at'), 'games': games}
+
+
 def refresh_team_news(state, matches):
     if not AF_KEY:
         return 'no key'
@@ -1252,6 +1366,7 @@ def refresh_team_news(state, matches):
     linked = af_link(state, matches)
     af_injuries(state, days)
     got = af_lineups(state)
+    n_live = af_live(state)
     tn = state.setdefault('tn', {})
     for mid in [k for k, r in tn.items() if parse_iso(r['ko']) < NOW - timedelta(hours=6)]:
         del tn[mid]
@@ -1259,7 +1374,7 @@ def refresh_team_news(state, matches):
         del state['lineup_lk'][lk]
     n_lu = sum(1 for r in tn.values() if r.get('lu'))
     note = (f"{linked} matches linked, {n_lu} line-ups in{f' ({got} new)' if got else ''}, "
-            f"{graded} new results, {af.get('used', 0)} calls today")
+            f"{graded} new results{f', {n_live} live scores' if n_live else ''}, {af.get('used', 0)} calls today")
     if af.get('note') and af_blocked(state):
         note += ' · paused: ' + af['note']
     return note
@@ -1369,6 +1484,23 @@ def expected_goals(lk, h, a, leagues, teams):
     lam_h = math.exp(mu + home + ah + sh / 2 + da - sa / 2)
     lam_a = math.exp(mu + aa + sa / 2 + dh - sh / 2)
     return [round(lam_h, 4), round(lam_a, 4)], True
+
+
+def lam_sd(lk, h, a, leagues, teams, cross):
+    """Standard error of log expected goals (home, away) from the ratings' standard errors."""
+    if not cross:
+        se = (leagues.get(lk) or {}).get('se') or {}
+        if h in se and a in se:
+            return [round(math.hypot(se[h][0], se[a][1]), 3), round(math.hypot(se[a][0], se[h][1]), 3)]
+        return None
+    rh, ra = teams.resolve_global(h), teams.resolve_global(a)
+    if not rh or not ra:
+        return None
+    sh_ = ((leagues.get(rh[0]) or {}).get('se') or {}).get(rh[1])
+    sa_ = ((leagues.get(ra[0]) or {}).get('se') or {}).get(ra[1])
+    if not sh_ or not sa_:
+        return None
+    return [round(math.hypot(sh_[0], sa_[1]), 3), round(math.hypot(sa_[0], sh_[1]), 3)]   # the engine adds the league-gap part
 
 
 def table_pos(leagues):
@@ -1494,6 +1626,7 @@ def build(state, prev, seed=None):
         if mkt and mkt.get('src') == 'football-data' and om.get('src') == 'football-data' and om.get('avg') == mkt.get('avg') and om.get('best') == mkt.get('best'):
             mkt = dict(mkt, upd=om.get('upd'))   # same prices re-read: keep when they were first seen
         lam, cross = expected_goals(f['lk'], f['h'], f['a'], leagues, teams)
+        ls = lam_sd(f['lk'], f['h'], f['a'], leagues, teams, cross) if lam else None
         ph = pos.get((f['lk'], f['h']))
         pa = pos.get((f['lk'], f['a']))
         dom_h = dom_a = None
@@ -1520,6 +1653,8 @@ def build(state, prev, seed=None):
             if not hist or hist[-1][1:] != pt[1:] or NOW - parse_iso(hist[-1][0]) > timedelta(hours=6):
                 hist.append(pt)
             hist = hist[-40:]
+        if L[f['lk']]['group'] == 'intl':
+            ls = None
         news = team_news_for(state, mid, f['lk'], ko, f['h'], f['a'])
         matches.append({
             'id': mid, 'lk': f['lk'], 'ko': iso(ko), 'h': pretty(f['h']), 'a': pretty(f['a']),
@@ -1530,6 +1665,10 @@ def build(state, prev, seed=None):
         })
         if news:
             matches[-1]['tn'] = news
+        if ls:
+            matches[-1]['ls'] = ls
+        if MODEL_W and L[f['lk']]['group'] not in ('cups', 'intl') and not cross:
+            matches[-1]['wm'] = MODEL_W
 
     # competitions no source covered this run keep their previous (or starter) fixtures until kick-off
     covered = {m['lk'] for m in matches}
@@ -1746,6 +1885,7 @@ for (const m of inp.matches) {
     src: a.src, p: [a.p.H, a.p.D, a.p.A], pm: a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A] : null, m: a.mkt ? a.mkt.p : null,
     k: a.top ? a.top.key : null, pp: a.top ? a.top.pAdj : null, pr: a.top ? a.top.price : null, r: a.top ? !!a.top.real : false,
     pu: a.top ? (a.top.pRaw != null ? a.top.pRaw : a.top.pAdj) : null,
+    t: a.top && a.top.pLo != null ? a.tier : undefined, pl: a.top && a.top.pLo != null ? a.top.pLo : undefined,
   };
   if (Date.parse(m.ko) > now) { const d = fmt.format(new Date(m.ko)); (byDay[d] = byDay[d] || []).push({ m, a }); }
 }
@@ -1795,7 +1935,7 @@ def recent_results(res):
     """Last three weeks of results per league from the football-data download: [date, home, away, hg, ag]."""
     out = {}
     for lk, (games, _) in res.items():
-        rows = [[d.strftime('%Y-%m-%d'), h, a, hg, ag] for d, h, a, hg, ag, _c in games if NOW - d < timedelta(days=21)]
+        rows = [[d.strftime('%Y-%m-%d'), h, a, hg, ag] for d, h, a, hg, ag, _c, *_ in games if NOW - d < timedelta(days=21)]
         if rows:
             out[lk] = rows
     return out
@@ -1900,6 +2040,9 @@ def track_update(doc, state):
             rec.update({'lk': m['lk'], 'ko': m['ko'], 'h': m['h'], 'a': m['a'], 'src': e['src'], 'p': r4(e['p']),
                         'pm': r4(e['pm']), 'm': r4(e['m']), 'k': e['k'], 'pp': round(e['pp'], 4), 'pr': e['pr'],
                         'r': bool(e['r']), 'cl': best, 'pu': round(e['pu'], 4) if e.get('pu') is not None else None})
+            if 't' in e:
+                rec['t'] = e['t']
+                rec['pl'] = round(e['pl'], 4)
             if rec.get('op') is None and best:
                 rec['op'] = best
             pend[mid] = rec
@@ -1940,7 +2083,7 @@ def track_update(doc, state):
             continue
         hs, as_ = res
         won = bool(settle(rec['k'], hs, as_))
-        t = tier_of(rec['pp']) or '-'
+        t = (rec['t'] if 't' in rec else tier_of(rec['pp'])) or '-'
         agg['n'] += 1
         tt = agg['tiers'][t]
         tt[0] += 1; tt[1] += int(won); tt[2] = round(tt[2] + rec['pp'], 4)
@@ -2037,7 +2180,7 @@ def publish_results(state):
 BT_EVERY_H = 7 * 24
 BT_SKIP_WEEKS = 4          # the first weeks of a season are left out while ratings settle
 
-NODE_BT = r"""
+ENGINE_LOAD = r"""
 const fs = require('fs');
 const [, , htmlPath, inPath] = process.argv;
 const html = fs.readFileSync(htmlPath, 'utf8');
@@ -2045,14 +2188,21 @@ const s = html.indexOf('/* Statpad engine'), e = html.indexOf('module.exports = 
 const mod = { exports: null };
 new Function('module', html.slice(s, e) + 'module.exports = ENGINE;')(mod);
 const E = mod.exports;
-if (E.setCalib) E.setCalib(null);   // the backtest shows the engine's own, uncorrected chances
 const inp = JSON.parse(fs.readFileSync(inPath, 'utf8'));
+"""
+
+NODE_BT = ENGINE_LOAD + r"""
+if (E.setCalib) E.setCalib(null);   // the replay shows the engine's own, uncorrected chances
 const out = { picks: {}, slips: {}, value: [] }, byDay = {};
 for (const m of inp.matches) {
   let a = null;
   try { a = E.analyse(m, Date.parse(m.ko) - 3600e3); } catch (err) { a = null; }
   if (!a) continue;
+  // the pick the engine made before tiers used the cautious chance: highest stated chance
+  let ob = null;
+  for (const s of a.sels) { if (s.x || s.key === 'D' || s.price < 1.05) continue; if (!ob || s.pAdj > ob.pAdj) ob = s; }
   out.picks[m.id] = { k: a.top ? a.top.key : null, pp: a.top ? a.top.pAdj : null, pr: a.top ? a.top.price : null,
+    t: a.top ? a.tier : null, ok: ob ? ob.key : null, op: ob ? ob.pAdj : null,
     p: [a.p.H, a.p.D, a.p.A], m: a.mkt ? a.mkt.p : null, pm: a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A] : null };
   for (const v of E.value([{ m, a }], 0.03)) out.value.push([m.id, v.s.key, v.s.price, v.s.p]);
   const d = m.ko.slice(0, 10); (byDay[d] = byDay[d] || []).push({ m, a });
@@ -2064,87 +2214,365 @@ for (const [d, list] of Object.entries(byDay)) {
 process.stdout.write(JSON.stringify(out));
 """
 
+NODE_FIT = ENGINE_LOAD + r"""
+const out = inp.map(([h, a, o]) => { const f = E.fit({ H: h, A: a, O: o }, [1.4, 1.1]); return [+f[0].toFixed(4), +f[1].toFixed(4)]; });
+process.stdout.write(JSON.stringify(out));
+"""
 
-def load_bt_season():
-    """Last completed season for football-data's main leagues (with pre-match prices), plus the season before for ratings."""
-    code, prev = season_code(NOW, 1), season_code(NOW, 2)
-    out = {}
-    for lk, c in L.items():
-        if not c['fd']:
-            continue
+
+def run_node(script, payload, timeout=600):
+    import shutil
+    import subprocess
+    import tempfile
+    node = shutil.which('node')
+    if not node or not INDEX_FILE.exists():
+        return None
+    with tempfile.TemporaryDirectory() as td:
+        js, inp = Path(td) / 'run.js', Path(td) / 'in.json'
+        js.write_text(script)
+        inp.write_text(json.dumps(payload))
+        r = subprocess.run([node, str(js), str(INDEX_FILE), str(inp)], capture_output=True, text=True, timeout=timeout)
+        if r.returncode != 0:
+            log('engine run failed', (r.stderr or '')[-300:])
+            return None
+        return json.loads(r.stdout)
+
+
+# ----------------------------------------------------------------------------------------------
+# Past seasons of football-data's main leagues, shared by the tuning and the replay
+# ----------------------------------------------------------------------------------------------
+_FD_SEASONS = {}
+
+
+def fd_season(lk, code):
+    """(date, home, away, home goals, away goals, home shots on target, away SoT, prices, kick-off) for one season."""
+    key = (lk, code)
+    if key not in _FD_SEASONS:
         rows = []
-        for cd, cur in ((code, True), (prev, False)):
-            r = fetch(f'{FD}/mmz4281/{cd}/{c["fd"]}.csv')
-            if r.status != 200 or not r.body:
-                continue
+        r = fetch(f'{FD}/mmz4281/{code}/{L[lk]["fd"]}.csv')
+        if r.status == 200 and r.body:
             for row in read_csv(r.body):
                 d = parse_date(col(row, 'Date'))
                 h, a = col(row, 'HomeTeam', 'Home'), col(row, 'AwayTeam', 'Away')
                 hg, ag = fnum(col(row, 'FTHG', 'HG')), fnum(col(row, 'FTAG', 'AG'))
                 if d and h and a and hg is not None and ag is not None:
-                    ko = uk_to_utc(d, col(row, 'Time'))   # football-data times are UK time; 15:00 if missing
-                    rows.append((d, h, a, int(hg), int(ag), cur, fd_market(row, None) if cur else None, ko))
-        if any(r[5] for r in rows):
-            out[lk] = rows
-    return out, f'20{code[:2]}/{code[2:]}'
+                    rows.append((d, h, a, int(hg), int(ag), fnum(col(row, 'HST')), fnum(col(row, 'AST')),
+                                 fd_market(row, None), uk_to_utc(d, col(row, 'Time'))))   # football-data times are UK time
+        _FD_SEASONS[key] = rows
+    return _FD_SEASONS[key]
+
+
+def season_name(code):
+    return f'20{code[:2]}/{code[2:]}'
+
+
+def season_preds(cur_rows, prev_rows, P, skip=None):
+    """Every game of a season with the expected goals, and their spread, from the ratings as they stood
+    that week: built only from earlier games."""
+    skip = BT_SKIP_WEEKS if skip is None else skip
+    cur = sorted(cur_rows, key=lambda r: r[0])
+    if len(cur) < 60:
+        return []
+    games = [(r[0], r[1], r[2], r[3], r[4], False, r[5], r[6]) for r in prev_rows] + \
+            [(r[0], r[1], r[2], r[3], r[4], True, r[5], r[6]) for r in cur]
+    start = cur[0][0]
+    teams = sorted({r[1] for r in cur} | {r[2] for r in cur})
+    init, fits = None, {}
+    for w in sorted({(r[0] - start).days // 7 for r in cur}):
+        if w < skip:
+            continue
+        cut = start + timedelta(days=7 * w)
+        rt = fit_ratings([g for g in games if g[0] < cut], teams, asof=cut, init=init, P=P)
+        if rt:
+            fits[w], init = rt, rt
+    out = []
+    for r in cur:
+        rt = fits.get((r[0] - start).days // 7)
+        if not rt or r[1] not in rt['teams'] or r[2] not in rt['teams']:
+            continue
+        (ah, dh), (aa, da) = rt['teams'][r[1]], rt['teams'][r[2]]
+        (sah, sdh), (saa, sda) = rt['se'][r[1]], rt['se'][r[2]]
+        out.append((r, math.exp(rt['mu'] + rt['home'] + ah + da), math.exp(rt['mu'] + aa + dh),
+                    math.hypot(sah, sda), math.hypot(saa, sdh)))
+    return out
+
+
+RHO_DC = -0.07   # the engine's Dixon-Coles correction
+
+
+def dc_probs(lh, la, n=11):
+    """Home, draw, away and over 2.5 from the Dixon-Coles scoreline grid (as the engine builds it)."""
+    ph, pa = [math.exp(-lh)], [math.exp(-la)]
+    for k in range(1, n):
+        ph.append(ph[-1] * lh / k)
+        pa.append(pa[-1] * la / k)
+    c00, c01, c10, c11 = 1 - lh * la * RHO_DC, 1 + lh * RHO_DC, 1 + la * RHO_DC, 1 - RHO_DC
+    H = D = A = U = 0.0
+    for i in range(n):
+        pi = ph[i]
+        for j in range(n):
+            v = pi * pa[j]
+            if i < 2 and j < 2:
+                v *= c00 if i == 0 and j == 0 else c01 if i == 0 else c10 if j == 0 else c11
+            if i > j:
+                H += v
+            elif i == j:
+                D += v
+            else:
+                A += v
+            if i + j < 3:
+                U += v
+    t = H + D + A
+    return H / t, D / t, A / t, 1 - U / t
+
+
+def game_loss(lh, la, hg, ag):
+    """Log loss on the result (1X2) and on over/under 2.5 for one game."""
+    H, D, A, O = dc_probs(lh, la)
+    r = H if hg > ag else D if hg == ag else A
+    o = O if hg + ag > 2 else 1 - O
+    return -math.log(max(1e-9, r)), -math.log(max(1e-9, o))
+
+
+# ----------------------------------------------------------------------------------------------
+# Tuning: the model's settings (memory, last season's weight, shrinkage, shots) are searched on two past
+# seasons, then checked on the last completed season, which the search never saw. They are switched on
+# only if they beat the defaults there, after blending with the market as the site does.
+# ----------------------------------------------------------------------------------------------
+TUNE_EVERY_D = 30
+TUNE_BUDGET_S = float(ENV('STATPAD_TUNE_BUDGET') or 420)
+TUNE_GRID = {'sw': [0.0, 0.15, 0.3, 0.45, 0.6, 0.75], 'hl': [120.0, 180.0, 270.0, 365.0, 540.0],
+             'pw': [0.4, 0.6, 0.8, 1.0], 'k': [1.5, 2.5, 3.5, 5.0, 6.0, 8.0]}
+W_GRID = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
+W_DEFAULT = 0.8
+_TUNE_JOBS = []   # (this season's rows, last season's rows); read by forked worker processes
+
+
+def _tune_job(arg):
+    i, P, full = arg
+    cur_rows, prev_rows = _TUNE_JOBS[i]
+    n = l1 = l2 = 0.0
+    rows = []
+    for r, lh, la, _sh, _sa in season_preds(cur_rows, prev_rows, P):
+        if full:
+            mk = r[7]
+            if mk and mk.get('p'):
+                rows.append((lh, la, r[3], r[4], mk['p'][0], mk['p'][2], (mk.get('ou') or {}).get('pO')))
+            continue
+        x, y = game_loss(lh, la, r[3], r[4])
+        n += 1
+        l1 += x
+        l2 += y
+    return rows if full else (n, l1, l2)
+
+
+def _pool():
+    try:
+        import multiprocessing
+        from concurrent.futures import ProcessPoolExecutor
+        cores = os.cpu_count() or 1
+        if cores < 2:
+            return None
+        return ProcessPoolExecutor(max_workers=min(4, cores), mp_context=multiprocessing.get_context('fork'))
+    except Exception:
+        return None
+
+
+def _pmap(pool, fn, args):
+    if pool:
+        try:
+            return list(pool.map(fn, args))
+        except Exception as e:
+            log('tuning: parallel run failed, going on in one process', repr(e))
+    return [fn(x) for x in args]
+
+
+def blend_loss(rows, lams, w):
+    """Average 1X2 + over/under log loss after blending model and market as the engine does."""
+    n = l1 = l2 = 0.0
+    for (lh, la, hg, ag, *_), (mh, ma) in zip(rows, lams):
+        bh, ba = math.exp(w * math.log(mh) + (1 - w) * math.log(lh)), math.exp(w * math.log(ma) + (1 - w) * math.log(la))
+        x, y = game_loss(bh, ba, hg, ag)
+        n += 1
+        l1 += x
+        l2 += y
+    return (l1 / n, l2 / n) if n else (None, None)
+
+
+def run_tuning(state):
+    global _TUNE_JOBS
+    t0 = time.time()
+    c1, c2, c3, c4 = (season_code(NOW, i) for i in (1, 2, 3, 4))
+    train, check = [], []
+    for lk, c in L.items():
+        if not c['fd']:
+            continue
+        s1, s2, s3, s4 = (fd_season(lk, code) for code in (c1, c2, c3, c4))
+        if len(s2) >= 60 and s3:
+            train.append((s2, s3))
+        if len(s3) >= 60 and s4:
+            train.append((s3, s4))
+        if len(s1) >= 60 and s2:
+            check.append((s1, s2))
+    if len(train) < 6 or len(check) < 3:
+        log('tuning: not enough past seasons', len(train), len(check))
+        return None
+    _TUNE_JOBS = train + check
+    ti, ci = list(range(len(train))), list(range(len(train), len(train) + len(check)))
+    pool = _pool()
+    evals, cache = 0, {}
+    try:
+        def score(P):
+            nonlocal evals
+            key = json.dumps(P, sort_keys=True)
+            if key not in cache:
+                res = _pmap(pool, _tune_job, [(i, P, False) for i in ti])
+                n = sum(r[0] for r in res)
+                cache[key] = (sum(r[1] for r in res) + sum(r[2] for r in res)) / max(1, n)
+                evals += 1
+            return cache[key]
+
+        best = dict(DEFAULT_MODEL)
+        bs = score(best)
+        finished = True
+        for _round in range(2):
+            moved = False
+            for name in ('sw', 'hl', 'pw', 'k'):
+                for v in TUNE_GRID[name]:
+                    if time.time() - t0 > TUNE_BUDGET_S:
+                        finished = False
+                        break
+                    P = dict(best, **{name: v})
+                    sc = score(P)
+                    if sc < bs - 1e-5:
+                        best, bs, moved = P, sc, True
+            if not moved or not finished:
+                break
+        # leagues without shot counts: the same search with goals only
+        best0 = dict(best, sw=0.0)
+        bs0 = score(best0)
+        for name in ('k', 'hl', 'pw'):
+            for v in TUNE_GRID[name]:
+                if time.time() - t0 > TUNE_BUDGET_S * 1.25:
+                    finished = False
+                    break
+                P = dict(best0, **{name: v})
+                sc = score(P)
+                if sc < bs0 - 1e-5:
+                    best0, bs0 = P, sc
+        t_search = time.time() - t0
+        # the market's share: model expected goals from the tuned settings, market expected goals fitted by the engine
+        tr_rows = [r for rows in _pmap(pool, _tune_job, [(i, best, True) for i in ti]) for r in rows]
+        ck_def = [r for rows in _pmap(pool, _tune_job, [(i, DEFAULT_MODEL, True) for i in ci]) for r in rows]
+        ck_new = [r for rows in _pmap(pool, _tune_job, [(i, best, True) for i in ci]) for r in rows]
+        ck_0 = [r for rows in _pmap(pool, _tune_job, [(i, best0, True) for i in ci]) for r in rows]
+    finally:
+        if pool:
+            pool.shutdown()
+    lam_tr = run_node(NODE_FIT, [[r[4], r[5], r[6]] for r in tr_rows])
+    lam_ck = run_node(NODE_FIT, [[r[4], r[5], r[6]] for r in ck_new])
+    if not lam_tr or not lam_ck or len(ck_def) != len(ck_new):
+        log('tuning: market fit failed')
+        return None
+    w_scores = {w: sum(blend_loss(tr_rows, lam_tr, w)) for w in W_GRID}
+    w_best = min(w_scores, key=w_scores.get)
+    # the check season: never seen by the search
+    m_def = blend_loss(ck_def, lam_ck, 0.0)
+    m_new = blend_loss(ck_new, lam_ck, 0.0)
+    b_old = blend_loss(ck_def, lam_ck, W_DEFAULT)
+    b_p = blend_loss(ck_new, lam_ck, W_DEFAULT)
+    p_on = best != DEFAULT_MODEL and sum(b_p) < sum(b_old) - 1e-4
+    rows_on = ck_new if p_on else ck_def
+    b_w = blend_loss(rows_on, lam_ck, w_best)
+    b_base = b_p if p_on else b_old
+    w_on = w_best != W_DEFAULT and sum(b_w) < sum(b_base) - 1e-4
+    b_after = b_w if w_on else b_base
+    mkt = blend_loss(ck_new, lam_ck, 1.0)
+    m_0 = blend_loss(ck_0, lam_ck, 0.0) if len(ck_0) == len(ck_def) else (9, 9)
+    on0 = p_on and best0 != dict(DEFAULT_MODEL) and sum(m_0) < sum(m_def) - 1e-4
+    r5 = lambda x: round(x, 5)
+    out = {'at': iso(NOW), 'train': [season_name(c3), season_name(c2)], 'check': season_name(c1), 'check_code': c1,
+           'leagues': len(check), 'games': len(ck_new), 'evals': evals, 'secs': round(time.time() - t0),
+           'search_secs': round(t_search), 'finished': finished,
+           'default': DEFAULT_MODEL, 'params': best, 'on': p_on, 'w': w_best, 'w_on': w_on,
+           'params0': best0, 'on0': on0,
+           'll': {'model': [r5(m_def[0]), r5(m_new[0])], 'model_ou': [r5(m_def[1]), r5(m_new[1])],
+                  'site': [r5(b_old[0]), r5(b_after[0])], 'site_ou': [r5(b_old[1]), r5(b_after[1])],
+                  'market': [r5(mkt[0]), r5(mkt[1])], 'model0': [r5(m_0[0]), r5(m_0[1])]}}
+    log(f"tuning: {evals} settings tried in {out['search_secs']} s on {season_name(c3)}-{season_name(c2)}; best {best}, market share {w_best}. "
+        f"Checked on {season_name(c1)}: model {m_def[0]:.4f} -> {m_new[0]:.4f}, site {b_old[0]:.4f} -> {b_after[0]:.4f} (1X2 log loss); "
+        f"settings {'on' if p_on else 'kept old'}, market share {'on' if w_on else 'kept 0.8'}")
+    return out
+
+
+def apply_tuning(state):
+    global MODEL, MODEL0, MODEL_W
+    t = state.get('tune') or {}
+    MODEL = dict(t['params']) if t.get('on') and t.get('params') else dict(DEFAULT_MODEL)
+    MODEL0 = dict(t['params0']) if t.get('on0') and t.get('params0') else dict(DEFAULT_MODEL)
+    MODEL_W = t.get('w') if t.get('w_on') else None
+
+
+def tune_due(state):
+    t = state.get('tune')
+    if not t:
+        return due(state, 'tune', 6)   # first time: retry every 6 hours if the downloads fail
+    return due(state, 'tune', TUNE_EVERY_D * 24) or t.get('check_code') != season_code(NOW, 1) or not t.get('finished', True)
+
+
+def public_tune(state):
+    t = state.get('tune')
+    if not t:
+        return None
+    return {k: t[k] for k in ('at', 'train', 'check', 'leagues', 'games', 'default', 'params', 'on', 'params0', 'on0', 'w', 'w_on', 'll') if k in t}
+
+
+# ----------------------------------------------------------------------------------------------
+# Replay: last season through today's engine
+# ----------------------------------------------------------------------------------------------
+def load_bt_season():
+    code, prev = season_code(NOW, 1), season_code(NOW, 2)
+    out = {}
+    for lk, c in L.items():
+        if c['fd']:
+            cur = fd_season(lk, code)
+            if cur:
+                out[lk] = (cur, fd_season(lk, prev))
+    return out, season_name(code)
 
 
 def bt_matches(seasons):
-    """Engine input for every backtest game: expected goals from the ratings as they stood that week, plus its prices."""
+    """Engine input for every replayed game: the model as it stood that week, plus the pre-match prices."""
     ms, res = [], {}
-    for lk, rows in seasons.items():
-        cur = sorted([r for r in rows if r[5]], key=lambda r: r[0])
-        if len(cur) < 60:
-            continue
-        start = cur[0][0]
-        teams = sorted({r[1] for r in cur} | {r[2] for r in cur})
-        init, fits = None, {}
-        for w in sorted({(r[0] - start).days // 7 for r in cur}):
-            if w < BT_SKIP_WEEKS:
+    for lk, (cur_rows, prev_rows) in seasons.items():
+        for r, lh, la, sh, sa in season_preds(cur_rows, prev_rows, MODEL):
+            d, h, a, hg, ag, _hs, _as, mkt, ko = r
+            if not mkt:
                 continue
-            cut = start + timedelta(days=7 * w)
-            games = [(d, h, a, hg, ag, c) for d, h, a, hg, ag, c, _m, _k in rows if d < cut]
-            rt = fit_ratings(games, teams, asof=cut, init=init)
-            if rt:
-                fits[w], init = rt, rt
-        for d, h, a, hg, ag, c, mkt, ko in cur:
-            rt = fits.get((d - start).days // 7)
-            if not rt or not mkt or h not in rt['teams'] or a not in rt['teams']:
-                continue
-            ah, dh = rt['teams'][h]
-            aa, da = rt['teams'][a]
-            lm = [round(math.exp(rt['mu'] + rt['home'] + ah + da), 4), round(math.exp(rt['mu'] + aa + dh), 4)]
             mid = f"{lk}-{ko:%Y%m%d}-{slug(h)}-{slug(a)}"
-            ms.append({'id': mid, 'lk': lk, 'ko': iso(ko), 'h': h, 'a': a, 'lm': lm, 'mkt': mkt, 'xl': False, 'fr': False, 'clash': False})
+            m = {'id': mid, 'lk': lk, 'ko': iso(ko), 'h': h, 'a': a, 'lm': [round(lh, 4), round(la, 4)],
+                 'ls': [round(sh, 3), round(sa, 3)], 'mkt': mkt, 'xl': False, 'fr': False, 'clash': False}
+            if MODEL_W:
+                m['wm'] = MODEL_W
+            ms.append(m)
             res[mid] = (hg, ag)
     return ms, res
 
 
 def run_backtest(state):
-    import shutil
-    import subprocess
-    import tempfile
     t0 = time.time()
-    node = shutil.which('node')
-    if not node or not INDEX_FILE.exists():
-        return None
     seasons, label = load_bt_season()
     ms, res = bt_matches(seasons)
     t1 = time.time()
     if len(ms) < 200:
         log('backtest: not enough games with prices', len(ms))
         return None
-    with tempfile.TemporaryDirectory() as td:
-        js, inp = Path(td) / 'bt.js', Path(td) / 'in.json'
-        js.write_text(NODE_BT)
-        inp.write_text(json.dumps({'target': TRACK_TARGET, 'matches': ms}))
-        r = subprocess.run([node, str(js), str(INDEX_FILE), str(inp)], capture_output=True, text=True, timeout=600)
-        if r.returncode != 0:
-            log('backtest: engine failed', (r.stderr or '')[-300:])
-            return None
-        eng = json.loads(r.stdout)
+    eng = run_node(NODE_BT, {'target': TRACK_TARGET, 'matches': ms})
+    if not eng:
+        return None
     agg = new_agg()
     agg['value'] = [0, 0, 0.0]                 # bets, won, units at the best price
+    agg['tiers_old'] = {t: [0, 0, 0.0] for t in ('A', 'B', 'C', '-')}   # tiers from the stated chance alone
     by_lg = {}
     for mid, e in eng['picks'].items():
         hs, as_ = res[mid]
@@ -2152,12 +2580,16 @@ def run_backtest(state):
         lk = mid.split('-')[0]
         if e['k']:
             won = bool(settle(e['k'], hs, as_))
-            t = tier_of(e['pp']) or '-'
+            t = (e['t'] if 't' in e else tier_of(e['pp'])) or '-'
             tt = agg['tiers'][t]
             tt[0] += 1; tt[1] += int(won); tt[2] = round(tt[2] + e['pp'], 4)
             if t != '-':
                 bl = by_lg.setdefault(lk, [0, 0, 0.0])
                 bl[0] += 1; bl[1] += int(won); bl[2] = round(bl[2] + e['pp'], 4)
+        if e.get('ok'):
+            to = tier_of(e['op']) or '-'
+            tt = agg['tiers_old'][to]
+            tt[0] += 1; tt[1] += int(bool(settle(e['ok'], hs, as_))); tt[2] = round(tt[2] + e['op'], 4)
         agg['n'] += 1
         for i in range(3):
             b = agg['cal'][min(9, int(e['p'][i] * 10))]
@@ -2181,7 +2613,7 @@ def run_backtest(state):
             a = agg['slips'][s_['t']]
             a[0] += 1; a[1] += int(won); a[2] = round(a[2] + (s_['o'] - 1 if won else -1), 3); a[3] = round(a[3] + s_['p'], 4)
     out = {'app': 'Statpad', 'season': label, 'at': iso(NOW), 'games': len(ms), 'leagues': len({m['lk'] for m in ms}),
-           'skip_weeks': BT_SKIP_WEEKS, 'target': TRACK_TARGET, 'agg': agg,
+           'skip_weeks': BT_SKIP_WEEKS, 'target': TRACK_TARGET, 'model': MODEL, 'wm': MODEL_W or W_DEFAULT, 'agg': agg,
            'by_league': dict(sorted(by_lg.items(), key=lambda x: -x[1][0]))}
     log(f"backtest: {label}, {len(ms)} games in {out['leagues']} leagues (ratings {t1 - t0:.0f} s, total {time.time() - t0:.0f} s)")
     return out
@@ -2224,7 +2656,24 @@ def main():
             log('source error in', fn.__name__, '->', repr(e))
             return default
 
-    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state:
+    retuned = False
+    if tune_due(state):
+        last['tune'] = iso(NOW)
+        tn = safe(lambda: run_tuning(state), None)
+        if tn:
+            state['tune'] = tn
+            retuned = True
+            src['tuning'] = {'ok': True, 'at': iso(NOW), 'note': f"{'tuned settings on' if tn['on'] else 'default settings kept'}"
+                                                              f"{', market share ' + str(tn['w']) if tn['w_on'] else ''}"}
+        elif not state.get('tune'):
+            src['tuning'] = {'ok': False, 'at': iso(NOW), 'note': 'past seasons not available yet'}
+    apply_tuning(state)
+    model_sig = json.dumps([MODEL, MODEL0, MODEL_W], sort_keys=True)
+    if model_sig != state.get('model_sig'):
+        state['model_sig'] = model_sig
+        retuned = True
+
+    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or retuned:
         res = safe(load_results, {})
         if res:
             state['leagues'] = safe(lambda: compute_leagues(res, Teams()), state.get('leagues') or {})
@@ -2279,14 +2728,21 @@ def main():
     if n_sc:
         log('results from The Odds API for', n_sc, 'competitions')
     track = safe(lambda: track_update(doc, state), None)
-    if due(state, 'backtest', BT_EVERY_H) or not state.get('backtest'):
+    if due(state, 'backtest', BT_EVERY_H) or not state.get('backtest') or retuned:
         last['backtest'] = iso(NOW)
         bt = safe(lambda: run_backtest(state), None)
         if bt:
             state['backtest'] = bt
             changed = True
     if state.get('backtest'):
-        (OUT_DIR / 'backtest.json').write_text(json.dumps(state['backtest'], ensure_ascii=False, separators=(',', ':')))
+        (OUT_DIR / 'backtest.json').write_text(json.dumps(dict(state['backtest'], tune=public_tune(state)), ensure_ascii=False, separators=(',', ':')))
+    live = safe(lambda: publish_live(state), None)
+    if live is not None:
+        (OUT_DIR / 'live.json').write_text(json.dumps(live, ensure_ascii=False, separators=(',', ':')))
+        lsig = json.dumps(live['games'], sort_keys=True)
+        if lsig != state.get('live_sig'):
+            state['live_sig'] = lsig
+            changed = True
     results = safe(lambda: publish_results(state), None)
     if results is not None:
         (OUT_DIR / 'results.json').write_text(json.dumps(results, ensure_ascii=False, separators=(',', ':')))
