@@ -317,10 +317,12 @@ def offline_name(url):
     return re.sub(r'[^A-Za-z0-9.-]+', '_', u.netloc + u.path).strip('_')
 
 
-def fetch(url, params=None, tries=3):
+def fetch(url, params=None, tries=3, headers=None):
     full = url + ('?' + urlencode(params) if params else '')
     if OFFLINE:
         p = Path(OFFLINE) / offline_name(url)
+        if params and 'api-sports' in url:   # test files for API-Football are per query
+            p = Path(OFFLINE) / (offline_name(url) + '__' + re.sub(r'[^A-Za-z0-9.-]+', '_', urlencode(sorted(params.items()))))
         if not p.exists():
             return Fetched(404, b'', {})
         hdr = {}
@@ -331,7 +333,7 @@ def fetch(url, params=None, tries=3):
     last = None
     for i in range(tries):
         try:
-            req = Request(full, headers={'User-Agent': 'Statpad/1.0 (GitHub Actions data refresh)', 'Accept-Encoding': 'identity'})
+            req = Request(full, headers={'User-Agent': 'Statpad/1.0 (GitHub Actions data refresh)', 'Accept-Encoding': 'identity', **(headers or {})})
             with urlopen(req, timeout=40) as r:
                 return Fetched(r.status, r.read(), {k.lower(): v for k, v in r.headers.items()})
         except HTTPError as e:
@@ -887,10 +889,15 @@ def refresh_odds_api(state):
     if remaining < cost + 5 and not FORCE:
         return 'out of credits'
     cands = []
+    news = state.get('lineup_lk') or {}
     for key, nxt in active:
         last = (api.get(key) or {}).get('odds_at')
         age = (NOW - parse_iso(last)).total_seconds() / 60 if last else 1e9
-        if FORCE or age >= MIN_INTERVAL * tier(nxt) - 1:
+        lu = news.get(plan.get(key))
+        fresh_news = lu and (not last or parse_iso(last) < parse_iso(lu)) and (nxt - NOW) <= timedelta(hours=2) and age >= MIN_INTERVAL - 1
+        if fresh_news:
+            cands.append((0, nxt, -age, key))   # line-ups just landed: prices move on team news
+        elif FORCE or age >= MIN_INTERVAL * tier(nxt) - 1:
             cands.append((tier(nxt), nxt, -age, key))
     cands.sort()
     done = 0
@@ -915,6 +922,319 @@ def refresh_odds_api(state):
         done += 1
     state['spend'] = {today: spent}
     return f'{done} competitions priced'
+
+
+# ----------------------------------------------------------------------------------------------
+# Team news (optional): injuries, suspensions and confirmed line-ups from API-Football.
+# The free plan allows 100 calls a day, so they are rationed: the fixture list for today and
+# tomorrow every 6 h, injuries for each day every 4 h, and line-ups from about an hour before
+# kick-off, checked every 15 min until both teams are in. The news is shown on the site; the
+# probabilities move with the bookmakers' prices, which react to team news, and a confirmed
+# line-up asks for a fresh price for that competition.
+# ----------------------------------------------------------------------------------------------
+AF_KEY = (ENV('API_FOOTBALL_KEY') or '').strip()
+AF = 'https://v3.football.api-sports.io'
+AF_DAILY = int(float(ENV('API_FOOTBALL_DAILY') or 100))
+AF_FIX_EVERY = 6        # hours between fixture-list downloads, per day
+AF_INJ_EVERY = 4        # hours between injury downloads, per day
+AF_LU_FROM = 65         # minutes before kick-off to start asking for line-ups
+AF_LU_EVERY = 15        # minutes between line-up checks for a match
+AF_BATCH = 20           # fixtures per call (the API's maximum)
+
+
+def af_blocked(state):
+    b = (state.get('af') or {}).get('block_until')
+    return bool(b and parse_iso(b) > NOW)
+
+
+def af_get(path, params, state):
+    """One API-Football call -> (response list or None, error text or None). Keeps to the daily allowance."""
+    af = state.setdefault('af', {})
+    day = NOW.strftime('%Y-%m-%d')
+    if af.get('day') != day:
+        af.update({'day': day, 'used': 0, 'left': None})
+    if af_blocked(state):
+        return None, 'paused'
+    if af['used'] >= AF_DAILY - 2 or (af.get('left') is not None and af['left'] <= 2):
+        return None, 'daily allowance used'
+    if af['used'] and not OFFLINE:
+        time.sleep(0.4)   # stay well inside the per-minute limit
+    r = fetch(AF + path, params, headers={'x-apisports-key': AF_KEY})
+    af['used'] += 1
+    left = r.headers.get('x-ratelimit-requests-remaining')
+    if left is not None:
+        af['left'] = fnum(left)
+    if r.status != 200:
+        log('API-Football', path, 'status', r.status)
+        return None, f'status {r.status}'
+    try:
+        data = json.loads(text_of(r.body))
+    except ValueError:
+        return None, 'unreadable reply'
+    err = data.get('errors')
+    if err:
+        msg = '; '.join(f'{k}: {v}' for k, v in err.items()) if isinstance(err, dict) else '; '.join(map(str, err))
+        log('API-Football', path, params, '->', msg[:300])
+        keys = set(err) if isinstance(err, dict) else set()
+        if 'token' in keys or 'access' in keys:
+            af['block_until'], af['note'] = iso(NOW + timedelta(hours=6)), 'the key was refused'
+        elif 'requests' in keys:
+            tomorrow = (NOW + timedelta(days=1)).replace(hour=0, minute=5, second=0, microsecond=0)
+            af['block_until'], af['note'] = iso(tomorrow), "today's allowance is used up"
+        elif 'plan' in keys:
+            af['block_until'], af['note'] = iso(NOW + timedelta(hours=24)), 'your plan does not cover this: ' + msg[:160]
+        return None, msg
+    return data.get('response') or [], None
+
+
+def af_names(s):
+    """Loose team-name forms for matching another provider's names: normalised, and its word set."""
+    n = norm(s)
+    return n, set(n.split())
+
+
+SIDE_MARKS = {'w', 'women', 'woman', 'fem', 'femenino', 'feminin', 'frauen', 'u17', 'u18', 'u19', 'u20', 'u21', 'u23',
+              'ii', 'b', 'c', 'reserves', 'res', 'youth', 'academy', 'jong'}
+
+
+def team_sim(a, b):
+    if same_team(a, b):
+        return 1.0
+    (na, ta), (nb, tb) = af_names(a), af_names(b)
+    if not na or not nb or (ta ^ tb) & SIDE_MARKS:   # never pair a club with its women's, youth or reserve side
+        return 0.0
+    if ta and tb and (ta <= tb or tb <= ta):
+        return 0.9
+    return difflib.SequenceMatcher(None, na, nb).ratio()
+
+
+def af_link(state, matches):
+    """Pair Statpad's matches in the next ~40 h with API-Football fixture ids."""
+    tn = state.setdefault('tn', {})
+    fxs = []
+    for rec in ((state.get('af') or {}).get('fx') or {}).values():
+        fxs.extend(rec['list'])
+    fxs = [(parse_iso(f[1]), f) for f in fxs if f[1]]
+    fxs.sort(key=lambda x: x[0])
+    times = [x[0] for x in fxs]
+    import bisect
+    linked = 0
+    for m in matches:
+        ko = parse_iso(m['ko'])
+        if not (NOW - timedelta(hours=3) < ko < NOW + timedelta(hours=40)):
+            continue
+        r = tn.get(m['id'])
+        if r and r.get('fid'):
+            linked += 1
+            continue
+        best, best_s = None, 0.0
+        i0 = bisect.bisect_left(times, ko - timedelta(hours=3))
+        i1 = bisect.bisect_right(times, ko + timedelta(hours=3))
+        country = (L.get(m['lk']) or {}).get('country') or ''
+        for fko, f in fxs[i0:i1]:
+            dt = abs((fko - ko).total_seconds()) / 60
+            sh, sa = team_sim(f[2], m['h']), team_sim(f[3], m['a'])
+            if not (sh == 1 and sa == 1) and country and f[5] and f[5].lower() not in ('world', 'europe') and f[5].lower() != country.lower():
+                continue   # loose name matches must at least be in the same country
+            ok = (sh == 1 and sa == 1) or (dt <= 15 and ((sh == 1 and sa >= 0.5) or (sa == 1 and sh >= 0.5) or (sh >= 0.8 and sa >= 0.8)))
+            if ok and sh + sa - dt / 600 > best_s:
+                best, best_s = f, sh + sa - dt / 600
+        if best:
+            tn[m['id']] = {'fid': best[0], 'hid': best[6], 'aid': best[7], 'ko': m['ko'], 'lk': m['lk'], 'h': m['h'], 'a': m['a']}
+            linked += 1
+    return linked
+
+
+def af_injuries(state, days):
+    af, tn = state['af'], state.setdefault('tn', {})
+    at, store = af.setdefault('inj_at', {}), af.setdefault('inj', {})
+    for ds in days:
+        if not any(r.get('fid') and r['ko'][:10] == ds for r in tn.values()):
+            continue
+        if at.get(ds) and NOW - parse_iso(at[ds]) < timedelta(hours=AF_INJ_EVERY) and not FORCE:
+            continue
+        rows = None
+        if af.get('inj_mode', 'date') == 'date':
+            rows, err = af_get('/injuries', {'date': ds}, state)
+            if rows is None and err and not af_blocked(state) and 'allowance' not in err and 'status' not in err:
+                af['inj_mode'] = 'ids'   # this plan or API version wants fixture ids instead of a date
+        if af.get('inj_mode') == 'ids':
+            fids = sorted({r['fid'] for r in tn.values() if r.get('fid') and r['ko'][:10] == ds})
+            rows = []
+            for i in range(0, len(fids), AF_BATCH):
+                got, err = af_get('/injuries', {'ids': '-'.join(map(str, fids[i:i + AF_BATCH]))}, state)
+                if got is None:
+                    rows = None
+                    break
+                rows.extend(got)
+        if rows is None:
+            continue
+        at[ds] = iso(NOW)
+        by = {}
+        for it in rows:
+            fid = (it.get('fixture') or {}).get('id')
+            pl = it.get('player') or {}
+            if not fid or not pl.get('name'):
+                continue
+            typ = 'q' if 'question' in (pl.get('type') or '').lower() else 'x'
+            by.setdefault(str(fid), []).append([(it.get('team') or {}).get('id'), pl['name'], typ, (pl.get('reason') or '').strip()])
+        store[ds] = by
+    for ds in [d for d in store if d < (NOW - timedelta(days=1)).strftime('%Y-%m-%d')]:
+        store.pop(ds, None)
+        at.pop(ds, None)
+
+
+def af_lineups(state):
+    tn = state.setdefault('tn', {})
+    due = []
+    for r in tn.values():
+        if not r.get('fid') or r.get('lu'):
+            continue
+        mins = (parse_iso(r['ko']) - NOW).total_seconds() / 60
+        if not (-20 <= mins <= AF_LU_FROM):
+            continue
+        if r.get('lu_try') and (NOW - parse_iso(r['lu_try'])).total_seconds() / 60 < AF_LU_EVERY - 1 and not FORCE:
+            continue
+        due.append(r)
+    due.sort(key=lambda r: r['ko'])
+    found = 0
+    for i in range(0, len(due), AF_BATCH):
+        chunk = due[i:i + AF_BATCH]
+        resp, err = af_get('/fixtures', {'ids': '-'.join(str(r['fid']) for r in chunk)}, state)
+        if resp is None:
+            break
+        by = {(f.get('fixture') or {}).get('id'): f for f in resp}
+        for r in chunk:
+            r['lu_try'] = iso(NOW)
+            side = {}
+            for x in (by.get(r['fid']) or {}).get('lineups') or []:
+                tid = (x.get('team') or {}).get('id')
+                key = 'h' if tid == r['hid'] else 'a' if tid == r['aid'] else None
+                xi = [[(p.get('player') or {}).get('number'), (p.get('player') or {}).get('name'), (p.get('player') or {}).get('pos')]
+                      for p in x.get('startXI') or []]
+                if key and len(xi) >= 7:
+                    side[key] = {'fm': x.get('formation'), 'xi': xi, 'co': (x.get('coach') or {}).get('name')}
+            if 'h' in side and 'a' in side:
+                r['lu'], r['lu_at'] = side, iso(NOW)
+                state.setdefault('lineup_lk', {})[r['lk']] = iso(NOW)
+                found += 1
+    return found
+
+
+def refresh_team_news(state, matches):
+    if not AF_KEY:
+        return 'no key'
+    af = state.setdefault('af', {})
+    if af_blocked(state):
+        return 'paused: ' + (af.get('note') or '')
+    fx = af.setdefault('fx', {})
+    days = [NOW.strftime('%Y-%m-%d'), (NOW + timedelta(days=1)).strftime('%Y-%m-%d')]
+    for ds in days:
+        rec = fx.get(ds)
+        if rec and NOW - parse_iso(rec['at']) < timedelta(hours=AF_FIX_EVERY) and not FORCE:
+            continue
+        resp, err = af_get('/fixtures', {'date': ds, 'timezone': 'UTC'}, state)
+        if resp is None:
+            continue
+        lst = []
+        for f in resp:
+            fi, te, lg = f.get('fixture') or {}, f.get('teams') or {}, f.get('league') or {}
+            h, a = te.get('home') or {}, te.get('away') or {}
+            if fi.get('id') and fi.get('date') and h.get('name') and a.get('name'):
+                lst.append([fi['id'], fi['date'], h['name'], a['name'], lg.get('name'), lg.get('country'), h.get('id'), a.get('id')])
+        fx[ds] = {'at': iso(NOW), 'list': lst}
+        log('team news: API-Football lists', len(lst), 'fixtures on', ds)
+    for ds in [d for d in fx if d < days[0]]:
+        del fx[ds]
+    linked = af_link(state, matches)
+    af_injuries(state, days)
+    got = af_lineups(state)
+    tn = state.setdefault('tn', {})
+    for mid in [k for k, r in tn.items() if parse_iso(r['ko']) < NOW - timedelta(hours=6)]:
+        del tn[mid]
+    for lk in [k for k, v in (state.get('lineup_lk') or {}).items() if parse_iso(v) < NOW - timedelta(hours=6)]:
+        del state['lineup_lk'][lk]
+    n_lu = sum(1 for r in tn.values() if r.get('lu'))
+    note = f"{linked} matches linked, {n_lu} line-ups in{f' ({got} new)' if got else ''}, {af.get('used', 0)} calls today"
+    if af.get('note') and af_blocked(state):
+        note += ' · paused: ' + af['note']
+    return note
+
+
+def team_news_for(state, mid, lk, ko, h, a):
+    """The news for one match, in the compact form the site reads, or None."""
+    tn = state.get('tn') or {}
+    r = tn.get(mid)
+    if not r:
+        for x in tn.values():
+            if x.get('lk') == lk and abs((parse_iso(x['ko']) - ko).total_seconds()) < 3 * 3600 and same_team(x['h'], h) and same_team(x['a'], a):
+                r = x
+                break
+    if not r or not r.get('fid'):
+        return None
+    inj = (((state.get('af') or {}).get('inj') or {}).get(r['ko'][:10]) or {}).get(str(r['fid'])) or []
+    out = {'h': [], 'a': []}
+    for tid, name, typ, why in inj:
+        side = 'h' if tid == r['hid'] else 'a' if tid == r['aid'] else None
+        if side and len(out[side]) < 14 and [name, why, typ] not in out[side]:
+            out[side].append([name, why, typ])
+    lu = r.get('lu') or {}
+    if not (out['h'] or out['a'] or lu):
+        return None
+    news = {'h': {'out': out['h']}, 'a': {'out': out['a']}, 'lu': bool(lu)}
+    for side in ('h', 'a'):
+        if lu.get(side):
+            news[side].update({'fm': lu[side].get('fm'), 'xi': lu[side].get('xi'), 'co': lu[side].get('co')})
+    return news
+
+
+# ----------------------------------------------------------------------------------------------
+# Self-tuning: the track record recalibrates the chances Statpad states.
+# ----------------------------------------------------------------------------------------------
+CAL_MIN = 150        # graded top picks before it switches on
+CAL_PRIOR = 0.3      # spread of the prior around "no change", on the log-odds scale
+
+
+def fit_calib(picks):
+    """Fit log-odds(landed) = log-odds(stated) + c + (b - 1) * (log-odds(stated) - log-odds(75%)) on graded top picks
+    from the last 90 days: c is an overall shift at 75%, b stretches or squeezes around it. It uses the chance
+    Statpad stated before any correction, so it never feeds on itself, and priors centred on "no change"
+    keep it modest until the evidence is strong. Published as a, b with log-odds(landed) = a + b * log-odds(stated)."""
+    x0 = math.log(3)   # log-odds of 75%
+    xs, ys = [], []
+    for p in picks:
+        raw = p[18] if len(p) > 18 and p[18] is not None else p[9]
+        if raw is None:
+            continue
+        q = min(0.98, max(0.02, float(raw)))
+        xs.append(math.log(q / (1 - q)))
+        ys.append(1 if p[13] else 0)
+    n = len(xs)
+    out = {'on': False, 'n': n, 'need': CAL_MIN}
+    if n < CAL_MIN:
+        return out
+    c, b, sc, sb = 0.0, 1.0, CAL_PRIOR ** 2, (CAL_PRIOR * 0.8) ** 2
+    for _ in range(40):
+        gc, gb, hcc, hcb, hbb = -c / sc, -(b - 1) / sb, -1 / sc, 0.0, -1 / sb
+        for x, y in zip(xs, ys):
+            u = x - x0
+            pr = 1 / (1 + math.exp(-(x0 + c + b * u)))
+            w = pr * (1 - pr)
+            gc += y - pr
+            gb += (y - pr) * u
+            hcc -= w
+            hcb -= w * u
+            hbb -= w * u * u
+        det = hcc * hbb - hcb * hcb
+        if abs(det) < 1e-12:
+            break
+        dc, db = (hbb * gc - hcb * gb) / det, (hcc * gb - hcb * gc) / det
+        c, b = c - dc, b - db
+        if abs(dc) + abs(db) < 1e-9:
+            break
+    c, b = max(-0.6, min(0.6, c)), max(0.7, min(1.3, b))
+    out.update({'on': True, 'a': round(x0 + c - b * x0, 4), 'b': round(b, 4), 'shift': round(c, 4)})
+    return out
 
 
 # ----------------------------------------------------------------------------------------------
@@ -1096,6 +1416,7 @@ def build(state, prev, seed=None):
             if not hist or hist[-1][1:] != pt[1:] or NOW - parse_iso(hist[-1][0]) > timedelta(hours=6):
                 hist.append(pt)
             hist = hist[-40:]
+        news = team_news_for(state, mid, f['lk'], ko, f['h'], f['a'])
         matches.append({
             'id': mid, 'lk': f['lk'], 'ko': iso(ko), 'h': pretty(f['h']), 'a': pretty(f['a']),
             'ph': ph[0] if ph else None, 'pa': pa[0] if pa else None,
@@ -1103,10 +1424,18 @@ def build(state, prev, seed=None):
             'dh': dom_h, 'da': dom_a,
             'lm': lam, 'xl': cross, 'mkt': mkt, 'hist': hist, 'clash': clash, 'tbc': tbc, 'ks': ks, 'fr': fr,
         })
+        if news:
+            matches[-1]['tn'] = news
 
     # competitions no source covered this run keep their previous (or starter) fixtures until kick-off
     covered = {m['lk'] for m in matches}
     carried = [m for m in prev_list if m['lk'] not in covered and lo <= parse_iso(m['ko']) <= hi]
+    for m in carried:
+        news = team_news_for(state, m['id'], m['lk'], parse_iso(m['ko']), m['h'], m['a'])
+        if news:
+            m['tn'] = news
+        else:
+            m.pop('tn', None)
     if carried:
         log('kept', len(carried), 'earlier fixtures for', len({m['lk'] for m in carried}), 'competitions with no fresh fixtures')
         matches.extend(carried)
@@ -1299,6 +1628,7 @@ const mod = { exports: null };
 new Function('module', html.slice(s, e) + 'module.exports = ENGINE;')(mod);
 const E = mod.exports;
 const inp = JSON.parse(fs.readFileSync(inPath, 'utf8'));
+if (E.setCalib) E.setCalib(inp.calib && inp.calib.on ? inp.calib : null);
 const now = Date.parse(inp.now);
 let fmt;
 try { fmt = new Intl.DateTimeFormat('en-CA', { timeZone: inp.tz, year: 'numeric', month: '2-digit', day: '2-digit' }); }
@@ -1311,6 +1641,7 @@ for (const m of inp.matches) {
   out.picks[m.id] = {
     src: a.src, p: [a.p.H, a.p.D, a.p.A], pm: a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A] : null, m: a.mkt ? a.mkt.p : null,
     k: a.top ? a.top.key : null, pp: a.top ? a.top.pAdj : null, pr: a.top ? a.top.price : null, r: a.top ? !!a.top.real : false,
+    pu: a.top ? (a.top.pRaw != null ? a.top.pRaw : a.top.pAdj) : null,
   };
   if (Date.parse(m.ko) > now) { const d = fmt.format(new Date(m.ko)); (byDay[d] = byDay[d] || []).push({ m, a }); }
 }
@@ -1336,7 +1667,8 @@ def run_engine(doc):
     with tempfile.TemporaryDirectory() as td:
         js, inp = Path(td) / 'engine_run.js', Path(td) / 'in.json'
         js.write_text(NODE_ENGINE)
-        inp.write_text(json.dumps({'now': iso(NOW), 'tz': TRACK_TZ, 'target': TRACK_TARGET, 'matches': doc['matches']}))
+        inp.write_text(json.dumps({'now': iso(NOW), 'tz': TRACK_TZ, 'target': TRACK_TARGET, 'matches': doc['matches'],
+                                   'calib': doc.get('calib')}))
         r = subprocess.run([node, str(js), str(INDEX_FILE), str(inp)], capture_output=True, text=True, timeout=300)
         if r.returncode != 0:
             log('track: engine failed', (r.stderr or '')[-300:])
@@ -1460,7 +1792,7 @@ def track_update(doc, state):
             rec = pend.get(mid) or {'id': mid, 'op': None}
             rec.update({'lk': m['lk'], 'ko': m['ko'], 'h': m['h'], 'a': m['a'], 'src': e['src'], 'p': r4(e['p']),
                         'pm': r4(e['pm']), 'm': r4(e['m']), 'k': e['k'], 'pp': round(e['pp'], 4), 'pr': e['pr'],
-                        'r': bool(e['r']), 'cl': best})
+                        'r': bool(e['r']), 'cl': best, 'pu': round(e['pu'], 4) if e.get('pu') is not None else None})
             if rec.get('op') is None and best:
                 rec['op'] = best
             pend[mid] = rec
@@ -1521,7 +1853,7 @@ def track_update(doc, state):
             c = agg['clv']
             c[0] += 1; c[1] = round(c[1] + clv, 4); c[2] += int(clv > 0)
         tr['picks'].append([mid, rec['lk'], rec['ko'], rec['h'], rec['a'], hs, as_, rec['src'], rec['k'], rec['pp'],
-                            rec['pr'], int(bool(rec['r'])), t, int(won), clv] + rec['p'])
+                            rec['pr'], int(bool(rec['r'])), t, int(won), clv] + rec['p'] + [rec.get('pu') or rec['pp']])
         scores[mid] = [hs, as_, rec['ko']]
         del pend[mid]
         changed = True
@@ -1645,11 +1977,22 @@ def main():
         src['fixtures'] = {'ok': ok or ok2, 'at': iso(NOW), 'count': len(fx) + len(ofx)}
         log('football-data fixtures:', len(fx), '| openfootball schedule fixtures:', len(ofx))
 
+    if AF_KEY:
+        prev_matches = (prev or {}).get('matches') or []
+        note = safe(lambda: refresh_team_news(state, prev_matches), 'error')
+        src['team_news'] = {'ok': note != 'error' and not af_blocked(state), 'at': iso(NOW), 'note': note}
+        log('team news:', note)
+    else:
+        src.pop('team_news', None)
+
     msg = safe(lambda: refresh_odds_api(state), 'error')
     src['odds_api'] = {'ok': msg not in ('no key', 'paused', 'out of credits'), 'at': iso(NOW), 'note': msg}
     log('odds:', msg, '| credits left:', (state.get('quota') or {}).get('remaining'))
 
     doc = build(state, prev, seed)
+    doc['calib'] = safe(lambda: fit_calib(load_track(state)[0]['picks']), {'on': False, 'n': 0, 'need': CAL_MIN})
+    if doc['calib'].get('on'):
+        log(f"self-tuning: on from {doc['calib']['n']} graded picks (a={doc['calib']['a']}, b={doc['calib']['b']})")
     changed = prev is None or stable(doc) != stable(prev) or FORCE
     if not doc['matches'] and prev and prev.get('matches') and not FORCE:
         changed = False   # never replace a live board with an empty one

@@ -227,6 +227,8 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .b-done { background: var(--sunk); color: var(--ink-3); }
 .b-clash { background: var(--yellow-soft); color: var(--yellow); }
 .b-est { background: var(--sunk); color: var(--ink-3); }
+.b-xi { background: var(--cobalt-soft, var(--sunk)); color: var(--cobalt); }
+.b-news { background: var(--sunk); color: var(--ink-2); }
 .fx-teams { display: grid; gap: 5px; min-width: 0; grid-row: 2; grid-column: 1; }
 .tm { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .tm .pos { font: 600 10.5px/1 var(--f-mono); color: var(--ink-3); width: 20px; flex: none; text-align: right; }
@@ -307,6 +309,27 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .chip { font-size: 12px; padding: 5px 9px; border-radius: 99px; background: var(--sunk); color: var(--ink-2); border: 1px solid var(--rule); }
 .chip.warn { background: var(--yellow-soft); color: var(--yellow); border-color: transparent; }
+.tn-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.tn-team { font: 700 13.5px/1.2 var(--f-display); margin-bottom: 8px; }
+.tn-fm { display: inline-block; font: 600 11px/1 var(--f-mono); color: var(--cobalt); background: var(--sunk); border-radius: 4px; padding: 3px 6px; margin-bottom: 6px; }
+.tn-xi ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; }
+.tn-xi li { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.tn-xi li b { width: 20px; flex: none; text-align: right; font: 600 11.5px/1 var(--f-mono); color: var(--ink-3); }
+.tn-xi li small { margin-left: auto; font: 500 10.5px/1 var(--f-mono); color: var(--ink-3); }
+.tn-co { margin: 6px 0 0; font-size: 12px; color: var(--ink-3); }
+.tn-sub { margin: 10px 0 4px; font: 700 10.5px/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.tn-out { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.tn-out li { display: grid; font-size: 13px; padding-left: 10px; border-left: 2px solid var(--red); min-width: 0; }
+.tn-out li.q { border-left-color: var(--yellow); }
+.tn-out li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tn-out li small { font-size: 11.5px; color: var(--ink-3); }
+.tn-none { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+.tune { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.tune div { background: var(--sunk); border-radius: 10px; padding: 10px 8px; text-align: center; font-size: 13px; }
+.tune i { font-style: normal; color: var(--ink-3); margin: 0 4px; }
+.tune b { color: var(--cobalt); }
+.tune-bar { height: 8px; border-radius: 99px; background: var(--sunk); overflow: hidden; margin-bottom: 10px; }
+.tune-bar i { display: block; height: 100%; background: var(--cobalt); border-radius: 99px; }
 .chip.good { background: var(--pitch-soft); color: var(--pitch); border-color: transparent; }
 .heat { display: grid; grid-template-columns: 26px repeat(6, 1fr); gap: 3px; font: 500 10.5px/1 var(--f-mono); font-stretch: 87.5%; }
 .heat .ax { color: var(--ink-3); display: grid; place-items: center; height: 26px; }
@@ -620,6 +643,14 @@ const ENGINE = (() => {
     A: { name: 'Nearly definite', lo: 0.82, hi: 1.01, max: 25 },
   };
   const STEP = 0.002;
+  // self-tuning: a correction fitted on the track record, log-odds(true) = a + b * log-odds(stated)
+  let CAL = null;
+  function setCalib(c) { CAL = c && isFinite(c.a) && isFinite(c.b) ? { a: +c.a, b: +c.b } : null; }
+  function calib(p) {
+    if (!CAL || !(p > 0)) return p;
+    const q = Math.min(0.995, Math.max(0.005, p)), z = CAL.a + CAL.b * Math.log(q / (1 - q));
+    return 1 / (1 + Math.exp(-z));
+  }
 
   function pois(l) { const p = new Float64Array(N); p[0] = Math.exp(-l); for (let k = 1; k < N; k++) p[k] = p[k - 1] * l / k; return p; }
   function matrix(lh, la) {
@@ -724,8 +755,8 @@ const ENGINE = (() => {
       } else if (i != null) price = 1 / (prob * (1 + M_EST));
       else price = 1 / (prob * (1 + M_DER));
       price = real ? price : r2(price);
-      const pAdj = Math.max(0, prob - hair);
-      const s = { key, label: lab(m), group, p: prob, pAdj, fair: 1 / prob, price, real, bk, edge: real ? prob * price - 1 : null };
+      const pRaw = Math.max(0, prob - hair), pAdj = calib(pRaw);
+      const s = { key, label: lab(m), group, p: prob, pRaw, pAdj, fair: 1 / prob, price, real, bk, edge: real ? prob * price - 1 : null };
       return s;
     });
     for (let k = 0; k < sels.length; k++) {
@@ -790,7 +821,7 @@ const ENGINE = (() => {
     return out.sort((x, y) => y.s.edge - x.s.edge);
   }
 
-  return { analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit };
+  return { analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL };
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 
@@ -1028,6 +1059,24 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function maxEdge(r) { return r.a ? Math.max(-1, ...r.a.sels.filter((s) => s.real).map((s) => s.edge)) : -1; }
   function formDots(f) { return f ? `<span class="form" aria-label="Form ${esc(f)}">${[...f].map((c) => `<i class="${c}"></i>`).join('')}</span>` : ''; }
   function inCoupon(id, key) { return S.coupon.some((c) => c.id === id && c.key === key); }
+  function newsBadge(m) {
+    const t = m.tn; if (!t) return '';
+    if (t.lu) return '<span class="badge b-xi" title="Starting line-ups are confirmed">Line-ups in</span>';
+    const n = ((t.h && t.h.out) || []).length + ((t.a && t.a.out) || []).length;
+    return n ? `<span class="badge b-news" title="Players missing or doubtful">${n} out</span>` : '';
+  }
+  function newsCard(m) {
+    const t = m.tn; if (!t) return '';
+    const side = (s, name) => {
+      const d = t[s] || {}, out = d.out || [];
+      const xi = d.xi && d.xi.length ? `<div class="tn-xi">${d.fm ? `<span class="tn-fm">${esc(d.fm)}</span>` : ''}<ol>${d.xi.map((p) => `<li><b>${p[0] != null ? esc(String(p[0])) : ''}</b>${esc(p[1] || '')}${p[2] ? `<small>${esc(p[2])}</small>` : ''}</li>`).join('')}</ol>${d.co ? `<p class="tn-co">Coach: ${esc(d.co)}</p>` : ''}</div>` : '';
+      const miss = out.length ? `<ul class="tn-out">${out.map((p) => `<li class="${p[2] === 'q' ? 'q' : 'x'}"><span>${esc(p[0])}</span><small>${p[2] === 'q' ? 'Doubtful' : 'Out'}${p[1] ? ' · ' + esc(p[1]) : ''}</small></li>`).join('')}</ul>` : '<p class="tn-none">No reported absences</p>';
+      return `<div class="tn-side"><div class="tn-team">${esc(name)}</div>${xi}${xi && out.length ? '<div class="tn-sub">Missing</div>' : ''}${miss}</div>`;
+    };
+    return `<div class="card"><h4>Team news <span>${t.lu ? 'line-ups confirmed' : 'line-ups expected about an hour before kick-off'}</span></h4>
+      <div class="tn-grid">${side('h', m.h)}${side('a', m.a)}</div>
+      <p class="note">From API-Football. Prices react to team news, and Statpad's chances follow the prices${t.lu ? '. Confirmed line-ups ask for a fresh price when your odds credits allow' : ''}.</p></div>`;
+  }
   function fxCard(r) {
     const { m, a } = r;
     const status = r.live ? '<span class="badge b-live">Live</span>' : r.started ? '<span class="badge b-done">Started</span>' : '';
@@ -1040,7 +1089,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     };
     const pick = a && a.top ? `<span class="pick"><span class="tier tier-${ENGINE.tierOf(a.top.pAdj) || 'C'}">${pct(a.top.pAdj)}</span><b>${esc(a.top.label)}</b> · ${odds(a.top.price)}${a.top.real ? '' : ' est'}</span>` : `<span class="pick">No prediction yet: no ratings or prices</span>`;
     return `<article class="fx" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}">
-      <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${a && !realMkt(m) ? '<span class="badge b-est">Model only</span>' : ''}</div>
+      <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${a && !realMkt(m) ? '<span class="badge b-est">Model only</span>' : ''}${newsBadge(m)}</div>
       <div class="fx-teams">
         <div class="tm"><span class="pos">${m.ph || ''}</span><span class="nm">${esc(m.h)}</span>${formDots(m.fh)}<span class="xg">${a ? a.lh.toFixed(2) : ''}</span></div>
         <div class="tm"><span class="pos">${m.pa || ''}</span><span class="nm">${esc(m.a)}</span>${formDots(m.fa)}<span class="xg">${a ? a.la.toFixed(2) : ''}</span></div>
@@ -1135,6 +1184,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (m.clash) chips.push(['Big game: kept out of the two safest slip tiers', 'warn']);
     if (m.fr) chips.push(['Friendly: rotated line-ups, extra caution and kept out of the two safest tiers', 'warn']);
     if (m.xl) chips.push(['Cross-league ratings', '']);
+    if (S.data && S.data.calib && S.data.calib.on && a.top) chips.push([`Self-tuned: ${pct(a.top.pRaw)} → ${pct(a.top.pAdj)} on the top pick`, '']);
     const hm = [];
     let mx = 0; for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) mx = Math.max(mx, a.M[i][j]);
     const topSet = new Set(a.scores.slice(0, 3).map((s) => s[0] + '-' + s[1]));
@@ -1163,6 +1213,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="side r"><div class="team">${esc(m.a)}</div><div class="meta">${pos(m.pa, m.fa, m.da)}</div></div>
       </div>
       <div class="chips">${chips.map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>
+      ${newsCard(m)}
       <div class="card"><h4>Who wins <span>home · draw · away</span></h4><div class="cmp">
         <div class="cmp-row"><span class="n">Statpad</span>${sbar([a.p.H, a.p.D, a.p.A])}</div>
         ${mk ? `<div class="cmp-row"><span class="n">Market</span>${sbar(mk.p)}</div>` : ''}
@@ -1387,12 +1438,29 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           <div class="tt-wrap"><table class="tt"><thead><tr><th>Tier</th><th>Played</th><th>Won</th><th>Hit</th><th class="hide-sm">Said</th><th>Units</th></tr></thead><tbody>${slipRows}</tbody></table></div>
           ${g.void ? `<p class="note">${g.void} slips voided after a postponed game.</p>` : ''}</div>
         <div class="card"><h4>Calibration <span>tap a dot</span></h4>${calChart(g.cal || [])}</div>
+        ${tuneCard()}
         <div class="card"><h4>Statpad vs the market</h4>${llHtml}</div>
         ${openSlipsCard(T)}
         <div class="card"><h4>Latest results <span>top pick on each card</span></h4>${pickRows || '<p class="note">No graded picks yet.</p>'}</div>
         <div class="card"><h4>Recent slips</h4>${slipList((T.slips || []).slice(-12).reverse()) || '<p class="note">No settled slips yet.</p>'}</div>
       </div>
       <p class="note">Recording since ${esc(since)}. A match's top pick is the one on its card at the last update before kick-off. Slips are the ${T.target || 10}-odds slips as they stood before their first game, with days counted in ${esc(T.tz || 'UTC')}. Results come from football-data.co.uk, usually within 2–4 days. Detail covers the last 90 days; the totals are all-time.</p>`;
+  }
+  function tuneCard() {
+    const c = (S.data && S.data.calib) || null;
+    if (!c) return '';
+    if (!c.on) {
+      const n = c.n || 0, need = c.need || 150;
+      return `<div class="card"><h4>Self-tuning <span>learning</span></h4>
+        <div class="tune-bar"><i style="width:${Math.min(100, (n / need) * 100)}%"></i></div>
+        <p class="note">${n} of ${need} graded top picks. Once there are ${need}, Statpad compares what it said with what landed over the last 90 days and corrects its stated chances. Until then they are used as they are.</p></div>`;
+    }
+    const pts = [0.6, 0.7, 0.8, 0.9].map((p) => [p, ENGINE.calib(p)]);
+    const d80 = pts[2][1] - 0.8, size = Math.abs(d80) < 0.03 ? 'a little' : Math.abs(d80) < 0.06 ? 'somewhat' : 'clearly';
+    const dir = Math.abs(d80) < 0.005 ? 'It has been well calibrated, so chances barely move.' : d80 < 0 ? `It has been ${size} over-confident, so chances are trimmed.` : `It has been ${size} under-confident, so chances are raised.`;
+    return `<div class="card"><h4>Self-tuning <span>on · ${c.n} graded picks</span></h4>
+      <div class="tune">${pts.map(([p, q]) => `<div><span class="mono">${pct(p, 0)}</span><i>→</i><b class="mono">${pct(q, 0)}</b></div>`).join('')}</div>
+      <p class="note">${dir} The correction is refitted on every update from the last 90 days of graded top picks, and held close to “no change” until the evidence is strong. It changes the stated chances, tiers and slips, not the value edges, which come from real prices.</p></div>`;
   }
   function slipList(list) {
     return list.map((s) => {
@@ -1446,7 +1514,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Data status</h3>
       <div class="status">
         <div><span>Data generated</span><b>${new Date(d.generated).toLocaleString()}</b></div>
-        ${st('results', 'Results &amp; tables')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('snapshot', 'Starter snapshot')}
+        ${st('results', 'Results &amp; tables')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('team_news', 'Team news')}${st('snapshot', 'Starter snapshot')}
         <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.interval_min ? ' · refresh every ' + (o.interval_min >= 120 ? Math.round(o.interval_min / 60) + ' h' : Math.round(o.interval_min) + ' min') : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
         <div><span>Matches loaded</span><b>${d.matches.length} · ${Object.keys(d.leagues || {}).length} competitions</b></div>
       </div>
@@ -1456,6 +1524,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>When a match has prices, the bookmakers' margin is removed and the consensus is formed with Pinnacle and the exchanges weighted up. Statpad fits the two expected-goals numbers that reproduce that consensus, including the over/under 2.5 line where available, and blends them 80/20 with the model in log space. The market is sharper than any table-based model, so it gets the larger share. Every market comes from a Dixon–Coles scoreline grid, which corrects the 0-0, 1-0, 0-1 and 1-1 cells that a plain Poisson model gets wrong.</p>
       <h3>Confidence tiers</h3>
       <p><b>Nearly definite</b> legs are 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. Picks lose a 3-point safety haircut when they rest on the model alone, another 3 when model and market disagree by more than 12 points, and 1 more when prices are over a day and a half old. Big games between two top-six sides are kept out of the two safest tiers.</p>
+      <h3>Self-tuning</h3>
+      <p>${d.calib && d.calib.on ? `On, from ${d.calib.n} graded top picks.` : `Learning: ${(d.calib && d.calib.n) || 0} of ${(d.calib && d.calib.need) || 150} graded top picks.`} Every update compares the chances Statpad stated (before any correction) with what landed over the last 90 days, and fits a small correction on the log-odds scale. A prior centred on “no change” keeps the correction modest until there is plenty of evidence. The correction applies to stated chances, tiers and slips.</p>
+      <h3>Team news</h3>
+      <p>With an API-Football key, Statpad shows injuries, suspensions and doubts for the next two days, and the confirmed starting line-ups from about an hour before kick-off. They are shown on the match page; the chances move with the bookmakers' prices, which react to team news, and confirmed line-ups ask for a fresh price for that competition when credits allow.</p>
       <h3>Slips</h3>
       <p>For each tier and day, a dynamic-programming search finds the combination with the highest chance of landing whose total odds sit between 95% and 110% of your target. It takes one leg per match, skips games that have kicked off, and uses at most 25 legs. Chasing a target with short-priced legs usually lowers the hit chance, so compare tiers before you stake.</p>
       <h3>Value</h3>
@@ -1695,6 +1767,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     try {
       if (!doc || !Array.isArray(doc.matches)) throw new Error('matches.json has no match list');
       S.data = doc; S.err = null; S.now = Date.now();
+      const cal = doc.calib && doc.calib.on ? { a: doc.calib.a, b: doc.calib.b } : null, cs = JSON.stringify(cal);
+      if (cs !== S.calSig) { S.calSig = cs; ENGINE.setCalib(cal); S.cache.clear(); }
       if (!(await analyseAll(token))) return;
       if (!S.day || (S.day !== 'all' && !days().some((d) => d.key === S.day))) S.day = pickDefaultDay();
       render(); flash(before);
