@@ -13,11 +13,14 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 | `.github/workflows/update.yml` | Runs `update.py` every 5 minutes and redeploys the site whenever the data changes. |
 | `matches.json` | Starter data (5–9 Nov 2026). It is replaced on the first run. |
 | `track.json` | The track record. The workflow creates it and commits it; don't edit it by hand. |
+| `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. |
+| `icon-192.png`, `icon-512.png`, `icon-maskable.png`, `apple-touch-icon.png` | App icons for Android, iPhone and desktop. |
+| `og.jpg` | The picture shown when the link is shared on WhatsApp, Telegram or X. |
 
 ## Launch it (works from a phone browser)
 
 1. **Create the repository.** On github.com tap **+ → New repository**. Name it `statpad`, choose **Public**, then tap **Create repository**.
-2. **Upload the site files.** On the new repo page, tap **uploading an existing file**. Pick `index.html`, `update.py`, `matches.json` and `README.md`, then tap **Commit changes**.
+2. **Upload the site files.** On the new repo page, tap **uploading an existing file**. Pick `index.html`, `update.py`, `matches.json`, `README.md` and the app files (`sw.js`, `manifest.webmanifest`, `og.jpg` and the four icon `.png` files), then tap **Commit changes**.
 3. **Turn on Pages.** Go to **Settings → Pages**. Under *Build and deployment → Source*, choose **GitHub Actions**.
 4. **(Optional, recommended) Add the odds key.** Get a free key at the-odds-api.com. Then go to **Settings → Secrets and variables → Actions → New repository secret**, use the name `ODDS_API_KEY` and paste the key as the value.
 5. **Add the workflow.** Go to **Code → Add file → Create new file**. Type the name `.github/workflows/update.yml` (each `/` creates a folder), paste in the contents of `update.yml` and tap **Commit changes**. This starts the first run.
@@ -36,6 +39,12 @@ Every run saves each match's top pick before kick-off, along with the 10-odds sl
 - whether Statpad's 1X2 probabilities beat the bookmakers' consensus
 
 The record uses the same engine as the page, run with Node from `index.html`. Results for UEFA, cup and Saudi games come from The Odds API and are only fetched on paid plans.
+
+## App and sharing
+
+- **Install.** On Android (Chrome), tap the download icon in the header to install Statpad like an app. On iPhone, open the site in Safari, tap **Share**, then **Add to Home Screen**; the site shows this tip when you tap the same icon. Once installed it opens full screen, and it still opens with the last data when you're offline.
+- **Share a slip.** Every slip, and the slip at the top of the page, has a share button. It makes a branded picture of the slip and opens your phone's share menu, so you can send it to WhatsApp, Telegram or your status. On a computer it saves the picture instead.
+- **Link previews.** When the site's link is shared, apps show the Statpad card (`og.jpg`). The workflow fills in the site's full address when it publishes. Apps keep old previews for a while, so a change can take a day to show.
 
 ## Where the data comes from
 
