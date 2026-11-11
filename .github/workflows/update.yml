@@ -80,14 +80,59 @@ jobs:
             git push origin "HEAD:${GITHUB_REF_NAME}" || echo "Push failed; the next run will try again."
           fi
 
+      - uses: actions/configure-pages@v5
+        id: pages
+        if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
+
       - name: Assemble site
         if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
-          cp index.html _site/index.html
+          # link previews (WhatsApp, Telegram, X) need the site's full address, which only the deploy knows
+          if [ -n "$BASE_URL" ]; then
+            sed "s#content=\"\./#content=\"${BASE_URL%/}/#g" index.html > _site/index.html
+          else
+            cp index.html _site/index.html
+          fi
+          # app files: offline support, install details and the preview picture
+          for f in sw.js manifest.webmanifest og.jpg; do
+            if [ -f "$f" ]; then cp "$f" _site/; fi
+          done
+          # the app icons are drawn here, so they never need uploading
+          if pip install --quiet --disable-pip-version-check pillow; then
+            cd _site
+            python - <<'PY'
+          from PIL import Image, ImageDraw
+          SS = 4  # draw 4x larger, then shrink for smooth edges
+          INK, BG, BAR = (238, 243, 239, 255), (13, 24, 19, 255), (111, 134, 255, 255)
+          def mark(d, ox, oy, k):
+              S = lambda v: round(v * k * SS)
+              w1, w2 = S(1.6), S(1.4)
+              d.rounded_rectangle([ox + S(2.2), oy + S(4.2), ox + S(21.8), oy + S(19.8)], radius=S(2.8), outline=INK, width=w1)
+              d.rectangle([ox + S(11.3), oy + S(5), ox + S(12.7), oy + S(19)], fill=INK)
+              d.ellipse([ox + S(8.7), oy + S(8.7), ox + S(15.3), oy + S(15.3)], outline=INK, width=w2)
+              d.rectangle([ox + S(15.5), oy + S(9), ox + S(18.5), oy + S(15)], fill=BAR)
+          def icon(size, full, art):
+              n = size * SS
+              im = Image.new('RGBA', (n, n), BG if full else (0, 0, 0, 0))
+              d = ImageDraw.Draw(im)
+              if not full:
+                  pad, r = round(n * 32 / 512), round(n * 104 / 512)
+                  d.rounded_rectangle([pad, pad, n - pad, n - pad], radius=r, fill=BG, outline=(40, 51, 46, 255), width=round(n * 6 / 512))
+              a = art * SS
+              mark(d, (n - a) // 2, (n - a) // 2, art / 24)
+              return im.resize((size, size), Image.LANCZOS)
+          icon(512, False, 300).save('icon-512.png', optimize=True)
+          icon(512, False, 300).resize((192, 192), Image.LANCZOS).save('icon-192.png', optimize=True)
+          icon(512, True, 250).save('icon-maskable.png', optimize=True)
+          icon(180, True, 112).save('apple-touch-icon.png', optimize=True)
+          PY
+            cd ..
+          else
+            echo "Could not install Pillow; app icons skipped this time."
+          fi
           touch _site/.nojekyll
-
-      - uses: actions/configure-pages@v5
-        if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
 
       - uses: actions/upload-pages-artifact@v3
         if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
@@ -96,5 +141,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deploy
-        if: steps.update.outputs.changed == 'true' || github.event_name != 'schedule'
-        uses: actions/deploy-pages@v4
+        if: steps.update.outputs.changed =
