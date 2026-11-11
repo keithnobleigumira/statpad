@@ -985,6 +985,8 @@ def af_get(path, params, state, reserve=2):
         elif 'requests' in keys:
             tomorrow = (NOW + timedelta(days=1)).replace(hour=0, minute=5, second=0, microsecond=0)
             af['block_until'], af['note'] = iso(tomorrow), "today's allowance is used up"
+        elif 'plan' in keys and re.search(r'this date|from \d{4}-\d{2}-\d{2} to', msg):
+            pass   # the free plan only serves yesterday, today and tomorrow: just this date is out of reach
         elif 'plan' in keys:
             af['block_until'], af['note'] = iso(NOW + timedelta(hours=24)), 'your plan does not cover this: ' + msg[:160]
         return None, msg
@@ -1122,7 +1124,14 @@ def af_fixture_row(f):
     return [fi['id'], fi['date'], h['name'], a['name'], lg.get('name'), lg.get('country'), h.get('id'), a.get('id'), st, hs, as_]
 
 
+def af_window(ds):
+    """API-Football's free plan serves fixture lists for yesterday, today and tomorrow (UTC) only."""
+    return (NOW - timedelta(days=1)).strftime('%Y-%m-%d') <= ds <= (NOW + timedelta(days=1)).strftime('%Y-%m-%d')
+
+
 def af_day(state, ds, why):
+    if not af_window(ds):
+        return False
     fail = state['af'].setdefault('fail', {})
     if fail.get(ds) and NOW - parse_iso(fail[ds]) < timedelta(minutes=60) and not FORCE:
         return False   # a failed download waits an hour before it's tried again
@@ -1185,6 +1194,8 @@ def af_results(state):
     today = NOW.strftime('%Y-%m-%d')
     pulled = 0
     for ds, kos in sorted(waiting().items(), reverse=True):
+        if not af_window(ds):
+            continue   # older days are left to football-data
         rec = fx.get(ds)
         ended = max(kos) + timedelta(minutes=110)
         gap = timedelta(minutes=60 if ds == today else 180)
@@ -1217,6 +1228,9 @@ def refresh_team_news(state, matches):
     if not AF_KEY:
         return 'no key'
     af = state.setdefault('af', {})
+    if 'this date' in (af.get('note') or ''):   # an older version paused on the free plan's date limit: undo that
+        af.pop('block_until', None)
+        af.pop('note', None)
     if af_blocked(state):
         return 'paused: ' + (af.get('note') or '')
     fx = af.setdefault('fx', {})

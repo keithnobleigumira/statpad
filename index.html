@@ -108,6 +108,12 @@ a { color: var(--cobalt); }
 .icon-btn svg { width: 17px; height: 17px; }
 @media (max-width: 389px) { .top-right { gap: 6px; } .live { padding: 7px 8px; gap: 6px; } .icon-btn { width: 34px; height: 34px; } .brand { gap: 8px; } }
 @media (max-width: 349px) { #liveText { display: none; } .live { padding: 10px; } }
+/* the header never overflows, even with enlarged phone text: the status pill gives way first */
+.top-right { min-width: 0; }
+.live { min-width: 0; flex: 0 1 auto; overflow: hidden; }
+#liveText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-right .icon-btn { flex: none; }
+@media (max-width: 430px) { .lt-w { display: none; } }   /* small phones: "31 min ago" says enough */
 .live .long { display: none; }
 @media (min-width: 980px) { .tabs { display: flex; } .live .long { display: inline; } }
 
@@ -1006,7 +1012,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const ago = age < 1 ? 'just now' : age < 60 ? Math.round(age) + ' min ago' : age < 48 * 60 ? Math.round(age / 60) + ' h ago' : Math.round(age / 1440) + ' d ago';
     const stale = age > 6 * 60 && !S.legacy;
     el.classList.add(stale || S.err ? 'warn' : 'on');
-    t.innerHTML = `${S.legacy ? 'Live prices' : 'Data'} ${esc(ago)}<span class="long"> · checks every minute</span>`;
+    t.innerHTML = `<span class="lt-w">${S.legacy ? 'Live prices' : 'Data'} </span>${esc(ago)}<span class="long"> · checks every minute</span>`;
     el.title = 'Data generated ' + new Date(gen).toLocaleString() + (S.lastOk ? ' · last checked ' + tFmt.format(S.lastOk) : '');
   }
 
