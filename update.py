@@ -1331,16 +1331,58 @@ def af_live(state):
         if gl.get('home') is None or gl.get('away') is None:
             continue
         minute = int(st.get('elapsed') or 0) + int(st.get('extra') or 0)
-        games[mid] = [int(gl['home']), int(gl['away']), minute, st.get('short') or '', iso(NOW)]
+        hs, as_ = int(gl['home']), int(gl['away'])
+        prev = games.get(mid)
+        goals, reds, exact = live_events(f, hs, as_)
+        if goals is None:
+            # no event list: each new goal is placed halfway between the last check and this one
+            goals = [list(g) for g in (prev[5] if prev and len(prev) > 5 else [])]
+            reds = [list(x) for x in (prev[6] if prev and len(prev) > 6 else [])]
+            ph, pa_, pm = (prev[0], prev[1], prev[2]) if prev else (0, 0, 0)
+            when = round((pm + minute) / 2)
+            goals += [[when, 'h']] * max(0, hs - ph) + [[when, 'a']] * max(0, as_ - pa_)
+            for side, want in (('h', hs), ('a', as_)):   # a goal ruled out: drop the latest
+                while sum(1 for g in goals if g[1] == side) > want:
+                    goals.remove(max((g for g in goals if g[1] == side), key=lambda g: g[0]))
+            goals.sort()
+        games[mid] = [hs, as_, minute, st.get('short') or '', iso(NOW), goals, reds, exact]
         n += 1
     return n
+
+
+def live_events(f, hs, as_):
+    """Goals and red cards with their minutes, from the fixture's event list when the live feed includes one.
+    Trusted only if the goals add up to the score."""
+    ev = f.get('events')
+    if not isinstance(ev, list) or not ev:
+        return None, [], 0
+    hid = ((f.get('teams') or {}).get('home') or {}).get('id')
+    gs, rs = [], []
+    for e in ev:
+        tm = e.get('time') or {}
+        mn = int(tm.get('elapsed') or 0) + int(tm.get('extra') or 0)
+        side = 'h' if (e.get('team') or {}).get('id') == hid else 'a'
+        typ, det = (e.get('type') or '').lower(), (e.get('detail') or '').lower()
+        if typ == 'goal' and 'missed' not in det:
+            gs.append([mn, side, 'own' in det])
+        elif typ == 'card' and ('red' in det or 'second yellow' in det):
+            rs.append([mn, side])
+    for flip in (False, True):   # feeds differ on which team an own goal is listed under
+        g2 = [[m, ('a' if s == 'h' else 'h') if (o and flip) else s] for m, s, o in gs]
+        if sum(1 for g in g2 if g[1] == 'h') == hs and sum(1 for g in g2 if g[1] == 'a') == as_:
+            return sorted(g2), sorted(rs), 1
+    return None, [], 0
 
 
 def publish_live(state):
     """Scores of games in play (and the last seen state of games that just ended), for the cash-out adviser."""
     lv = ((state.get('af') or {}).get('live') or {})
     done = (state.get('af') or {}).get('scores') or {}
-    games = {mid: v for mid, v in (lv.get('games') or {}).items() if mid not in done}
+    games = {}
+    for mid, v in (lv.get('games') or {}).items():
+        if mid in done:   # finished: the final score, with the goal times seen while it was live
+            v = [done[mid][0], done[mid][1], max(90, v[2]), 'FT', v[4]] + list(v[5:])
+        games[mid] = v
     return {'app': 'Statpad', 'generated': iso(NOW), 'checked': lv.get('at'), 'games': games}
 
 
@@ -1697,6 +1739,8 @@ def build(state, prev, seed=None):
         if lg:
             rec.update({'season': lg.get('season'), 'mu': lg.get('mu'), 'home': lg.get('home'),
                         'table': [[pretty(r[0])] + r[1:] for r in lg.get('table') or []]})
+            if lg.get('shots'):
+                rec['sh'] = 1   # ratings use shots on target as well as goals
         out_leagues[lk] = rec
 
     q = state.get('quota') or {}

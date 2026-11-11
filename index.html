@@ -356,6 +356,65 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .heat .c { aspect-ratio: 1.35; border-radius: 6px; display: grid; place-items: center; color: var(--ink); position: relative; }
 .heat .c.top { box-shadow: inset 0 0 0 2px var(--ink); font-weight: 700; }
 .heat-cap { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); margin-top: 8px; }
+/* scoreline explorer */
+.qx-heat button.c { border: 0; font: inherit; cursor: pointer; transition: opacity .15s, box-shadow .15s; }
+.qx-heat button.c.dim { opacity: .28; }
+.qx-heat button.c.on { box-shadow: inset 0 0 0 2px var(--ink); font-weight: 700; }
+.qx-heat button.c:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 1px; }
+.qx-out { margin-top: 12px; }
+.qx-res { background: var(--sunk); border-radius: 12px; padding: 12px 14px; display: grid; gap: 10px; }
+.qx-lab { font-weight: 700; font-size: 14.5px; overflow-wrap: anywhere; }
+.qx-num { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.qx-num span { display: grid; gap: 3px; font-size: 11.5px; color: var(--ink-3); }
+.qx-num b { font: 650 19px/1 var(--f-mono); font-stretch: 87.5%; color: var(--ink); }
+.qx-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.qx-acts .btn[aria-pressed="true"] { background: var(--pitch); border-color: var(--pitch); color: #fff; }
+.qx-res .note { margin: 0; }
+.qx-ctl { display: grid; gap: 10px; margin-top: 14px; }
+.qx-row { display: grid; gap: 6px; min-width: 0; }
+.qx-t { font-size: 11.5px; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+.qx-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.qx-chips::-webkit-scrollbar { display: none; }
+.qx-chips button { flex: none; border: 1px solid var(--rule); background: var(--card); color: var(--ink-2); border-radius: 99px; padding: 7px 12px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.qx-chips button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+/* why this pick */
+.story ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+.story li { position: relative; padding-left: 16px; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.story li::before { content: ''; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--cobalt); }
+.story li:first-child { color: var(--ink); font-size: 14.5px; }
+.story li:first-child::before { background: var(--pitch); }
+.story b { color: var(--ink); }
+/* live win probability */
+.card.lv h4 .lv-h { display: inline-flex; align-items: center; gap: 8px; color: var(--red); }
+.lv-sc { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin: 4px 0 10px; font-weight: 650; }
+.lv-sc span:last-child { text-align: right; }
+.lv-sc b { font-size: 30px; font-stretch: 87.5%; letter-spacing: .02em; }
+.wp { width: 100%; height: 170px; display: block; border-radius: 10px; overflow: hidden; }
+.wp text { font: 500 10px var(--f-mono); fill: var(--ink-3); }
+.lv-mk { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+.lv-mk b { color: var(--ink); font-family: var(--f-mono); }
+.card.lv .note { margin: 8px 0 0; }
+.pbar.live { box-shadow: 0 0 0 2px var(--red-soft); }
+/* market movers */
+.mvlist { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .mvlist { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1180px) { .mvlist { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.mv { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 8px; cursor: pointer; min-width: 0; }
+.mv:hover { border-color: var(--ink-3); }
+.mv-top { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--ink-3); flex-wrap: wrap; }
+.mv-tag { font: 700 10.5px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .05em; padding: 4px 7px; border-radius: 6px; }
+.mv-tag.in { background: var(--pitch-soft); color: var(--pitch); } .mv-tag.out { background: var(--red-soft); color: var(--red); }
+.mv-main { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-width: 0; }
+.mv-main > div { display: grid; min-width: 0; }
+.mv-main b { font-size: 15.5px; overflow-wrap: anywhere; }
+.mv-main small { font-size: 12px; color: var(--ink-3); }
+.mv-sp { width: 120px; height: 34px; flex: none; }
+.mv-nums { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); align-items: baseline; }
+.mv-nums .mono { font-weight: 650; color: var(--ink); }
+.mv-nums em { font-style: normal; font-weight: 700; font-family: var(--f-mono); }
+.mv-nums em.up { color: var(--pitch); } .mv-nums em.down { color: var(--red); }
+.mv-nums .muted { color: var(--ink-3); }
+.mv-take { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
 .dist { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 110px; }
 .dist .col { display: grid; gap: 5px; justify-items: center; align-self: end; }
 .dist .bar { width: 100%; border-radius: 6px 6px 2px 2px; background: var(--cobalt); opacity: .85; }
@@ -711,12 +770,14 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 
     <section id="v-value" class="section" data-view="value" hidden>
       <div class="sec-head">
-        <div><h2>Value board</h2><p class="sub">Real prices that beat Statpad's probability. Edge = probability × best price − 1. Estimated prices never appear here.</p></div>
-        <div class="ctl"><span class="lbl">Min edge</span><div class="seg" id="minEdge"></div></div>
+        <div><h2 id="valTitle">Value board</h2><p class="sub" id="valSub">Real prices that beat Statpad's probability. Edge = probability × best price − 1. Estimated prices never appear here.</p></div>
+        <div class="ctl"><div class="seg" id="valSeg" role="group" aria-label="Value bets or market movers"><button type="button" data-vseg="value" aria-pressed="true">Value bets</button><button type="button" data-vseg="movers" aria-pressed="false">Market movers</button></div>
+        <span class="lbl" id="minEdgeL">Min edge</span><div class="seg" id="minEdge"></div></div>
       </div>
       <div class="days" id="days-value" role="group" aria-label="Day"></div>
       <div class="filters"><label class="field"><span class="sr">Scope</span><select id="vscope"><option value="all">All competitions</option><option value="big">Big leagues</option><option value="cups">Europe &amp; cups</option><option value="intl">Internationals</option></select></label></div>
       <div class="vlist" id="valueList" style="margin-top:14px"></div>
+      <div class="mvlist" id="moversList" style="margin-top:14px" hidden></div>
     </section>
 
     <section id="v-slips" class="section" data-view="slips" hidden>
@@ -1073,7 +1134,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const S = {
     data: null, rows: [], byId: new Map(), cache: new Map(), now: Date.now(),
     tab: store.get('tab', 'matches'), day: null, league: store.get('league', 'all'), q: '', sort: store.get('sort', 'ko'),
-    target: store.get('target', 10), scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), minEdge: store.get('minEdge', 0.02),
+    target: store.get('target', 10), scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), vseg: store.get('vseg', 'value'), minEdge: store.get('minEdge', 0.02),
     coupon: store.get('coupon', []), bank: store.get('bank', 100), stakeMode: store.get('stakeMode', 'qk'), tleague: store.get('tleague', null),
     open: null, shown: 60, lastFetch: null, lastOk: null, live: false, legacy: false, err: null,
     ready: false, token: 0, ver: 0, slipCache: new Map(), bad: 0, progress: null,
@@ -1300,8 +1361,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function fxCard(r) {
     const { m, a } = r;
-    const status = r.live ? `<span class="badge b-live" data-livebadge="${esc(m.id)}">${liveTxt(m.id) || 'Live'}</span>` : r.started ? '<span class="badge b-done">Started</span>' : '';
-    const bar = a ? `<div class="pbar" aria-hidden="true"><i class="h" style="width:${a.p.H * 100}%"></i><i class="d" style="width:${a.p.D * 100}%"></i><i class="a" style="width:${a.p.A * 100}%"></i></div>` : '';
+    const LN = r.started ? liveNow(m.id) : null, lp = LN ? liveP(r, LN) : null;
+    const status = LN && LN.ft ? `<span class="badge b-done" data-livebadge="${esc(m.id)}">${liveTxt(m.id)}</span>` : r.live ? `<span class="badge b-live" data-livebadge="${esc(m.id)}">${liveTxt(m.id) || 'Live'}</span>` : r.started ? `<span class="badge b-done" data-livebadge="${esc(m.id)}">Started</span>` : '';
+    const pb = lp || (a ? a.p : null);
+    const bar = pb ? `<div class="pbar${lp ? ' live' : ''}" aria-hidden="true" data-livebar="${esc(m.id)}"><i class="h" style="width:${pb.H * 100}%"></i><i class="d" style="width:${pb.D * 100}%"></i><i class="a" style="width:${pb.A * 100}%"></i></div>` : '';
     const btn = (k, lab) => {
       if (!a) return `<span class="ob est"><span class="k">${lab}</span><span class="v">–</span></span>`;
       const s = a.sels.find((x) => x.key === k);
@@ -1355,6 +1418,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // ---------------- detail sheet ----------------
   function openMatch(id, opener) {
     const r = S.byId.get(id); if (!r) return;
+    if (S.open !== id) Object.assign(S.qx, { r: '', g: '', b: '', m: '', hg: '', ag: '', s: [] });
     S.open = id; S.opener = opener || document.activeElement;
     renderSheet();
     $('#sheet').classList.add('open'); $('#scrim').classList.add('open'); $('#sheet').setAttribute('aria-hidden', 'false');
@@ -1436,14 +1500,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="side r"><div class="team">${esc(m.a)}</div><div class="meta">${pos(m.pa, m.fa, m.da)}</div></div>
       </div>
       <div class="chips">${chips.map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>
+      <div id="sheetLive">${r.started ? liveCard(r) : ''}</div>
+      ${storyCard(r)}
       ${newsCard(m)}
       <div class="card"><h4>Who wins <span>home · draw · away</span></h4><div class="cmp">
         <div class="cmp-row"><span class="n">Statpad</span>${sbar([a.p.H, a.p.D, a.p.A])}</div>
         ${mk ? `<div class="cmp-row"><span class="n">Market</span>${sbar(mk.p)}</div>` : ''}
         ${a.pMod ? `<div class="cmp-row"><span class="n">Model</span>${sbar([a.pMod.H, a.pMod.D, a.pMod.A])}</div>` : ''}
       </div><div class="legend"><span><i style="background:var(--h)"></i>${esc(m.h)}</span><span><i style="background:var(--d)"></i>Draw</span><span><i style="background:var(--a)"></i>${esc(m.a)}</span></div></div>
-      <div class="card"><h4>Scorelines <span>most likely: ${a.scores.slice(0, 3).map((s) => `${s[0]}-${s[1]} (${pct(s[2], 0)})`).join(', ')}</span></h4>
-        <div class="heat">${hm.join('')}</div><div class="heat-cap"><span>Rows: ${esc(m.h)} goals</span><span>Columns: ${esc(m.a)} goals</span></div></div>
+      <div class="card qx" id="qx">${qxCard(r)}</div>
       <div class="card"><h4>Total goals <span>over 2.5: ${pct(a.p.O25)}</span></h4>
         <div class="dist">${tot.map((v, k) => `<div class="col"><span class="v">${pct(v)}</span><div class="bar${k < 3 ? ' lo' : ''}" style="height:${Math.max(3, (v / tmax) * 70)}px"></div><span class="k">${k === 6 ? '6+' : k}</span></div>`).join('')}</div></div>
       <div class="card"><h4>Markets <span>price = best real price, or a fair-plus-margin estimate</span></h4>
@@ -1458,6 +1523,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function renderValue() {
     if (!S.ready) { showProgress(); return; }
     renderDays('days-value', true);
+    const mv = S.vseg === 'movers';
+    for (const b of document.querySelectorAll('[data-vseg]')) b.setAttribute('aria-pressed', String(b.dataset.vseg === (mv ? 'movers' : 'value')));
+    $('#valTitle').textContent = mv ? 'Market movers' : 'Value board';
+    $('#valSub').textContent = mv ? 'The biggest moves in the bookmakers’ average prices since Statpad first saw them. A shortening price usually means money is coming in, often from sharp bettors; a drifting price means the opposite. Statpad’s chances follow the market, so these are the games where its numbers moved most.'
+      : 'Real prices that beat Statpad\'s probability. Edge = probability × best price − 1. Estimated prices never appear here.';
+    $('#minEdge').hidden = mv; $('#minEdgeL').hidden = mv; $('#valueList').hidden = mv; $('#moversList').hidden = !mv;
+    $('#vscope').value = S.vscope;
+    if (mv) { renderMovers(); return; }
     $('#minEdge').innerHTML = EDGES.map((e) => `<button type="button" data-edge="${e}" aria-pressed="${S.minEdge === e}"><span class="mono">${Math.round(e * 100)}%</span></button>`).join('');
     $('#vscope').value = S.vscope;
     const list = S.rows.filter((r) => !r.started && r.a && (S.day === 'all' || r.day === S.day) && inScope(r, S.vscope)).map((r) => ({ m: r.m, a: r.a }));
@@ -1823,7 +1896,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Check a slip</h3>
       <p>Add a screenshot or photo of a slip, or paste its text, under <b>Bets → Check slip</b>. Pictures are read on your phone by Tesseract, an open-source text reader (a one-time download of about 4.5 MB), so the picture itself is never uploaded. Before reading, Statpad turns it grey, flips dark-mode screenshots, evens out the light in photos and sizes it for the reader; the text it reads appears in the box, where anything misread can be fixed. Statpad finds each game among its fixtures (team nicknames like Man Utd, Barca or Spurs work), reads the pick (1, X, 2, double chance, over/under, GG/NG, draw no bet, ±1.5 handicaps and same-game combos) and the odds, then prices each leg from the scoreline grid. You see the real chance of the whole slip, its fair odds, the odds needed to break even after tax, the weakest leg and what dropping it would do. Picks it can't read, or markets it doesn't price (half-time, corners, cards, scorers), are left for you to choose, and a price far from the fair odds is flagged in case it was misread.</p>
       <h3>Live scores and cash-out</h3>
-      <p>With an API-Football key, Statpad checks the scores of its games in play, spreading at most 40 checks a day over the hours games are being played (about every 10–20 minutes) and keeping calls in hand for line-ups and results. For each open bet in My bets it then shows the chance of each leg now and what the whole bet is worth on average: the rest of each game is played out from the score, the minute and both sides' expected goals, with goals coming a little faster late on. Type your bookmaker's cash-out offer and it says whether the offer is above or below that value. With no live score (no key, or between checks) you can type the score and minute yourself. Red cards and injuries aren't known to it, so treat it as a guide.</p>
+      <p>With an API-Football key, Statpad checks the scores of its games in play, spreading at most 40 checks a day over the hours games are being played (about every 10–20 minutes) and keeping calls in hand for line-ups and results. For each open bet in My bets it then shows the chance of each leg now and what the whole bet is worth on average: the rest of each game is played out from the score, the minute and both sides' expected goals, with goals coming a little faster late on. Type your bookmaker's cash-out offer and it says whether the offer is above or below that value. With no live score (no key, or between checks) you can type the score and minute yourself. It counts red cards when the live feed lists them; injuries aren't known to it, so treat it as a guide.</p>
+      <h3>Live win probability</h3>
+      <p>During a game, its card's bar shows the chances now, and the match page draws the whole game: home, draw and away chances minute by minute, with each goal and red card marked. Each point plays out the rest of the game from the score at that minute, the time left and both sides' expected goals, with a side down to ten men scoring less and its opponent more. When the live feed lists events, goal and card minutes are exact; otherwise each new goal is placed halfway between two score checks, and the page says so.</p>
+      <h3>Scoreline explorer</h3>
+      <p>On every match page, tap scores on the grid to make your own set, or pick conditions (result, total goals, both teams to score, winning margin, each team's goals). Statpad adds up the matching scorelines from the whole grid, so the links between the parts are priced in, and shows the chance, the fair odds and a typical bet-builder price. Your bet can go on the coupon and into My bets, where it settles like any other pick.</p>
+      <h3>Why this pick</h3>
+      <p>Each match page explains the top pick in plain words, from the same numbers: the teams' attack and defence ranks on Statpad's ratings, recent form, expected goals, what the bookmakers and Statpad's own model each say, how the price has moved, team news, and any reason for caution.</p>
+      <h3>Market movers</h3>
+      <p>Under <b>Value → Market movers</b>, the games whose bookmaker prices moved most since Statpad first saw them, measured as the change in the margin-free chance. A shortening price usually means money is coming in, often from sharp bettors. Each move comes with Statpad's own model view (agreeing, going further, or not seeing it), team news, and whether a value price is still around.</p>
       <h3>My bets</h3>
       <p>Save a coupon with your stake and your bookmaker's odds, and Statpad shows the chance of it landing, the odds you need to break even after the tax on winnings (15% in Uganda by default; change it in My bets), and what it's worth on average. Bets settle themselves from the same results, using the 90-minute score; a postponed leg counts at odds 1. Everything is stored on your device: use Back up to keep a copy or move to a new phone.</p>
       <h3>Slips</h3>
@@ -2137,7 +2218,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (b.status !== 'open') continue;
       for (const l of b.legs) {
         if (l.res) continue;
-        const sc = R.scores && R.scores[l.id], fn = SETTLE[l.key];
+        const sc = R.scores && R.scores[l.id], fn = settleFn(l.key);
         if (sc && fn) { const r = fn(sc[0], sc[1]); l.res = r === null ? 'v' : r ? 'w' : 'l'; l.sc = sc; changed = true; }
         else if (R.void && R.void[l.id]) { l.res = 'v'; changed = true; }
       }
@@ -2430,6 +2511,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const CK_KEYS = ['H', 'D', 'A', '1X', 'X2', '12', 'O05', 'O15', 'O25', 'O35', 'U15', 'U25', 'U35', 'U45', 'BTTS', 'BTTS_N', 'DNB_H', 'DNB_A', 'H_O05', 'A_O05', 'H_O15', 'A_O15',
     'AH_H-1.5', 'AH_H+1.5', 'AH_A-1.5', 'AH_A+1.5', 'H&O15', 'H&O25', 'H&BTTS', 'H&U35', 'H_NIL', 'A&O15', 'A&O25', 'A&BTTS', 'A&U35', 'A_NIL', '1X&U35', 'X2&U35', '1X&BTTS', 'X2&BTTS', 'BTTS&O25', 'D&U25'];
   function ckLabel(key, m) {
+    if (String(key).startsWith('Q:')) return qLabel(key, m);
     const r = S.byId.get(m.id), s = r && r.a ? r.a.sels.find((x) => x.key === key) : null;
     if (s) return s.label;
     const L = { '12': `${m.h} or ${m.a}`, O05: 'Over 0.5 goals', O35: 'Over 3.5 goals', U15: 'Under 1.5 goals', U45: 'Under 4.5 goals', O45: 'Over 4.5 goals' };
@@ -2437,16 +2519,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // chance of a pick from the match's scoreline grid: win, and stake back (draw no bet)
   function gridP(M, key) {
-    const fn = SETTLE[key]; if (!M || !fn) return null;
+    const fn = settleFn(key); if (!M || !fn) return null;
     let w = 0, v = 0;
     for (let i = 0; i < M.length; i++) for (let j = 0; j < M.length; j++) { const o = fn(i, j); if (o === null) v += M[i][j]; else if (o) w += M[i][j]; }
     return { w, v };
   }
   function gridSel(r, key) {
-    if (!r || !r.a || !SETTLE[key]) return null;
+    if (!r || !r.a || !settleFn(key)) return null;
     const q = gridP(r.a.M, key); if (!q || !(q.w > 0)) return null;
     const p = q.w / (1 - q.v);
-    return { key, label: ckLabel(key, r.m), p, pAdj: p, fair: 1 / p, price: Math.max(1.01, Math.round(100 / (p * 1.065)) / 100), real: false, x: true };
+    return { key, label: ckLabel(key, r.m), p, pAdj: p, fair: 1 / p, price: Math.max(1.01, Math.round(100 / (p * (key.startsWith('Q:') ? 1.08 : 1.065))) / 100), real: false, x: true };
   }
   // a line in a soft form that keeps decimals and signs, with the two teams written as tags; on the line that
   // names the game, the "home v away" part itself is taken out so it isn't read as a pick
@@ -2593,7 +2675,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (list.length === 1) { chance *= list[0].p; continue; }
       same = true;
       const M = list[0].r.a.M; let w = 0;
-      for (let i = 0; i < M.length; i++) for (let j = 0; j < M.length; j++) if (list.every((x) => SETTLE[x.g.key](i, j))) w += M[i][j];
+      for (let i = 0; i < M.length; i++) for (let j = 0; j < M.length; j++) if (list.every((x) => settleFn(x.g.key)(i, j))) w += M[i][j];
       chance *= w;
     }
     const prod = ok.every((x) => x.price > 1) && ok.length ? ok.reduce((a, x) => a * x.price, 1) : null;
@@ -2842,10 +2924,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const t = Math.max(0, Math.min(T_END, st === 'HT' ? 45 : min || 0));
     return Math.max(0, 1 - goalClock(t) / goalClock(T_END));
   }
-  function liveLeg(key, lh, la, h0, a0, min, st) {
-    const fn = SETTLE[key]; if (!fn || !(lh > 0) || !(la > 0)) return null;
-    const r = remFrac(min, st), N = 10, ph = [Math.exp(-lh * r)], pa = [Math.exp(-la * r)];
-    for (let k = 1; k <= N; k++) { ph.push(ph[k - 1] * lh * r / k); pa.push(pa[k - 1] * la * r / k); }
+  function liveLeg(key, lh, la, h0, a0, min, st, rh, ra) {
+    const fn = settleFn(key); if (!fn || !(lh > 0) || !(la > 0)) return null;
+    const r = remFrac(min, st), N = 10;
+    const kh = lh * r * Math.pow(RED_OWN, rh || 0) * Math.pow(RED_OPP, ra || 0), ka = la * r * Math.pow(RED_OWN, ra || 0) * Math.pow(RED_OPP, rh || 0);
+    const ph = [Math.exp(-kh)], pa = [Math.exp(-ka)];
+    for (let k = 1; k <= N; k++) { ph.push(ph[k - 1] * kh / k); pa.push(pa[k - 1] * ka / k); }
     let w = 0, v = 0;
     for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) { const q = ph[i] * pa[j], o = fn(h0 + i, a0 + j); if (o === null) v += q; else if (o) w += q; }
     return { w, v };
@@ -2862,11 +2946,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     const g = S.live && S.live.games && S.live.games[l.id], m0 = S.manual[l.id], man = m0 && m0.h != null && m0.a != null && m0.min != null ? m0 : null;
     const src = man && (!g || man.at > Date.parse(g[4])) ? { h: man.h, a: man.a, min: man.min, st: man.min > 45 ? '2H' : '1H', man: true, at: man.at }
-      : g ? { h: g[0], a: g[1], min: g[2], st: g[3], at: Date.parse(g[4]) } : null;
+      : g ? { h: g[0], a: g[1], min: g[2], st: g[3], at: Date.parse(g[4]), rh: (g[6] || []).filter((x) => x[1] === 'h').length, ra: (g[6] || []).filter((x) => x[1] === 'a').length } : null;
     if (!src) return { w: null, v: 0, st: Date.now() > ko + 125 * 60e3 ? 'waiting' : 'noscore' };
-    let minNow = src.st === 'HT' ? 45 : Math.min(T_END, src.min + (src.man ? 0 : Math.max(0, (Date.now() - src.at) / 60e3 - 1)));   // the clock kept running since the last check
+    let minNow = src.st === 'HT' ? 45 : src.st === 'FT' ? 90 : Math.min(T_END, src.min + (src.man ? 0 : Math.max(0, (Date.now() - src.at) / 60e3 - 1)));   // the clock kept running since the last check
     if (src.st === '1H') minNow = Math.min(minNow, 47);
-    const q = lam ? liveLeg(l.key, lam[0], lam[1], src.h, src.a, minNow, src.st) : null;
+    const q = lam ? liveLeg(l.key, lam[0], lam[1], src.h, src.a, minNow, src.st, src.rh, src.ra) : null;
     return Object.assign(q || { w: null, v: 0 }, { st: 'live', sc: [src.h, src.a], min: src.st === 'HT' ? 'HT' : Math.round(minNow) + "'", man: !!src.man, at: src.at });
   }
   function liveBet(b) {
@@ -2920,7 +3004,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const [cls, head, txt] = r >= 1.0 ? ['good', 'Taking it is the better deal', `The offer is ${Math.round((r - 1) * 100)}% more than the bet is worth on average.`]
       : r >= 0.93 ? ['fair', 'Close call', `The offer is ${Math.round((1 - r) * 100)}% below what the bet is worth. Take it only if you'd rather have the money for sure.`]
       : ['poor', 'Holding is worth more on average', `The offer is ${Math.round((1 - r) * 100)}% below what the bet is worth (${money(L.worth)}).`];
-    return `<div class="verdict v-${cls}"><b>${head}</b><span>${esc(txt)}</span></div><p class="note">If you hold: ${pct(L.pAll, 0)} chance of ${money(L.net)}, otherwise nothing. If you cash out: ${money(o)} for sure. These are averages, not promises; a red card or injury changes them.</p>`;
+    return `<div class="verdict v-${cls}"><b>${head}</b><span>${esc(txt)}</span></div><p class="note">If you hold: ${pct(L.pAll, 0)} chance of ${money(L.net)}, otherwise nothing. If you cash out: ${money(o)} for sure. These are averages, not promises: an injury, or a red card the live feed hasn't shown yet, changes them.</p>`;
   }
   function paintLive() {
     for (const el of document.querySelectorAll('[data-livebet]')) {
@@ -2930,9 +3014,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (a) a.innerHTML = coAdvice(b, L);
     }
     for (const el of document.querySelectorAll('[data-livebadge]')) { const t = liveTxt(el.dataset.livebadge); if (t) el.textContent = t; }
+    for (const el of document.querySelectorAll('[data-livebar]')) {
+      const r = S.byId.get(el.dataset.livebar), L = r && r.started ? liveNow(r.m.id) : null, p = L ? liveP(r, L) : null; if (!p) continue;
+      el.classList.add('live'); const [h, d, a] = el.children; h.style.width = p.H * 100 + '%'; d.style.width = p.D * 100 + '%'; a.style.width = p.A * 100 + '%';
+    }
+    const sl = $('#sheetLive'); if (sl && S.open) { const r = S.byId.get(S.open); if (r) sl.innerHTML = liveCard(r); }
   }
   function liveTxt(id) {
     const g = S.live && S.live.games && S.live.games[id]; if (!g) return '';
+    if (g[3] === 'FT') return `FT · ${g[0]}–${g[1]}`;
     const min = g[3] === 'HT' ? 'HT' : Math.min(T_END, g[2] + Math.max(0, Math.round((Date.now() - Date.parse(g[4])) / 60e3) - 1)) + "'";
     return `Live ${min} · ${g[0]}–${g[1]}`;
   }
@@ -2959,12 +3049,249 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (d.co) { S.coOffer[d.co] = amt(e.target.value); const b = S.bets.find((x) => x.id === d.co); const a = $('#lba-' + d.co); if (b && a) a.innerHTML = coAdvice(b); }
   });
 
+  // ---------------- scoreline explorer: build any bet from the scoreline grid ----------------
+  // A custom bet is a key like "Q:r=H;g=2-3;b=Y" (result, total goals, both score, margin, team goals) or
+  // "Q:s=1-0.2-1" (a set of exact scores). It prices, goes on the coupon and settles like any other pick.
+  S.qx = { r: '', g: '', b: '', m: '', hg: '', ag: '', s: [] };
+  const QX = {
+    r: ['Result', [['', 'Any'], ['H', (m) => m.h], ['D', 'Draw'], ['A', (m) => m.a], ['1X', (m) => `${m.h} or draw`], ['X2', (m) => `Draw or ${m.a}`], ['12', 'No draw']]],
+    g: ['Total goals', [['', 'Any'], ['0-1', '0–1'], ['2-3', '2–3'], ['4-', '4+'], ['2-', 'Over 1.5'], ['3-', 'Over 2.5'], ['0-2', 'Under 2.5'], ['0-3', 'Under 3.5']]],
+    b: ['Both teams score', [['', 'Any'], ['Y', 'Yes'], ['N', 'No']]],
+    m: ['Winning margin', [['', 'Any'], ['1', 'Exactly 1'], ['2', '2 or more']]],
+    hg: [(m) => `${m.h} goals`, [['', 'Any'], ['0-0', '0'], ['1-', '1+'], ['2-', '2+'], ['3-', '3+']]],
+    ag: [(m) => `${m.a} goals`, [['', 'Any'], ['0-0', '0'], ['1-', '1+'], ['2-', '2+'], ['3-', '3+']]],
+  };
+  function qxKey(q) { return qxKey_(q); }
+  const qxKey_ = (q) => q.s.length ? 'Q:s=' + q.s.slice().sort().join('.') : (() => { const p = ['r', 'g', 'b', 'm', 'hg', 'ag'].filter((k) => q[k]).map((k) => `${k}=${q[k]}`); return p.length ? 'Q:' + p.join(';') : null; })();
+  function qParse(key) { return Object.fromEntries(String(key).slice(2).split(';').filter(Boolean).map((x) => x.split('='))); }
+  const qParse_ = (key) => Object.fromEntries(String(key).slice(2).split(';').filter(Boolean).map((x) => x.split('=')));
+  function inRange(v, s) { const [lo, hi] = String(s).split('-'); return v >= +lo && (hi === '' || hi == null || v <= +hi); }
+  const inRange_ = (v, s) => { const [lo, hi] = String(s).split('-'); return v >= +lo && (hi === '' || hi == null || v <= +hi); };
+  function qFn(key) {
+    const QFN = qFn.cache || (qFn.cache = new Map());
+    if (QFN.has(key)) return QFN.get(key);
+    const q = qParse(key), tests = [];
+    if (q.s) { const set = new Set(q.s.split('.')); tests.push((h, a) => set.has(`${h}-${a}`)); }
+    if (q.r) tests.push({ H: (h, a) => h > a, D: (h, a) => h === a, A: (h, a) => h < a, '1X': (h, a) => h >= a, X2: (h, a) => h <= a, '12': (h, a) => h !== a }[q.r] || (() => false));
+    if (q.g) tests.push((h, a) => inRange(h + a, q.g));
+    if (q.b) tests.push(q.b === 'Y' ? (h, a) => h > 0 && a > 0 : (h, a) => !(h > 0 && a > 0));
+    if (q.m) tests.push(q.m === '1' ? (h, a) => Math.abs(h - a) === 1 : (h, a) => Math.abs(h - a) >= 2);
+    if (q.hg) tests.push((h) => inRange(h, q.hg));
+    if (q.ag) tests.push((h, a) => inRange(a, q.ag));
+    const fn = tests.length ? (h, a) => tests.every((t) => t(h, a)) : null;
+    QFN.set(key, fn);
+    return fn;
+  }
+  function qLabel(key, m) {
+    const q = qParse(key);
+    if (q.s) { const s = q.s.split('.').map((x) => x.replace('-', '–')); return `Score ${s.length > 1 ? s.slice(0, -1).join(', ') + ' or ' + s[s.length - 1] : s[0]}`; }
+    const nm = (k, v) => { const o = QX[k][1].find((x) => x[0] === v); return o ? (typeof o[1] === 'function' ? o[1](m) : o[1]) : v; };
+    const parts = [];
+    if (q.r) parts.push(q.r === 'H' ? `${m.h} win` : q.r === 'A' ? `${m.a} win` : nm('r', q.r));
+    if (q.g) parts.push(/Over|Under/.test(nm('g', q.g)) ? nm('g', q.g) + ' goals' : nm('g', q.g) + ' goals');
+    if (q.b) parts.push(q.b === 'Y' ? 'both score' : 'not both score');
+    if (q.m) parts.push(q.m === '1' ? 'won by exactly 1' : 'won by 2+');
+    if (q.hg) parts.push(q.hg === '0-0' ? `${m.h} don't score` : `${m.h} score ${nm('hg', q.hg)}`);
+    if (q.ag) parts.push(q.ag === '0-0' ? `${m.a} don't score` : `${m.a} score ${nm('ag', q.ag)}`);
+    return parts.join(' & ');
+  }
+  function settleFn(k) { return SETTLE[k] || (typeof k === 'string' && k.startsWith('Q:') ? qFn(k) : null); }
+  function qxCard(r) {
+    const { m, a } = r, q = S.qx, key = qxKey(q), fn = key ? qFn(key) : null;
+    let mx = 0; for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) mx = Math.max(mx, a.M[i][j]);
+    const cells = ['<div class="ax"></div>' + [0, 1, 2, 3, 4, 5].map((j) => `<div class="ax">${j}</div>`).join('')];
+    for (let i = 0; i < 6; i++) {
+      cells.push(`<div class="ax">${i}</div>` + [0, 1, 2, 3, 4, 5].map((j) => {
+        const v = a.M[i][j], t = Math.pow(v / mx, 0.8), on = fn ? fn(i, j) : false, col = i > j ? 'var(--h)' : i === j ? 'var(--d)' : 'var(--a)';
+        return `<button type="button" class="c${on ? ' on' : fn ? ' dim' : ''}" data-qcell="${i}-${j}" aria-pressed="${q.s.includes(i + '-' + j)}" aria-label="${esc(m.h)} ${i}, ${esc(m.a)} ${j}: ${pct(v, 1)}" style="background:color-mix(in srgb, ${col} ${Math.round(8 + t * 72)}%, var(--card))">${v >= 0.005 ? (v * 100).toFixed(v < 0.1 ? 1 : 0) : ''}</button>`;
+      }).join(''));
+    }
+    const ctl = Object.entries(QX).map(([k, [title, opts]]) => `<div class="qx-row"><span class="qx-t">${esc(typeof title === 'function' ? title(m) : title)}</span><div class="qx-chips">${opts.map(([v, lab]) =>
+      `<button type="button" data-qx="${k}|${v}" aria-pressed="${!q.s.length && q[k] === v}">${esc(typeof lab === 'function' ? lab(m) : lab)}</button>`).join('')}</div></div>`).join('');
+    let out = '<p class="note">Tap scores to make your own set, or pick conditions below. Statpad prices it from the whole grid, so the links between the parts are counted.</p>';
+    if (fn) {
+      let p = 0; for (let i = 0; i < a.M.length; i++) for (let j = 0; j < a.M.length; j++) if (fn(i, j)) p += a.M[i][j];
+      const added = inCoupon(m.id, key);
+      out = p > 0.0005 ? `<div class="qx-res"><div class="qx-lab">${esc(qLabel(key, m))}</div>
+        <div class="qx-num"><span>Chance<b>${pct(p, 1)}</b></span><span>Fair odds<b>${odds(1 / p)}</b></span><span>Bet builder price, about<b>${odds(Math.max(1.01, 1 / (p * 1.08)))}</b></span></div>
+        <div class="qx-acts"><button type="button" class="btn pri" data-add="${esc(m.id)}|${esc(key)}" aria-pressed="${added}">${added ? 'On your coupon' : 'Add to coupon'}</button><button type="button" class="btn ghost" data-qxreset="1">Clear</button></div>
+        <p class="note">If your bookmaker's bet builder pays less than the fair odds, it's poor value.</p></div>`
+        : `<div class="qx-res"><div class="qx-lab">${esc(qLabel(key, m))}</div><p class="note">That can't happen, or almost never does. Loosen a condition.</p><div class="qx-acts"><button type="button" class="btn ghost" data-qxreset="1">Clear</button></div></div>`;
+    }
+    return `<h4>Scoreline explorer <span>most likely: ${a.scores.slice(0, 3).map((s) => `${s[0]}-${s[1]} (${pct(s[2], 0)})`).join(', ')}</span></h4>
+      <div class="heat qx-heat">${cells.join('')}</div><div class="heat-cap"><span>Rows: ${esc(m.h)} goals</span><span>Columns: ${esc(m.a)} goals</span></div>
+      <div class="qx-out" aria-live="polite">${out}</div><div class="qx-ctl">${ctl}</div>`;
+  }
+  document.addEventListener('click', (e) => { const t = e.target.closest('[data-vseg]'); if (!t) return; S.vseg = t.dataset.vseg; store.set('vseg', S.vseg); renderValue(); });
+  function paintQx() { const r = S.byId.get(S.open), el = $('#qx'); if (r && r.a && el) el.innerHTML = qxCard(r); }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-qx],[data-qcell],[data-qxreset]'); if (!t) return;
+    const q = S.qx;
+    if (t.dataset.qxreset) Object.assign(q, { r: '', g: '', b: '', m: '', hg: '', ag: '', s: [] });
+    else if (t.dataset.qcell) { const c = t.dataset.qcell, i = q.s.indexOf(c); if (i >= 0) q.s.splice(i, 1); else q.s.push(c); for (const k of Object.keys(QX)) q[k] = ''; }
+    else { const [k, v] = t.dataset.qx.split('|'); q.s = []; q[k] = q[k] === v ? '' : v; }
+    paintQx();
+  });
+
+  // ---------------- why this pick: the story behind the numbers ----------------
+  function storyCard(r) {
+    const { m, a } = r; if (!a || !a.top) return '';
+    const t = a.top, info = lgInfo(m.lk), out = [], sc = a.scores[0];
+    out.push(`Statpad's pick is <b>${esc(t.label)}</b> at ${pct(t.pAdj)}${a.tier ? `, ${TIER_NAME[a.tier].toLowerCase()}` : ''}. The most likely score is ${sc[0]}–${sc[1]} (${pct(sc[2], 0)}).`);
+    const lg = S.data && S.data.leagues && S.data.leagues[m.lk], tab = lg && lg.table;
+    if (tab && tab.length > 5 && tab[0].length > 10 && !m.xl) {
+      const att = tab.slice().sort((x, y) => y[9] - x[9]).map((x) => x[0]), def = tab.slice().sort((x, y) => x[10] - y[10]).map((x) => x[0]);
+      const rk = (n) => { const i = att.indexOf(n), j = def.indexOf(n); return i < 0 || j < 0 ? null : [i + 1, j + 1]; };
+      const h = rk(m.h), w = rk(m.a);
+      if (h && w) out.push(`On Statpad's ratings (${lg.sh ? 'goals and shots on target' : 'goals'}, recent games counting most), ${esc(m.h)} have the ${ord(h[0])}-best attack and ${ord(h[1])}-best defence of ${tab.length} in the league; ${esc(m.a)} rank ${ord(w[0])} and ${ord(w[1])}.`);
+    } else if (info.group === 'intl' && m.ph && m.pa) out.push(`${esc(m.h)} are ${ord(m.ph)} and ${esc(m.a)} ${ord(m.pa)} in Statpad's world ratings.`);
+    const wins = (f) => [...f].filter((c) => c === 'W').length;
+    if (m.fh && m.fa) out.push(`Form: ${esc(m.h)} have won ${wins(m.fh)} of their last ${m.fh.length}, ${esc(m.a)} ${wins(m.fa)} of ${m.fa.length}.`);
+    const o = a.p.O25;
+    out.push(`Expected goals: ${esc(m.h)} ${a.lh.toFixed(1)}, ${esc(m.a)} ${a.la.toFixed(1)}. ${o >= 0.58 ? `Goals look likely: over 2.5 is ${pct(o)}.` : o <= 0.42 ? `A tight game is likely: under 2.5 is ${pct(1 - o)}.` : `Over 2.5 is close to a coin flip at ${pct(o)}.`}`);
+    // what the bookmakers think, and how their prices have moved
+    const side = /^(H|1X|DNB_H|AH_H|H&|H_)/.test(t.key) ? 0 : /^(A|X2|DNB_A|AH_A|A&|A_)/.test(t.key) ? 2 : t.key === 'D' ? 1 : null;
+    const nmS = side === 0 ? m.h : side === 2 ? m.a : 'the draw';
+    if (m.mkt && side != null && a.pMod) {
+      const mk = m.mkt.p[side], md = [a.pMod.H, a.pMod.D, a.pMod.A][side];
+      out.push(`The bookmakers give ${esc(nmS)} ${pct(mk)}${side === 1 ? '' : ' to win'}; Statpad's own model says ${pct(md)}${Math.abs(mk - md) < 0.04 ? ', so they agree.' : md > mk ? ', a little higher than the market.' : ', a little lower than the market, which takes most of the weight.'}`);
+    } else if (m.mkt && m.mkt.ou && m.mkt.ou.pO && /^(O|U|BTTS)/.test(t.key) && a.pMod) {
+      out.push(`On goals, the bookmakers make over 2.5 ${pct(m.mkt.ou.pO)}; Statpad's own model ${pct(a.pMod.O25)}${Math.abs(m.mkt.ou.pO - a.pMod.O25) < 0.04 ? ', so they agree.' : '.'}`);
+    } else if (!m.mkt) out.push('There are no bookmaker prices yet, so this rests on Statpad\'s model alone.');
+    const h = m.hist;
+    if (h && h.length > 1 && side != null) {
+      const o0 = h[0][side + 1], o1 = h[h.length - 1][side + 1];
+      if (o0 > 1 && o1 > 1 && Math.abs(o1 / o0 - 1) >= 0.03) out.push(`${side === 1 ? 'The draw' : esc(nmS)}${side === 1 ? '' : "'s"} price has ${o1 < o0 ? 'shortened' : 'drifted'} from ${odds(o0)} to ${odds(o1)} since ${esc(dayLabel(dayKey(Date.parse(h[0][0]))))}${o1 < o0 ? ': money has been coming in.' : '.'}`);
+    }
+    const tn = m.tn;
+    if (tn) {
+      const outs = (s) => ((tn[s] && tn[s].out) || []).filter((p) => p[2] !== 'q');
+      const oh = outs('h'), oa = outs('a'), say = (n, l) => `${esc(n)} ${l.length} (${l.slice(0, 2).map((p) => esc(p[0])).join(', ')}${l.length > 2 ? '…' : ''})`;
+      const bits = [oh.length ? say(m.h, oh) : '', oa.length ? say(m.a, oa) : ''].filter(Boolean);
+      if (bits.length || tn.lu) out.push(`${bits.length ? 'Missing: ' + bits.join('; ') + '.' : ''}${tn.lu ? ' Line-ups are confirmed.' : ''}`.trim());
+    }
+    const why = [];
+    if (a.src === 'model') why.push('there are no bookmaker prices yet');
+    if (a.diverge != null && a.diverge > 0.12) why.push(`the model and the market disagree by ${Math.round(a.diverge * 100)} points`);
+    if (m.ls && Math.max(m.ls[0], m.ls[1]) > 0.33) why.push('the ratings rest on little data (early in the season, or a newly promoted side)');
+    if (a.ageH != null && a.ageH > 36) why.push('the prices are old');
+    if (m.clash) why.push('it is a big game');
+    if (m.fr) why.push('it is a friendly');
+    if (why.length || t.pAdj - t.pLo > 0.04) out.push(`Caution: ${why.length ? why.join(', ') : 'the numbers have a wide spread'}, so the cautious chance is ${pct(t.pLo)}.`);
+    return `<div class="card story"><h4>Why this pick <span>the story in the numbers</span></h4><ul>${out.map((x) => `<li>${x}</li>`).join('')}</ul></div>`;
+  }
+
+  // ---------------- live win probability ----------------
+  const RED_OWN = 0.72, RED_OPP = 1.22;   // scoring rates after a red card: the side down to ten scores less, the other side more
+  function livePH(lh, la, h0, a0, minute, st, rh, ra) {
+    const r = remFrac(minute, st);
+    const kh = lh * r * Math.pow(RED_OWN, rh || 0) * Math.pow(RED_OPP, ra || 0), ka = la * r * Math.pow(RED_OWN, ra || 0) * Math.pow(RED_OPP, rh || 0);
+    const N = 10, ph = [Math.exp(-kh)], pa = [Math.exp(-ka)];
+    for (let k = 1; k <= N; k++) { ph.push(ph[k - 1] * kh / k); pa.push(pa[k - 1] * ka / k); }
+    const p = { H: 0, D: 0, A: 0, O25: 0, BTTS: 0 };
+    for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) {
+      const q = ph[i] * pa[j], h = h0 + i, a = a0 + j;
+      if (h > a) p.H += q; else if (h === a) p.D += q; else p.A += q;
+      if (h + a > 2) p.O25 += q; if (h > 0 && a > 0) p.BTTS += q;
+    }
+    return p;
+  }
+  // the live entry for a match: score, minute (the clock keeps running between checks), goal and red-card times
+  function liveNow(id) {
+    const g = S.live && S.live.games && S.live.games[id]; if (!g) return null;
+    const st = g[3], ft = st === 'FT';
+    let min = st === 'HT' ? 45 : Math.min(T_END, g[2] + (ft ? 0 : Math.max(0, (Date.now() - Date.parse(g[4])) / 60e3 - 1)));
+    if (st === '1H') min = Math.min(min, 47);
+    if (ft) min = Math.max(90, g[2]);
+    const goals = g[5] || [], reds = g[6] || [];
+    return { h: g[0], a: g[1], min, st, ft, goals, reds, exact: !!g[7], at: Date.parse(g[4]) };
+  }
+  function liveP(r, L) {
+    if (!r || !r.a || !L) return null;
+    const rh = L.reds.filter((x) => x[1] === 'h').length, ra = L.reds.filter((x) => x[1] === 'a').length;
+    return livePH(r.a.lh, r.a.la, L.h, L.a, L.min, L.ft ? 'FT' : L.st, rh, ra);
+  }
+  function winChart(r, L) {
+    const { m, a } = r, W = 560, H = 170, P = 30, B = 22, T = Math.max(90, Math.ceil(L.min));
+    const pts = [];
+    for (let t = 0; t <= Math.floor(L.min); t++) {
+      const h0 = L.goals.filter((x) => x[0] <= t && x[1] === 'h').length, a0 = L.goals.filter((x) => x[0] <= t && x[1] === 'a').length;
+      const rh = L.reds.filter((x) => x[0] <= t && x[1] === 'h').length, ra = L.reds.filter((x) => x[0] <= t && x[1] === 'a').length;
+      const p = t === 0 ? { H: a.p.H, D: a.p.D, A: a.p.A } : livePH(a.lh, a.la, h0, a0, t, t >= 90 && L.ft ? 'FT' : '2H', rh, ra);
+      pts.push([t, p.H, p.D]);
+    }
+    const now = liveP(r, L); if (now) pts.push([L.min, now.H, now.D]);
+    const x = (t) => P + (W - P - 10) * t / T, y = (v) => 8 + (H - B - 8) * (1 - v);
+    const band = (lo, hi, c) => `<path d="M${pts.map((p) => `${x(p[0]).toFixed(1)},${y(hi(p)).toFixed(1)}`).join('L')}L${pts.slice().reverse().map((p) => `${x(p[0]).toFixed(1)},${y(lo(p)).toFixed(1)}`).join('L')}Z" fill="var(--${c})" opacity=".85"/>`;
+    const marks = L.goals.map(([t, s]) => `<line x1="${x(t)}" x2="${x(t)}" y1="8" y2="${H - B}" stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="2 3"/><circle cx="${x(t)}" cy="9" r="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.5"/><text x="${x(t)}" y="${H - 7}" text-anchor="middle">${t}'</text>`).join('')
+      + L.reds.map(([t]) => `<rect x="${x(t) - 3}" y="${H - B - 12}" width="6" height="9" rx="1" fill="var(--red)"/>`).join('');
+    return `<svg class="wp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Win probability through the game">
+      ${band(() => 0, (p) => p[1], 'h')}${band((p) => p[1], (p) => p[1] + p[2], 'd')}${band((p) => p[1] + p[2], () => 1, 'a')}
+      <line x1="${x(45)}" x2="${x(45)}" y1="8" y2="${H - B}" stroke="var(--card)" stroke-width="1.5"/>
+      ${[0.25, 0.5, 0.75].map((v) => `<line x1="${P}" x2="${x(L.min)}" y1="${y(v)}" y2="${y(v)}" stroke="var(--card)" stroke-opacity=".35"/><text x="0" y="${y(v) + 3}">${Math.round(v * 100)}%</text>`).join('')}
+      ${marks}<text x="${x(0)}" y="${H - 7}">0'</text><text x="${x(45)}" y="${H - 7}" text-anchor="middle">HT</text><text x="${x(T)}" y="${H - 7}" text-anchor="end">${T}'</text></svg>`;
+  }
+  function liveCard(r) {
+    const L = liveNow(r.m.id); if (!L || !r.a) return '';
+    const { m } = r, p = liveP(r, L), mn = L.ft ? 'Full time' : L.st === 'HT' ? 'Half time' : `Live · ${Math.round(L.min)}'`;
+    const scorers = L.goals.length ? `<p class="note">Goals: ${L.goals.map(([t, s]) => `${t}' ${esc(s === 'h' ? m.h : m.a)}`).join(', ')}${L.reds.length ? ' · Red cards: ' + L.reds.map(([t, s]) => `${t}' ${esc(s === 'h' ? m.h : m.a)}`).join(', ') : ''}${L.exact ? '' : '. Goal times are approximate: live scores are checked every 10–20 minutes.'}</p>` : '';
+    return `<div class="card lv"><h4><span class="lv-h">${L.ft ? '' : '<span class="live-dot"></span>'}${esc(mn)}</span><span>${L.ft ? 'final score' : 'chances now'}</span></h4>
+      <div class="lv-sc"><span>${esc(m.h)}</span><b class="mono">${L.h}–${L.a}</b><span>${esc(m.a)}</span></div>
+      ${winChart(r, L)}
+      <div class="legend"><span><i style="background:var(--h)"></i>${esc(m.h)}${L.ft ? '' : ' ' + pct(p.H)}</span><span><i style="background:var(--d)"></i>Draw${L.ft ? '' : ' ' + pct(p.D)}</span><span><i style="background:var(--a)"></i>${esc(m.a)}${L.ft ? '' : ' ' + pct(p.A)}</span></div>
+      ${L.ft ? '' : `<div class="lv-mk"><span>Over 2.5 now <b>${pct(p.O25)}</b></span><span>Both score now <b>${pct(p.BTTS)}</b></span></div>`}
+      ${scorers}<p class="note">The chances play out the rest of the game from the score, the minute${L.reds.length ? ', red cards' : ''} and each side's expected goals before kick-off.</p></div>`;
+  }
+
+  // ---------------- market movers ----------------
+  function implied(o) { const inv = o.map((x) => (x > 1 ? 1 / x : 0)), s = inv.reduce((p, q) => p + q, 0); return s > 0 && inv.every((x) => x > 0) ? inv.map((x) => x / s) : null; }
+  function movers(rows) {
+    const out = [], cut = Date.now() - 6 * 3600e3;
+    for (const r of rows) {
+      const h = r.m.hist; if (r.started || !r.a || !h || h.length < 2) continue;
+      const P = h.map((x) => implied(x.slice(1, 4))); if (P.some((x) => !x)) continue;
+      const p0 = P[0], p1 = P[P.length - 1];
+      let k = h.findIndex((x) => Date.parse(x[0]) >= cut); const pr = k > 0 ? P[k - 1] : k === 0 ? p0 : p1;
+      let best = null;
+      for (const i of [0, 1, 2]) { const d = p1[i] - p0[i]; if (!best || Math.abs(d) > Math.abs(best.d)) best = { i, d, d6: p1[i] - pr[i] }; }
+      if (Math.abs(best.d) < 0.015) continue;
+      out.push(Object.assign(best, { r, p0: p0[best.i], p1: p1[best.i], o0: h[0][best.i + 1], o1: h[h.length - 1][best.i + 1], t0: Date.parse(h[0][0]), ser: P.map((x) => x[best.i]), ts: h.map((x) => Date.parse(x[0])) }));
+    }
+    return out.sort((x, y) => Math.abs(y.d) - Math.abs(x.d));
+  }
+  function mvSpark(v) {
+    const W = 120, H = 34, t0 = v.ts[0], t1 = v.ts[v.ts.length - 1] || t0 + 1, lo = Math.min(...v.ser), hi = Math.max(...v.ser), sp = Math.max(0.01, hi - lo);
+    const pts = v.ser.map((p, k) => `${(2 + (W - 4) * (t1 === t0 ? 1 : (v.ts[k] - t0) / (t1 - t0))).toFixed(1)},${(3 + (H - 6) * (1 - (p - lo) / sp)).toFixed(1)}`).join(' ');
+    return `<svg class="mv-sp" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--${v.d > 0 ? 'pitch' : 'red'})" stroke-width="2" stroke-linejoin="round"/></svg>`;
+  }
+  function renderMovers() {
+    const box = $('#moversList'); if (!box) return;
+    const rows = S.rows.filter((r) => (S.day === 'all' || r.day === S.day) && inScope(r, S.vscope));
+    const list = movers(rows).slice(0, 60);
+    if (!list.length) { box.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>No big price moves here yet</b>Moves show up once bookmaker prices have refreshed a few times for these games. Try "All week".</div>`; return; }
+    box.innerHTML = list.map((v) => {
+      const { m, a } = v.r, up = v.d > 0, who = v.i === 0 ? `${m.h} to win` : v.i === 2 ? `${m.a} to win` : 'The draw';
+      const md = a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A][v.i] : null;
+      let take = md == null ? 'Statpad has no model view on this game.' : Math.abs(md - v.p1) < 0.03 ? `Statpad's own model agrees with the new price (${pct(md)}).`
+        : (up ? md > v.p1 : md < v.p1) ? `Statpad's own model goes further (${pct(md)}).` : (up ? md <= v.p0 + 0.01 : md >= v.p0 - 0.01) ? `Statpad's own model doesn't see it (${pct(md)}): the move may be team news or money the ratings can't see.` : `Statpad's own model is in between (${pct(md)}).`;
+      const tn = m.tn, outs = tn ? ['h', 'a'].map((s) => ((tn[s] && tn[s].out) || []).filter((p) => p[2] !== 'q').length) : [0, 0];
+      if (tn && tn.lu) take += ' Line-ups are in.'; else if (outs[0] + outs[1]) take += ` Team news: ${[outs[0] ? `${esc(m.h)} ${outs[0]} out` : '', outs[1] ? `${esc(m.a)} ${outs[1]} out` : ''].filter(Boolean).join(', ')}.`;
+      const s = a.sels.find((x) => x.key === ['H', 'D', 'A'][v.i]);
+      if (s && s.real && s.edge >= 0.02) take += ` Still value at ${odds(s.price)}${s.bk ? ' (' + esc(s.bk) + ')' : ''}: ${sgn(s.edge, 0)}.`;
+      return `<article class="mv" data-open="${esc(m.id)}" tabindex="0">
+        <div class="mv-top"><span class="mv-tag ${up ? 'in' : 'out'}">${up ? 'Money coming in' : 'Drifting'}</span><span>${esc(lgName(m.lk))} · ${esc(dayLabel(v.r.day))} ${tFmt.format(v.r.ko)}</span></div>
+        <div class="mv-main"><div><b>${esc(who)}</b><small>${esc(m.h)} v ${esc(m.a)}</small></div>${mvSpark(v)}</div>
+        <div class="mv-nums"><span class="mono">${odds(v.o0)} → ${odds(v.o1)}</span><span>chance <b>${pct(v.p0)} → ${pct(v.p1)}</b> <em class="${up ? 'up' : 'down'}">${up ? '+' : '−'}${Math.abs(v.d * 100).toFixed(1)} pts</em></span>${Math.abs(v.d6) >= 0.01 ? `<span class="muted">${v.d6 > 0 ? '+' : '−'}${Math.abs(v.d6 * 100).toFixed(1)} pts in the last 6 h</span>` : ''}</div>
+        <p class="mv-take">${take}</p></article>`;
+    }).join('');
+  }
+
   // ---------------- events ----------------
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-tab],[data-add],[data-open],[data-day],[data-target],[data-edge],[data-stake],[data-rm],[data-addslip],[data-shareslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn,#installBtn,#installTipX');
     if (!t) return;
     if (t.dataset.tab) { e.preventDefault(); setTab(t.dataset.tab); return; }
-    if (t.dataset.add) { e.stopPropagation(); const [id, key] = t.dataset.add.split('|'); toggleCoupon(id, key); if (S.tab === 'coupon') renderCoupon(); return; }
+    if (t.dataset.add) { e.stopPropagation(); const [id, key] = t.dataset.add.split('|'); toggleCoupon(id, key); if (S.tab === 'coupon') renderCoupon(); if (key.startsWith('Q:')) paintQx(); return; }
     if (t.dataset.goslips) { S.day = t.dataset.goslips; setTab('slips'); return; }
     if (t.dataset.open) { openMatch(t.dataset.open, t); return; }
     if (t.dataset.day) { S.day = t.dataset.day; S.shown = 60; render(); return; }

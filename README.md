@@ -65,7 +65,23 @@ It shows each leg's real chance, fair odds and whether its price is value or sho
 
 With the API-Football key, the workflow checks the live scores of Statpad's games while they're being played. One call covers every live game; at most 40 checks a day are spread over the hours games are in play (about every 10–20 minutes on a busy day), and line-ups and results always get their calls first. The scores go into `live.json`, and match cards show them.
 
-For each open bet in **My bets** with a game in play, Statpad shows each leg's chance now, the chance the whole bet lands, and what the bet is worth on average. It plays out the rest of each game from the score, the minute and both teams' expected goals. Type your bookmaker's **cash-out offer** and it tells you whether the offer is above or below that value, alongside the plain odds of holding. Without live scores (no key, or between checks), type the score and minute yourself. It doesn't know about red cards or injuries, so treat it as a guide.
+For each open bet in **My bets** with a game in play, Statpad shows each leg's chance now, the chance the whole bet lands, and what the bet is worth on average. It plays out the rest of each game from the score, the minute and both teams' expected goals. Type your bookmaker's **cash-out offer** and it tells you whether the offer is above or below that value, alongside the plain odds of holding. Without live scores (no key, or between checks), type the score and minute yourself. It counts red cards when the live feed lists them, but doesn't know about injuries, so treat it as a guide.
+
+## Live win probability
+
+While a game is being played, its card's bar shows the chances now, and the match page draws the whole game as a chart: home, draw and away chances minute by minute, with goals and red cards marked. Each point plays out the rest of the game from the score, the time left and both teams' expected goals; a team down to ten men scores less and its opponent more. With live scores from API-Football, goal and card times are exact when the feed lists the events; otherwise a new goal is placed halfway between two score checks, and the chart says so. Finished games keep their chart for about half an hour after the final whistle. The cash-out adviser uses red cards too.
+
+## Scoreline explorer
+
+Every match page has a scoreline grid you can play with. Tap scores to make your own set ("1–0, 2–0 or 2–1"), or pick conditions: result, total goals, both teams to score, winning margin, and each team's goals. Statpad adds up the matching scorelines from the whole grid, so the links between the parts are priced in, and shows the chance, the fair odds and a typical bet-builder price. Add it to the coupon and save it to My bets, where it settles itself like any other pick.
+
+## Why this pick
+
+Each match page opens with the story behind the top pick: the teams' attack and defence ranks on Statpad's ratings, recent form, expected goals, what the bookmakers and Statpad's own model each say, how the price has moved, team news, and any reason for caution (thin data, disagreement, old prices).
+
+## Market movers
+
+**Value → Market movers** lists the games whose bookmaker prices moved most since Statpad first saw them, measured as the change in the margin-free chance (not just the odds). A shortening price usually means money is coming in, often from sharp bettors; a drifting one the opposite. Each move shows a small price chart, the move in the last six hours, whether Statpad's own model agrees, team news, and whether a value price is still available. Tap one to open the match.
 
 ## Combos, draw no bet and handicaps
 
