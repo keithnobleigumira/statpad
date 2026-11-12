@@ -1,6 +1,8 @@
 /* Statpad service worker: lets the site install as an app and open offline.
-   Always tries the network first, so updates show straight away; the last good copy is kept for offline use. */
-const CACHE = 'statpad-v1', FONTS = 'statpad-fonts-v1';
+   Always tries the network first, so updates show straight away; the last good copy is kept for offline use.
+   Club crests and flags never change, so they come from the phone's copy once downloaded (saves data). */
+const CACHE = 'statpad-v1', FONTS = 'statpad-fonts-v1', IMGS = 'statpad-crests-v1', IMG_MAX = 600;
+const IMG_HOSTS = ['media.api-sports.io', 'flagcdn.com'];
 const SHELL = ['./', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -11,7 +13,7 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
-    for (const k of await caches.keys()) if (k !== CACHE && k !== FONTS) await caches.delete(k);
+    for (const k of await caches.keys()) if (k !== CACHE && k !== FONTS && k !== IMGS) await caches.delete(k);
     await self.clients.claim();
   })());
 });
@@ -21,6 +23,11 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+
+  if ((url.origin === self.location.origin && url.pathname.includes('/crests/')) || IMG_HOSTS.includes(url.hostname)) {
+    e.respondWith(imageFirst(req));
+    return;
+  }
 
   if (url.origin === self.location.origin) {
     // data files are fetched with a cache-busting query; keep one copy per file
@@ -56,3 +63,25 @@ self.addEventListener('fetch', (e) => {
     }));
   }
 });
+
+// crests & flags: cache first; only readable (same-site or CORS) answers are kept, never opaque ones
+async function imageFirst(req) {
+  try {
+    const c = await caches.open(IMGS);
+    const hit = await c.match(req, { ignoreSearch: true, ignoreVary: true });
+    if (hit) return hit;
+    const res = await fetch(req);
+    if (res.ok && (res.type === 'basic' || res.type === 'cors')) c.put(req, res.clone()).then(trimImages).catch(() => {});
+    return res;
+  } catch (err) {
+    return Response.error();
+  }
+}
+let trimT = 0;
+function trimImages() {
+  clearTimeout(trimT);
+  trimT = setTimeout(async () => {
+    const c = await caches.open(IMGS), keys = await c.keys();
+    for (const k of keys.slice(0, Math.max(0, keys.length - IMG_MAX))) await c.delete(k);
+  }, 8000);
+}

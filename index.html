@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Statpad: football predictions from a goals model blended with live bookmaker prices. Probabilities for every market, value picks and target-odds slips.">
-<meta name="theme-color" content="#f2f4f1" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0a100e" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#070b19" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#070b19" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Statpad">
 <meta property="og:title" content="Statpad · Football predictions">
@@ -31,46 +31,39 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Hanken+Grotesk:wght@400;500;600;700&family=Martian+Mono:wdth,wght@75..112.5,400..600&display=swap">
 <style>
-/* Statpad: a match-day notepad. Chalk paper, pitch lines, one cobalt accent for anything you can act on;
-   pitch green / card red only for prices moving or value appearing. */
+/* Statpad: a match-day board under floodlights. Night navy surfaces, club crests and colours carry the
+   identity; one cobalt accent for anything you can act on; pitch green / flare red only for prices moving
+   or value appearing. Dark is the default; light ("day match") is a choice in Display settings. */
 :root {
-  --paper: #f2f4f1; --card: #ffffff; --sunk: #e9eee9; --ink: #0d1813; --ink-2: #4f5f57; --ink-3: #7d8a83;
-  --rule: #dbe2dd; --rule-2: #e8ede9;
-  --cobalt: #2a46e8; --cobalt-ink: #ffffff; --cobalt-soft: rgba(42, 70, 232, .09); --cobalt-line: rgba(42, 70, 232, .35);
-  --pitch: #0f8a52; --pitch-soft: rgba(15, 138, 82, .11); --red: #d8432f; --red-soft: rgba(216, 67, 47, .1);
-  --yellow: #b98900; --yellow-soft: rgba(229, 168, 0, .14);
-  --h: #2a46e8; --d: #b8c2bc; --a: #e8743b;
-  --ticket: #0d1813; --ticket-2: #1b2822; --ticket-ink: #eef3ef; --ticket-mute: #8fa199; --ticket-rule: #2b3a33;
-  --shadow: 0 1px 0 rgba(13, 24, 19, .04), 0 10px 30px -18px rgba(13, 24, 19, .35);
+  --paper: #070b19; --card: #0d1327; --card-2: #121a34; --sunk: #0a1022; --ink: #edf1ff; --ink-2: #a3adca; --ink-3: #6b7594;
+  --rule: #1c2544; --rule-2: #151d37;
+  --cobalt: #7c93ff; --cobalt-ink: #060a18; --cobalt-soft: rgba(124, 147, 255, .14); --cobalt-line: rgba(124, 147, 255, .45);
+  --pitch: #3ddc97; --pitch-soft: rgba(61, 220, 151, .13); --red: #ff6b5e; --red-soft: rgba(255, 107, 94, .14);
+  --yellow: #ffc94d; --yellow-soft: rgba(255, 201, 77, .14);
+  --h: #7c93ff; --d: #47536f; --a: #ff9a5c;
+  --ticket: #edf1ff; --ticket-2: #dfe5f5; --ticket-ink: #0a1230; --ticket-mute: #56607d; --ticket-rule: #c8d0e3;
+  --shadow: inset 0 1px 0 rgba(255, 255, 255, .035), 0 18px 40px -26px rgba(0, 0, 0, .95);
+  --lift: 0 26px 50px -28px rgba(0, 0, 0, .9);
+  --flood: rgba(124, 147, 255, .2); --flood-2: rgba(61, 220, 151, .08); --stripe: rgba(255, 255, 255, .022);
   --f-display: "Archivo", "Arial Black", system-ui, sans-serif;
   --f-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --r: 14px; --r-sm: 9px; --gut: 16px;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #0a100e; --card: #111916; --sunk: #0d1411; --ink: #e8efeb; --ink-2: #9fb0a7; --ink-3: #6f7f77;
-    --rule: #22302a; --rule-2: #1a2520;
-    --cobalt: #8297ff; --cobalt-ink: #0a100e; --cobalt-soft: rgba(130, 151, 255, .12); --cobalt-line: rgba(130, 151, 255, .4);
-    --pitch: #3ccf8e; --pitch-soft: rgba(60, 207, 142, .12); --red: #ff7a63; --red-soft: rgba(255, 122, 99, .12);
-    --yellow: #f2c84b; --yellow-soft: rgba(242, 200, 75, .13);
-    --h: #8297ff; --d: #4a5a52; --a: #ff9a5c;
-    --ticket: #eaf1ec; --ticket-2: #dde6e0; --ticket-ink: #0d1813; --ticket-mute: #52645b; --ticket-rule: #c5d1ca;
-    --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 14px 34px -20px rgba(0, 0, 0, .9);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --paper: #0a100e; --card: #111916; --sunk: #0d1411; --ink: #e8efeb; --ink-2: #9fb0a7; --ink-3: #6f7f77;
-  --rule: #22302a; --rule-2: #1a2520;
-  --cobalt: #8297ff; --cobalt-ink: #0a100e; --cobalt-soft: rgba(130, 151, 255, .12); --cobalt-line: rgba(130, 151, 255, .4);
-  --pitch: #3ccf8e; --pitch-soft: rgba(60, 207, 142, .12); --red: #ff7a63; --red-soft: rgba(255, 122, 99, .12);
-  --yellow: #f2c84b; --yellow-soft: rgba(242, 200, 75, .13);
-  --h: #8297ff; --d: #4a5a52; --a: #ff9a5c;
-  --ticket: #eaf1ec; --ticket-2: #dde6e0; --ticket-ink: #0d1813; --ticket-mute: #52645b; --ticket-rule: #c5d1ca;
-  --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 14px 34px -20px rgba(0, 0, 0, .9);
+  --r: 16px; --r-sm: 10px; --gut: 16px; --top: 60px;
+  --spring: cubic-bezier(.32, .72, 0, 1); --pop: cubic-bezier(.34, 1.56, .64, 1);
   color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --paper: #eef1f7; --card: #ffffff; --card-2: #f7f9fd; --sunk: #e6eaf3; --ink: #0a1230; --ink-2: #4a5577; --ink-3: #7a84a3;
+  --rule: #d8deea; --rule-2: #e7ebf3;
+  --cobalt: #2a46e8; --cobalt-ink: #ffffff; --cobalt-soft: rgba(42, 70, 232, .09); --cobalt-line: rgba(42, 70, 232, .35);
+  --pitch: #0c8a55; --pitch-soft: rgba(12, 138, 85, .11); --red: #d8432f; --red-soft: rgba(216, 67, 47, .1);
+  --yellow: #b98900; --yellow-soft: rgba(229, 168, 0, .14);
+  --h: #2a46e8; --d: #b9c1d3; --a: #e8743b;
+  --ticket: #0a1230; --ticket-2: #17204a; --ticket-ink: #eef2ff; --ticket-mute: #8e98bb; --ticket-rule: #27315c;
+  --shadow: 0 1px 0 rgba(10, 18, 48, .04), 0 10px 30px -18px rgba(10, 18, 48, .3);
+  --lift: 0 24px 44px -26px rgba(10, 18, 48, .45);
+  --flood: rgba(42, 70, 232, .1); --flood-2: rgba(12, 138, 85, .06); --stripe: rgba(10, 18, 48, .025);
+  color-scheme: light;
 }
 @media (min-width: 760px) { :root { --gut: 28px; } }
 * { box-sizing: border-box; }
@@ -181,7 +174,7 @@ h1 em { font-style: normal; color: var(--cobalt); }
 .tape-tag { font: 600 10px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px; background: rgba(255,255,255,.1); }
 .up { color: var(--pitch); } .down { color: var(--red); }
 .tape .up { color: #46d896; } .tape .down { color: #ff8a73; }
-:root[data-theme="dark"] .tape .up, :root[data-theme="dark"] .tape .down { filter: saturate(1.1) brightness(.75); }
+:root:not([data-theme="light"]) .tape .up, :root:not([data-theme="light"]) .tape .down { filter: saturate(1.1) brightness(.75); }
 @keyframes tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .tape { overflow-x: auto; } .tape-in { animation: none; } .live.on .dot::after { animation: none; opacity: 0; } }
 
@@ -308,8 +301,7 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .sbar { display: flex; height: 24px; border-radius: 7px; overflow: hidden; gap: 2px; }
 .sbar i { display: flex; align-items: center; justify-content: center; font: 600 10.5px/1 var(--f-mono); font-stretch: 87.5%; font-style: normal; color: #fff; min-width: 0; overflow: hidden; white-space: nowrap; }
 .sbar .h { background: var(--h); } .sbar .d { background: var(--d); color: var(--ink); } .sbar .a { background: var(--a); }
-:root[data-theme="dark"] .sbar .h, :root[data-theme="dark"] .sbar .a { color: #0a100e; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sbar .h, :root:not([data-theme="light"]) .sbar .a { color: #0a100e; } }
+:root:not([data-theme="light"]) .sbar .h, :root:not([data-theme="light"]) .sbar .a { color: #070b19; }
 .legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--ink-3); margin-top: 10px; flex-wrap: wrap; }
 .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
@@ -905,6 +897,268 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .tip { position: fixed; z-index: 80; pointer-events: none; background: var(--ink); color: var(--paper); font-size: 12px; line-height: 1.35; padding: 7px 10px; border-radius: 8px; max-width: 240px; opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .12s; }
 .tip.show { opacity: 1; transform: none; }
 [hidden] { display: none !important; }
+
+/* ================= v2: floodlit match board ================= */
+body { background: var(--paper); }
+.fx, .ob, .btn, .day, .spot, .lgc button, .bnav button, .add, .vrow, .bigg-c, .tab, .icon-btn, .seg button, .t-legs li, .slip li { -webkit-tap-highlight-color: transparent; }
+
+/* crests, flags, monograms */
+.cr { --s: 22px; position: relative; flex: none; width: var(--s); height: var(--s); display: inline-block; vertical-align: middle; }
+.cr > b { position: absolute; inset: 0; display: grid; place-items: center; padding-bottom: 6%; font: 800 calc(var(--s) * .36)/1 var(--f-display); font-stretch: 100%; letter-spacing: -.02em; color: #fff;
+  background: linear-gradient(165deg, hsl(var(--hu) 64% 54%), hsl(calc(var(--hu) + 32) 60% 30%));
+  clip-path: polygon(50% 0, 100% 13%, 97% 58%, 50% 100%, 3% 58%, 0 13%); transition: opacity .25s; }
+.cr > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .3s; }
+.cr.ok > img { opacity: 1; } .cr.ok > b { opacity: 0; }
+.cr.fl > b { clip-path: none; border-radius: 50%; padding: 0; }
+.cr.fl > img { border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ink) 16%, transparent); }
+.cr.fl > img, .cr.fl > b { inset: 7%; width: 86%; height: 86%; }
+.cr-xs { --s: 16px; } .cr-sm { --s: 22px; } .cr-md { --s: 30px; } .cr-lg { --s: 52px; } .cr-xl { --s: 68px; }
+.cr-lg > img, .cr-xl > img { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .35)); }
+:root:not([data-theme="light"]) .cr:not(.fl) > img { filter: drop-shadow(0 0 .6px rgba(255, 255, 255, .55)); }
+:root:not([data-theme="light"]) .cr-lg:not(.fl) > img, :root:not([data-theme="light"]) .cr-xl:not(.fl) > img { filter: drop-shadow(0 0 1px rgba(255, 255, 255, .5)) drop-shadow(0 8px 14px rgba(0, 0, 0, .55)); }
+.crp { display: inline-flex; align-items: center; margin-right: 6px; vertical-align: -3px; }
+.crp .cr + .cr { margin-left: -4px; }
+.lgi { --s: 20px; position: relative; flex: none; width: var(--s); height: var(--s); border-radius: 6px; background: #fff; box-shadow: 0 0 0 1px rgba(10, 18, 48, .1); display: inline-grid; place-items: center; overflow: hidden; vertical-align: middle; }
+.lgi > b { position: absolute; inset: 0; display: grid; place-items: center; font: 800 calc(var(--s) * .34)/1 var(--f-display); color: #27315c; transition: opacity .2s; }
+.lgi > img { position: absolute; inset: 9%; width: 82%; height: 82%; object-fit: contain; opacity: 0; transition: opacity .3s; }
+.lgi.ok > img { opacity: 1; } .lgi.ok > b { opacity: 0; }
+.lgi.fl { border-radius: 50%; } .lgi.fl > img { inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lgi-xs { --s: 16px; border-radius: 5px; } .lgi-md { --s: 26px; border-radius: 8px; } .lgi-lg { --s: 34px; border-radius: 10px; }
+
+/* header & navigation */
+.top { background: color-mix(in srgb, var(--paper) 80%, transparent); border-bottom-color: color-mix(in srgb, var(--ink) 7%, transparent); }
+.brand-mark { background: linear-gradient(150deg, #22306a, #0a1230); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16), 0 6px 16px -6px rgba(124, 147, 255, .6); }
+.icon-btn { background: color-mix(in srgb, var(--card) 80%, transparent); border-color: var(--rule); transition: transform .15s var(--pop), background .2s; }
+.live { background: color-mix(in srgb, var(--card) 80%, transparent); }
+.tab { transition: color .2s, background .25s; }
+.tab[aria-current="page"] { background: var(--cobalt-soft); box-shadow: inset 0 0 0 1px var(--cobalt-line); color: var(--ink); }
+.bnav { --i: 0; background: color-mix(in srgb, var(--paper) 84%, transparent); border-top-color: color-mix(in srgb, var(--ink) 8%, transparent); backdrop-filter: saturate(1.5) blur(18px); -webkit-backdrop-filter: saturate(1.5) blur(18px); }
+.bnav::before { content: ''; position: absolute; top: 7px; width: 54px; height: 30px; border-radius: 99px; background: var(--cobalt-soft); box-shadow: inset 0 0 0 1px var(--cobalt-line);
+  left: calc(4px + (100% - 8px) / 7 * var(--i) + ((100% - 8px) / 7 - 54px) / 2); transition: left .5s var(--pop); pointer-events: none; }
+.bnav.no-ind::before { opacity: 0; }
+.bnav button { padding-top: 10px; transition: color .2s; }
+.bnav svg { transition: transform .35s var(--pop); }
+.bnav button[aria-current="page"] svg { transform: translateY(-1px) scale(1.08); }
+.bnav .count { top: 2px; }
+.count.bump, .bnav .count.bump { animation: bump .45s var(--pop); }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.5); } 100% { transform: scale(1); } }
+
+/* hero: floodlit pitch with the day's headline games */
+.hero { border-bottom: 0; isolation: isolate;
+  background: radial-gradient(80% 60% at 15% -12%, var(--flood), transparent 62%), radial-gradient(60% 50% at 95% -8%, var(--flood-2), transparent 62%); }
+.hero::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: repeating-linear-gradient(98deg, var(--stripe) 0 36px, transparent 36px 72px);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 70%); mask-image: linear-gradient(180deg, #000, transparent 70%); }
+.hero .wrap { padding-top: 18px; padding-bottom: 22px; gap: 18px; }
+.mday { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.mday-d { font: 800 22px/1.05 var(--f-display); font-stretch: 112%; letter-spacing: -.025em; }
+.mday-s { display: flex; gap: 6px; }
+.mday-s span { display: inline-flex; align-items: center; gap: 6px; font: 600 11.5px/1 var(--f-mono); font-stretch: 87.5%; color: var(--ink-2); padding: 6px 9px; border-radius: 99px; background: color-mix(in srgb, var(--card) 70%, transparent); border: 1px solid var(--rule); }
+.mday-s .lv { color: var(--red); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+.mday-s .lv i { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.hero h1 { display: none; }
+@media (min-width: 760px) { .hero h1 { display: block; margin: 2px 0 6px; } .mday-d { font-size: 15px; color: var(--ink-2); font-stretch: 100%; } .hero .wrap { padding-top: 30px; padding-bottom: 34px; } }
+.holo { display: none; }
+@media (min-width: 760px) { .holo { display: block; } }
+.kpis { grid-template-columns: repeat(4, 1fr); border-radius: 16px; background: var(--rule); margin-top: 0; }
+.kpi { background: color-mix(in srgb, var(--card) 92%, transparent); padding: 10px 11px; }
+.kpi-v { font-size: 20px; }
+.kpi-l { font-size: 11px; margin-top: 4px; }
+@media (min-width: 560px) { .kpi { padding: 13px 14px; } .kpi-v { font-size: 24px; } .kpi-l { font-size: 12px; } }
+
+.spot-wrap { margin: 0 calc(-1 * var(--gut)); min-width: 0; }
+.spot-rail { display: grid; grid-auto-flow: column; grid-auto-columns: min(86%, 372px); gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
+  scroll-padding: 0 var(--gut); padding: 4px var(--gut) 12px; scrollbar-width: none; }
+.spot-rail::-webkit-scrollbar { display: none; }
+@media (min-width: 980px) { .spot-wrap { margin: 0; } .spot-rail { padding-left: 0; padding-right: 0; scroll-padding: 0; grid-auto-columns: calc(50% - 6px); } }
+.spot { --th: #7c93ff; --ta: #ff9a5c; scroll-snap-align: start; position: relative; isolation: isolate; overflow: hidden; border-radius: 22px; padding: 14px 14px 13px; cursor: pointer; min-width: 0;
+  background: radial-gradient(95% 75% at -5% -10%, color-mix(in srgb, var(--th) 46%, transparent), transparent 64%),
+              radial-gradient(95% 75% at 105% -10%, color-mix(in srgb, var(--ta) 46%, transparent), transparent 64%),
+              linear-gradient(180deg, var(--card-2), var(--card));
+  border: 1px solid color-mix(in srgb, var(--ink) 11%, transparent);
+  box-shadow: var(--lift), inset 0 1px 0 rgba(255, 255, 255, .07); transition: transform .2s var(--pop), --th .6s, --ta .6s; }
+.spot::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: repeating-linear-gradient(90deg, var(--stripe) 0 26px, transparent 26px 52px);
+  -webkit-mask-image: linear-gradient(180deg, transparent 20%, #000 100%); mask-image: linear-gradient(180deg, transparent 20%, #000 100%); }
+:root[data-theme="light"] .spot { background: radial-gradient(95% 75% at -5% -10%, color-mix(in srgb, var(--th) 26%, transparent), transparent 64%), radial-gradient(95% 75% at 105% -10%, color-mix(in srgb, var(--ta) 26%, transparent), transparent 64%), linear-gradient(180deg, #fff, var(--card-2)); }
+.spot-top { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--ink-2); min-width: 0; }
+.spot-top .lgn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.spot-top .t { margin-left: auto; flex: none; font: 600 11.5px/1 var(--f-mono); font-stretch: 87.5%; color: var(--ink); padding: 5px 8px; border-radius: 99px; background: color-mix(in srgb, var(--paper) 55%, transparent); }
+.spot-top .t.lv { background: var(--red); color: #fff; }
+.spot-duel { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 6px; margin-top: 14px; }
+.spot-tm { display: grid; justify-items: center; gap: 7px; text-align: center; min-width: 0; }
+.spot-tm b { font: 750 14.5px/1.15 var(--f-display); font-stretch: 100%; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.spot-tm small { font-size: 11px; color: var(--ink-3); margin-top: -3px; }
+.spot-mid { text-align: center; padding-top: 14px; min-width: 70px; }
+.spot-mid .x { font: 600 19px/1 var(--f-mono); font-stretch: 87.5%; letter-spacing: -.04em; }
+.spot-mid .sc { font: 850 32px/1 var(--f-display); font-stretch: 110%; letter-spacing: -.02em; }
+.spot-mid small { display: block; font-size: 10.5px; color: var(--ink-3); margin-top: 6px; }
+.spot-p { margin-top: 14px; }
+.spot-p .pbar { height: 7px; }
+.spot-pl { display: flex; justify-content: space-between; font: 600 11.5px/1 var(--f-mono); font-stretch: 87.5%; margin-top: 7px; }
+.spot-pl .h { color: var(--h); } .spot-pl .d { color: var(--ink-3); } .spot-pl .a { color: var(--a); }
+.spot-pick { margin-top: 11px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--ink) 9%, transparent); display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); min-width: 0; }
+.spot-pick > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.spot-pick b { color: var(--ink); }
+.spot-dots { display: flex; justify-content: center; gap: 6px; margin-top: -2px; }
+.spot-dots button { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 99px; background: var(--rule); transition: width .35s var(--spring), background .3s; }
+.spot-dots button[aria-current="true"] { width: 20px; background: var(--cobalt); }
+
+/* matches: quick actions, days, competition chips */
+#v-matches .sec-head .ctl { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+#v-matches .sec-head .ctl::-webkit-scrollbar { display: none; }
+@media (max-width: 759px) { #v-matches .sec-head { margin-bottom: 12px; } #v-matches .sec-head > div:first-child { flex: 1 1 100%; } #v-matches .sec-head .ctl { margin: 0 calc(-1 * var(--gut)); padding: 0 var(--gut); width: calc(100% + 2 * var(--gut)); } #v-matches .sec-head .ctl .btn { flex: none; } }
+.btn { transition: transform .15s var(--pop), background .2s, border-color .2s; }
+.btn.listen-b { background: color-mix(in srgb, var(--card) 90%, transparent); }
+.btn.listen-b svg { color: var(--cobalt); }
+.days { gap: 8px; padding-top: 3px; padding-bottom: 3px; }
+.day { border-radius: 14px; padding: 8px 13px; transition: transform .15s var(--pop), background .25s, color .25s, border-color .25s; }
+.day[aria-pressed="true"] { background: var(--cobalt); border-color: var(--cobalt); color: var(--cobalt-ink); box-shadow: 0 8px 20px -10px var(--cobalt); }
+.day[aria-pressed="true"] .d2 { color: color-mix(in srgb, var(--cobalt-ink) 72%, transparent); }
+.lgc { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 10px calc(-1 * var(--gut)) 0; padding: 2px var(--gut); }
+.lgc::-webkit-scrollbar { display: none; }
+.lgc:empty { display: none; }
+.lgc button { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px 0 8px; border-radius: 99px; border: 1px solid var(--rule); background: var(--card); font-size: 13px; font-weight: 650; color: var(--ink-2); white-space: nowrap; transition: transform .15s var(--pop), background .25s, color .25s; }
+.lgc button.all { padding-left: 13px; }
+.lgc button .n { font: 600 10.5px/1 var(--f-mono); color: var(--ink-3); }
+.lgc button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.lgc button[aria-pressed="true"] .n { color: inherit; opacity: .6; }
+.lgc button.live-c { color: var(--red); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+.lgc button.live-c i { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: blink 1.6s infinite; }
+.lgc button.live-c[aria-pressed="true"] { background: var(--red); color: #fff; border-color: var(--red); }
+.lgc button.live-c[aria-pressed="true"] i { background: #fff; }
+.field { border-radius: 13px; background: color-mix(in srgb, var(--card) 92%, transparent); }
+
+/* competition groups and match cards */
+.comp { margin-top: 14px; }
+.comp-h { position: sticky; top: var(--top); z-index: 6; align-items: center; margin: 0 calc(-1 * var(--gut)); padding: 9px var(--gut) 8px; background: color-mix(in srgb, var(--paper) 94%, transparent); }
+.comp-h h3 { font-size: 14.5px; }
+.comp-h .lgi { margin-right: -1px; }
+.comp-list { border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 2.5%, var(--card)), var(--card) 120px); }
+.fx { padding: 13px 14px 12px; gap: 9px 12px; transition: background .2s; }
+.fx-teams { gap: 7px; }
+.tm { gap: 9px; }
+.tm .pos { width: 16px; }
+.tm .nm { font-size: 15px; }
+.tm .sc { margin-left: auto; padding-left: 8px; font: 850 17px/1 var(--f-display); font-stretch: 110%; color: var(--ink); flex: none; }
+.tm .sc.up { color: var(--red); animation: goal 1.4s ease-out; }
+@keyframes goal { 0%, 30% { transform: scale(1.5); } 100% { transform: none; } }
+.fx.is-live { background: linear-gradient(90deg, var(--red-soft), transparent 45%); }
+.fx.is-live::before { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--red); }
+.badge.b-live { position: relative; padding-left: 15px; }
+.badge.b-live::before { content: ''; position: absolute; left: 6px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: currentColor; animation: blink 1.6s infinite; }
+.fx-odds { grid-template-columns: repeat(3, 56px); gap: 6px; }
+.ob { background: var(--sunk); border-color: color-mix(in srgb, var(--ink) 6%, transparent); border-radius: 12px; padding: 6px 4px 6px; transition: transform .15s var(--pop), background .2s, border-color .2s, box-shadow .2s; }
+.ob .v { font-size: 14.5px; font-weight: 700; }
+.ob[aria-pressed="true"] { background: linear-gradient(180deg, color-mix(in srgb, var(--cobalt) 80%, #fff), var(--cobalt)); border-color: transparent; box-shadow: 0 8px 18px -8px var(--cobalt); }
+.pbar { height: 5px; gap: 3px; background: transparent; }
+.pbar i { border-radius: 99px; }
+.pick .tier { border-radius: 99px; padding: 3px 7px; }
+.cr + .nm { margin-left: -1px; }
+/* phones: odds sit under the teams, so names, form and expected goals get the full width */
+@media (max-width: 519px) {
+  .fx { grid-template-columns: minmax(0, 1fr); contain-intrinsic-size: auto 136px; }
+  .fx-odds { grid-row: 3; grid-column: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .fx-bar { grid-row: 4; }
+  .ob { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px; padding: 8px 9px; text-align: left; }
+  .ob .k { font-size: 10.5px; }
+  .ob .v { margin: 0; text-align: center; font-size: 15px; }
+  .ob .p { margin: 0; text-align: right; font-size: 10px; }
+  .fx .form { display: inline-flex; margin-left: auto; }
+  .fx .xg { display: inline; margin-left: 10px; min-width: 30px; text-align: right; }
+  .fx.is-live .xg { display: none; }
+}
+@media (max-width: 359px) { .fx .form { display: none; } .fx .xg { margin-left: auto; } }
+:root:not(.calm) .ob:active, :root:not(.calm) .day:active, :root:not(.calm) .lgc button:active, :root:not(.calm) .btn:active, :root:not(.calm) .icon-btn:active, :root:not(.calm) .add:active, :root:not(.calm) .seg button:active { transform: scale(.93); }
+:root:not(.calm) .spot:active { transform: scale(.975); }
+.fx:active { background: color-mix(in srgb, var(--cobalt) 7%, transparent); }
+.more-btn { border-radius: 99px; padding: 11px 20px; }
+
+/* most at stake, value, slips, coupon: crest pairs and lifted cards */
+.bigg-c { border-radius: 18px; background: linear-gradient(180deg, var(--card-2), var(--card)); }
+.bigg-c b { display: flex; align-items: center; gap: 2px; }
+.vrow { border-radius: 18px; transition: transform .15s var(--pop); }
+.vrow .fxl .crp { vertical-align: -4px; }
+.slip { border-radius: 20px; }
+.slip li .fxl .crp { vertical-align: -4px; }
+.t-legs .tfx .crp { vertical-align: -4px; }
+.cp-item .fxl .crp { vertical-align: -4px; }
+
+/* sheet: springs open, drags closed */
+.scrim { background: rgba(3, 6, 16, .62); transition: opacity .35s; }
+:root[data-theme="light"] .scrim { background: rgba(10, 18, 48, .38); }
+.sheet { border-radius: 26px 26px 0 0; transition: transform .5s var(--spring); border-top: 1px solid color-mix(in srgb, var(--ink) 9%, transparent); box-shadow: 0 -30px 70px -20px rgba(0, 0, 0, .6); will-change: transform; }
+.sheet.drag { transition: none; }
+.grab { width: 44px; height: 5px; margin-top: 9px; background: color-mix(in srgb, var(--ink) 22%, transparent); }
+.grab, .sheet-bar { touch-action: none; }
+@media (min-width: 980px) { .sheet { border-radius: 0; border-top: 0; } .grab { display: none; } }
+.vs { position: relative; isolation: isolate; overflow: hidden; align-items: start; padding: 18px 12px 16px; border-radius: 22px; border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  --th: #7c93ff; --ta: #ff9a5c;
+  background: radial-gradient(90% 85% at -5% -5%, color-mix(in srgb, var(--th) 44%, transparent), transparent 62%),
+              radial-gradient(90% 85% at 105% -5%, color-mix(in srgb, var(--ta) 44%, transparent), transparent 62%),
+              linear-gradient(180deg, var(--card-2), var(--card));
+  box-shadow: var(--lift); }
+:root[data-theme="light"] .vs { background: radial-gradient(90% 85% at -5% -5%, color-mix(in srgb, var(--th) 24%, transparent), transparent 62%), radial-gradient(90% 85% at 105% -5%, color-mix(in srgb, var(--ta) 24%, transparent), transparent 62%), linear-gradient(180deg, #fff, var(--card-2)); }
+.vs::before { content: ''; position: absolute; inset: 0; z-index: -1; background: repeating-linear-gradient(90deg, var(--stripe) 0 30px, transparent 30px 60px); pointer-events: none; }
+.vs .side, .vs .side.r { display: grid; justify-items: center; text-align: center; gap: 8px; }
+.vs .team { font-size: clamp(15px, 4.3vw, 21px); font-stretch: 96%; overflow-wrap: normal; word-break: normal; hyphens: auto; max-width: 100%; }
+.vs { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; }
+.vs .meta, .vs .side.r .meta { justify-content: center; flex-wrap: wrap; margin-top: 0; }
+.vs .mid { padding-top: 22px; }
+.vs .mid .sc { font: 850 40px/1 var(--f-display); font-stretch: 110%; letter-spacing: -.02em; }
+.vs .mid .lvm { display: inline-block; margin-top: 6px; font: 700 11px/1 var(--f-mono); color: #fff; background: var(--red); border-radius: 99px; padding: 4px 8px; }
+.card { border-radius: 18px; }
+
+/* display settings */
+.tm-top { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.ask-duel { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--rule); min-width: 0; }
+.ask-duel b { font: 750 14px/1.2 var(--f-display); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ask-duel span { color: var(--ink-3); font-size: 12px; }
+.disp { display: grid; gap: 4px; }
+.disp-row { display: grid; gap: 10px; padding: 16px 0; border-top: 1px solid var(--rule); }
+.disp-row:first-child { border-top: 0; padding-top: 4px; }
+.disp-row h5 { margin: 0; font: 700 15px/1.2 var(--f-display); }
+.disp-row p { margin: 0; font-size: 13px; color: var(--ink-2); }
+.disp-row .seg { justify-self: start; }
+.disp-prev { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--rule); }
+
+/* loading skeleton */
+.skel { display: grid; gap: 10px; margin-top: 14px; }
+.skel-t { font-size: 13px; color: var(--ink-2); display: flex; align-items: center; gap: 10px; }
+.skel-t .bar { flex: 1; height: 4px; border-radius: 99px; background: var(--rule); overflow: hidden; }
+.skel-t .bar i { display: block; height: 100%; background: var(--cobalt); border-radius: inherit; transition: width .3s; }
+.sk { height: 108px; border-radius: 18px; border: 1px solid var(--rule); background: linear-gradient(100deg, var(--card) 30%, color-mix(in srgb, var(--ink) 6%, var(--card)) 50%, var(--card) 70%) 0 0 / 220% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { from { background-position: 110% 0; } to { background-position: -110% 0; } }
+
+/* tap-to-add: the price flies to the Bets tab */
+.fly { position: fixed; z-index: 95; left: 0; top: 0; height: 26px; min-width: 40px; padding: 0 9px; border-radius: 99px; background: var(--cobalt); color: var(--cobalt-ink); font: 700 12px/26px var(--f-mono); text-align: center; pointer-events: none; box-shadow: 0 10px 24px -8px var(--cobalt); will-change: transform, opacity; }
+
+/* the first load: bars sweep in, headline cards rise once */
+.intro .pbar, .intro .sbar { animation: sweep .9s var(--spring) both; }
+.intro .spot { animation: rise .6s var(--spring) both; }
+.intro .spot:nth-child(2) { animation-delay: .07s; } .intro .spot:nth-child(3) { animation-delay: .14s; }
+@keyframes sweep { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+/* switching sections */
+@supports (view-transition-name: none) {
+  main { view-transition-name: main; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+  ::view-transition-old(main) { animation: vt-out .16s ease-in both; }
+  ::view-transition-new(main) { animation: vt-in .34s var(--spring) both; }
+  :root[data-dir="back"]::view-transition-old(main) { animation-name: vt-out-b; }
+  :root[data-dir="back"]::view-transition-new(main) { animation-name: vt-in-b; }
+}
+@keyframes vt-out { to { opacity: 0; transform: translateX(-22px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateX(26px); } }
+@keyframes vt-out-b { to { opacity: 0; transform: translateX(22px); } }
+@keyframes vt-in-b { from { opacity: 0; transform: translateX(-26px); } }
+.section.enter { animation: sec-in .3s var(--spring) both; }
+@keyframes sec-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* reduced motion: still, instant */
+.calm *, .calm *::before, .calm *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+.calm .tape-in { animation: none !important; }
 </style>
 </head>
 <body>
@@ -917,6 +1171,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   <symbol id="i-table" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M9 4v16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M18 7h2M4 17h3M12 17h8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"/><circle cx="15.5" cy="7" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9.5" cy="17" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
   <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M8 7.5L12 4l4 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10.5H6.5A1.5 1.5 0 005 12v7a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0019 19v-7a1.5 1.5 0 00-1.5-1.5H16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
   <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4.5 8.5A1.5 1.5 0 016 7h2.2l1.3-2h5l1.3 2H18a1.5 1.5 0 011.5 1.5v9A1.5 1.5 0 0118 19H6a1.5 1.5 0 01-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.8" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
@@ -942,7 +1197,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
       <span class="live" id="live" role="status"><span class="dot"></span><span id="liveText">Loading</span></span>
       <button class="icon-btn" id="installBtn" type="button" aria-label="Install the Statpad app" title="Install app" hidden><svg><use href="#i-install"/></svg></button>
       <button class="icon-btn" id="askBtn" type="button" data-ask="listen" aria-label="Ask Statpad" title="Ask Statpad"><svg><use href="#i-mic"/></svg></button>
-      <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch colour theme"><svg><use href="#i-moon"/></svg></button>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Display settings" title="Display"><svg><use href="#i-sliders"/></svg></button>
     </div>
   </div>
 </header>
@@ -951,7 +1206,9 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   <section class="hero" id="hero" hidden>
     <div class="wrap">
       <div class="hero-main">
+        <div class="mday"><div class="mday-d" id="mdayD"></div><div class="mday-s" id="mdayS"></div></div>
         <h1>Every fixture, <em>priced by the numbers.</em></h1>
+        <div class="spot-wrap"><div class="spot-rail" id="spotRail" aria-label="Headline games"></div><div class="spot-dots" id="spotDots" role="group" aria-label="Headline games"></div></div>
         <div class="holo" aria-hidden="true"><canvas id="holo"></canvas></div>
         <div class="kpis" id="kpis"></div>
       </div>
@@ -967,13 +1224,14 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
         <div class="ctl"><button type="button" class="btn listen-b" data-ask="listen"><svg aria-hidden="true"><use href="#i-mic"/></svg>Ask Statpad</button><button type="button" class="btn listen-b" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen to the briefing</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button><button type="button" class="btn listen-b" data-shockmap="1"><svg aria-hidden="true"><use href="#i-radar"/></svg>Shock map</button></div>
       </div>
       <div class="days" id="days-matches" role="group" aria-label="Day"></div>
+      <div class="lgc" id="lgChips" role="group" aria-label="Competitions"></div>
       <div class="filters">
         <label class="field grow"><svg><use href="#i-search"/></svg><span class="sr">Search teams</span><input id="q" type="search" placeholder="Search a team" autocomplete="off"></label>
         <label class="field"><svg><use href="#i-filter"/></svg><span class="sr">Competition</span><select id="league"></select></label>
         <label class="field"><span class="sr">Sort</span><select id="sort">
           <option value="ko">Kick-off</option><option value="conf">Most confident</option><option value="edge">Best value</option><option value="stakes">Most at stake</option><option value="comp">Competition</option></select></label>
       </div>
-      <div id="matchList"></div>
+      <div id="matchList"><div class="skel" aria-label="Loading matches"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div></div>
     </section>
 
     <section id="v-value" class="section" data-view="value" hidden>
@@ -1037,7 +1295,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   </div>
 </main>
 
-<footer><div class="wrap"><span>Statpad · probabilities, not promises. 18+ only. Never stake more than you can afford to lose.</span><span id="footData"></span></div></footer>
+<footer><div class="wrap"><span>Statpad · probabilities, not promises. 18+ only. Never stake more than you can afford to lose. Crests from API-Football, flags from flagcdn.com.</span><span id="footData"></span></div></footer>
 
 <nav class="bnav" id="bnav" aria-label="Sections"></nav>
 <div class="scrim" id="scrim"></div>
@@ -1350,7 +1608,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     target: store.get('target', 10), scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), vseg: store.get('vseg', 'value'), minEdge: store.get('minEdge', 0.02),
     coupon: store.get('coupon', []), bank: store.get('bank', 100), stakeMode: store.get('stakeMode', 'qk'), tleague: store.get('tleague', null),
     open: null, shown: 60, lastFetch: null, lastOk: null, live: false, legacy: false, err: null,
-    ready: false, token: 0, ver: 0, slipCache: new Map(), bad: 0, progress: null,
+    ready: false, token: 0, ver: 0, slipCache: new Map(), bad: 0, progress: null, scMem: new Map(),
   };
   if (!TABS.some((t) => t[0] === S.tab)) S.tab = 'matches';
 
@@ -1391,11 +1649,120 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (S.ready) { renderLive(); return; }
     const pc = Math.round((S.progress || 0) * 100);
     $('#liveText').textContent = 'Analysing ' + pc + '%';
-    $('#matchList').innerHTML = `<div class="empty-state"><b>Crunching the numbers… ${pc}%</b>Running the model over ${S.data.matches.length} matches. This takes a few seconds the first time.</div>`;
+    $('#matchList').innerHTML = `<div class="skel"><div class="skel-t"><span>Crunching the numbers… ${pc}%</span><span class="bar"><i style="width:${pc}%"></i></span></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>`;
   }
   const lgInfo = (lk) => (S.data && S.data.leagues && S.data.leagues[lk]) || { name: lk, group: 'more', country: '' };
   const lgName = (lk) => lgInfo(lk).name;
   const realMkt = (m) => !!(m.mkt && m.mkt.best && m.mkt.src !== 'none');
+  // ---------------- crests, flags & display settings ----------------
+  // Club crests come from the pipeline (crests/ on the site, learnt from API-Football's fixture lists);
+  // a negative id means the crest isn't on the site yet, so it loads from API-Football's image server.
+  // National teams and competitions' countries show their flag (flagcdn.com). Anything unknown gets a
+  // monogram shield in a colour of its own, which is also what shows while a crest is loading.
+  const UI = { theme: store.get('theme', null) || 'dark', crests: store.get('crests', true), haptics: store.get('haptics', true), motion: store.get('motion', 'auto') };
+  const RM = matchMedia('(prefers-reduced-motion: reduce)');
+  const motionOK = () => UI.motion === 'full' || (UI.motion === 'auto' && !RM.matches);
+  function applyUI() {
+    const de = document.documentElement;
+    const dark = UI.theme === 'auto' ? !matchMedia('(prefers-color-scheme: light)').matches : UI.theme !== 'light';
+    de.dataset.theme = dark ? 'dark' : 'light';
+    de.classList.toggle('calm', !motionOK());
+    de.classList.toggle('no-crests', !UI.crests);
+    for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.setAttribute('content', dark ? '#070b19' : '#eef1f6');
+  }
+  const buzz = (ms) => { if (UI.haptics && navigator.vibrate) { try { navigator.vibrate(ms || 8); } catch (e) { /* not allowed */ } } };
+  const CR_API = 'https://media.api-sports.io/football/';
+  const ISO = (() => {
+    const o = {}, src = 'afghanistan af|albania al|algeria dz|andorra ad|angola ao|anguilla ai|antigua barbuda ag|argentina ar|armenia am|aruba aw|australia au|austria at|azerbaijan az|bahamas bs|bahrain bh|bangladesh bd|barbados bb|belarus by|belgium be|belize bz|benin bj|bermuda bm|bhutan bt|bolivia bo|bonaire bq|bosnia herzegovina ba|botswana bw|brazil br|british virgin islands vg|brunei bn|brunei darussalam bn|bulgaria bg|burkina faso bf|burundi bi|cambodia kh|cameroon cm|canada ca|cape verde cv|cape verde islands cv|cabo verde cv|cayman islands ky|central african republic cf|chad td|chile cl|china cn|china pr cn|chinese taipei tw|taiwan tw|colombia co|comoros km|congo cg|congo dr cd|dr congo cd|democratic republic congo cd|cook islands ck|costa rica cr|croatia hr|cuba cu|curacao cw|cyprus cy|czech republic cz|czechia cz|denmark dk|djibouti dj|dominica dm|dominican republic do|ecuador ec|egypt eg|el salvador sv|england gb-eng|equatorial guinea gq|eritrea er|estonia ee|eswatini sz|swaziland sz|ethiopia et|europe eu|faroe islands fo|fiji fj|finland fi|france fr|french guiana gf|gabon ga|gambia gm|georgia ge|germany de|ghana gh|gibraltar gi|greece gr|grenada gd|guadeloupe gp|guam gu|guatemala gt|guinea gn|guinea bissau gw|guyana gy|haiti ht|honduras hn|hong kong hk|hungary hu|iceland is|india in|indonesia id|iran ir|ir iran ir|iraq iq|ireland ie|republic ireland ie|israel il|italy it|ivory coast ci|cote divoire ci|cote d ivoire ci|jamaica jm|japan jp|jordan jo|kazakhstan kz|kenya ke|kosovo xk|kuwait kw|kyrgyzstan kg|kyrgyz republic kg|laos la|latvia lv|lebanon lb|lesotho ls|liberia lr|libya ly|liechtenstein li|lithuania lt|luxembourg lu|macau mo|madagascar mg|malawi mw|malaysia my|maldives mv|mali ml|malta mt|martinique mq|mauritania mr|mauritius mu|mexico mx|moldova md|monaco mc|mongolia mn|montenegro me|montserrat ms|morocco ma|mozambique mz|myanmar mm|namibia na|nepal np|netherlands nl|holland nl|new caledonia nc|new zealand nz|nicaragua ni|niger ne|nigeria ng|north korea kp|korea dpr kp|north macedonia mk|macedonia mk|northern ireland gb-nir|norway no|oman om|pakistan pk|palestine ps|panama pa|papua new guinea pg|paraguay py|peru pe|philippines ph|poland pl|portugal pt|puerto rico pr|qatar qa|romania ro|russia ru|rwanda rw|saint kitts nevis kn|st kitts nevis kn|saint lucia lc|st lucia lc|saint vincent grenadines vc|st vincent grenadines vc|samoa ws|san marino sm|sao tome principe st|saudi arabia sa|scotland gb-sct|senegal sn|serbia rs|seychelles sc|sierra leone sl|singapore sg|sint maarten sx|slovakia sk|slovenia si|solomon islands sb|somalia so|south africa za|south korea kr|korea republic kr|republic korea kr|korea kr|south sudan ss|spain es|sri lanka lk|sudan sd|suriname sr|sweden se|switzerland ch|syria sy|tahiti pf|tajikistan tj|tanzania tz|thailand th|timor leste tl|east timor tl|togo tg|tonga to|trinidad tobago tt|tunisia tn|turkey tr|turkiye tr|turkmenistan tm|turks caicos islands tc|uganda ug|ukraine ua|united arab emirates ae|uae ae|united states us|united states america us|usa us|us virgin islands vi|uruguay uy|uzbekistan uz|vanuatu vu|venezuela ve|vietnam vn|wales gb-wls|yemen ye|zambia zm|zimbabwe zw';
+    for (const x of src.split('|')) { const i = x.lastIndexOf(' '); o[x.slice(0, i)] = x.slice(i + 1); }
+    return o;
+  })();
+  const isoKey = (s) => fold(s).replace(/&/g, ' ').replace(/[^a-z]+/g, ' ').replace(/\b(and|the|of)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  const isoOf = (s) => (s ? ISO[isoKey(s)] || null : null);
+  const flagUrl = (iso, w) => `https://flagcdn.com/w${w}/${iso}.png`;
+  const NOISE = /^(fc|cf|ac|afc|sc|sv|fk|nk|sk|bk|if|ik|cd|ud|rc|rcd|ss|as|us|ca|club|cd|vfb|vfl|tsg|bsc|spvgg|1|1st|real|sporting|athletic|atletico|deportivo|olympique|stade|racing)$/;
+  function initials(name) {
+    const w = fold(name).replace(/[^a-z0-9 ]+/g, ' ').split(' ').filter(Boolean);
+    const core = w.filter((x) => !NOISE.test(x));
+    const use = core.length ? core : w;
+    if (!use.length) return '?';
+    return (use.length === 1 ? use[0].slice(0, 2) : use[0][0] + use[1][0]).toUpperCase();
+  }
+  function hueOf(name) { let h = 7; for (const c of fold(name)) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0; return h % 360; }
+  const CR_BAD = new Set();          // picture addresses that failed this session
+  // team colours read from the crests themselves (cached between visits)
+  const TC = (() => { const t = store.get('tcol', {}); return t && typeof t === 'object' ? t : {}; })();
+  const teamCol = (name) => TC[name] || `hsl(${hueOf(name)} 62% 52%)`;
+  function crestSrcs(name, lk, big) {
+    if (!UI.crests) return [];
+    const g = lgInfo(lk).group;
+    const iso = g === 'intl' ? isoOf(name) : null;
+    if (iso) return [flagUrl(iso, big ? 160 : 80)];
+    const id = S.data && S.data.crests && S.data.crests[name];
+    if (!id) return [];
+    const remote = CR_API + 'teams/' + Math.abs(id) + '.png';
+    return id > 0 ? [`crests/${big ? 'b/' : ''}${id}.png`, remote] : [remote];
+  }
+  // size: xs 16 · sm 22 · md 30 · lg 52 · xl 68 (CSS px)
+  function crest(name, lk, size) {
+    size = size || 'sm';
+    const big = size === 'lg' || size === 'xl';
+    const srcs = crestSrcs(name, lk, big).filter((u) => !CR_BAD.has(u));
+    const flag = srcs[0] && srcs[0].includes('flagcdn');
+    const img = srcs.length ? `<img src="${esc(srcs[0])}"${srcs[1] ? ` data-alt="${esc(srcs[1])}"` : ''} alt="" crossorigin="anonymous" loading="lazy" decoding="async" data-tn="${esc(name)}">` : '';
+    return `<span class="cr cr-${size}${flag ? ' fl' : ''}" style="--hu:${hueOf(name)}" aria-hidden="true"><b>${esc(initials(name))}</b>${img}</span>`;
+  }
+  function lgIcon(lk, size) {
+    const info = lgInfo(lk), id = S.data && S.data.lgcrests && S.data.lgcrests[lk];
+    const iso = isoOf(info.country);
+    let src = '', alt = '';
+    if (UI.crests && id) { src = id > 0 ? `crests/l${id}.png` : CR_API + 'leagues/' + Math.abs(id) + '.png'; alt = id > 0 ? CR_API + 'leagues/' + id + '.png' : ''; }
+    else if (UI.crests && iso) src = flagUrl(iso, 80);
+    if (CR_BAD.has(src)) { src = alt; alt = ''; }
+    const ini = (info.name || lk).replace(/[^A-Za-z0-9 ]/g, '').split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 3).toUpperCase();
+    return `<span class="lgi lgi-${size || 'sm'}${src.includes('flagcdn') ? ' fl' : ''}" aria-hidden="true"><b>${esc(ini || '•')}</b>${src ? `<img src="${esc(src)}"${alt ? ` data-alt="${esc(alt)}"` : ''} alt="" crossorigin="anonymous" loading="lazy" decoding="async">` : ''}</span>`;
+  }
+  // a crest's main colour: the average of its most saturated, most common hue (white, black and grey ignored)
+  function tcLearn(img) {
+    const name = img.dataset.tn;
+    if (!name || TC[name] || img.closest('.fl')) return;
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = 20;
+      const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, 20, 20);
+      const d = x.getImageData(0, 0, 20, 20).data, bins = new Map();
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i + 1], b = d[i + 2]; if (d[i + 3] < 160) continue;
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b), dl = mx - mn, sat = mx ? dl / mx : 0;
+        if (mx < 40 || sat < 0.28) continue;
+        const h = !dl ? 0 : mx === r ? ((g - b) / dl + 6) % 6 : mx === g ? (b - r) / dl + 2 : (r - g) / dl + 4;
+        const k = Math.round(h * 2.5) % 15;
+        const e = bins.get(k) || { w: 0, c: 0, r: 0, g: 0, b: 0 };
+        e.w += sat; e.c++; e.r += r; e.g += g; e.b += b; bins.set(k, e);
+      }
+      let best = null; for (const e of bins.values()) if (!best || e.w > best.w) best = e;
+      if (!best || best.c < 6) return;
+      TC[name] = '#' + [best.r, best.g, best.b].map((v) => Math.round(v / best.c).toString(16).padStart(2, '0')).join('');
+      clearTimeout(tcLearn.t);
+      tcLearn.t = setTimeout(() => { const ks = Object.keys(TC); for (const k of ks.slice(0, Math.max(0, ks.length - 400))) delete TC[k]; store.set('tcol', TC); }, 1500);
+      for (const el of document.querySelectorAll('[data-tch],[data-tca]')) {
+        if (el.dataset.tch === name) el.style.setProperty('--th', TC[name]);
+        if (el.dataset.tca === name) el.style.setProperty('--ta', TC[name]);
+      }
+    } catch (e) { /* a picture whose pixels can't be read */ }
+  }
+  document.addEventListener('load', (e) => {
+    const t = e.target; if (!t || t.tagName !== 'IMG') return;
+    const p = t.parentNode; if (!p || !p.classList || !(p.classList.contains('cr') || p.classList.contains('lgi'))) return;
+    p.classList.add('ok');
+    if (p.classList.contains('cr')) tcLearn(t);
+  }, true);
+  document.addEventListener('error', (e) => {
+    const t = e.target; if (!t || t.tagName !== 'IMG') return;
+    const p = t.parentNode; if (!p || !p.classList || !(p.classList.contains('cr') || p.classList.contains('lgi'))) return;
+    CR_BAD.add(t.getAttribute('src'));
+    const alt = t.dataset.alt;
+    if (alt && !CR_BAD.has(alt)) { t.removeAttribute('data-alt'); t.src = alt; } else t.remove();
+  }, true);
   function days() {
     const out = [], base = new Date(S.now); base.setHours(12, 0, 0, 0);
     for (let i = 0; i < 7; i++) { const d = new Date(base.getTime() + i * 864e5); out.push({ key: dayKey(d), d, i }); }
@@ -1416,6 +1783,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const html = (cls) => TABS.map(([k, label, ic]) => `<button type="button" class="${cls}" data-tab="${k}" ${S.tab === k ? 'aria-current="page"' : ''}>${cls === 'b' ? `<svg><use href="#${ic}"/></svg>` : ''}${label}${k === 'coupon' && cc ? `<span class="count">${cc}</span>` : ''}</button>`).join('');
     $('#tabs').innerHTML = html('tab');
     $('#bnav').innerHTML = html('b');
+    $('#bnav').style.setProperty('--i', Math.max(0, TABS.findIndex((t) => t[0] === S.tab)));
+    if (S.navCC != null && cc > S.navCC) for (const c of document.querySelectorAll('#bnav .count, #tabs .count')) c.classList.add('bump');
+    S.navCC = cc;
     for (const v of document.querySelectorAll('[data-view]')) v.hidden = v.dataset.view !== S.tab;
     $('#hero').hidden = S.tab !== 'matches' || !S.data;
     $('#tape').hidden = S.tab !== 'matches' || !S.data || !$('#tapeIn').children.length;
@@ -1456,7 +1826,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const comps = new Set(up.map((r) => r.m.lk)).size;
     if (window.__holo) window.__holo.stats({ fixtures: up.length, comps });
     $('#kpis').innerHTML = [[up.length, 'fixtures'], [priced, 'live prices'], [vals, 'value spots'], [comps, 'competitions']]
-      .map(([v, l]) => `<div class="kpi"><div class="kpi-v mono">${v}</div><div class="kpi-l">${l}</div></div>`).join('');
+      .map(([v, l]) => `<div class="kpi"><div class="kpi-v mono" data-to="${v}">${S.kpiDone ? v : 0}</div><div class="kpi-l">${l}</div></div>`).join('');
+    if (!S.kpiDone) { S.kpiDone = true; countUp($('#kpis')); }
+    renderSpot();
     // ticket: the first day with enough open games; built after the list is on screen
     const box = $('#heroTicket');
     const dk = days().find((d) => S.rows.filter((r) => r.day === d.key && !r.started && r.a).length >= 4);
@@ -1484,7 +1856,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="t-head"><div><div class="t-kick">${esc(dayLabel(dk.key, true))} · ${esc(best.name)}</div><div class="t-title">Best ${best.target}-odds slip</div></div>
       <div class="t-odds"><div class="v">${odds(best.odds)}</div><div class="l">${pct(best.prob, 1)} to land</div></div></div>
       <div class="t-perf"></div>
-      <ul class="t-legs">${legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pAdj)}${l.s.real ? '' : ' · est'}</small></span><span class="tfx">${esc(l.m.h)} v ${esc(l.m.a)} · ${tFmt.format(Date.parse(l.m.ko))}</span></li>`).join('')}</ul>
+      <ul class="t-legs">${legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pAdj)}${l.s.real ? '' : ' · est'}</small></span><span class="tfx">${pair(l.m)}${esc(l.m.h)} v ${esc(l.m.a)} · ${tFmt.format(Date.parse(l.m.ko))}</span></li>`).join('')}</ul>
       ${best.legs.length > 5 ? `<div class="t-more" style="margin-top:8px">+ ${best.legs.length - 5} more legs</div>` : ''}
       <div class="t-foot"><span>${best.legs.length} legs · one per match</span><button type="button" class="t-share" data-shareslip="hero" aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg></button><button type="button" data-goslips="${esc(dk.key)}">See all slips</button></div></div>`;
     S.heroSlip = { s: best, dk: dk.key };
@@ -1535,7 +1907,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // ---------------- matches ----------------
   function leagueOptions(sel, val, withAll) {
     const present = new Set(S.rows.map((r) => r.m.lk));
-    let h = withAll ? `<option value="all">All competitions</option><option value="g:big">Big leagues</option><option value="g:cups">Europe &amp; cups</option><option value="g:intl">Internationals</option>` : '';
+    let h = withAll ? `<option value="all">All competitions</option><option value="g:big">Big leagues</option><option value="g:cups">Europe &amp; cups</option><option value="g:intl">Internationals</option><option value="live">Live now</option>` : '';
     for (const [g, gl] of GROUPS) {
       const ks = [...present].filter((k) => lgInfo(k).group === g).sort((a, b) => lgName(a).localeCompare(lgName(b)));
       if (ks.length) h += `<optgroup label="${esc(gl)}">${ks.map((k) => `<option value="${esc(k)}">${esc(lgName(k))}</option>`).join('')}</optgroup>`;
@@ -1545,8 +1917,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function filtered() {
     const q = fold(S.q.trim());
     return S.rows.filter((r) => {
-      if (S.day !== 'all' && r.day !== S.day) return false;
-      if (S.league !== 'all') { if (S.league.startsWith('g:')) { if (lgInfo(r.m.lk).group !== S.league.slice(2)) return false; } else if (r.m.lk !== S.league) return false; }
+      if (S.league === 'live') { if (!isLive(r)) return false; } else if (S.day !== 'all' && r.day !== S.day) return false;
+      if (S.league !== 'all' && S.league !== 'live') { if (S.league.startsWith('g:')) { if (lgInfo(r.m.lk).group !== S.league.slice(2)) return false; } else if (r.m.lk !== S.league) return false; }
       if (q && !fold(r.m.h + ' ' + r.m.a + ' ' + lgName(r.m.lk)).includes(q)) return false;
       return true;
     });
@@ -1584,12 +1956,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const val = s.real && s.edge >= 0.02;
       return `<button type="button" class="ob${s.real ? '' : ' est'}${val ? ' val' : ''}" data-add="${esc(m.id)}|${k}" aria-pressed="${inCoupon(m.id, k)}" aria-label="${esc(s.label)} at ${odds(s.price)}"><span class="k">${lab}</span><span class="v">${odds(s.price)}</span><span class="p">${val ? sgn(s.edge, 0) : pct(s.p)}</span></button>`;
     };
+    const sc = LN ? [LN.h, LN.a] : null, was = S.scMem.get(m.id); if (sc) S.scMem.set(m.id, sc);
+    const scs = (i) => (sc ? `<span class="sc${was && sc[i] > was[i] ? ' up' : ''}">${sc[i]}</span>` : '');
     const pick = a && a.top ? `<span class="pick"><span class="tier tier-${a.tier || 'C'}">${pct(a.top.pAdj)}</span><b>${esc(a.top.label)}</b> · ${odds(a.top.price)}${a.top.real ? '' : ' est'}</span>` : `<span class="pick">No prediction yet: no ratings or prices</span>`;
-    return `<article class="fx" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}">
+    return `<article class="fx${r.live && !(LN && LN.ft) ? ' is-live' : ''}" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}">
       <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${stakeBadge(m)}${a && !realMkt(m) ? '<span class="badge b-est">Model only</span>' : ''}${newsBadge(m)}</div>
       <div class="fx-teams">
-        <div class="tm"><span class="pos">${m.ph || ''}</span><span class="nm">${esc(m.h)}</span>${formDots(m.fh)}<span class="xg">${a ? a.lh.toFixed(2) : ''}</span></div>
-        <div class="tm"><span class="pos">${m.pa || ''}</span><span class="nm">${esc(m.a)}</span>${formDots(m.fa)}<span class="xg">${a ? a.la.toFixed(2) : ''}</span></div>
+        <div class="tm"><span class="pos">${m.ph || ''}</span>${crest(m.h, m.lk)}<span class="nm">${esc(m.h)}</span>${formDots(m.fh)}<span class="xg">${a ? a.lh.toFixed(2) : ''}</span>${scs(0)}</div>
+        <div class="tm"><span class="pos">${m.pa || ''}</span>${crest(m.a, m.lk)}<span class="nm">${esc(m.a)}</span>${formDots(m.fa)}<span class="xg">${a ? a.la.toFixed(2) : ''}</span>${scs(1)}</div>
       </div>
       <div class="fx-bar">${bar}${pick}</div>
       <div class="fx-odds">${btn('H', '1')}${btn('D', 'X')}${btn('A', '2')}</div>
@@ -1599,11 +1973,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!S.ready) { showProgress(); return; }
     renderDays('days-matches', true);
     leagueOptions($('#league'), S.league, true);
+    renderChips();
     $('#sort').value = S.sort;
     const rows = filtered();
     const box = $('#matchList');
     if (!rows.length) {
-      box.innerHTML = `<div class="empty-state"><b>No matches here</b>${S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`; return;
+      box.innerHTML = `<div class="empty-state"><b>${S.league === 'live' ? 'No games in play' : 'No matches here'}</b>${S.league === 'live' ? 'Live games show here from kick-off. Pick “All” to see the day’s fixtures.' : S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`; return;
     }
     S.shk.games = shockGames(); S.shk.key = (S.shk.key || 0) + 1; S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
     let html = (!S.q ? shockCard(rows) : '') + (S.sort !== 'stakes' && !S.q ? bigGames(rows) : '');
@@ -1618,7 +1993,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         if (shown >= S.shown) break;
         const list = groups.get(k).slice(0, Math.max(0, S.shown - shown)); shown += list.length;
         const info = lgInfo(k);
-        html += `<div class="comp"><div class="comp-h"><h3>${esc(info.name)}</h3><span>${esc(info.country || '')}${S.day === 'all' ? '' : ' · ' + groups.get(k).length + (groups.get(k).length === 1 ? ' game' : ' games')}</span></div><div class="comp-list">${list.map(fxCard).join('')}</div></div>`;
+        html += `<div class="comp"><div class="comp-h">${lgIcon(k, 'sm')}<h3>${esc(info.name)}</h3><span>${esc(info.country || '')}${S.day === 'all' ? '' : ' · ' + groups.get(k).length + (groups.get(k).length === 1 ? ' game' : ' games')}</span></div><div class="comp-list">${list.map(fxCard).join('')}</div></div>`;
       }
       if (rows.length > S.shown) html += `<button class="more-btn" type="button" data-more="1">Show ${Math.min(60, rows.length - S.shown)} more of ${rows.length - S.shown}</button>`;
     } else {
@@ -1681,16 +2056,17 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (String(S.open).startsWith('team:')) { renderTeamSheet(); return; }
     if (S.open === 'status:') { renderStatusSheet(); return; }
     if (S.open === 'shock:') { renderShockSheet(); return; }
+    if (S.open === 'display:') { renderDisplaySheet(); return; }
     if (S.ask && S.ask.cur && S.open !== 'ask:') askAbortRec();
     if (S.open === 'ask:') { if (!$('#askForm')) renderAskSheet(); return; }
     const r = S.byId.get(S.open); if (!r) { closeSheet(); return; }
     const { m, a } = r, info = lgInfo(m.lk);
     $('#sheetTitle').textContent = `${info.name} · ${longFmt.format(r.ko)}`;
     if (!a) {
-      $('#sheetBody').innerHTML = `<div class="vs"><div class="side"><div class="team">${esc(m.h)}</div></div><div class="mid"><div class="xg-l">VS</div></div><div class="side r"><div class="team">${esc(m.a)}</div></div></div><div class="empty-state"><b>No prediction yet</b>Neither team has ratings in Statpad's data and no prices are in yet. It fills in automatically once either arrives.</div>`;
+      $('#sheetBody').innerHTML = `<div class="vs" style="--th:${teamCol(m.h)};--ta:${teamCol(m.a)}"><div class="side">${crest(m.h, m.lk, 'xl')}<div class="team">${esc(m.h)}</div></div><div class="mid"><div class="xg-l">VS</div></div><div class="side r">${crest(m.a, m.lk, 'xl')}<div class="team">${esc(m.a)}</div></div></div><div class="empty-state"><b>No prediction yet</b>Neither team has ratings in Statpad's data and no prices are in yet. It fills in automatically once either arrives.</div>`;
       return;
     }
-    const intl = info.group === 'intl';
+    const intl = info.group === 'intl', LNs = r.started ? liveNow(m.id) : null;
     const pos = (p, f, dom) => `${p ? `<span>${ord(p)}${intl ? ' in world ratings' : dom ? ' in ' + esc(lgName(dom)) : ''}</span>` : ''}${formDots(f)}`;
     const chips = [];
     chips.push({ blend: [`Model ${Math.round((1 - (a.wm || 0.8)) * 100)}% · market ${Math.round((a.wm || 0.8) * 100)}%`, ''], market: ['Market-implied', ''], model: ['Model only: no prices yet', 'warn'], external: ['External forecast blend', ''] }[a.src]);
@@ -1725,10 +2101,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const mrows = mrowsOf(groups), xrows = mrowsOf(xgroups), nx = a.sels.filter((s) => s.x).length;
     const mk = m.mkt;
     $('#sheetBody').innerHTML = `${S.fromAsk ? `<button type="button" class="btn ghost tback" data-ask="1">← ${SW() ? 'Rudi kwa Uliza Statpad' : 'Back to Ask Statpad'}</button>` : ''}
-      <div class="vs">
-        <div class="side"><div class="team">${teamLink(m, m.h, m.dh)}</div><div class="meta">${pos(m.ph, m.fh, m.dh)}</div></div>
-        <div class="mid"><div class="xg-big">${a.lh.toFixed(2)} – ${a.la.toFixed(2)}</div><div class="xg-l">EXPECTED GOALS</div></div>
-        <div class="side r"><div class="team">${teamLink(m, m.a, m.da)}</div><div class="meta">${pos(m.pa, m.fa, m.da)}</div></div>
+      <div class="vs" data-tch="${esc(m.h)}" data-tca="${esc(m.a)}" style="--th:${teamCol(m.h)};--ta:${teamCol(m.a)}">
+        <div class="side">${crest(m.h, m.lk, 'xl')}<div class="team">${teamLink(m, m.h, m.dh)}</div><div class="meta">${pos(m.ph, m.fh, m.dh)}</div></div>
+        <div class="mid">${LNs ? `<div class="sc">${LNs.h}–${LNs.a}</div><span class="lvm">${esc(LNs.ft ? 'Full time' : LNs.st === 'HT' ? 'Half time' : Math.floor(LNs.min) + "'")}</span><div class="xg-l" style="margin-top:10px">EXPECTED ${a.lh.toFixed(2)} – ${a.la.toFixed(2)}</div>` : `<div class="xg-big">${a.lh.toFixed(2)} – ${a.la.toFixed(2)}</div><div class="xg-l">EXPECTED GOALS</div>`}</div>
+        <div class="side r">${crest(m.a, m.lk, 'xl')}<div class="team">${teamLink(m, m.a, m.da)}</div><div class="meta">${pos(m.pa, m.fa, m.da)}</div></div>
       </div>
       <div class="chips">${chips.map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>
       <div id="sheetLive">${r.started ? liveCard(r) : ''}</div>
@@ -1777,7 +2153,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     box.innerHTML = v.map(({ m, s, kelly }) => {
       const ko = Date.parse(m.ko);
       return `<div class="vrow" data-open="${esc(m.id)}" tabindex="0">
-        <div><div class="fxl">${esc(lgName(m.lk))} · ${esc(dayLabel(dayKey(ko)))} ${tFmt.format(ko)}</div><div class="sel">${esc(s.label)}</div><div class="fxl">${esc(m.h)} v ${esc(m.a)}</div></div>
+        <div><div class="fxl">${esc(lgName(m.lk))} · ${esc(dayLabel(dayKey(ko)))} ${tFmt.format(ko)}</div><div class="sel">${esc(s.label)}</div><div class="fxl">${pair(m)}${esc(m.h)} v ${esc(m.a)}</div></div>
         <div class="edge"><div class="v">${sgn(s.edge)}</div><div class="l">edge</div><button type="button" class="add" style="margin-top:8px" data-add="${esc(m.id)}|${s.key}" aria-pressed="${inCoupon(m.id, s.key)}" aria-label="Add to coupon">${inCoupon(m.id, s.key) ? '✓' : '+'}</button></div>
         <div class="ebar"><i style="width:${(s.edge / emax) * 100}%"></i></div>
         <div class="nums"><span>Price <b>${odds(s.price)}</b>${s.bk ? ' at ' + esc(s.bk) : ''}</span><span>Fair <b>${odds(s.fair)}</b></span><span>Chance <b>${pct(s.p)}</b></span><span>¼ Kelly <b>${(Math.max(0, kelly) * 25).toFixed(1)}%</b> of bank</span></div>
@@ -1824,7 +2200,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="slip-h"><div class="name"><span class="tier tier-${s.tier}">${s.tier === 'A' ? 'A' : s.tier === 'B' ? 'B' : 'C'}</span>${esc(cfg.name)}</div>
         <div class="band">Each leg ${Math.round(cfg.lo * 100)}–${cfg.hi > 1 ? '100' : Math.round(cfg.hi * 100)}% · up to ${cfg.max} legs</div>
         <div class="slip-nums"><div><div class="v">${s.legs.length ? odds(s.odds) : '–'}</div><div class="l">total odds</div></div><div><div class="v">${s.legs.length ? pct(s.prob, 1) : '–'}</div><div class="l">to land</div></div><div><div class="v">${s.legs.length}</div><div class="l">legs</div></div></div></div>
-        ${s.legs.length ? `<ol>${s.legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pAdj)}${l.s.real ? '' : ' · est'}</small></span><span class="fxl">${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</span></li>`).join('')}</ol>` : '<p class="note" style="padding:0 18px 12px">No legs fall in this band for the day.</p>'}
+        ${s.legs.length ? `<ol>${s.legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pAdj)}${l.s.real ? '' : ' · est'}</small></span><span class="fxl">${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</span></li>`).join('')}</ol>` : '<p class="note" style="padding:0 18px 12px">No legs fall in this band for the day.</p>'}
         <div class="slip-f"><span class="${s.feasible ? 'lbl' : 'w'}">${s.legs.length ? (s.feasible ? `${s.real}/${s.legs.length} legs at real prices${ev != null ? ' · EV ' + sgn(ev, 0) : ''}` : `Can't reach ${s.target} in this band; closest shown`) : ''}</span>
         <div class="slip-acts"><button type="button" class="btn" data-shareslip="${s.tier}" ${s.legs.length ? '' : 'disabled'} aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg>Share</button>
         <button type="button" class="btn pri" data-addslip="${s.tier}" ${s.legs.length ? '' : 'disabled'}>Add to coupon</button></div></div>
@@ -1866,7 +2242,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const ids = rows.map((x) => x.c.id), dup = ids.length !== new Set(ids).size;
     const started = rows.some((x) => x.r.started);
     box.innerHTML = `<div class="cp">
-      <div class="comp-list">${rows.map((x, i) => `<div class="cp-item"><span class="sel">${esc(x.s.label)}</span><span class="fxl">${esc(x.r.m.h)} v ${esc(x.r.m.a)} · ${esc(dayLabel(x.r.day))} ${tFmt.format(x.r.ko)} · ${pct(x.s.p)}${x.s.real ? '' : ' · est price'}</span>
+      <div class="comp-list">${rows.map((x, i) => `<div class="cp-item"><span class="sel">${esc(x.s.label)}</span><span class="fxl">${pair(x.r.m)}${esc(x.r.m.h)} v ${esc(x.r.m.a)} · ${esc(dayLabel(x.r.day))} ${tFmt.format(x.r.ko)} · ${pct(x.s.p)}${x.s.real ? '' : ' · est price'}</span>
         <input type="text" inputmode="decimal" value="${odds(x.price)}" data-price="${i}" aria-label="Price for ${esc(x.s.label)}"><button type="button" class="x" data-rm="${i}" aria-label="Remove">✕</button></div>`).join('')}</div>
       <div class="card" style="margin-top:0"><div class="sum">
         <div class="sum-row big"><span>Total odds</span><b>${odds(tOdds)}</b></div>
@@ -1914,7 +2290,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const hasR = L.table.some((r) => r[9] != null), hasW = L.table.some((r) => r[2] != null);
     const amax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[9] || 0))) : 1, dmax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[10] || 0))) : 1;
     $('#tableBox').innerHTML = `<div class="lt"><table><thead><tr><th class="l">#</th><th class="l">Team</th><th>P</th>${hasW ? '<th>W</th><th>D</th><th>L</th>' : ''}<th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th class="l">Form</th>${hasR ? '<th>Attack</th><th>Defence</th>' : ''}</tr></thead><tbody>
-      ${L.table.map((r, i) => `<tr class="${i < 4 ? 'zone' : ''}"><td class="l">${i + 1}</td><td class="l team"><button type="button" class="tlink" data-team="${esc(S.tleague)}|${esc(r[0])}">${esc(r[0])}</button></td><td>${r[1]}</td>${hasW ? `<td>${r[2] ?? ''}</td><td>${r[3] ?? ''}</td><td>${r[4] ?? ''}</td>` : ''}<td>${r[5]}</td><td>${r[6]}</td><td>${r[5] - r[6] > 0 ? '+' : ''}${r[5] - r[6]}</td><td><b>${r[7]}</b></td><td class="l">${formDots(r[8]) || ''}</td>
+      ${L.table.map((r, i) => `<tr class="${i < 4 ? 'zone' : ''}"><td class="l">${i + 1}</td><td class="l team">${crest(r[0], S.tleague, 'xs')} <button type="button" class="tlink" data-team="${esc(S.tleague)}|${esc(r[0])}">${esc(r[0])}</button></td><td>${r[1]}</td>${hasW ? `<td>${r[2] ?? ''}</td><td>${r[3] ?? ''}</td><td>${r[4] ?? ''}</td>` : ''}<td>${r[5]}</td><td>${r[6]}</td><td>${r[5] - r[6] > 0 ? '+' : ''}${r[5] - r[6]}</td><td><b>${r[7]}</b></td><td class="l">${formDots(r[8]) || ''}</td>
       ${hasR ? `<td>${r[9] != null ? Math.exp(r[9]).toFixed(2) + '×' : ''}<span class="rbar"><i style="width:${r[9] != null ? (Math.exp(r[9]) / amax) * 100 : 0}%"></i></span></td><td>${r[10] != null ? Math.exp(r[10]).toFixed(2) + '×' : ''}<span class="rbar def"><i style="width:${r[10] != null ? (Math.exp(r[10]) / dmax) * 100 : 0}%"></i></span></td>` : ''}</tr>`).join('')}
     </tbody></table></div><p class="note">${esc(L.name)}${L.season ? ' · ' + esc(L.season) : ''}. ${hasR ? 'Attack above 1.00 scores more than an average side; defence below 1.00 concedes less. ' : ''}Points deductions are not applied.</p>`;
   }
@@ -2201,9 +2577,20 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function setTab(t) {
     if (S.tab === t) return;
-    S.tab = t; store.set('tab', t);
-    if (t === 'slips' && S.day === 'all') S.day = pickDefaultDay();
-    S.shown = 60; render(); window.scrollTo(0, 0);
+    const from = TABS.findIndex((x) => x[0] === S.tab), to = TABS.findIndex((x) => x[0] === t);
+    const go = () => {
+      S.tab = t; store.set('tab', t);
+      if (t === 'slips' && S.day === 'all') S.day = pickDefaultDay();
+      S.shown = 60; render(); window.scrollTo(0, 0);
+    };
+    buzz(6);
+    if (document.startViewTransition && motionOK() && !document.hidden) {
+      document.documentElement.dataset.dir = to < from ? 'back' : 'fwd';
+      try { document.startViewTransition(go); return; } catch (e) { /* run it plainly */ }
+    }
+    go();
+    const sec = document.querySelector(`[data-view="${t}"]`);
+    if (sec && motionOK()) { sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter'); }
   }
   let toastT;
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1600); }
@@ -3773,6 +4160,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const was = S.shk.liveN || 0;
     shockRefresh(); S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
     if (S.tab === 'matches' && !!was !== !!S.shk.liveN) renderMatches();
+    if (S.tab === 'matches' && S.ready) renderSpot();
   }
   function liveTxt(id) {
     const g = S.live && S.live.games && S.live.games[id]; if (!g) return '';
@@ -4038,7 +4426,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (s && s.real && s.edge >= 0.02) take += ` Still value at ${odds(s.price)}${s.bk ? ' (' + esc(s.bk) + ')' : ''}: ${sgn(s.edge, 0)}.`;
       return `<article class="mv" data-open="${esc(m.id)}" tabindex="0">
         <div class="mv-top"><span class="mv-tag ${up ? 'in' : 'out'}">${up ? 'Money coming in' : 'Drifting'}</span><span>${esc(lgName(m.lk))} · ${esc(dayLabel(v.r.day))} ${tFmt.format(v.r.ko)}</span></div>
-        <div class="mv-main"><div><b>${esc(who)}</b><small>${esc(m.h)} v ${esc(m.a)}</small></div>${mvSpark(v)}</div>
+        <div class="mv-main"><div><b>${esc(who)}</b><small>${pair(m)}${esc(m.h)} v ${esc(m.a)}</small></div>${mvSpark(v)}</div>
         <div class="mv-nums"><span class="mono">${odds(v.o0)} → ${odds(v.o1)}</span><span>chance <b>${pct(v.p0)} → ${pct(v.p1)}</b> <em class="${up ? 'up' : 'down'}">${up ? '+' : '−'}${Math.abs(v.d * 100).toFixed(1)} pts</em></span>${Math.abs(v.d6) >= 0.01 ? `<span class="muted">${v.d6 > 0 ? '+' : '−'}${Math.abs(v.d6 * 100).toFixed(1)} pts in the last 6 h</span>` : ''}</div>
         <p class="mv-take">${take}</p></article>`;
     }).join('');
@@ -4100,7 +4488,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (list.length < 2) return '';
     return `<div class="bigg"><div class="bigg-h"><h3>Most at stake</h3><button type="button" class="linkbtn" data-sortstakes="1">All by stakes</button></div><div class="bigg-row">${list.map((r) => {
       const st = stakeOf(r.m), s = stakeSides(r.m).sort((p, q) => q.sw - p.sw)[0];
-      return `<button type="button" class="bigg-c" data-open="${esc(r.m.id)}"><span class="stk-lv ${st.cls}">${st.lv} · ${st.s}</span><b>${esc(r.m.h)} v ${esc(r.m.a)}</b><small>${esc(lgName(r.m.lk))} · ${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}</small>${s ? `<span class="bigg-s">${esc(s.name)}, ${esc(s.z.toLowerCase())}: <b>${fmtP(s.w)}</b> with a win, <b>${fmtP(s.l)}</b> with a defeat</span>` : ''}</button>`;
+      return `<button type="button" class="bigg-c" data-open="${esc(r.m.id)}"><span class="stk-lv ${st.cls}">${st.lv} · ${st.s}</span><b>${pair(r.m)}${esc(r.m.h)} v ${esc(r.m.a)}</b><small>${esc(lgName(r.m.lk))} · ${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}</small>${s ? `<span class="bigg-s">${esc(s.name)}, ${esc(s.z.toLowerCase())}: <b>${fmtP(s.w)}</b> with a win, <b>${fmtP(s.l)}</b> with a defeat</span>` : ''}</button>`;
     }).join('')}</div></div>`;
   }
   document.addEventListener('click', (e) => {
@@ -4296,7 +4684,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const row = (L.table || []).find((r) => r[0] === name), pos = row ? L.table.indexOf(row) + 1 : null;
     const c = S.tf[lk], tf = c && c.d, T = tf && tf.t && tf.t[name];
     const back = S.teamBack && S.byId.get(S.teamBack) ? `<button type="button" class="btn ghost tback" data-open="${esc(S.teamBack)}">← Back to the match</button>` : S.teamBack === 'ask:' ? `<button type="button" class="btn ghost tback" data-ask="1">← ${SW() ? 'Rudi kwa Uliza Statpad' : 'Back to Ask Statpad'}</button>` : '';
-    const head = `<div class="tm-head">${back}<div class="tm-name">${esc(name)}</div>
+    const head = `<div class="tm-head">${back}<div class="tm-top">${crest(name, lk, 'xl')}<div class="tm-name">${esc(name)}</div></div>
       <div class="tm-meta">${pos ? `<span>${ord(pos)} of ${L.table.length}</span><span>${row[7]} pts from ${row[1]}</span>` : ''}${row ? formDots(row[8]) : ''}</div>
       <button type="button" class="btn listen-b" data-listen="team"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></div>`;
     if (!T) {
@@ -4965,7 +5353,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const A = it.A, sw = it.lang === 'sw', D = (x) => (sw ? String(x).replace(/over 99%/g, '>99%').replace(/under 1%/g, '<1%') : x), TT = (en, s) => (sw ? s : en);
     const body = !A ? `<p class="ask-wait">${TT('Thinking…', 'Nafikiri…')}</p>` : `<p class="ask-lead">${esc(D(A.lead))}</p>${A.items && A.items.length ? `<ul class="ask-items${A.plain ? ' plain' : ''}">${A.items.map((x) => A.chips ? `<li><button type="button" class="ask-chip" data-askq="${esc(x)}">${esc(x)}</button></li>` : `<li>${esc(D(x))}</li>`).join('')}</ul>` : ''}${A.tail ? `<p class="ask-tail">${esc(A.tail)}</p>` : ''}
       <div class="ask-acts"><button type="button" class="btn sm listen-b" data-asksay="${S.ask.log.indexOf(it)}"><svg aria-hidden="true"><use href="#i-speaker"/></svg>${TT('Listen', 'Sikiliza')}</button>${(A.acts || []).map(([l, attr]) => `<button type="button" class="btn sm" ${attr}>${esc(l)}</button>`).join('')}</div>`;
-    return `<div class="ask-q"><span>${esc(it.q)}</span></div><div class="ask-a">${body}</div>`;
+    const oid = A && (A.acts || []).map(([, attr]) => (/data-open="([^"]+)"/.exec(attr) || [])[1]).find(Boolean), om = oid && S.byId.get(oid);
+    const duel = om ? `<div class="ask-duel">${crest(om.m.h, om.m.lk, 'md')}<b>${esc(om.m.h)}</b><span>v</span><b>${esc(om.m.a)}</b>${crest(om.m.a, om.m.lk, 'md')}</div>` : '';
+    return `<div class="ask-q"><span>${esc(it.q)}</span></div><div class="ask-a">${duel}${body}</div>`;
   }
   function renderAskLog(scroll) {
     const box = $('#askLog'); if (!box || S.open !== 'ask:') return;
@@ -5161,11 +5551,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     cv._pts = pts;
   }
-  const REDUCED = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const REDUCED = () => !motionOK();
   function shkLoop(t) {
     S.shk.raf = 0;
     let any = false;
-    for (const cv of [...S.shk.cvs]) { if (!cv.isConnected) { S.shk.cvs.delete(cv); continue; } if (cv._vis && !document.hidden) { shkDraw(cv, t); any = true; } }
+    for (const cv of [...S.shk.cvs]) { if (!cv.isConnected) { S.shk.cvs.delete(cv); continue; } if (cv._vis && !document.hidden && cv.clientWidth > 0) { shkDraw(cv, t); any = true; } }
     if (any && !REDUCED()) S.shk.raf = requestAnimationFrame(shkLoop);
   }
   function shkKick() { if (!S.shk.raf) S.shk.raf = requestAnimationFrame(shkLoop); }
@@ -5367,12 +5757,174 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (t.dataset.gssay) { const m = S.gsLast; if (!m) return; speak('Goal seek', [`To turn ${S.gs.stake.toLocaleString('en-US')} into ${S.gs.goal.toLocaleString('en-US')}, the best chance is ${fmtGs(m.prob).replace('%', ' percent')}, with ${m.legs.length} legs at total odds of ${odds(m.odds)}.`, ...m.legs.map((l, i) => `${i + 1}: ${l.s.label}, in ${l.m.h} against ${l.m.a}, at ${odds(l.s.price)}.`)]); }
   });
 
+  // ---------------- headline games, competition chips, motion helpers ----------------
+  const longDay = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  const midDay = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+  const pair = (m) => `<span class="crp">${crest(m.h, m.lk, 'xs')}${crest(m.a, m.lk, 'xs')}</span>`;
+  const isLive = (r) => r.live && !((liveNow(r.m.id) || {}).ft);
+  function spotDay() { return S.day && S.day !== 'all' ? S.day : (pickDefaultDay() || dayKey(S.now)); }
+  // live games first, then the day's headline games: big clashes, high stakes, top competitions, top-table sides
+  function spotList() {
+    const dk = spotDay();
+    const cr = S.data.crests || {};
+    const score = (r) => (isLive(r) ? 50 : 0) + (cr[r.m.h] && cr[r.m.a] ? 6 : 0) + (r.m.clash ? 30 : 0) + (r.m.sk ? r.m.sk[0] * 0.3 : 0)
+      + ({ big: 70, cups: 62, intl: 45, more: 8 }[lgInfo(r.m.lk).group] || 0)
+      + (r.m.ph && r.m.pa && lgInfo(r.m.lk).group !== 'intl' ? Math.max(0, 12 - Math.min(r.m.ph, r.m.pa)) : 0) + (realMkt(r.m) ? 8 : 0);
+    return S.rows.filter((r) => r.a && (isLive(r) || (!r.started && r.day === dk))).sort((x, y) => score(y) - score(x) || x.ko - y.ko).slice(0, 6);
+  }
+  function spotCard(r) {
+    const { m, a } = r, LN = r.started ? liveNow(m.id) : null, lp = LN ? liveP(r, LN) : null, p = lp || a.p;
+    const intl = lgInfo(m.lk).group === 'intl';
+    const t = r.started ? `<span class="t${LN && LN.ft ? '' : ' lv'}">${esc(LN ? (LN.ft ? 'FT' : LN.st === 'HT' ? 'HT' : Math.floor(LN.min) + "'") : 'Live')}</span>` : `<span class="t">${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}</span>`;
+    const mid = LN ? `<div class="sc">${LN.h}–${LN.a}</div><small>${LN.ft ? 'full time' : 'live score'}</small>` : `<div class="x">${a.lh.toFixed(1)}–${a.la.toFixed(1)}</div><small>expected goals</small>`;
+    const side = (n, ps) => `<div class="spot-tm">${crest(n, m.lk, 'lg')}<b>${esc(n)}</b>${ps && !intl ? `<small>${ord(ps)}</small>` : ''}</div>`;
+    return `<article class="spot" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}" data-tch="${esc(m.h)}" data-tca="${esc(m.a)}" style="--th:${teamCol(m.h)};--ta:${teamCol(m.a)}">
+      <div class="spot-top">${lgIcon(m.lk, 'xs')}<span class="lgn">${esc(lgName(m.lk))}</span>${t}</div>
+      <div class="spot-duel">${side(m.h, m.ph)}<div class="spot-mid">${mid}</div>${side(m.a, m.pa)}</div>
+      <div class="spot-p"><div class="pbar" aria-hidden="true"><i class="h" style="width:${p.H * 100}%"></i><i class="d" style="width:${p.D * 100}%"></i><i class="a" style="width:${p.A * 100}%"></i></div>
+        <div class="spot-pl"><span class="h">${pct(p.H)}</span><span class="d">Draw ${pct(p.D)}</span><span class="a">${pct(p.A)}</span></div></div>
+      ${a.top ? `<div class="spot-pick"><span class="tier tier-${a.tier || 'C'}">${pct(a.top.pAdj)}</span><span><b>${esc(a.top.label)}</b> · ${odds(a.top.price)}${a.top.real ? '' : ' est'}</span></div>` : ''}
+    </article>`;
+  }
+  function renderSpot() {
+    const rail = $('#spotRail'), dots = $('#spotDots'); if (!rail) return;
+    const dk = spotDay(), list = spotList();
+    const nDay = S.rows.filter((r) => r.day === dk).length, nLive = S.rows.filter(isLive).length;
+    $('#mdayD').textContent = (() => { const [y, mo, d] = dk.split('-').map(Number); const lab = dayLabel(dk); const full = longDay.format(new Date(y, mo - 1, d, 12)); return lab === 'Today' || lab === 'Tomorrow' ? `${lab} · ${midDay.format(new Date(y, mo - 1, d, 12))}` : full; })();
+    $('#mdayS').innerHTML = `${nLive ? `<span class="lv"><i></i>${nLive} live</span>` : ''}<span>${nDay} ${nDay === 1 ? 'game' : 'games'}</span>`;
+    const keep = rail.scrollLeft;
+    rail.innerHTML = list.map(spotCard).join('');
+    rail.hidden = !list.length; dots.hidden = list.length < 2;
+    dots.innerHTML = list.length > 1 ? list.map((_, i) => `<button type="button" data-spotdot="${i}" aria-label="Headline game ${i + 1}"></button>`).join('') : '';
+    rail.scrollLeft = keep; spotDots();
+  }
+  function spotDots() {
+    const rail = $('#spotRail'), first = rail && rail.firstElementChild; if (!first) return;
+    const step = first.getBoundingClientRect().width + 12, i = Math.round(rail.scrollLeft / Math.max(1, step));
+    for (const b of document.querySelectorAll('#spotDots button')) b.setAttribute('aria-current', String(+b.dataset.spotdot === i));
+  }
+  let spotRaf = 0;
+  document.addEventListener('scroll', (e) => { if (e.target && e.target.id === 'spotRail' && !spotRaf) spotRaf = requestAnimationFrame(() => { spotRaf = 0; spotDots(); }); }, true);
+  function countUp(box) {
+    for (const el of box.querySelectorAll('[data-to]')) {
+      const to = +el.dataset.to; if (!motionOK() || !to) { el.textContent = to; continue; }
+      const t0 = performance.now(), D = 900;
+      const step = (t) => { const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(to * e); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }
+  }
+  function renderChips() {
+    const el = $('#lgChips'); if (!el) return;
+    const dayRows = S.rows.filter((r) => S.day === 'all' || r.day === S.day);
+    const live = S.rows.filter(isLive).length;
+    const cnt = new Map(); for (const r of dayRows) cnt.set(r.m.lk, (cnt.get(r.m.lk) || 0) + 1);
+    const gi = (k) => GROUPS.findIndex((g) => g[0] === lgInfo(k).group);
+    const ks = [...cnt.keys()].sort((a, b) => gi(a) - gi(b) || cnt.get(b) - cnt.get(a) || lgName(a).localeCompare(lgName(b))).slice(0, 18);
+    if (cnt.has(S.league) && !ks.includes(S.league)) ks.unshift(S.league);
+    el.innerHTML = `<button type="button" class="all" data-lgchip="all" aria-pressed="${S.league === 'all'}">All<span class="n">${dayRows.length}</span></button>`
+      + (live ? `<button type="button" class="live-c" data-lgchip="live" aria-pressed="${S.league === 'live'}"><i></i>Live<span class="n">${live}</span></button>` : '')
+      + ks.map((k) => `<button type="button" data-lgchip="${esc(k)}" aria-pressed="${S.league === k}">${lgIcon(k, 'xs')}${esc(lgName(k))}<span class="n">${cnt.get(k)}</span></button>`).join('');
+  }
+  // the price flies from the button to the Bets tab
+  function flyToBets(from) {
+    if (!motionOK() || !from || !from.getBoundingClientRect) return;
+    const tgt = document.querySelector(innerWidth >= 980 ? '#tabs [data-tab="coupon"]' : '#bnav [data-tab="coupon"]');
+    if (!tgt || !tgt.offsetParent) return;
+    const a = from.getBoundingClientRect(), b = tgt.getBoundingClientRect();
+    if (!a.width || a.bottom < 0 || a.top > innerHeight) return;
+    const dot = document.createElement('i'); dot.className = 'fly'; dot.setAttribute('aria-hidden', 'true');
+    const v = from.querySelector('.v'); dot.textContent = v ? v.textContent : '+';
+    document.body.appendChild(dot);
+    const w = dot.offsetWidth, x0 = a.left + a.width / 2 - w / 2, y0 = a.top + a.height / 2 - 13, x1 = b.left + b.width / 2 - w / 2, y1 = b.top + 4;
+    const mx = (x0 + x1) / 2 + (x1 > x0 ? -40 : 40), my = Math.min(y0, y1) - 70;
+    const anim = dot.animate([
+      { transform: `translate(${x0}px, ${y0}px) scale(.6)`, opacity: 0 },
+      { transform: `translate(${x0}px, ${y0 - 14}px) scale(1.08)`, opacity: 1, offset: 0.14 },
+      { transform: `translate(${mx}px, ${my}px) scale(.92)`, opacity: 1, offset: 0.55 },
+      { transform: `translate(${x1}px, ${y1}px) scale(.35)`, opacity: 0.2 },
+    ], { duration: 680, easing: 'cubic-bezier(.45, 0, .25, 1)' });
+    anim.onfinish = () => { dot.remove(); const svg = tgt.querySelector('svg') || tgt; svg.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 380, easing: 'cubic-bezier(.34, 1.56, .64, 1)' }); };
+    anim.oncancel = () => dot.remove();
+  }
+  // display settings
+  function openDisplay(opener) {
+    S.open = 'display:'; S.opener = opener || document.activeElement;
+    renderSheet();
+    const sh = $('#sheet'); sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; $('#sheetBody').scrollTop = 0;
+    setTimeout(() => $('#sheetClose').focus(), 60);
+  }
+  function renderDisplaySheet() {
+    $('#sheetTitle').textContent = 'Display';
+    const seg = (k, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button type="button" data-ui="${k}:${v}" aria-pressed="${String(UI[k]) === String(v)}">${l}</button>`).join('')}</div>`;
+    const ex = (S.rows || []).find((r) => S.data && S.data.crests && S.data.crests[r.m.h] && S.data.crests[r.m.a]) || (S.rows || [])[0];
+    $('#sheetBody').innerHTML = `<div class="disp">
+      <div class="disp-row"><h5>Theme</h5><p>Dark is easy on the eyes at night and saves battery on most phones; light reads better in bright sun.</p>${seg('theme', [['dark', 'Dark'], ['light', 'Light'], ['auto', 'Match phone']])}</div>
+      <div class="disp-row"><h5>Club crests and flags</h5><p>Each crest downloads once and is kept on your phone. Choose “Save data” to load no pictures at all: teams show a coloured monogram instead.</p>${seg('crests', [[true, 'Show'], [false, 'Save data']])}
+        ${ex ? `<div class="disp-prev">${crest(ex.m.h, ex.m.lk, 'md')}${crest(ex.m.a, ex.m.lk, 'md')}<span>${esc(ex.m.h)} v ${esc(ex.m.a)}</span></div>` : ''}</div>
+      <div class="disp-row"><h5>Vibrate on tap</h5><p>A short buzz when you add a pick, switch sections or swipe a page away, on phones that can.</p>${seg('haptics', [[true, 'On'], [false, 'Off']])}</div>
+      <div class="disp-row"><h5>Motion</h5><p>Sliding pages, prices flying to your coupon, bars that sweep in. “Match phone” follows your phone’s reduce-motion setting.</p>${seg('motion', [['auto', 'Match phone'], ['full', 'Full'], ['reduced', 'Reduced']])}</div>
+      <p class="note">Crests from API-Football; flags from flagcdn.com.</p>
+    </div>`;
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-ui],[data-lgchip],[data-spotdot]'); if (!t) return;
+    if (t.dataset.spotdot != null) {
+      const rail = $('#spotRail'), first = rail && rail.firstElementChild; if (!first) return;
+      rail.scrollTo({ left: (first.getBoundingClientRect().width + 12) * +t.dataset.spotdot, behavior: motionOK() ? 'smooth' : 'auto' }); return;
+    }
+    if (t.dataset.lgchip) {
+      S.league = t.dataset.lgchip; store.set('league', S.league); S.shown = 60; buzz(5); renderMatches();
+      const b = document.querySelector(`[data-lgchip="${CSS.escape(S.league)}"]`); if (b && b.scrollIntoView) b.scrollIntoView({ block: 'nearest', inline: 'center', behavior: motionOK() ? 'smooth' : 'auto' });
+      return;
+    }
+    const [k, raw] = t.dataset.ui.split(':'), v = raw === 'true' ? true : raw === 'false' ? false : raw;
+    UI[k] = v; store.set(k, v); applyUI(); if (k === 'haptics' && v) buzz(12);
+    renderDisplaySheet();
+    if (k === 'crests' || k === 'theme') { const o = S.open; S.open = null; render(); S.open = o; }
+  });
+  // drag the sheet down to close it: by its handle and title bar, or by pulling down from the top of its content
+  (() => {
+    const sh = $('#sheet'), body = $('#sheetBody'), scrim = $('#scrim');
+    let y0 = null, dy = 0, t0 = 0;
+    const can = () => innerWidth < 980 && sh.classList.contains('open');
+    const start = (y) => { y0 = y; dy = 0; t0 = performance.now(); };
+    const move = (y) => { dy = Math.max(0, y - y0); sh.classList.add('drag'); sh.style.transform = `translateY(${dy}px)`; scrim.style.opacity = String(Math.max(0.15, 1 - dy / 420)); };
+    const end = () => {
+      if (y0 == null) return;
+      const v = dy / Math.max(1, performance.now() - t0);
+      sh.classList.remove('drag'); sh.style.transform = ''; scrim.style.opacity = '';
+      if (dy > 110 || (dy > 36 && v > 0.55)) { buzz(8); closeSheet(); }
+      y0 = null; dy = 0;
+    };
+    let pid = null;
+    sh.addEventListener('pointerdown', (e) => {
+      if (!can() || e.button > 0 || !e.target.closest('.grab, .sheet-bar') || e.target.closest('button, a, input, select')) return;
+      pid = e.pointerId; try { sh.setPointerCapture(pid); } catch (er) { /* ignore */ } start(e.clientY);
+    });
+    sh.addEventListener('pointermove', (e) => { if (pid === e.pointerId && y0 != null) move(e.clientY); });
+    const up = (e) => { if (pid === e.pointerId) { pid = null; end(); } };
+    sh.addEventListener('pointerup', up); sh.addEventListener('pointercancel', up);
+    let tb = null, drag = false;
+    body.addEventListener('touchstart', (e) => { tb = can() && body.scrollTop <= 0 && e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; drag = false; }, { passive: true });
+    body.addEventListener('touchmove', (e) => {
+      if (!tb) return;
+      const x = e.touches[0].clientX, y = e.touches[0].clientY, dx = x - tb[0], d = y - tb[1];
+      if (!drag) {
+        if (d < -4 || Math.abs(dx) > Math.abs(d)) { tb = null; return; }
+        if (d > 10 && body.scrollTop <= 0) { drag = true; start(y); } else return;
+      }
+      e.preventDefault(); move(y);
+    }, { passive: false });
+    const tend = () => { if (drag) end(); tb = null; drag = false; };
+    body.addEventListener('touchend', tend); body.addEventListener('touchcancel', tend);
+  })();
+
   // ---------------- events ----------------
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-tab],[data-add],[data-open],[data-day],[data-target],[data-edge],[data-stake],[data-rm],[data-addslip],[data-shareslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn,#installBtn,#installTipX');
     if (!t) return;
     if (t.dataset.tab) { e.preventDefault(); setTab(t.dataset.tab); return; }
-    if (t.dataset.add) { e.stopPropagation(); const [id, key] = t.dataset.add.split('|'); toggleCoupon(id, key); if (S.tab === 'coupon') renderCoupon(); if (key.startsWith('Q:')) paintQx(); return; }
+    if (t.dataset.add) { e.stopPropagation(); const [id, key] = t.dataset.add.split('|'); toggleCoupon(id, key); buzz(inCoupon(id, key) ? 12 : 6); if (inCoupon(id, key)) flyToBets(t); if (S.tab === 'coupon') renderCoupon(); if (key.startsWith('Q:')) paintQx(); return; }
     if (t.dataset.goslips) { S.day = t.dataset.goslips; setTab('slips'); return; }
     if (t.dataset.open) { openMatch(t.dataset.open, t); return; }
     if (t.dataset.day) { S.day = t.dataset.day; S.shown = 60; render(); return; }
@@ -5402,10 +5954,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     if (t.id === 'clearCoupon') { S.coupon = []; saveCoupon(); renderCoupon(); return; }
     if (t.id === 'scrim' || t.id === 'sheetClose') { closeSheet(); return; }
-    if (t.id === 'themeBtn') {
-      const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      const next = cur === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; store.set('theme', next);
-    }
+    if (t.id === 'themeBtn') { openDisplay(t); return; }
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && S.open) closeSheet();
@@ -5443,6 +5992,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (cs !== S.calSig) { S.calSig = cs; ENGINE.setCalib(cal); S.cache.clear(); }
       if (!(await analyseAll(token))) return;
       if (!S.day || (S.day !== 'all' && !days().some((d) => d.key === S.day))) S.day = pickDefaultDay();
+      const first = !S.introDone; S.introDone = true;
+      if (first && motionOK()) { document.documentElement.classList.add('intro'); setTimeout(() => document.documentElement.classList.remove('intro'), 1500); }
       render(); flash(before);
     } catch (e) { showFatal(e); }
   }
@@ -5492,7 +6043,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     } catch (e) { /* not running as an artifact */ }
   }
 
-  try { const th = store.get('theme', null); if (th) document.documentElement.dataset.theme = th; } catch (e) { /* ignore */ }
+  applyUI();
+  try { matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (UI.theme === 'auto') applyUI(); }); RM.addEventListener('change', applyUI); } catch (e) { /* old browsers */ }
   renderNav();
   load(true);
   connectLegacy();
@@ -5520,7 +6072,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const FONT = '"Archivo", "Arial Black", "Helvetica Neue", Arial, sans-serif';
   const MONO = '"Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace';
   const TAG = 'PROBABILITIES · VALUE · SLIPS';
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const RMQ = matchMedia('(prefers-reduced-motion: reduce)');
+  // the page's Motion setting (html.calm) decides; it already follows the phone's setting when set to match it
+  const reduce = { get matches() { return document.documentElement.classList.contains('calm'); }, addEventListener: (t, f) => { if (RMQ.addEventListener) RMQ.addEventListener(t, () => setTimeout(f, 0)); } };
   const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
   const eio = (x) => (x = clamp(x, 0, 1), x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
   const eout = (x) => (x = clamp(x, 0, 1), 1 - Math.pow(1 - x, 3));

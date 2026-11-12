@@ -14,7 +14,8 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 | `matches.json` | Starter data (5–9 Nov 2026). It is replaced on the first run. |
 | `track.json` | The track record. The workflow creates it and commits it; don't edit it by hand. |
 | `backtest.json`, `results.json`, `live.json`, `teams/` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores; one file per league for team pages and the season simulator). Nothing to upload. |
-| `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. |
+| `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. `sw.js` also keeps crests and flags on the phone after the first download. |
+| `crests/` | Club crests and competition logos. The workflow makes them on each publish; nothing to upload. |
 | App icons | Drawn by the workflow each time it publishes, so there's nothing to upload. |
 | `og.jpg` | The picture shown when the link is shared on WhatsApp, Telegram or X. |
 
@@ -196,6 +197,15 @@ The **Bets** tab has two parts: **Coupon** (build a bet) and **My bets** (bets y
 - **Budget and settings.** You can set a weekly or monthly budget, the tax rate (15% by default, Uganda's withholding tax on net winnings from July 2026) and the currency (UGX).
 - **Private.** Saved bets live only on that phone or browser. Use **Back up** to save a file, and **Restore** to load it on another device.
 
+## Look and feel
+
+- **Dark by default.** The site now opens in a floodlit night theme. The sliders button in the header opens **Display**, where you can choose Dark, Light or Match phone, turn off crests to save data, turn off vibration, and reduce motion.
+- **Headline games.** The top of the Matches page is a swipeable row of the day's biggest games, live ones included: both crests, expected goals (or the live score), the three-way chances and the top pick. Each card takes the colours of the two clubs' crests.
+- **Club crests and flags.** Crests appear on match cards, the match page, slips, the coupon, the value board, tables and team pages. National teams show their flag, and competitions show their logo. Teams without a crest yet show a coloured monogram shield.
+- **Quicker to use.** A row of competition chips (with a Live chip while games are in play) filters the day in one tap. Sections slide when you switch tabs. Match pages spring open and can be swiped down to close. Tapping a price sends it flying to the Bets tab, with a light buzz on phones that support it. Each competition's header stays pinned while you scroll its games.
+
+**Where crests come from.** The pipeline learns each club's API-Football id from the fixture lists it already downloads for team news (no extra calls), downloads each crest once from API-Football's public image server, shrinks it to two small sizes and publishes it in `crests/` on the site. About 110 well-known clubs and every competition logo are built in, so they show from the first run; the rest fill in over the first week as each team plays. Without an API-Football key, only those built-in crests show. Once a crest is on your phone it isn't downloaded again, and **Display → Save data** stops pictures loading at all.
+
 ## App and sharing
 
 - **Install.** On Android (Chrome), tap the download icon in the header to install Statpad like an app. On iPhone, open the site in Safari, tap **Share**, then **Add to Home Screen**; the site shows this tip when you tap the same icon. Once installed it opens full screen, and it still opens with the last data when you're offline.
@@ -209,7 +219,7 @@ The **Bets** tab has two parts: **Coupon** (build a bet) and **My bets** (bets y
 - **International results** (free, no key, on GitHub: `martj42/international_results`). Every national-team result, used to rate teams for the UEFA Nations League and international friendlies and to grade those games. The maintainer updates it after each international window, so those grades can take a few weeks.
 - **The Odds API** (optional key). Fixtures for leagues, UEFA competitions and cups come from a free listing that doesn't use credits. Prices from many bookmakers are paced to your monthly credit allowance. The free plan has 500 credits a month, which works out at roughly one price refresh per competition per day. A paid plan refreshes as often as `ODDS_MIN_INTERVAL` allows.
 
-- **API-Football** (optional key, free plan: 100 calls a day). Team news: injuries, suspensions and doubts for today and tomorrow, plus confirmed starting line-ups from about an hour before kick-off. Also fast results and live scores for the cash-out adviser. The calls are rationed to fit the free plan, which only serves fixtures and results for yesterday, today and tomorrow; anything older comes from football-data. If your plan doesn't cover the current season at all, the site says so under **Method → Data status** and pauses team news for a day at a time, using only 1 call.
+- **API-Football** (optional key, free plan: 100 calls a day). Team news: injuries, suspensions and doubts for today and tomorrow, plus confirmed starting line-ups from about an hour before kick-off. Also fast results and live scores for the cash-out adviser, and the team ids that give each club its crest. The calls are rationed to fit the free plan, which only serves fixtures and results for yesterday, today and tomorrow; anything older comes from football-data. If your plan doesn't cover the current season at all, the site says so under **Method → Data status** and pauses team news for a day at a time, using only 1 call.
 
 Without a key, the site still works from the model and the football-data prices. Saudi, Czech, Serbian and Eerste Divisie matches, the UEFA and cup matches, and the Nations League and friendlies all need the key, because their fixtures come from The Odds API.
 

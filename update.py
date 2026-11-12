@@ -38,9 +38,12 @@ import json
 import math
 import os
 import re
+import shutil
+import struct
 import sys
 import time
 import unicodedata
+import zlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -317,7 +320,7 @@ def offline_name(url):
     return re.sub(r'[^A-Za-z0-9.-]+', '_', u.netloc + u.path).strip('_')
 
 
-def fetch(url, params=None, tries=3, headers=None):
+def fetch(url, params=None, tries=3, headers=None, timeout=40):
     full = url + ('?' + urlencode(params) if params else '')
     if OFFLINE:
         p = Path(OFFLINE) / offline_name(url)
@@ -334,7 +337,7 @@ def fetch(url, params=None, tries=3, headers=None):
     for i in range(tries):
         try:
             req = Request(full, headers={'User-Agent': 'Statpad/1.0 (GitHub Actions data refresh)', 'Accept-Encoding': 'identity', **(headers or {})})
-            with urlopen(req, timeout=40) as r:
+            with urlopen(req, timeout=timeout) as r:
                 return Fetched(r.status, r.read(), {k.lower(): v for k, v in r.headers.items()})
         except HTTPError as e:
             if e.code in (401, 403, 404, 422):
@@ -1497,7 +1500,7 @@ def af_fixture_row(f):
     hs, as_ = ft.get('home'), ft.get('away')
     if hs is None and st == 'FT':
         hs, as_ = gl.get('home'), gl.get('away')
-    return [fi['id'], fi['date'], h['name'], a['name'], lg.get('name'), lg.get('country'), h.get('id'), a.get('id'), st, hs, as_]
+    return [fi['id'], fi['date'], h['name'], a['name'], lg.get('name'), lg.get('country'), h.get('id'), a.get('id'), st, hs, as_, lg.get('id')]
 
 
 def af_window(ds):
@@ -1864,6 +1867,349 @@ def lam_sd(lk, h, a, leagues, teams, cross):
     if not sh_ or not sa_:
         return None
     return [round(math.hypot(sh_[0], sa_[1]), 3), round(math.hypot(sa_[0], sh_[1]), 3)]   # the engine adds the league-gap part
+
+
+# ----------------------------------------------------------------------------------------------
+# Club crests and competition logos. API-Football's fixture lists (already fetched for team news and
+# results) carry each team's id; pairing them with our matches teaches Statpad which crest belongs to
+# which name. Crests are downloaded once from API-Football's public image server, shrunk to two small
+# sizes with the pure-Python PNG code below (the runner has no Pillow), kept with the state and
+# published to crests/ on the site. Names whose crest isn't downloaded yet get a negative id, which tells
+# the page to load it straight from the image server meanwhile.
+# ----------------------------------------------------------------------------------------------
+CREST_TEAM = 'https://media.api-sports.io/football/teams/{}.png'
+CREST_LEAGUE = 'https://media.api-sports.io/football/leagues/{}.png'
+CREST_SMALL, CREST_BIG = 60, 120      # px: list rows / match pages
+CREST_PER_RUN = 40
+# Crests for well-known clubs, so they show from the first run (each id checked against its picture);
+# ids learnt from API-Football's fixtures take precedence.
+CREST_SEED = {
+    'Arsenal': 42, 'Aston Villa': 66, 'Bournemouth': 35, 'Brentford': 55, 'Brighton': 51, 'Chelsea': 49,
+    'Coventry': 1346, 'Crystal Palace': 52, 'Everton': 45, 'Fulham': 36, 'Hull': 64, 'Ipswich': 57, 'Leeds': 63,
+    'Liverpool': 40, 'Manchester City': 50, 'Manchester United': 33, 'Newcastle': 34, 'Nottingham Forest': 65,
+    'Sunderland': 746, 'Tottenham': 47, 'Alavés': 542, 'Athletic Club': 531, 'Atlético Madrid': 530,
+    'Barcelona': 529, 'Celta Vigo': 538, 'Elche': 797, 'Espanyol': 540, 'Getafe': 546, 'Levante': 539,
+    'Osasuna': 727, 'Rayo Vallecano': 728, 'Real Betis': 543, 'Real Madrid': 541, 'Real Sociedad': 548,
+    'Sevilla': 536, 'Valencia': 532, 'Villarreal': 533, '1. FC Köln': 192, 'Augsburg': 170, 'Bayern Munich': 157,
+    "Borussia M'gladbach": 163, 'Dortmund': 165, 'Eintracht Frankfurt': 169, 'Freiburg': 160, 'Hamburger SV': 175,
+    'Hoffenheim': 167, 'Leverkusen': 168, 'Mainz': 164, 'RB Leipzig': 173, 'Schalke 04': 174, 'Stuttgart': 172,
+    'Union Berlin': 182, 'Werder Bremen': 162, 'Atalanta': 499, 'Bologna': 500, 'Cagliari': 490, 'Como': 895,
+    'Fiorentina': 502, 'Frosinone': 512, 'Genoa': 495, 'Inter': 505, 'Juventus': 496, 'Lazio': 487, 'Lecce': 867,
+    'Milan': 489, 'Monza': 1579, 'Napoli': 492, 'Parma': 523, 'Roma': 497, 'Sassuolo': 488, 'Torino': 503,
+    'Udinese': 494, 'Venezia': 517, 'Angers': 77, 'Auxerre': 108, 'Brest': 106, 'Le Havre': 111, 'Lens': 116,
+    'Lille': 79, 'Lorient': 97, 'Lyon': 80, 'Marseille': 81, 'Monaco': 91, 'Nice': 84, 'Paris FC': 114,
+    'Paris Saint-Germain': 85, 'Rennes': 94, 'Strasbourg': 95, 'Toulouse': 96, 'Troyes': 110, 'Ajax': 194,
+    'PSV Eindhoven': 197, 'Feyenoord': 209, 'AZ Alkmaar': 201, 'Twente': 415, 'Benfica': 211, 'Porto': 212,
+    'Sporting CP': 228, 'Braga': 217, 'Galatasaray': 645, 'Fenerbahce': 611, 'Besiktas': 549, 'Trabzonspor': 998,
+    'Celtic': 247, 'Rangers': 257, 'Aberdeen': 252, 'Hearts': 254, 'Hibernian': 249, 'Club Brugge': 569,
+    'Anderlecht': 554, 'Boca Juniors': 451, 'Inter Miami': 9568, 'Los Angeles FC': 1616}
+# API-Football's competition ids for Statpad's leagues (checked against their logos)
+AF_LEAGUE = {'EPL': 39, 'LaLiga': 140, 'BUN': 78, 'SA': 135, 'L1': 61, 'POR': 94, 'ERE': 88, 'BEL': 144, 'KSA': 307, 'ENG2': 40, 'GER2': 79, 'ITA2': 136, 'ESP2': 141, 'FRA2': 62, 'NED2': 89, 'ENG3': 41, 'ENG4': 42, 'SCO1': 179, 'SCO2': 180, 'TUR1': 203, 'GRE1': 197, 'AUT1': 218, 'SUI1': 207, 'DEN1': 119, 'NOR1': 103, 'SWE1': 113, 'POL1': 106, 'ROU1': 283, 'CZE1': 345, 'SRB1': 286, 'IRL1': 357, 'FIN1': 244, 'BRA1': 71, 'ARG1': 128, 'MEX1': 262, 'USA1': 253, 'JPN1': 98, 'CHN1': 169, 'UCL': 2, 'UEL': 3, 'UECL': 848, 'FAC': 45, 'EFLC': 48, 'DFB': 81, 'CDR': 143, 'CI': 137, 'CDF': 66, 'UNL': 5, 'INTF': 10}
+CREST_BUDGET_S = 25
+
+PNG_SIG = b'\x89PNG\r\n\x1a\n'
+
+
+def png_decode(data):
+    if data[:8] != PNG_SIG:
+        raise ValueError('not a png')
+    pos, idat, plte, trns, ihdr = 8, [], None, None, None
+    while pos + 8 <= len(data):
+        n, typ = struct.unpack('>I4s', data[pos:pos + 8])
+        body = data[pos + 8:pos + 8 + n]
+        pos += 12 + n
+        if typ == b'IHDR':
+            ihdr = struct.unpack('>IIBBBBB', body)
+        elif typ == b'PLTE':
+            plte = body
+        elif typ == b'tRNS':
+            trns = body
+        elif typ == b'IDAT':
+            idat.append(body)
+        elif typ == b'IEND':
+            break
+    if not ihdr:
+        raise ValueError('no header')
+    w, h, bd, ct, _, _, il = ihdr
+    if il:
+        raise ValueError('interlaced')
+    ch = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[ct]
+    if w * h > 1_500_000:
+        raise ValueError('too big')
+    raw = zlib.decompress(b''.join(idat))
+    bits = ch * bd
+    stride = (w * bits + 7) // 8
+    bpp = max(1, bits // 8)
+    out = bytearray(stride * h)
+    prev = bytearray(stride)
+    p = 0
+    for y in range(h):
+        f = raw[p]
+        line = bytearray(raw[p + 1:p + 1 + stride])
+        p += 1 + stride
+        if f == 1:
+            for i in range(bpp, stride):
+                line[i] = (line[i] + line[i - bpp]) & 255
+        elif f == 2:
+            for i in range(stride):
+                line[i] = (line[i] + prev[i]) & 255
+        elif f == 3:
+            for i in range(stride):
+                a = line[i - bpp] if i >= bpp else 0
+                line[i] = (line[i] + ((a + prev[i]) >> 1)) & 255
+        elif f == 4:
+            for i in range(stride):
+                a = line[i - bpp] if i >= bpp else 0
+                b = prev[i]
+                c = prev[i - bpp] if i >= bpp else 0
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        out[y * stride:(y + 1) * stride] = line
+        prev = line
+    # to RGBA, 8 bits per channel
+    px = bytearray(w * h * 4)
+    if ct == 3:
+        pal = [tuple(plte[i:i + 3]) for i in range(0, len(plte or b''), 3)]
+        alpha = list(trns or b'')
+        per = 8 // bd
+        mask = (1 << bd) - 1
+        for y in range(h):
+            row = out[y * stride:(y + 1) * stride]
+            for x in range(w):
+                if bd == 8:
+                    k = row[x]
+                else:
+                    byte = row[x // per]
+                    k = (byte >> (8 - bd * (x % per + 1))) & mask
+                r, g, b = pal[k] if k < len(pal) else (0, 0, 0)
+                o = (y * w + x) * 4
+                px[o:o + 4] = bytes((r, g, b, alpha[k] if k < len(alpha) else 255))
+        return w, h, px
+    step = ch * (bd // 8) if bd >= 8 else None
+    if bd < 8:   # low bit-depth greyscale
+        if ct != 0:
+            raise ValueError('unsupported')
+        per, mask, scale = 8 // bd, (1 << bd) - 1, 255 // ((1 << bd) - 1)
+        for y in range(h):
+            row = out[y * stride:(y + 1) * stride]
+            for x in range(w):
+                v = ((row[x // per] >> (8 - bd * (x % per + 1))) & mask) * scale
+                o = (y * w + x) * 4
+                px[o:o + 4] = bytes((v, v, v, 255))
+        return w, h, px
+    hi = 2 if bd == 16 else 1
+    for y in range(h):
+        row = out[y * stride:(y + 1) * stride]
+        for x in range(w):
+            s = row[x * step:(x + 1) * step:hi]
+            o = (y * w + x) * 4
+            if ct == 6:
+                px[o:o + 4] = s
+            elif ct == 2:
+                px[o:o + 4] = bytes((s[0], s[1], s[2], 255))
+            elif ct == 4:
+                px[o:o + 4] = bytes((s[0], s[0], s[0], s[1]))
+            else:
+                px[o:o + 4] = bytes((s[0], s[0], s[0], 255))
+    if trns and ct in (0, 2) and bd == 8:   # single transparent colour
+        key = tuple(trns[1::2][:3]) if ct == 2 else (trns[1],) * 3
+        for i in range(0, len(px), 4):
+            if tuple(px[i:i + 3]) == key:
+                px[i + 3] = 0
+    return w, h, px
+
+
+def _weights(n_in, n_out):
+    """Area-average weights: for each output cell, [(input index, weight)]."""
+    sc = n_in / n_out
+    res = []
+    for o in range(n_out):
+        a, b = o * sc, (o + 1) * sc
+        ws, i = [], int(a)
+        while i < b and i < n_in:
+            ws.append((i, min(b, i + 1) - max(a, i)))
+            i += 1
+        t = sum(w for _, w in ws) or 1
+        res.append([(i, w / t) for i, w in ws])
+    return res
+
+
+def png_shrink(w, h, px, box):
+    if w <= box and h <= box:
+        return w, h, px
+    k = box / max(w, h)
+    W, H = max(1, round(w * k)), max(1, round(h * k))
+    # premultiply
+    pre = [0.0] * (w * h * 4)
+    for i in range(0, w * h * 4, 4):
+        a = px[i + 3] / 255
+        pre[i], pre[i + 1], pre[i + 2], pre[i + 3] = px[i] * a, px[i + 1] * a, px[i + 2] * a, px[i + 3]
+    wx, wy = _weights(w, W), _weights(h, H)
+    tmp = [0.0] * (W * h * 4)
+    for y in range(h):
+        base = y * w * 4
+        for X, ws in enumerate(wx):
+            r = g = b = a = 0.0
+            for i, f in ws:
+                j = base + i * 4
+                r += pre[j] * f; g += pre[j + 1] * f; b += pre[j + 2] * f; a += pre[j + 3] * f
+            o = (y * W + X) * 4
+            tmp[o], tmp[o + 1], tmp[o + 2], tmp[o + 3] = r, g, b, a
+    out = bytearray(W * H * 4)
+    for Y, ws in enumerate(wy):
+        for X in range(W):
+            r = g = b = a = 0.0
+            for i, f in ws:
+                j = (i * W + X) * 4
+                r += tmp[j] * f; g += tmp[j + 1] * f; b += tmp[j + 2] * f; a += tmp[j + 3] * f
+            o = (Y * W + X) * 4
+            if a > 0.5:
+                m = 255 / a
+                out[o:o + 4] = bytes((min(255, round(r * m)), min(255, round(g * m)), min(255, round(b * m)), min(255, round(a))))
+    return W, H, out
+
+
+def png_encode(w, h, px):
+    stride, rows, prev = w * 4, [], bytearray(w * 4)
+    for y in range(h):
+        line = px[y * stride:(y + 1) * stride]
+        best, best_s = None, None
+        for f in range(5):
+            o = bytearray(stride)
+            for i in range(stride):
+                a = line[i - 4] if i >= 4 else 0
+                b = prev[i]
+                c = prev[i - 4] if i >= 4 else 0
+                if f == 0:
+                    v = line[i]
+                elif f == 1:
+                    v = line[i] - a
+                elif f == 2:
+                    v = line[i] - b
+                elif f == 3:
+                    v = line[i] - ((a + b) >> 1)
+                else:
+                    pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                    v = line[i] - (a if pa <= pb and pa <= pc else b if pb <= pc else c)
+                o[i] = v & 255
+            s = sum(v if v < 128 else 256 - v for v in o)
+            if best_s is None or s < best_s:
+                best, best_s = bytes([f]) + bytes(o), s
+        rows.append(best)
+        prev = line
+    def chunk(t, b):
+        return struct.pack('>I', len(b)) + t + b + struct.pack('>I', zlib.crc32(t + b) & 0xffffffff)
+    return PNG_SIG + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(b''.join(rows), 9)) + chunk(b'IEND', b'')
+
+
+def small_png(data, box):
+    w, h, px = png_decode(data)
+    return png_encode(*png_shrink(w, h, px, box))
+
+
+def learn_crests(state, matches):
+    """Remember API-Football's team (and competition) id for our names, from fixtures paired with theirs."""
+    cr = state.setdefault('crest', {})
+    lc = state.setdefault('lgcrest', {})
+    for lk, lid in AF_LEAGUE.items():
+        lc.setdefault(lk, lid)
+    for name, tid in CREST_SEED.items():
+        cr.setdefault(name, tid)
+    fxs = af_rows(state)
+    if not fxs:
+        return 0
+    lo, hi = fxs[0][0] - timedelta(hours=3), fxs[-1][0] + timedelta(hours=3)
+    n = 0
+    for m in matches:
+        if (L.get(m['lk']) or {}).get('group') == 'intl':
+            continue   # national teams show their flag
+        if m['h'] in cr and m['a'] in cr and m['lk'] in lc:
+            continue
+        ko = parse_iso(m['ko'])
+        if not (lo <= ko <= hi):
+            continue
+        f = af_match(m['lk'], ko, m['h'], m['a'], fxs)
+        if not f:
+            continue
+        for name, tid in ((m['h'], f[6]), (m['a'], f[7])):
+            if isinstance(tid, int) and tid > 0 and cr.get(name) != tid:
+                cr[name] = tid
+                n += 1
+        lid = f[11] if len(f) > 11 else None
+        if m['lk'] not in AF_LEAGUE and isinstance(lid, int) and lid > 0 and lc.get(m['lk']) != lid:
+            lc[m['lk']] = lid
+    return n
+
+
+def crest_dir():
+    d = STATE_DIR / 'crests'
+    (d / 'b').mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def fetch_crests(state):
+    """Download and shrink crests not on file yet, a few per run, giving up early if the server is unhappy."""
+    d = crest_dir()
+    bad = state.setdefault('crest_bad', {})
+    want = [('t', i) for i in sorted(set((state.get('crest') or {}).values()))] + [('l', i) for i in sorted(set((state.get('lgcrest') or {}).values()))]
+    t0, got, fails = time.time(), 0, 0
+    for kind, i in want:
+        name = f'{i}.png' if kind == 't' else f'l{i}.png'
+        if (d / name).exists():
+            continue
+        key = name[:-4]
+        if bad.get(key) and NOW - parse_iso(bad[key]) < timedelta(days=2) and not FORCE:
+            continue
+        if got >= CREST_PER_RUN or fails >= 3 or time.time() - t0 > CREST_BUDGET_S:
+            break
+        r = fetch((CREST_TEAM if kind == 't' else CREST_LEAGUE).format(i), tries=1, timeout=12)
+        try:
+            if r.status != 200 or not r.body:
+                raise ValueError(f'HTTP {r.status}')
+            big = small_png(r.body, CREST_BIG) if kind == 't' else None
+            small = small_png(r.body, CREST_SMALL)
+        except Exception as e:
+            bad[key] = iso(NOW)
+            fails += 1
+            log('crest', name, 'not saved:', repr(e)[:80])
+            continue
+        if big:
+            (d / 'b' / name).write_bytes(big)
+        (d / name).write_bytes(small)
+        bad.pop(key, None)
+        got += 1
+        time.sleep(0.15)
+    return got
+
+
+def publish_crests(state, doc):
+    """Copy every crest on file to the site and list the ones this page needs: name -> id (negative = not on file yet)."""
+    d = crest_dir()
+    out = OUT_DIR / 'crests'
+    (out / 'b').mkdir(parents=True, exist_ok=True)
+    for p in list(d.glob('*.png')) + list((d / 'b').glob('*.png')):
+        q = out / p.relative_to(d)
+        if not q.exists() or q.stat().st_size != p.stat().st_size:
+            shutil.copyfile(p, q)
+    cr, lc = state.get('crest') or {}, state.get('lgcrest') or {}
+    names = set()
+    for m in doc['matches']:
+        names.update((m['h'], m['a']))
+    for lg in doc['leagues'].values():
+        names.update(r[0] for r in lg.get('table') or [])
+    sign = lambda i, f: i if (d / f).exists() else -i
+    doc['crests'] = {n: sign(cr[n], f'{cr[n]}.png') for n in sorted(names) if n in cr}
+    doc['lgcrests'] = {k: sign(lc[k], f'l{lc[k]}.png') for k in sorted(doc['leagues']) if k in lc}
+    return len(doc['crests'])
+
+
+def refresh_crests(state, doc):
+    n_new = learn_crests(state, doc['matches'])
+    got = fetch_crests(state)
+    n = publish_crests(state, doc)
+    if n_new or got:
+        log(f'crests: {n_new} new team ids, {got} downloaded, {n} on this board')
+    return n
 
 
 def table_pos(leagues):
@@ -3311,6 +3657,7 @@ def main():
     log('odds:', msg, '| credits left:', (state.get('quota') or {}).get('remaining'))
 
     doc = build(state, prev, seed)
+    safe(lambda: refresh_crests(state, doc), 0)
     safe(lambda: refresh_stakes(state, doc), None)
     n_fx = safe(lambda: apply_fx(state, doc), 0)
     if n_fx:
