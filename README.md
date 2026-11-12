@@ -133,14 +133,16 @@ Each is fitted on two past seasons after blending with the market as the site do
 
 ## Ask Statpad
 
-Tap the microphone in the header, or **Ask Statpad** on the Matches tab, and ask by voice or by typing, in English or Kiswahili:
+Tap the microphone in the header, or **Ask Statpad** on the Matches tab, and speak straight away (it starts listening), or type. English or Kiswahili:
 
 - "Who wins Arsenal v Chelsea?" / "Nani atashinda Arsenal dhidi ya Chelsea?"
 - "Safest picks today", "Give me a 5 odds slip", "Best value", "Biggest games"
 - "Who will win the Premier League?", "Who gets relegated from La Liga?"
 - "How are Arsenal doing?", "What's the score in the Arsenal game?", "How are my bets doing?"
 
-The phone's browser turns speech into text (Chrome on Android, Safari on iPhone); everything else runs on the page, from the same numbers. Answers can be read aloud, and come with buttons to open the match, add the pick or the slip to the coupon, or open the simulator. Where a browser has no voice input, type instead.
+The phone's browser turns speech into text (Chrome on Android, Safari on iPhone); everything else runs on the page, from the same numbers. Spoken questions are answered aloud (typed ones too, if you tick the box), and answers come with buttons to open the match, add the pick or the slip to the coupon, or open the simulator. Follow-ups work: "and tomorrow?", "what about Serie A?". You can name a market ("over 2.5 tips", "both teams to score today"), and names a little off ("Chelsi", "Liverpul") are still found.
+
+If the microphone does nothing: allow it for the site (tap the icon left of the address, then Permissions), and check you're online, since the phone needs the internet to turn speech into text. Inside the claude.ai preview the microphone is blocked; it works on your GitHub Pages site. Where a browser has no voice input, type instead.
 
 ## Combos, draw no bet and handicaps
 

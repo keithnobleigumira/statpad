@@ -448,7 +448,7 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .ask-tail { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
 .ask-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
 .ask-wait { margin: 0; color: var(--ink-3); }
-.ask-in { display: flex; gap: 8px; align-items: center; position: sticky; bottom: -40px; background: var(--paper); padding: 8px 0 10px; z-index: 1; }
+.ask-in { display: flex; gap: 8px; align-items: center; position: sticky; bottom: 0; background: var(--paper); padding: 8px 0 10px; z-index: 1; }
 .ask-in input { flex: 1; min-width: 0; border: 1px solid var(--rule); border-radius: 99px; padding: 11px 15px; font: 500 15px var(--f-body); background: var(--card); color: var(--ink); }
 .ask-in .btn { flex: none; }
 .ask-mic { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--pitch); color: #fff; display: grid; place-items: center; cursor: pointer; }
@@ -456,7 +456,10 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .ask-mic.on { background: var(--red); animation: askpulse 1.2s ease-in-out infinite; }
 @keyframes askpulse { 0%, 100% { box-shadow: 0 0 0 0 var(--red-soft); } 50% { box-shadow: 0 0 0 10px var(--red-soft); } }
 @media (prefers-reduced-motion: reduce) { .ask-mic.on { animation: none; } }
-.ask-state { margin: 0; min-height: 1.2em; font-size: 13px; color: var(--ink-2); }
+.ask-state { margin: 0; min-height: 1.2em; font-size: 13.5px; color: var(--ink-2); }
+.ask-state:empty { display: none; }
+.ask-state.on { color: var(--ink); font-weight: 600; padding: 10px 12px; border-radius: 12px; background: var(--red-soft); }
+.ask-state.err { color: var(--red); padding: 10px 12px; border-radius: 12px; background: var(--red-soft); }
 /* WhatsApp Status pack */
 .st-intro { margin-top: 0; }
 .st-acts { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 14px; }
@@ -543,6 +546,8 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .story h4 { align-items: center; }
 .tts-bar { position: fixed; z-index: 60; left: 10px; right: 10px; bottom: calc(70px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; background: var(--ink); color: var(--paper); border-radius: 16px; padding: 10px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25); max-width: 640px; margin: 0 auto; }
 @media (min-width: 980px) { .tts-bar { bottom: 18px; } }
+body:has(.sheet.open) .tts-bar { z-index: 62; top: calc(8px + env(safe-area-inset-top, 0px)); bottom: auto; flex-wrap: nowrap; }
+body:has(.sheet.open) .tts-bar .tts-v { display: none; }
 .tts-bar button { border: 0; background: none; color: inherit; display: grid; place-items: center; cursor: pointer; flex: none; }
 .tts-pp { width: 38px; height: 38px; border-radius: 50%; background: var(--pitch) !important; color: #fff !important; }
 .tts-pp svg, .tts-x svg { width: 18px; height: 18px; }
@@ -881,7 +886,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     <div class="top-right">
       <span class="live" id="live" role="status"><span class="dot"></span><span id="liveText">Loading</span></span>
       <button class="icon-btn" id="installBtn" type="button" aria-label="Install the Statpad app" title="Install app" hidden><svg><use href="#i-install"/></svg></button>
-      <button class="icon-btn" id="askBtn" type="button" data-ask="1" aria-label="Ask Statpad" title="Ask Statpad"><svg><use href="#i-mic"/></svg></button>
+      <button class="icon-btn" id="askBtn" type="button" data-ask="listen" aria-label="Ask Statpad" title="Ask Statpad"><svg><use href="#i-mic"/></svg></button>
       <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch colour theme"><svg><use href="#i-moon"/></svg></button>
     </div>
   </div>
@@ -904,7 +909,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     <section id="v-matches" class="section" data-view="matches">
       <div class="sec-head">
         <div><h2>Matches</h2><p class="sub" id="matchesSub">Tap a match for the full breakdown.</p></div>
-        <div class="ctl"><button type="button" class="btn listen-b" data-ask="1"><svg aria-hidden="true"><use href="#i-mic"/></svg>Ask Statpad</button><button type="button" class="btn listen-b" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen to the briefing</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
+        <div class="ctl"><button type="button" class="btn listen-b" data-ask="listen"><svg aria-hidden="true"><use href="#i-mic"/></svg>Ask Statpad</button><button type="button" class="btn listen-b" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen to the briefing</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
       </div>
       <div class="days" id="days-matches" role="group" aria-label="Day"></div>
       <div class="filters">
@@ -1583,6 +1588,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     setTimeout(() => $('#sheetClose').focus(), 60);
   }
   function closeSheet() {
+    if (S.ask && S.ask.cur) askAbortRec();
     S.open = null; S.teamBack = null; S.fromAsk = false;
     $('#sheet').classList.remove('open'); $('#scrim').classList.remove('open'); $('#sheet').setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
@@ -1617,7 +1623,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function renderSheet() {
     if (String(S.open).startsWith('team:')) { renderTeamSheet(); return; }
     if (S.open === 'status:') { renderStatusSheet(); return; }
-    if (S.open === 'ask:') { renderAskSheet(); return; }
+    if (S.ask && S.ask.cur && S.open !== 'ask:') askAbortRec();
+    if (S.open === 'ask:') { if (!$('#askForm')) renderAskSheet(); return; }
     const r = S.byId.get(S.open); if (!r) { closeSheet(); return; }
     const { m, a } = r, info = lgInfo(m.lk);
     $('#sheetTitle').textContent = `${info.name} · ${longFmt.format(r.ko)}`;
@@ -2098,7 +2105,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>WhatsApp Status pack</h3>
       <p>On the Matches and Slips tabs, <b>Status pack</b> draws four tall pictures for the day, sized for WhatsApp Status: the safest pick, an upset alert (the underdog at a real price of 2.60 or more with the best value, with how often it should land), the game with most at stake, and the slip at your target odds with the best chance of landing. Share all four in one go, or one at a time. Each carries the site's address and an 18+ note.</p>
       <h3>Ask Statpad</h3>
-      <p>Tap the microphone at the top, or <b>Ask Statpad</b> on the Matches tab, and ask by voice or by typing, in English or Kiswahili: who wins a game, how a team is doing, the safest picks, a slip at any odds, the best value, what's at stake, title and relegation races, live scores, or how your bets are doing. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone); the answers come from the same numbers as the rest of the page and can be read aloud. Some browsers don't offer voice input: type instead.</p>
+      <p>Tap the microphone at the top, or <b>Ask Statpad</b> on the Matches tab, and speak straight away, or type, in English or Kiswahili: who wins a game, how a team is doing, the safest picks, a slip at any odds, the best value, what's at stake, title and relegation races, live scores, or how your bets are doing. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so it needs the internet and the microphone allowed for the site; the answers come from the same numbers as the rest of the page and are read aloud. Follow-ups such as "and tomorrow?" work, and so do names a little off. Some browsers don't offer voice input: type instead.</p>
       <h3>My bets</h3>
       <p>Save a coupon with your stake and your bookmaker's odds, and Statpad shows the chance of it landing, the odds you need to break even after the tax on winnings (15% in Uganda by default; change it in My bets), and what it's worth on average. Bets settle themselves from the same results, using the 90-minute score; a postponed leg counts at odds 1. Everything is stored on your device: use Back up to keep a copy or move to a new phone.</p>
       <h3>Slips</h3>
@@ -4239,14 +4246,6 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (x && x.sw >= 0.05) out.push(T(`At stake: ${x.name}'s ${zoneWord(x.z)} is ${fmtP(x.w)} with a win, ${fmtP(x.l)} with a defeat.`, `Kilicho hatarini: nafasi ya ${x.name} ya ${zoneSw(x.z)} ni ${fmtP(x.w)} wakishinda, ${fmtP(x.l)} wakifungwa.`));
     return { lead, items: out, acts, plain: true };
   }
-  function aSafe(d) {
-    if (!d) return { lead: T('There are no games with predictions coming up.', 'Hakuna mechi zenye utabiri kwa sasa.') };
-    const rows = S.rows.filter((r) => r.day === d.key && !r.started && r.a && r.a.top).sort((x, y) => y.a.top.pLo - x.a.top.pLo).slice(0, 3);
-    if (!rows.length) return { lead: T(`No picks for ${dayWord(d.key)} yet.`, `Bado hakuna machaguo ya ${dayWord(d.key)}.`) };
-    return { lead: T(`The safest picks for ${dayWord(d.key)}:`, `Machaguo salama zaidi ya ${dayWord(d.key)}:`),
-      items: rows.map((r) => T(`${r.a.top.label}, in ${r.m.h} v ${r.m.a}: ${pct(r.a.top.pAdj)}, odds ${odds(r.a.top.price)}.`, `${r.a.top.label}, ${r.m.h} dhidi ya ${r.m.a}: ${pct(r.a.top.pAdj)}, odds ${odds(r.a.top.price)}.`)),
-      tail: T('Chances, not certainties.', 'Hizi ni nafasi, si uhakika.'), acts: rows.map((r) => [`${r.m.h} ${vsW()} ${r.m.a}`, `data-open="${esc(r.m.id)}"`]) };
-  }
   function aSlip(d, target) {
     if (!d) return { lead: T('There are no games for a slip yet.', 'Hakuna mechi za kutosha kwa mkeka.') };
     const open = S.rows.filter((r) => r.day === d.key && !r.started && r.a).map((r) => ({ m: r.m, a: r.a }));
@@ -4288,13 +4287,6 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return { lead: T(`${L.name}, ${SIM_N.toLocaleString('en-US')} simulated seasons. ${/^title$/i.test(zn) ? 'Title' : zn} chances:`, `${L.name}, misimu ${SIM_N.toLocaleString('en-US')} iliyoigwa. Nafasi za ${zoneSw(zn)}:`),
       items: list.map(([n, p]) => `${n}: ${fmtP(p)}`), acts: [[T('Open the season simulator', 'Fungua kiigaji cha msimu'), `data-gosim="${esc(lk)}"`]] };
   }
-  function aLive(hits) {
-    let rows = S.rows.filter((r) => r.started && liveNow(r.m.id) && !liveNow(r.m.id).ft);
-    if (hits.length) { const keys = new Set(hits.map((h) => h.t)); const mine = rows.filter((r) => keys.has(ckKey(r.m.h)) || keys.has(ckKey(r.m.a))); if (mine.length) rows = mine; }
-    if (!rows.length) return { lead: T('None of Statpad\'s games is in play right now.', 'Hakuna mechi ya Statpad inayoendelea sasa hivi.') };
-    return { lead: T('In play now:', 'Zinazoendelea sasa:'), items: rows.slice(0, 5).map((r) => { const L = liveNow(r.m.id); return `${r.m.h} ${L.h}–${L.a} ${r.m.a}, ${L.st === 'HT' ? T('half time', 'mapumziko') : Math.round(L.min) + "'"}`; }),
-      acts: rows.slice(0, 3).map((r) => [`${r.m.h} ${vsW()} ${r.m.a}`, `data-open="${esc(r.m.id)}"`]) };
-  }
   function aBets() {
     const open = S.bets.filter((b) => b.status === 'open'), done = S.bets.filter((b) => b.status !== 'open');
     if (!S.bets.length) return { lead: T('You have no saved bets. Save a coupon in Bets to follow it here.', 'Huna bet zilizohifadhiwa. Hifadhi kuponi kwenye Bets ili kuifuatilia.'), acts: [[T('Open Bets', 'Fungua Bets'), 'data-askgo="coupon"']] };
@@ -4329,118 +4321,294 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return { lead: T('Ask about any game or team, the safest picks, a slip at any odds, value, what\'s at stake, title races, live scores or your bets. For example:', 'Niulize kuhusu mechi au timu yoyote, machaguo salama, mkeka wa odds yoyote, thamani, mechi kubwa, mbio za ubingwa, matokeo ya moja kwa moja au bet zako. Kwa mfano:'),
       items: askExamples(), plain: true, chips: true };
   }
-  async function askAnswer(q) {
-    const t = askNorm(q), { hits } = ckHits(q, true), fx = hits.length ? ckFixture(hits) : null;
-    const has = (re) => re.test(t);
-    if (!t) return aHelp();
-    if (has(/\b(help|what can (you|i)|how do(es)? (this|it) work|msaada|nisaidie|naweza kuuliza)\b/)) return aHelp();
-    if (has(/\b(my bets?|my tickets?|my slips?|bet zangu|dau langu|tiketi zangu|mikeka yangu)\b/)) return aBets();
-    if (has(/\b(score|scores|live|in play|playing now|matokeo|inaendelea|zinazoendelea|mubashara|goli)\b/) && !has(/\b(likely|correct|most|expected|yanayowezekana)\b/)) return aLive(hits);
-    if (fx && fx.sure) return aMatch(fx.r);
-    const lgNamed = LG_WORDS.some(([re]) => re.test(t));
-    if (has(/\b(title|win the league|league winner|champions?|relegat\w*|go down|drop|top 4|ubingwa|bingwa|atashinda ligi|kushuka( daraja)?)\b/) || (lgNamed && !fx && has(/\b(win|wins|winner|atashinda|kushinda)\b/))) {
-      const kind = has(/\b(relegat\w*|go down|drop|kushuka)\b/) ? 'down' : has(/\btop 4\b/) ? 'top' : 'title';
-      return aTitle(askLeague(t, hits), kind);
-    }
-    if (has(/\b(stakes?|big(gest)? games?|most important|matters? most|mechi kubwa|muhimu|hatarini)\b/)) return aStakes(has(/\b(today|tomorrow|leo|kesho)\b/) ? askDay(t) : null);
-    if (has(/\b(value|edge|best price|overpriced|underpriced|thamani)\b/)) return aValue(has(/\b(today|tomorrow|leo|kesho)\b/) ? askDay(t) : null);
-    const mt = t.match(/\bodds? (\d+(?:\.\d+)?)\b|\b(\d+(?:\.\d+)?) ?(?:x |-)?odds?\b/);
-    if (mt || has(/\b(slip|slips|acca|accumulator|multi ?bet|mkeka|tiketi|combo)\b/)) {
-      const tg = Math.min(500, Math.max(1.5, mt ? +(mt[1] || mt[2]) : S.target));
-      return aSlip(askDay(t), tg);
-    }
-    if (has(/\b(safe|safest|sure|banker|bankers|best bets?|tips?|predictions?|picks?|uhakika|salama|utabiri|machaguo)\b/) && !fx) return aSafe(askDay(t));
-    if (fx) {
-      const tk = hits.sort((x, y) => y.w - x.w)[0].t, r = fx.r, name = ckKey(r.m.h) === tk ? r.m.h : ckKey(r.m.a) === tk ? r.m.a : null;
-      if (name && !has(/\b(who|win|wins|beat|predict\w*|odds|chances?|nani|atashinda|dhidi)\b/)) return aTeam(r, name);
-      return aMatch(r);
-    }
-    if (has(/\b(today|tomorrow|leo|kesho|weekend|games|matches|mechi)\b/)) return aSafe(askDay(t));
-    return { lead: T('Sorry, I couldn\'t match that to a question I can answer. Try one of these:', 'Samahani, sikuelewa swali hilo. Jaribu mojawapo ya haya:'), items: askExamples(), plain: true, chips: true, miss: true };
+  // every team Statpad knows (fixtures and league tables), for spoken questions: speech gets names a little
+  // wrong ("Chelsi", "Arsenali", "Liverpul"), so near spellings and sound-alikes count too
+  const ASK_STOP = new Set(('who wins win will would the and versus vs against between today tonight tomorrow weekend odds odd slip slips safe safest sure best value league title premier give me my picks pick match matches game games score scores chance chances playing doing do does bets bet how what whats which is are of for in on a an to play predict prediction predictions tips tip about tell think statpad please draw draws over under goals goal both teams team home away next beat beats there their they them it its this that with from at by be been was were have has had can could should get got any some more most less much many good great big biggest important stakes stake winner champion champions relegated relegation down top four five ten twenty point half and live now latest result results form table position place doing going say said know show see want need'
+    + ' nani atashinda dhidi ya na leo kesho mechi mkeka nipe bora salama timu ligi wa za la kwa ni je gani nini lini mshindi kushinda magoli zaidi chini ubingwa bingwa thamani utabiri machaguo hatarini muhimu kubwa zangu yangu sasa hivi habari gani zipi ipi wapi ngapi sana tafadhali asante'
+    + ' tonights todays tomorrows weekends possible possibly likely really maybe where when betting money final cup corners cards hello thanks thank okay hey please sport sports football soccer fixture fixtures kick off kickoff time first second half').split(' '));
+  const phon = (s) => s.replace(/[^a-z]/g, '').replace(/ph/g, 'f').replace(/ck/g, 'k').replace(/[qc]/g, 'k').replace(/z/g, 's').replace(/y/g, 'i').replace(/ee|ea|ie/g, 'i').replace(/oo|ou/g, 'u').replace(/(.)\1+/g, '$1').replace(/[aeiou]+$/, '');
+  let ASKT = null;
+  function askTeams() {
+    const key = (S.data && S.data.generated) + '|' + S.rows.length;
+    if (ASKT && ASKT.key === key) return ASKT;
+    const vars = new Map(), teams = new Map(), words = new Map();
+    const add = (v, nm) => { v = ckPlain(v).replace(/[+\-−–]/g, ' ').replace(/\s+/g, ' ').trim(); if (v.length < 3 || ASK_STOP.has(v)) return; if (!vars.has(v)) vars.set(v, new Set()); vars.get(v).add(nm); };
+    const team = (nm, lk) => {
+      if (!nm) return;
+      if (!teams.has(nm)) {
+        teams.set(nm, { name: nm, lks: new Set() });
+        const raw = UNPRETTY[nm];
+        add(nm, nm); add(ckKey(nm), nm); if (raw) { add(raw, nm); add(ckKey(raw), nm); }
+        for (const [k, v] of Object.entries(CK_ALIAS)) if (v === ckKey(nm) || (raw && v === ckKey(raw))) add(k, nm);
+        for (const w of ckKey(nm).split(' ')) if (w.length >= 4 && !CK_GENERIC.has(w) && !ASK_STOP.has(w)) words.set(w, (words.get(w) || new Set()).add(nm));
+      }
+      teams.get(nm).lks.add(lk);
+    };
+    for (const r of S.rows) { team(r.m.h, r.m.lk); team(r.m.a, r.m.lk); }
+    for (const [lk, L] of Object.entries(S.data.leagues || {})) for (const row of L.table || []) team(row[0], lk);
+    for (const [w, ns] of words) if (ns.size === 1 && !vars.has(w)) add(w, [...ns][0]);
+    const ph = new Map();
+    for (const [v, ns] of vars) if (v.length >= 4) { const p = phon(v); if (p.length >= 4) { if (!ph.has(p)) ph.set(p, new Set()); ns.forEach((n) => ph.get(p).add(n)); } }
+    ASKT = { key, vars, teams, ph, list: [...vars.keys()].filter((v) => v.length >= 4) };
+    return ASKT;
   }
-  const askSay = (A) => [A.lead, ...(A.items || []), A.tail || ''].filter(Boolean).map((x) => String(x).replace(/<[^>]+>/g, '')
-    .replace(/(\d)–(\d)/g, '$1 $2').replace(/over 99%/g, SW() ? 'zaidi ya asilimia 99' : 'over 99 percent').replace(/under 1%/g, SW() ? 'chini ya asilimia 1' : 'under 1 percent')
-    .replace(/(\d+(?:\.\d+)?)%/g, SW() ? 'asilimia $1' : '$1 percent').replace(/\bv\b/g, SW() ? 'dhidi ya' : 'against'));
-  async function ask(q, spoken) {
+  function askFindTeams(q) {
+    const I = askTeams(), toks = ckPlain(q).replace(/[+\-−–]/g, ' ').split(' ').filter(Boolean), found = [], taken = new Set();
+    for (let i = 0; i < toks.length; i++) for (let n = Math.min(5, toks.length - i); n >= 1; n--) {
+      const v = toks.slice(i, i + n).join(' '), ns = I.vars.get(v) || I.vars.get(CK_ALIAS[v] || '');
+      if (ns) { found.push({ names: [...ns], i, n, d: 0 }); for (let k = i; k < i + n; k++) taken.add(k); i += n - 1; break; }
+    }
+    for (let i = 0; i < toks.length; i++) {
+      if (taken.has(i)) continue;
+      let best = null;
+      for (let n = Math.min(3, toks.length - i); n >= 1; n--) {
+        const g = toks.slice(i, i + n);
+        if (g.some((x, k) => taken.has(i + k) || /^\d/.test(x)) || g.every((x) => ASK_STOP.has(x)) || ASK_STOP.has(g[0]) || ASK_STOP.has(g[g.length - 1])) continue;
+        const s = g.join(' '); if (s.length < 4) continue;
+        const p = phon(s);
+        let hit = p.length >= 4 && I.ph.get(p) ? { names: [...I.ph.get(p)], d: 0.5 } : null;
+        const max = s.length >= 8 ? 2 : s.length >= 5 ? 1 : 0;
+        if (!hit && max) for (const v of I.list) { if (Math.abs(v.length - s.length) > max) continue; const d = ckLev(s, v, max); if (d <= max && (!hit || d < hit.d)) hit = { names: [...I.vars.get(v)], d }; }
+        if (hit && (!best || hit.d < best.d || (hit.d === best.d && n > best.n))) best = Object.assign(hit, { i, n });
+      }
+      if (best) { found.push(best); for (let k = best.i; k < best.i + best.n; k++) taken.add(k); i += best.n - 1; }
+    }
+    return found.sort((a, b) => a.i - b.i);
+  }
+  const askLo = () => Date.now() - 3 * 3600e3;
+  function askFixture(found) {
+    for (let x = 0; x < found.length; x++) for (let y = x + 1; y < found.length; y++) {
+      const A = new Set(found[x].names), B = new Set(found[y].names);
+      const r = S.rows.filter((r) => r.ko >= askLo() && ((A.has(r.m.h) && B.has(r.m.a)) || (B.has(r.m.h) && A.has(r.m.a)))).sort((p, q) => p.ko - q.ko)[0];
+      if (r) return r;
+    }
+    return null;
+  }
+  const askNext = (name) => S.rows.filter((r) => r.ko >= askLo() && (r.m.h === name || r.m.a === name)).sort((p, q) => p.ko - q.ko)[0] || null;
+  function aTeamTable(name) {
+    const tm = askTeams().teams.get(name), lk = tm && [...tm.lks].find((k) => S.data.leagues[k] && S.data.leagues[k].table);
+    const L = lk && S.data.leagues[lk], row = L && L.table.find((x) => x[0] === name);
+    const none = T('They have no game in the next few days.', 'Hawana mechi katika siku chache zijazo.');
+    if (!row) return { lead: `${name}: ${none}` };
+    return { lead: T(`${name} are ${ord(L.table.indexOf(row) + 1)} in the ${L.name} with ${row[7]} points from ${row[1]} games.`, `${name} wako nafasi ya ${L.table.indexOf(row) + 1} kwenye ${L.name}, na pointi ${row[7]} kutoka mechi ${row[1]}.`),
+      items: [none], plain: true, acts: [[T('Team page', 'Ukurasa wa timu'), `data-team="${esc(lk)}|${esc(name)}"`]] };
+  }
+  // a market named in the question narrows the picks
+  const ASK_MK = [[/\bover (2\.5|2 and a half|2 point 5)\b/, ['O25'], 'Over 2.5 goals', 'magoli zaidi ya 2.5'], [/\bover (1\.5|1 and a half|1 point 5)\b/, ['O15'], 'Over 1.5 goals', 'magoli zaidi ya 1.5'],
+    [/\bover (3\.5|3 and a half|3 point 5)\b/, ['O35'], 'Over 3.5 goals', 'magoli zaidi ya 3.5'], [/\bunder (2\.5|2 and a half|2 point 5)\b/, ['U25'], 'Under 2.5 goals', 'magoli chini ya 2.5'],
+    [/\bunder (3\.5|3 and a half|3 point 5)\b/, ['U35'], 'Under 3.5 goals', 'magoli chini ya 3.5'], [/\b(both teams to score|both teams score|btts|gg|goal goal|timu zote kufunga)\b/, ['BTTS'], 'Both teams to score', 'timu zote kufunga'],
+    [/\b(no goal|ng|not both)\b/, ['BTTS_N'], 'Not both teams to score', 'si timu zote kufunga'], [/\bdouble chance\b/, ['1X', 'X2', '12'], 'Double chance', 'double chance'],
+    [/\b(draw|draws|sare)\b/, ['D'], 'Draw', 'sare'], [/\bhome wins?\b/, ['H'], 'Home win', 'ushindi wa nyumbani'], [/\baway wins?\b/, ['A'], 'Away win', 'ushindi wa ugenini'],
+    [/\b(straight wins?|outright wins?|to win|wins|ushindi)\b/, ['H', 'A'], 'Win', 'ushindi']];
+  const askMarket = (t) => ASK_MK.find(([re]) => re.test(t)) || null;
+  function aSafe(d, mk) {
+    if (!d) return { lead: T('There are no games with predictions coming up.', 'Hakuna mechi zenye utabiri kwa sasa.') };
+    const pickOf = (r) => (mk ? r.a.sels.filter((s) => !s.x && mk[1].includes(s.key)).sort((x, y) => y.pLo - x.pLo)[0] : r.a.top);
+    const rows = S.rows.filter((r) => r.day === d.key && !r.started && r.a).map((r) => ({ r, s: pickOf(r) })).filter((x) => x.s).sort((x, y) => y.s.pLo - x.s.pLo).slice(0, 3);
+    if (!rows.length) return { lead: T(`No ${mk ? mk[2].toLowerCase() + ' ' : ''}picks for ${dayWord(d.key)} yet.`, `Bado hakuna machaguo ya ${dayWord(d.key)}.`) };
+    return { lead: mk ? T(`The safest ${mk[2].toLowerCase()} picks for ${dayWord(d.key)}:`, `Machaguo salama zaidi ya ${mk[3]}, ${dayWord(d.key)}:`) : T(`The safest picks for ${dayWord(d.key)}:`, `Machaguo salama zaidi ya ${dayWord(d.key)}:`),
+      items: rows.map(({ r, s }) => T(`${s.label}, in ${r.m.h} v ${r.m.a}: ${pct(s.pAdj)}, odds ${odds(s.price)}.`, `${s.label}, ${r.m.h} dhidi ya ${r.m.a}: ${pct(s.pAdj)}, odds ${odds(s.price)}.`)),
+      tail: T('Chances, not certainties.', 'Hizi ni nafasi, si uhakika.'), acts: rows.map(({ r }) => [`${r.m.h} ${vsW()} ${r.m.a}`, `data-open="${esc(r.m.id)}"`]) };
+  }
+  const MISS = () => ({ lead: T('Sorry, I couldn\'t match that to a question I can answer. Try one of these:', 'Samahani, sikuelewa swali hilo. Jaribu mojawapo ya haya:'), items: askExamples(), plain: true, chips: true, miss: true });
+  async function askAnswer(q) {
+    const t = askNorm(q), has = (re) => re.test(t), C = S.ask.ctx || null;
+    if (!t) return aHelp();
+    const found = askFindTeams(q), fxr = askFixture(found), anyDay = has(/\b(today|tonight|tomorrow|leo|kesho|usiku)\b/);
+    const set = (ctx, A) => { S.ask.ctx = ctx; return A; };
+    if (has(/\b(help|what can (you|i)|how do(es)? (this|it) work|msaada|nisaidie|naweza kuuliza)\b/)) return aHelp();
+    // a follow-up: "and tomorrow?", "what about La Liga?"
+    if (C && !found.length && t.split(' ').length <= 6 && /^(and|what|how|na|je|then|ok|okay)?\b/.test(t)) {
+      if (anyDay && /^(and |what about |how about |na |je |then |ok |okay )?(for |kwa )?(today|tonight|tomorrow|leo|kesho)$/.test(t)) {
+        if (C.k === 'safe') return aSafe(askDay(t), C.mk); if (C.k === 'slip') return aSlip(askDay(t), C.tg);
+        if (C.k === 'value') return aValue(askDay(t)); if (C.k === 'stakes') return aStakes(askDay(t));
+      }
+      if (C.k === 'title' && LG_WORDS.some(([re]) => re.test(t))) { const kind = has(/\b(relegat\w*|go down|drop|kushuka)\b/) ? 'down' : has(/\btop 4\b/) ? 'top' : has(/\b(title|win|wins|winner|champions?|ubingwa|bingwa|atashinda)\b/) ? 'title' : C.kind; S.ask.ctx = { k: 'title', kind }; return aTitle(askLeague(t, []), kind); }
+    }
+    if (has(/\b(my bets?|my tickets?|my slips?|my coupons?|bet zangu|dau langu|tiketi zangu|mikeka yangu)\b/)) return set(null, aBets());
+    if (has(/\b(score|scores|live|in play|playing now|matokeo|inaendelea|zinazoendelea|mubashara|goli)\b/) && !has(/\b(likely|correct|most|expected|will|to score|teams score|both|yanayowezekana|kufunga)\b/)) return set(null, aLiveTeams(found));
+    if (fxr && found.length >= 2) return set(null, aMatch(fxr));
+    if (found.length >= 2 && !fxr && found[0].names[0] !== found[1].names[0] && has(/\b(v|vs|versus|against|and|dhidi|na|or)\b/)) {
+      const [x, y] = [found[0].names[0], found[1].names[0]], rx = askNext(x), ry = askNext(y);
+      const nx = (nm, r) => (r ? T(`${nm} play ${r.m.h === nm ? r.m.a : r.m.h} ${dayWord(r.day)}.`, `${nm} wanacheza na ${r.m.h === nm ? r.m.a : r.m.h} ${dayWord(r.day)}.`) : T(`${nm} have no game in the next few days.`, `${nm} hawana mechi siku chache zijazo.`));
+      return set(null, { lead: T(`${x} and ${y} don't play each other in the next few days.`, `${x} na ${y} hawakutani katika siku chache zijazo.`), items: [nx(x, rx), nx(y, ry)], plain: true,
+        acts: [rx, ry].filter(Boolean).map((r) => [`${r.m.h} ${vsW()} ${r.m.a}`, `data-open="${esc(r.m.id)}"`]) });
+    }
+    const lgNamed = LG_WORDS.some(([re]) => re.test(t));
+    if (has(/\b(title|win the league|league winner|champions?|relegat\w*|go down|drop|top 4|ubingwa|bingwa|atashinda ligi|kushuka( daraja)?)\b/) || (lgNamed && !found.length && has(/\b(win|wins|winner|atashinda|kushinda)\b/))) {
+      const kind = has(/\b(relegat\w*|go down|drop|kushuka)\b/) ? 'down' : has(/\btop 4\b/) ? 'top' : 'title';
+      const lk = askLeague(t, []) || (found[0] && [...(askTeams().teams.get(found[0].names[0]) || { lks: [] }).lks][0]);
+      return set({ k: 'title', kind }, aTitle(lk, kind));
+    }
+    if (has(/\b(stakes?|big(gest)? games?|most important|matters? most|mechi kubwa|muhimu|hatarini)\b/)) return set({ k: 'stakes' }, aStakes(anyDay ? askDay(t) : null));
+    if (has(/\b(value|edge|best price|overpriced|underpriced|thamani)\b/)) return set({ k: 'value' }, aValue(anyDay ? askDay(t) : null));
+    const mt = t.match(/\bodds? (?:of )?(\d+(?:\.\d+)?)\b|\b(\d+(?:\.\d+)?) ?(?:x |-)?odds?\b/);
+    if ((mt && !found.length) || has(/\b(slip|slips|acca|accumulator|multi ?bet|mkeka|tiketi|combo)\b/)) {
+      const tg = Math.min(500, Math.max(1.5, mt ? +(mt[1] || mt[2]) : S.target));
+      return set({ k: 'slip', tg }, aSlip(askDay(t), tg));
+    }
+    if (found.length) {
+      const name = found[0].names[0], r = fxr || askNext(name);
+      if (!r) return set(null, aTeamTable(name));
+      if (!has(/\b(who|win|wins|beat|predict\w*|odds|chances?|tips?|nani|atashinda|dhidi|utabiri)\b/) && (r.m.h === name || r.m.a === name)) return set(null, aTeam(r, name));
+      return set(null, aMatch(r));
+    }
+    const mk = askMarket(t);
+    if (mk || has(/\b(safe|safest|sure|banker|bankers|best bets?|tips?|predictions?|picks?|uhakika|salama|utabiri|machaguo|today|tomorrow|tonight|leo|kesho|weekend|games|matches|mechi|bet on)\b/)) return set({ k: 'safe', mk }, aSafe(askDay(t), mk));
+    return MISS();
+  }
+  function aLiveTeams(found) {
+    const names = new Set(found.flatMap((f) => f.names));
+    let rows = S.rows.filter((r) => r.started && liveNow(r.m.id) && !liveNow(r.m.id).ft);
+    if (names.size) { const mine = rows.filter((r) => names.has(r.m.h) || names.has(r.m.a)); if (mine.length) rows = mine; else if (found.length) { const r = askNext(found[0].names[0]); if (r && !r.started) return { lead: T(`${found[0].names[0]} aren't playing right now. Next: ${r.m.h} v ${r.m.a}, ${dayWord(r.day)} at ${tFmt.format(r.ko)}.`, `${found[0].names[0]} hawachezi sasa hivi. Mechi ijayo: ${r.m.h} dhidi ya ${r.m.a}, ${dayWord(r.day)} ${tFmt.format(r.ko)}.`), acts: [[T('Open the match', 'Fungua mechi'), `data-open="${esc(r.m.id)}"`]] }; } }
+    if (!rows.length) return { lead: T('None of Statpad\'s games is in play right now.', 'Hakuna mechi ya Statpad inayoendelea sasa hivi.') };
+    return { lead: T('In play now:', 'Zinazoendelea sasa:'), items: rows.slice(0, 5).map((r) => { const L = liveNow(r.m.id); return `${r.m.h} ${L.h}–${L.a} ${r.m.a}, ${L.st === 'HT' ? T('half time', 'mapumziko') : Math.round(L.min) + "'"}`; }),
+      acts: rows.slice(0, 3).map((r) => [`${r.m.h} ${vsW()} ${r.m.a}`, `data-open="${esc(r.m.id)}"`]) };
+  }
+  const askSay = (A, lang) => { const sw = lang === 'sw'; return [A.lead, ...(A.items || []), A.tail || ''].filter(Boolean).map((x) => String(x).replace(/<[^>]+>/g, '')
+    .replace(/(\d)–(\d)/g, '$1 $2').replace(/over 99%/g, sw ? 'zaidi ya asilimia 99' : 'over 99 percent').replace(/under 1%/g, sw ? 'chini ya asilimia 1' : 'under 1 percent')
+    .replace(/(\d+(?:\.\d+)?)%/g, sw ? 'asilimia $1' : '$1 percent').replace(/\bv\b/g, sw ? 'dhidi ya' : 'against')); };
+  async function ask(q, spoken, alts) {
     q = String(q || '').trim(); if (!q) return;
+    if (TTS.on) ttsStop();
     const item = { q, A: null, at: Date.now(), lang: S.ask.lang };
     S.ask.log.push(item); if (S.ask.log.length > 12) S.ask.log.shift();
-    renderAskLog();
-    try { item.A = await askAnswer(q); } catch (e) { item.A = { lead: T('Something went wrong answering that.', 'Kuna hitilafu.') }; }
-    renderAskLog();
-    if (spoken || S.ask.voiceOut) speak(T('Statpad answers', 'Statpad inajibu'), askSay(item.A), S.ask.lang);
+    renderAskLog(true);
+    try {
+      item.A = await askAnswer(q);
+      // speech gave other readings too: use the first one Statpad understands
+      if (item.A.miss && alts) for (const x of alts) { if (!x || x.toLowerCase() === q.toLowerCase()) continue; const A2 = await askAnswer(x); if (!A2.miss) { item.A = A2; item.q = x; break; } }
+    } catch (e) { item.A = { lead: T('Something went wrong answering that. Try asking another way.', 'Kuna hitilafu. Jaribu kuuliza kwa njia nyingine.') }; }
+    renderAskLog(true);
+    if (spoken || S.ask.voiceOut) setTimeout(() => { if (S.open === 'ask:') speak(item.lang === 'sw' ? 'Statpad inajibu' : 'Statpad answers', askSay(item.A, item.lang), item.lang); }, spoken ? 350 : 0);
+  }
+  // ---- the microphone. Android's recogniser can repeat words across results, stop without a final
+  // result, or not support the phone's own English (en-UG, say): each is handled here.
+  function askMerge(parts) {
+    let out = '';
+    for (const p0 of parts) {
+      const p = String(p0 || '').trim(), lo = out.toLowerCase(), pl = p.toLowerCase();
+      if (!p) continue;
+      if (!out || pl.startsWith(lo)) out = p; else if (lo.includes(pl)) continue; else out += ' ' + p;
+    }
+    return out.replace(/\b(\w+)( \1\b)+/gi, '$1').trim();
+  }
+  function askLangs() {
+    if (SW()) return ['sw-KE', 'sw-TZ', 'sw'];
+    const n = navigator.language || '';
+    return [...new Set([/^en-(GB|US|AU|CA|IN|IE|NZ|ZA|KE|NG|GH|TZ|PH|SG)$/i.test(n) ? n : null, 'en-GB', 'en-US'].filter(Boolean))];
   }
   function askListen() {
     if (!SRec) { toast(T('Voice input isn’t available in this browser: type your question', 'Kivinjari hiki hakina sauti: andika swali lako')); return; }
-    if (S.ask.on) { try { S.ask.rec.stop(); } catch (e) { /* */ } return; }
-    ttsStop(true);
-    const rec = new SRec();
-    rec.lang = SW() ? 'sw-KE' : (/^en-/i.test(navigator.language || '') ? navigator.language : 'en-GB');
-    rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
-    S.ask.rec = rec; S.ask.on = true; S.ask.interim = ''; S.ask.err = '';
-    let final = '';
+    if (S.ask.cur) { askStopRec(); return; }
+    ttsStop(true); ttsPlayer();
+    askStartRec(askLangs(), store.get('askLangIdx' + S.ask.lang, 0) || 0);
+  }
+  function askStartRec(langs, k) {
+    if (k >= langs.length) k = 0;
+    let rec;
+    try { rec = new SRec(); } catch (e) { S.ask.err = T('Couldn’t start the microphone. Type your question instead.', 'Maikrofoni haikuanza. Andika swali lako.'); renderAskMic(); return; }
+    rec.lang = langs[k]; rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = false;
+    const my = { rec, text: '', alts: [], retry: false, got: false };
+    S.ask.cur = my; S.ask.on = true; S.ask.interim = ''; S.ask.err = '';
     rec.onresult = (e) => {
-      let txt = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) final += r[0].transcript; else txt += r[0].transcript; }
-      S.ask.interim = (final + ' ' + txt).trim(); renderAskMic();
+      const finals = [], all = [];
+      for (let i = 0; i < e.results.length; i++) {
+        const r = e.results[i], tx = (r[0] && r[0].transcript) || '';
+        all.push(tx);
+        if (r.isFinal) { finals.push(tx); my.alts = Array.from(r).map((x) => x.transcript).filter(Boolean); }
+      }
+      my.text = askMerge(all); my.got = true;
+      S.ask.interim = my.text; renderAskMic();
     };
-    rec.onerror = (e) => { S.ask.err = e.error === 'not-allowed' || e.error === 'service-not-allowed' ? T('Allow the microphone for this site to ask by voice.', 'Ruhusu maikrofoni kwa tovuti hii.') : e.error === 'no-speech' ? T('I didn’t hear anything. Tap the mic and speak.', 'Sikusikia chochote. Gusa maikrofoni na uongee.') : e.error === 'network' ? T('Voice needs an internet connection.', 'Sauti inahitaji intaneti.') : ''; };
-    rec.onend = () => { S.ask.on = false; const q = (final || S.ask.interim).trim(); S.ask.interim = ''; renderAskMic(); if (q) ask(q, true); };
-    try { rec.start(); } catch (e) { S.ask.on = false; }
+    rec.onspeechend = () => { try { rec.stop(); } catch (e) { /* already stopping */ } };
+    rec.onerror = (e) => {
+      if (S.ask.cur !== my) return;
+      const er = e.error;
+      if (er === 'language-not-supported' && k + 1 < langs.length) { my.retry = true; return; }
+      const framed = (() => { try { return window.self !== window.top; } catch (x) { return true; } })();
+      S.ask.err = er === 'not-allowed' || er === 'service-not-allowed'
+        ? (framed ? T('The microphone is blocked inside this preview. It works on your Statpad site; here, type your question.', 'Maikrofoni imezuiwa hapa. Inafanya kazi kwenye tovuti ya Statpad; hapa andika swali lako.')
+          : T('Statpad needs the microphone: allow it in the browser’s site settings (the icon left of the address), then tap the mic again.', 'Ruhusu maikrofoni kwenye mipangilio ya tovuti ya kivinjari, kisha gusa maikrofoni tena.'))
+        : er === 'no-speech' ? T('I didn’t hear anything. Tap the mic and speak after the beep.', 'Sikusikia chochote. Gusa maikrofoni na uongee.')
+        : er === 'audio-capture' ? T('No microphone found, or another app is using it.', 'Maikrofoni haipatikani, au programu nyingine inaitumia.')
+        : er === 'network' ? T('Voice needs an internet connection. You can type instead.', 'Sauti inahitaji intaneti. Unaweza kuandika.')
+        : er === 'language-not-supported' ? T('Your phone can’t take voice in this language. Type instead.', 'Simu yako haipokei sauti kwa lugha hii. Andika badala yake.')
+        : er === 'aborted' ? '' : T('Voice input stopped. Tap the mic to try again.', 'Sauti imesimama. Gusa maikrofoni kujaribu tena.');
+    };
+    rec.onend = () => {
+      clearTimeout(my.timer);
+      if (S.ask.cur !== my) return;
+      S.ask.cur = null; S.ask.on = false; S.ask.interim = '';
+      if (my.retry) { store.set('askLangIdx' + S.ask.lang, k + 1); askStartRec(langs, k + 1); return; }
+      renderAskMic();
+      const q = my.text.trim();
+      if (q) { S.ask.err = ''; renderAskMic(); ask(q, true, my.alts); }
+    };
+    my.timer = setTimeout(() => {   // some phones never end on their own
+      try { rec.stop(); } catch (e) { /* */ }
+      setTimeout(() => { if (S.ask.cur === my) { try { rec.abort(); } catch (e) { /* */ } rec.onend(); } }, 1500);
+    }, 12000);
+    try { rec.start(); } catch (e) { S.ask.cur = null; S.ask.on = false; S.ask.err = T('Couldn’t start the microphone. Tap it again.', 'Maikrofoni haikuanza. Gusa tena.'); }
     renderAskMic();
   }
-  function openAsk(opener) {
+  function askStopRec() { const c = S.ask.cur; if (c) try { c.rec.stop(); } catch (e) { /* */ } }
+  function askAbortRec() { const c = S.ask.cur; if (!c) return; S.ask.cur = null; S.ask.on = false; S.ask.interim = ''; clearTimeout(c.timer); try { c.rec.abort(); } catch (e) { /* */ } renderAskMic(); }
+  function openAsk(opener, listen) {
     if (S.open && S.open !== 'ask:') S.askBack = S.open;
     S.open = 'ask:'; if (!$('#sheet').classList.contains('open')) S.opener = opener || document.activeElement;
-    renderSheet();
+    renderAskSheet();
     const sh = $('#sheet'); sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
     setTimeout(() => { const b = $('#sheetBody'); b.scrollTop = b.scrollHeight; }, 30);
+    if (listen && SRec && !S.ask.cur) askListen();
   }
   function askCard(it) {
-    const A = it.A, sw = it.lang === 'sw', D = (x) => (sw ? String(x).replace(/over 99%/g, '>99%').replace(/under 1%/g, '<1%') : x);
-    const body = !A ? `<p class="ask-wait">${T('Thinking…', 'Nafikiri…')}</p>` : `<p class="ask-lead">${esc(D(A.lead))}</p>${A.items && A.items.length ? `<ul class="ask-items${A.plain ? ' plain' : ''}">${A.items.map((x) => A.chips ? `<li><button type="button" class="ask-chip" data-askq="${esc(x)}">${esc(x)}</button></li>` : `<li>${esc(D(x))}</li>`).join('')}</ul>` : ''}${A.tail ? `<p class="ask-tail">${esc(A.tail)}</p>` : ''}
-      <div class="ask-acts"><button type="button" class="btn sm listen-b" data-asksay="${S.ask.log.indexOf(it)}"><svg aria-hidden="true"><use href="#i-speaker"/></svg>${T('Listen', 'Sikiliza')}</button>${(A.acts || []).map(([l, attr]) => `<button type="button" class="btn sm" ${attr}>${esc(l)}</button>`).join('')}</div>`;
+    const A = it.A, sw = it.lang === 'sw', D = (x) => (sw ? String(x).replace(/over 99%/g, '>99%').replace(/under 1%/g, '<1%') : x), TT = (en, s) => (sw ? s : en);
+    const body = !A ? `<p class="ask-wait">${TT('Thinking…', 'Nafikiri…')}</p>` : `<p class="ask-lead">${esc(D(A.lead))}</p>${A.items && A.items.length ? `<ul class="ask-items${A.plain ? ' plain' : ''}">${A.items.map((x) => A.chips ? `<li><button type="button" class="ask-chip" data-askq="${esc(x)}">${esc(x)}</button></li>` : `<li>${esc(D(x))}</li>`).join('')}</ul>` : ''}${A.tail ? `<p class="ask-tail">${esc(A.tail)}</p>` : ''}
+      <div class="ask-acts"><button type="button" class="btn sm listen-b" data-asksay="${S.ask.log.indexOf(it)}"><svg aria-hidden="true"><use href="#i-speaker"/></svg>${TT('Listen', 'Sikiliza')}</button>${(A.acts || []).map(([l, attr]) => `<button type="button" class="btn sm" ${attr}>${esc(l)}</button>`).join('')}</div>`;
     return `<div class="ask-q"><span>${esc(it.q)}</span></div><div class="ask-a">${body}</div>`;
   }
-  function renderAskLog() {
+  function renderAskLog(scroll) {
     const box = $('#askLog'); if (!box || S.open !== 'ask:') return;
     box.innerHTML = S.ask.log.length ? S.ask.log.map(askCard).join('') : `<div class="ask-hello"><b>${T('Ask Statpad anything about the games.', 'Uliza Statpad chochote kuhusu mechi.')}</b><span>${SRec ? T('Tap the microphone and speak, or type below.', 'Gusa maikrofoni na uongee, au andika hapa chini.') : T('Type your question below.', 'Andika swali lako hapa chini.')}</span></div><div class="ask-ex">${askExamples().map((x) => `<button type="button" class="ask-chip" data-askq="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
-    const b = $('#sheetBody'); if (b) b.scrollTop = b.scrollHeight;
+    if (scroll) { const b = $('#sheetBody'), last = box.lastElementChild && box.lastElementChild.previousElementSibling; if (b) b.scrollTop = last && S.ask.log.length ? Math.max(0, last.offsetTop - 12) : b.scrollHeight; }
   }
   function renderAskMic() {
-    const m = $('#askMic'), st = $('#askState'); if (!m || !st) return;
-    m.classList.toggle('on', S.ask.on); m.setAttribute('aria-pressed', S.ask.on);
-    st.textContent = S.ask.on ? (S.ask.interim || T('Listening…', 'Nasikiliza…')) : S.ask.err || '';
+    const m = $('#askMic'), st = $('#askState'); if (!st) return;
+    if (m) { m.classList.toggle('on', S.ask.on); m.setAttribute('aria-pressed', String(S.ask.on)); m.setAttribute('aria-label', S.ask.on ? T('Stop listening', 'Acha kusikiliza') : T('Ask by voice', 'Uliza kwa sauti')); }
+    st.classList.toggle('on', S.ask.on); st.classList.toggle('err', !S.ask.on && !!S.ask.err);
+    st.textContent = S.ask.on ? (S.ask.interim ? '“' + S.ask.interim + '”' : T('Listening… speak now', 'Nasikiliza… ongea sasa')) : S.ask.err || '';
   }
   function renderAskSheet() {
     $('#sheetTitle').textContent = T('Ask Statpad', 'Uliza Statpad');
     $('#sheetBody').innerHTML = `<div class="ask">
       <div class="ask-top"><div class="seg" role="group" aria-label="Language"><button type="button" data-asklang="en" aria-pressed="${!SW()}">English</button><button type="button" data-asklang="sw" aria-pressed="${SW()}">Kiswahili</button></div>
-        <label class="ask-vo"><input type="checkbox" id="askVoice"${S.ask.voiceOut ? ' checked' : ''}> ${T('Read answers aloud', 'Soma majibu kwa sauti')}</label></div>
+        <label class="ask-vo"><input type="checkbox" id="askVoice"${S.ask.voiceOut ? ' checked' : ''}> ${T('Read typed answers aloud', 'Soma majibu kwa sauti')}</label></div>
       <div id="askLog" class="ask-log" aria-live="polite"></div>
+      <p class="ask-state" id="askState" aria-live="polite"></p>
       <form class="ask-in" id="askForm"><input id="askText" type="text" autocomplete="off" enterkeyhint="send" placeholder="${esc(T('Ask about a game, a team, a slip…', 'Uliza kuhusu mechi, timu, mkeka…'))}" aria-label="${esc(T('Your question', 'Swali lako'))}">
         ${SRec ? `<button type="button" class="ask-mic" id="askMic" aria-label="${esc(T('Ask by voice', 'Uliza kwa sauti'))}" aria-pressed="false"><svg aria-hidden="true"><use href="#i-mic"/></svg></button>` : ''}
         <button type="submit" class="btn pri">${T('Ask', 'Uliza')}</button></form>
-      <p class="ask-state" id="askState" aria-live="polite"></p>
-      <p class="note">${T('Answers come from Statpad\'s own numbers on this page. Voice is turned into text by your phone\'s browser.', 'Majibu yanatoka kwenye takwimu za Statpad. Sauti inageuzwa kuwa maandishi na kivinjari cha simu yako.')}</p></div>`;
-    renderAskLog(); renderAskMic();
+      <p class="note">${T('Answers come from Statpad\'s own numbers on this page. Your phone\'s browser turns speech into text, so it needs the internet and the microphone allowed.', 'Majibu yanatoka kwenye takwimu za Statpad. Kivinjari cha simu yako kinageuza sauti kuwa maandishi, kwa hiyo kinahitaji intaneti na ruhusa ya maikrofoni.')}</p></div>`;
+    renderAskLog(true); renderAskMic();
   }
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-ask],[data-askq],[data-asksay],[data-asklang],[data-askslip],[data-askbets],[data-askgo],#askMic'); if (!t) return;
     e.stopPropagation();
     if (t.id === 'askMic') { askListen(); return; }
-    if (t.dataset.ask != null) { openAsk(t); return; }
-    if (t.dataset.askq != null) { ask(t.dataset.askq, false); return; }
-    if (t.dataset.asksay != null) { const it = S.ask.log[+t.dataset.asksay]; if (it && it.A) speak(T('Statpad answers', 'Statpad inajibu'), askSay(it.A), S.ask.lang); return; }
-    if (t.dataset.asklang) { S.ask.lang = t.dataset.asklang; store.set('askLang', S.ask.lang); renderAskSheet(); return; }
+    if (t.dataset.ask != null) { openAsk(t, t.dataset.ask === 'listen'); return; }
+    if (t.dataset.askq != null) { askAbortRec(); ask(t.dataset.askq, false); return; }
+    if (t.dataset.asksay != null) { const it = S.ask.log[+t.dataset.asksay]; if (TTS.on) { ttsStop(); return; } if (it && it.A) speak(it.lang === 'sw' ? 'Statpad inajibu' : 'Statpad answers', askSay(it.A, it.lang), it.lang); return; }
+    if (t.dataset.asklang) { askAbortRec(); S.ask.lang = t.dataset.asklang; S.ask.ctx = null; store.set('askLang', S.ask.lang); renderAskSheet(); return; }
     if (t.dataset.askslip) { const s = S.askSlip; if (!s) return; for (const l of s.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: null, from: s.tier }); saveCoupon(); toast(T(`${s.legs.length} legs added to the coupon`, `Machaguo ${s.legs.length} yamewekwa kwenye kuponi`)); return; }
     if (t.dataset.askbets) { closeSheet(); S.bseg = 'mine'; store.set('bseg', 'mine'); setTab('coupon'); return; }
     if (t.dataset.askgo) { closeSheet(); setTab(t.dataset.askgo); }
   });
   document.addEventListener('submit', (e) => {
     if (e.target.id !== 'askForm') return;
-    e.preventDefault(); const i = $('#askText'); const q = i.value; i.value = ''; ask(q, false);
+    e.preventDefault(); askAbortRec(); const i = $('#askText'); const q = i.value; i.value = ''; i.blur(); ask(q, false);
   });
+  document.addEventListener('input', (e) => { if (e.target.id === 'askText' && S.ask.cur) askAbortRec(); });
   document.addEventListener('change', (e) => { if (e.target.id === 'askVoice') S.ask.voiceOut = e.target.checked; });
 
   // ---------------- events ----------------
