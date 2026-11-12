@@ -1060,7 +1060,8 @@ body { background: var(--paper); }
   .fx { grid-template-columns: minmax(0, 1fr); contain-intrinsic-size: auto 136px; }
   .fx-odds { grid-row: 3; grid-column: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .fx-bar { grid-row: 4; }
-  .ob { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px; padding: 8px 9px; text-align: left; }
+  .ob { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 5px; padding: 8px 8px; text-align: left; }
+  .ob .v { letter-spacing: -.03em; }
   .ob .k { font-size: 10.5px; }
   .ob .v { margin: 0; text-align: center; font-size: 15px; }
   .ob .p { margin: 0; text-align: right; font-size: 10px; }
@@ -1295,7 +1296,7 @@ body { background: var(--paper); }
   </div>
 </main>
 
-<footer><div class="wrap"><span>Statpad · probabilities, not promises. 18+ only. Never stake more than you can afford to lose. Crests from API-Football, flags from flagcdn.com.</span><span id="footData"></span></div></footer>
+<footer><div class="wrap"><span>Statpad · probabilities, not promises. 18+ only. Never stake more than you can afford to lose. Crests from API-Football and the football-logos collection, flags from flagcdn.com.</span><span id="footData"></span></div></footer>
 
 <nav class="bnav" id="bnav" aria-label="Sections"></nav>
 <div class="scrim" id="scrim"></div>
@@ -1655,8 +1656,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const lgName = (lk) => lgInfo(lk).name;
   const realMkt = (m) => !!(m.mkt && m.mkt.best && m.mkt.src !== 'none');
   // ---------------- crests, flags & display settings ----------------
-  // Club crests come from the pipeline (crests/ on the site, learnt from API-Football's fixture lists);
-  // a negative id means the crest isn't on the site yet, so it loads from API-Football's image server.
+  // Club crests come from the pipeline (crests/ on the site): API-Football ids learnt from its club lists and
+  // fixtures, or a file key for one from the open football-logos collection. A negative id means the crest
+  // isn't on the site yet, so it loads from API-Football's image server meanwhile.
   // National teams and competitions' countries show their flag (flagcdn.com). Anything unknown gets a
   // monogram shield in a colour of its own, which is also what shows while a crest is loading.
   const UI = { theme: store.get('theme', null) || 'dark', crests: store.get('crests', true), haptics: store.get('haptics', true), motion: store.get('motion', 'auto') };
@@ -1700,8 +1702,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (iso) return [flagUrl(iso, big ? 160 : 80)];
     const id = S.data && S.data.crests && S.data.crests[name];
     if (!id) return [];
+    if (typeof id === 'string') return big ? [`crests/b/${id}.png`, `crests/${id}.png`] : [`crests/${id}.png`];   // from the open football-logos collection
     const remote = CR_API + 'teams/' + Math.abs(id) + '.png';
-    return id > 0 ? [`crests/${big ? 'b/' : ''}${id}.png`, remote] : [remote];
+    return id > 0 ? (big ? [`crests/b/${id}.png`, `crests/${id}.png`, remote] : [`crests/${id}.png`, remote]) : [remote];
   }
   // size: xs 16 · sm 22 · md 30 · lg 52 · xl 68 (CSS px)
   function crest(name, lk, size) {
@@ -1709,16 +1712,18 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const big = size === 'lg' || size === 'xl';
     const srcs = crestSrcs(name, lk, big).filter((u) => !CR_BAD.has(u));
     const flag = srcs[0] && srcs[0].includes('flagcdn');
-    const img = srcs.length ? `<img src="${esc(srcs[0])}"${srcs[1] ? ` data-alt="${esc(srcs[1])}"` : ''} alt="" crossorigin="anonymous" loading="lazy" decoding="async" data-tn="${esc(name)}">` : '';
+    const img = srcs.length ? `<img src="${esc(srcs[0])}"${srcs[1] ? ` data-alt="${esc(srcs.slice(1).join('|'))}"` : ''} alt="" crossorigin="anonymous" loading="lazy" decoding="async" data-tn="${esc(name)}">` : '';
     return `<span class="cr cr-${size}${flag ? ' fl' : ''}" style="--hu:${hueOf(name)}" aria-hidden="true"><b>${esc(initials(name))}</b>${img}</span>`;
   }
+  function lgSrcs(lk) {
+    const info = lgInfo(lk), id = S.data && S.data.lgcrests && S.data.lgcrests[lk], iso = isoOf(info.country);
+    if (UI.crests && id) return { srcs: id > 0 ? [`crests/l${id}.png`, CR_API + 'leagues/' + id + '.png'] : [CR_API + 'leagues/' + Math.abs(id) + '.png'], flag: false };
+    if (UI.crests && iso) return { srcs: [flagUrl(iso, 80)], flag: true };
+    return { srcs: [], flag: false };
+  }
   function lgIcon(lk, size) {
-    const info = lgInfo(lk), id = S.data && S.data.lgcrests && S.data.lgcrests[lk];
-    const iso = isoOf(info.country);
-    let src = '', alt = '';
-    if (UI.crests && id) { src = id > 0 ? `crests/l${id}.png` : CR_API + 'leagues/' + Math.abs(id) + '.png'; alt = id > 0 ? CR_API + 'leagues/' + id + '.png' : ''; }
-    else if (UI.crests && iso) src = flagUrl(iso, 80);
-    if (CR_BAD.has(src)) { src = alt; alt = ''; }
+    const info = lgInfo(lk), L = lgSrcs(lk), ok = L.srcs.filter((u) => !CR_BAD.has(u));
+    const src = ok[0] || '', alt = ok[1] || '';
     const ini = (info.name || lk).replace(/[^A-Za-z0-9 ]/g, '').split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 3).toUpperCase();
     return `<span class="lgi lgi-${size || 'sm'}${src.includes('flagcdn') ? ' fl' : ''}" aria-hidden="true"><b>${esc(ini || '•')}</b>${src ? `<img src="${esc(src)}"${alt ? ` data-alt="${esc(alt)}"` : ''} alt="" crossorigin="anonymous" loading="lazy" decoding="async">` : ''}</span>`;
   }
@@ -1760,8 +1765,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const t = e.target; if (!t || t.tagName !== 'IMG') return;
     const p = t.parentNode; if (!p || !p.classList || !(p.classList.contains('cr') || p.classList.contains('lgi'))) return;
     CR_BAD.add(t.getAttribute('src'));
-    const alt = t.dataset.alt;
-    if (alt && !CR_BAD.has(alt)) { t.removeAttribute('data-alt'); t.src = alt; } else t.remove();
+    const alts = (t.dataset.alt || '').split('|').filter((u) => u && !CR_BAD.has(u));   // next: the small copy, then the image server
+    if (alts.length) { t.dataset.alt = alts.slice(1).join('|'); t.src = alts[0]; } else t.remove();
   }, true);
   function days() {
     const out = [], base = new Date(S.now); base.setHours(12, 0, 0, 0);
@@ -2499,6 +2504,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         ${st('results', 'Results &amp; tables')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('team_news', 'Team news, live scores &amp; fast results')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
         <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.interval_min ? ' · refresh every ' + (o.interval_min >= 120 ? Math.round(o.interval_min / 60) + ' h' : Math.round(o.interval_min) + ' min') : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
         <div><span>Matches loaded</span><b>${d.matches.length} · ${Object.keys(d.leagues || {}).length} competitions</b></div>
+        ${(() => { const T = new Map(); for (const m of d.matches) { T.set(m.h, m.lk); T.set(m.a, m.lk); } let n = 0; for (const [t, lk] of T) if ((d.crests || {})[t] || (lgInfo(lk).group === 'intl' && isoOf(t))) n++; return `<div><span>Club crests</span><b>${n} of ${T.size} teams on the board${UI.crests ? '' : ' · pictures off (Save data)'}</b></div>`; })()}
       </div>
       <h3>The model</h3>
       <p>Each league's results feed a Poisson model: home goals = μ × home advantage × home attack × away defence, and the same for the away side without the home bonus. Older games count less, last season counts less again, and every team is pulled towards average by a few phantom games so a hot fortnight doesn't swing the ratings. Newly promoted sides start slightly below average.</p>
@@ -2607,7 +2613,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     while (txt.length > 1 && x.measureText(txt + '…').width > maxW) txt = txt.slice(0, -1);
     return txt.trimEnd() + '…';
   }
-  function slipCanvas(s, dk) {
+  function slipCanvas(s, dk, cr) {
     const W = 1080, P = 72, n = s.legs.length, big = n <= 10, ROW = big ? 132 : 98, TOP = 498;
     const H = Math.max(1350, TOP + n * ROW + 236);
     const c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -2660,13 +2666,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const when = `${tFmt.format(ko)}`;
       if (big) {
         font(`650 34px ${SF.b}`); x.fillStyle = INK; x.fillText(fitText(x, l.s.label, leftW), P, y + 40);
-        font(`500 25px ${SF.b}`); x.fillStyle = MUT; x.fillText(fitText(x, `${m.h} v ${m.a}`, leftW), P, y + 78);
+        const pw = stPair(x, cr, m, P, y + 70, 32) + 10;
+        font(`500 25px ${SF.b}`); x.fillStyle = MUT; x.fillText(fitText(x, `${m.h} v ${m.a}`, leftW - pw), P + pw, y + 78);
         font(`500 19px ${SF.m}`); x.fillStyle = DIM; x.fillText(fitText(x, `${when} · ${lgName(m.lk)}`.toUpperCase(), leftW), P, y + 110);
         font(`500 40px ${SF.m}`); x.fillStyle = INK; x.textAlign = 'right'; x.fillText(odds(l.s.price), W - P, y + 46);
         font(`500 21px ${SF.m}`); x.fillStyle = l.s.real ? MUT : DIM; x.fillText(`${pct(l.s.pAdj)}${l.s.real ? '' : ' · EST'}`, W - P, y + 82);
       } else {
         font(`650 30px ${SF.b}`); x.fillStyle = INK; x.fillText(fitText(x, l.s.label, leftW), P, y + 38);
-        font(`500 22px ${SF.b}`); x.fillStyle = MUT; x.fillText(fitText(x, `${when} · ${m.h} v ${m.a}`, leftW), P, y + 72);
+        const pw = stPair(x, cr, m, P, y + 65, 26) + 8;
+        font(`500 22px ${SF.b}`); x.fillStyle = MUT; x.fillText(fitText(x, `${when} · ${m.h} v ${m.a}`, leftW - pw), P + pw, y + 72);
         font(`500 34px ${SF.m}`); x.fillStyle = INK; x.textAlign = 'right'; x.fillText(odds(l.s.price), W - P, y + 42);
         font(`500 19px ${SF.m}`); x.fillStyle = l.s.real ? MUT : DIM; x.fillText(`${pct(l.s.pAdj)}${l.s.real ? '' : ' · EST'}`, W - P, y + 72);
       }
@@ -2689,7 +2697,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!s || !s.legs || !s.legs.length) return;
     let blob;
     try {
-      const c = slipCanvas(s, dk);
+      const c = slipCanvas(s, dk, await stCrests(s.legs.map((l) => l.m), 1500));   // quick, so the phone still allows the share
       blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92));
       if (!blob) throw new Error('no image');
     } catch (e) { toast('Couldn’t make the image'); return; }
@@ -2705,6 +2713,89 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
     toast('Slip image saved');
   }
+  // ---- crests on the shared pictures. They're loaded first as readable copies (so the picture can still be
+  // saved and shared), then drawn; a team without one gets the same coloured monogram shield as on the site.
+  const ST_IMG = new Map();
+  function stLoadImg(url) {
+    if (!ST_IMG.has(url)) ST_IMG.set(url, new Promise((res) => {
+      const im = new Image(); im.crossOrigin = 'anonymous'; im.decoding = 'async';
+      const t = setTimeout(() => res(null), 4000);
+      im.onload = () => { clearTimeout(t); res(im.naturalWidth ? im : null); };
+      im.onerror = () => { clearTimeout(t); ST_IMG.delete(url); res(null); };
+      im.src = url;
+    }));
+    return ST_IMG.get(url);
+  }
+  async function stFirstImg(urls) { for (const u of urls) { const im = await stLoadImg(u); if (im) return im; } return null; }
+  // every team and competition on these matches: name -> picture (or null), lk -> { im, flag }
+  async function stCrests(ms, maxMs) {
+    const C = { t: new Map(), l: new Map() }, jobs = [];
+    for (const m of ms) {
+      if (!m) continue;
+      for (const n of [m.h, m.a]) if (!C.t.has(n)) { C.t.set(n, null); jobs.push(stFirstImg(crestSrcs(n, m.lk, true)).then((im) => C.t.set(n, im))); }
+      if (!C.l.has(m.lk)) { C.l.set(m.lk, null); const L = lgSrcs(m.lk); jobs.push(stFirstImg(L.srcs).then((im) => C.l.set(m.lk, im ? { im, flag: L.flag } : null))); }
+    }
+    await Promise.race([Promise.all(jobs), new Promise((r) => setTimeout(r, maxMs || 6000))]);   // whatever has arrived by then
+    return C;
+  }
+  function stShield(x, cx, cy, s) {
+    x.beginPath();
+    [[0.5, 0], [1, 0.13], [0.97, 0.58], [0.5, 1], [0.03, 0.58], [0, 0.13]].forEach(([u, v], i) => { const X = cx - s / 2 + u * s, Y = cy - s / 2 + v * s; if (i) x.lineTo(X, Y); else x.moveTo(X, Y); });
+    x.closePath();
+  }
+  // a club's crest centred on (cx, cy) inside an s × s box; a national team's flag in a circle. A soft light halo
+  // keeps dark crests readable on the night background; `plate` sets the crest on a white disc ringed in `glow`.
+  function stCrest(x, cr, name, lk, cx, cy, s, glow, plate) {
+    const im = cr && cr.t.get(name), flag = lgInfo(lk).group === 'intl' && !!isoOf(name);
+    x.save();
+    if (plate) {
+      x.shadowColor = glow || 'rgba(255,255,255,.4)'; x.shadowBlur = s * 0.5;
+      x.fillStyle = 'rgba(244,247,255,.95)'; x.beginPath(); x.arc(cx, cy, s / 2, 0, Math.PI * 2); x.fill();
+      x.shadowBlur = 0; x.strokeStyle = glow || 'rgba(255,255,255,.6)'; x.lineWidth = Math.max(2, s / 28); x.stroke();
+      s *= 0.72; glow = 'rgba(0,0,0,.18)';
+    }
+    if (im && flag) {
+      x.beginPath(); x.arc(cx, cy, s * 0.46, 0, Math.PI * 2); x.save(); x.clip();
+      const k = Math.max(s / im.naturalWidth, s / im.naturalHeight);
+      x.drawImage(im, cx - im.naturalWidth * k / 2, cy - im.naturalHeight * k / 2, im.naturalWidth * k, im.naturalHeight * k); x.restore();
+      x.strokeStyle = 'rgba(255,255,255,.4)'; x.lineWidth = Math.max(2, s / 30); x.stroke();
+    } else if (im) {
+      const k = Math.min(s / im.naturalWidth, s / im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k;
+      x.shadowColor = glow || 'rgba(255,255,255,.34)'; x.shadowBlur = s * (glow ? 0.4 : 0.22);
+      x.drawImage(im, cx - w / 2, cy - h / 2, w, h);
+    } else {
+      const hu = hueOf(name), g = x.createLinearGradient(cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2);
+      g.addColorStop(0, `hsl(${hu}, 64%, 54%)`); g.addColorStop(1, `hsl(${(hu + 32) % 360}, 60%, 30%)`);
+      stShield(x, cx, cy, s * 0.92); x.shadowColor = glow || 'rgba(0,0,0,.55)'; x.shadowBlur = s * 0.3; x.fillStyle = g; x.fill();
+      x.shadowBlur = 0; x.strokeStyle = 'rgba(255,255,255,.28)'; x.lineWidth = Math.max(1.5, s / 36); x.stroke();
+      x.font = `800 ${Math.round(s * 0.34)}px ${SF.d}`; if ('letterSpacing' in x) x.letterSpacing = '0px'; if ('fontStretch' in x) x.fontStretch = 'normal';
+      x.fillStyle = '#ffffff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(initials(name), cx, cy - s * 0.05);
+    }
+    x.restore();
+  }
+  // both crests, the away one tucked behind the home one; returns the width used
+  function stPair(x, cr, m, X, cy, s) {
+    stCrest(x, cr, m.a, m.lk, X + s * 1.15, cy, s);
+    stCrest(x, cr, m.h, m.lk, X + s * 0.5, cy, s);
+    return s * 1.65;
+  }
+  // a competition's logo on a small white tile (or its country's flag in a circle); returns the width used
+  function stLeague(x, cr, lk, X, cy, s) {
+    const L = cr && cr.l.get(lk); if (!L) return 0;
+    const im = L.im; x.save();
+    if (L.flag) {
+      x.beginPath(); x.arc(X + s / 2, cy, s / 2, 0, Math.PI * 2); x.clip();
+      const k = Math.max(s / im.naturalWidth, s / im.naturalHeight); x.drawImage(im, X + s / 2 - im.naturalWidth * k / 2, cy - im.naturalHeight * k / 2, im.naturalWidth * k, im.naturalHeight * k);
+    } else {
+      rrPath(x, X, cy - s / 2, s, s, s * 0.26); x.fillStyle = '#ffffff'; x.fill();
+      const pad = s * 0.12, k = Math.min((s - 2 * pad) / im.naturalWidth, (s - 2 * pad) / im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k;
+      x.drawImage(im, X + (s - w) / 2, cy - h / 2, w, h);
+    }
+    x.restore();
+    return s + s * 0.4;
+  }
+  // which side a pick is about: 'h', 'a', or both
+  const pickSide = (k) => (/^(H|1X|H_|DNB_H|AH_H|HCP_H)/.test(k) ? 'h' : /^(A|X2|A_|DNB_A|AH_A|HCP_A)/.test(k) ? 'a' : '');
   // ---------------- WhatsApp Status pack: four tall images for the day ----------------
   const ST_W = 1080, ST_H = 1920, ST_P = 84;
   const ST_C = { ink: '#eef3ef', mut: '#8fa199', dim: '#5f6f68', cob: '#8297ff', grn: '#3ccf8e', red: '#ff7a63', org: '#ff9a5c', yel: '#f2c14e', h: '#6f86ff', d: '#b8c2bc', a: '#ff9a5c' };
@@ -2826,7 +2917,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const c = document.createElement('canvas'); c.width = ST_W; c.height = ST_H;
     const x = c.getContext('2d'), bg = stBackground(c1, c2, shash(D.dk + kind));
     x.drawImage(bg, 0, 0);
-    const F = { c, x, bg, c1, c2, P, W };
+    const F = { c, x, bg, c1, c2, P, W, cr: D.cr };
     // corner brackets of the display
     x.strokeStyle = hexA(c1, .75); x.lineWidth = 3;
     for (const [X, Y, sx, sy] of [[40, 160, 1, 1], [W - 40, 160, -1, 1], [40, 1720, 1, -1], [W - 40, 1720, -1, -1]]) { x.beginPath(); x.moveTo(X, Y + sy * 46); x.lineTo(X, Y); x.lineTo(X + sx * 46, Y); x.stroke(); }
@@ -2872,17 +2963,20 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return F.c;
   }
   function stMatch(F, r, y) {
-    const { x, P, W, c1 } = F;
-    stFont(x, `600 40px ${SF.b}`); x.fillStyle = SX.mut;
-    const h = r.m.h, a = r.m.a, gap = '   ';
-    const full = fitText(x, `${h}${gap}v${gap}${a}`, W - 2 * P);
-    if (full === `${h}${gap}v${gap}${a}`) {
-      x.fillText(h, P, y); let X = P + x.measureText(h + gap).width;
-      x.fillStyle = c1; x.fillText('v', X, y); X += x.measureText('v' + gap).width;
-      x.fillStyle = SX.mut; x.fillText(a, X, y);
-    } else x.fillText(full, P, y);
+    const { x, P, W, c1, cr } = F, m = r.m, cs = 50, cg = 14;
+    stFont(x, `600 40px ${SF.b}`);
+    const vtxt = '   v   ', vw = x.measureText(vtxt).width, avail = W - 2 * P - 2 * (cs + cg) - vw;
+    let hn = m.h, an = m.a;
+    if (x.measureText(hn).width + x.measureText(an).width > avail) { hn = fitText(x, hn, avail / 2); an = fitText(x, an, avail - x.measureText(hn).width); }
+    let X = P;
+    stCrest(x, cr, m.h, m.lk, X + cs / 2, y - 14, cs); X += cs + cg;
+    x.fillStyle = SX.ink; x.fillText(hn, X, y); X += x.measureText(hn).width;
+    x.fillStyle = c1; x.fillText(vtxt, X, y); X += vw;
+    stCrest(x, cr, m.a, m.lk, X + cs / 2, y - 14, cs); X += cs + cg;
+    x.fillStyle = SX.ink; x.fillText(an, X, y);
+    const lw = stLeague(x, cr, m.lk, P, y + 38, 30);
     stFont(x, `500 23px ${SF.m}`, null, '3px'); x.fillStyle = SX.dim;
-    x.fillText(fitText(x, `${lgName(r.m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), W - 2 * P), P, y + 46);
+    x.fillText(fitText(x, `${lgName(m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), W - 2 * P - lw), P + lw, y + 46);
   }
   // 1. SAFEST PICK: the confidence reactor
   function stSafe(D) {
@@ -2918,6 +3012,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     x.strokeStyle = 'rgba(255,255,255,.16)'; x.lineWidth = 2; x.setLineDash([3, 11]); x.beginPath(); x.arc(cx, cy, R - 64, 0, Math.PI * 2); x.stroke(); x.setLineDash([]);
     x.strokeStyle = hexA(c1, .35); x.lineWidth = 3;
     for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.3; x.beginPath(); x.arc(cx, cy, R - 86, a, a + 0.55); x.stroke(); }
+    // the team the pick is about, in the reactor
+    const side = pickSide(t.key);
+    if (side) stCrest(x, F.cr, side === 'h' ? r.m.h : r.m.a, r.m.lk, cx, cy - 150, 92, hexA(c1, .8), true);
+    else { stCrest(x, F.cr, r.m.h, r.m.lk, cx - 46, cy - 150, 78, hexA(c1, .8), true); stCrest(x, F.cr, r.m.a, r.m.lk, cx + 46, cy - 150, 78, hexA(c2, .8), true); }
     // the number
     stFont(x, `500 196px ${SF.m}`, null, '-6px');
     const num = String(Math.round(p * 100)), nw = x.measureText(num).width;
@@ -2949,7 +3047,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         x.strokeStyle = c1; x.lineCap = 'round'; x.beginPath(); x.arc(gx, mid, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * qp); x.stroke(); x.lineCap = 'butt';
         stFont(x, `600 18px ${SF.m}`); x.fillStyle = SX.ink; x.textAlign = 'center'; x.fillText(String(Math.round(qp * 100)), gx, mid + 7); x.textAlign = 'left';
         stFont(x, `700 34px ${SF.b}`); x.fillStyle = SX.ink; x.fillText(fitText(x, q.a.top.label, W - 2 * P - 260), P + 100, mid - 6);
-        stFont(x, `500 23px ${SF.b}`); x.fillStyle = SX.mut; x.fillText(fitText(x, `${q.m.h} v ${q.m.a} · ${tFmt.format(q.ko)}`, W - 2 * P - 260), P + 100, mid + 28);
+        const pw = stPair(x, F.cr, q.m, P + 100, mid + 20, 30);
+        stFont(x, `500 23px ${SF.b}`); x.fillStyle = SX.mut; x.fillText(fitText(x, `${q.m.h} v ${q.m.a} · ${tFmt.format(q.ko)}`, W - 2 * P - 260 - pw - 8), P + 100 + pw + 8, mid + 28);
         stFont(x, `500 36px ${SF.m}`); x.fillStyle = SX.ink; x.textAlign = 'right'; x.fillText(odds(q.a.top.price), W - P - 14, mid + 12); x.textAlign = 'left';
       });
     }
@@ -2973,11 +3072,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     x.strokeStyle = hexA(c1, .95); x.lineWidth = 3; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(sa) * R, cy + Math.sin(sa) * R); x.stroke();
     for (let i = 0; i < 9; i++) { const a = Rn() * Math.PI * 2, rr = 60 + Rn() * (R - 70); x.fillStyle = hexA(c2, .25 + Rn() * .35); x.beginPath(); x.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 3 + Rn() * 3, 0, Math.PI * 2); x.fill(); }
     // the target, just caught by the sweep
-    const ta = sa - 0.12, tr = R * 0.78, tx = cx + Math.cos(ta) * tr, ty = cy + Math.sin(ta) * tr;
-    stGlow(x, c2, 40, () => { x.fillStyle = c2; x.beginPath(); x.arc(tx, ty, 12, 0, Math.PI * 2); x.fill(); });
-    x.strokeStyle = hexA(c2, .8); x.lineWidth = 2; x.beginPath(); x.arc(tx, ty, 30, 0, Math.PI * 2); x.stroke();
-    stFont(x, `700 20px ${SF.m}`, null, '3px'); x.fillStyle = c2; x.fillText(fitText(x, (s.key === 'H' ? r.m.h : r.m.a).toUpperCase(), 260), tx + 42, ty - 6);
-    x.fillStyle = SX.dim; x.fillText('LOCKED', tx + 42, ty + 20);
+    const ta = sa - 0.12, tr = R * 0.78, tx = cx + Math.cos(ta) * tr, ty = cy + Math.sin(ta) * tr, dog = s.key === 'H' ? r.m.h : r.m.a;
+    x.strokeStyle = hexA(c2, .9); x.lineWidth = 2; for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; x.beginPath(); x.moveTo(tx + Math.cos(a) * 52, ty + Math.sin(a) * 52); x.lineTo(tx + Math.cos(a) * 68, ty + Math.sin(a) * 68); x.stroke(); }
+    stCrest(x, F.cr, dog, r.m.lk, tx, ty, 92, c2, true);
+    stFont(x, `700 20px ${SF.m}`, null, '3px'); x.fillStyle = c2; x.fillText(fitText(x, dog.toUpperCase(), W - P - (tx + 78) - 4), tx + 78, ty - 6);
+    x.fillStyle = SX.dim; x.fillText('LOCKED', tx + 78, ty + 20);
     // the price, with interference
     x.save(); x.translate(cx, cy + 10); x.scale(1, 0.5); const sh = x.createRadialGradient(0, 0, 0, 0, 0, 300); sh.addColorStop(0, 'rgba(3,6,10,.85)'); sh.addColorStop(1, 'rgba(3,6,10,0)'); x.fillStyle = sh; x.fillRect(-300, -300, 600, 600); x.restore();
     stFont(x, `500 188px ${SF.m}`, null, '-6px'); stAberr(x, odds(s.price), cx, cy + 66, 7);
@@ -3023,11 +3122,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!r) return stEmpty(F, 'No league game with much at stake today.');
     const st = stakeOf(r.m);
     // names
-    const nw = W - 2 * P - 250, nameFont = (t) => { let z = 66; for (; z > 40; z -= 2) { stFont(x, `850 ${z}px ${SF.d}`, 'expanded', '-1px'); if (x.measureText(t).width <= nw) break; } };
-    nameFont(r.m.h.toUpperCase()); stBigText(x, fitText(x, r.m.h.toUpperCase(), nw), P, 480, '#ffffff', c2, hexA(c1, .4));
-    stFont(x, `700 26px ${SF.m}`, null, '6px'); x.fillStyle = c1; x.fillText('VERSUS', P, 532);
-    nameFont(r.m.a.toUpperCase()); stBigText(x, fitText(x, r.m.a.toUpperCase(), nw), P, 610, '#ffffff', c2, hexA(c1, .4));
-    stFont(x, `500 23px ${SF.m}`, null, '3px'); x.fillStyle = SX.dim; x.fillText(fitText(x, `${lgName(r.m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), nw), P, 662);
+    const NX = P + 104, nw = W - 2 * P - 250 - 104, nameFont = (t) => { let z = 66; for (; z > 40; z -= 2) { stFont(x, `850 ${z}px ${SF.d}`, 'expanded', '-1px'); if (x.measureText(t).width <= nw) break; } };
+    stCrest(x, F.cr, r.m.h, r.m.lk, P + 42, 456, 84, hexA(c1, .45));
+    stCrest(x, F.cr, r.m.a, r.m.lk, P + 42, 586, 84, hexA(c2, .4));
+    nameFont(r.m.h.toUpperCase()); stBigText(x, fitText(x, r.m.h.toUpperCase(), nw), NX, 480, '#ffffff', c2, hexA(c1, .4));
+    stFont(x, `700 26px ${SF.m}`, null, '6px'); x.fillStyle = c1; x.fillText('VERSUS', NX, 532);
+    nameFont(r.m.a.toUpperCase()); stBigText(x, fitText(x, r.m.a.toUpperCase(), nw), NX, 610, '#ffffff', c2, hexA(c1, .4));
+    const lw = stLeague(x, F.cr, r.m.lk, P, 654, 30);
+    stFont(x, `500 23px ${SF.m}`, null, '3px'); x.fillStyle = SX.dim; x.fillText(fitText(x, `${lgName(r.m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), W - 2 * P - 250 - lw), P + lw, 662);
     // the stakes dial
     const dx = W - P - 105, dy = 520, dr = 92, sc = Math.min(1, st.s / 100);
     x.lineWidth = 16; x.strokeStyle = 'rgba(255,255,255,.08)'; x.beginPath(); x.arc(dx, dy, dr, Math.PI * 0.8, Math.PI * 2.2); x.stroke();
@@ -3043,7 +3145,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const q = stakeSide(nm, rec), Y = top0 + k * (ph + 26);
       stGlass(F, P - 12, Y, W - 2 * P + 24, ph, 26);
       const yT = Y + 56, yB = Y + ph - 46, my = (v) => yB - (yB - yT) * v, ox = P + 300, ex = W - P - 210;
-      stFont(x, `750 36px ${SF.b}`); x.fillStyle = SX.ink; x.fillText(fitText(x, nm, 270), P + 14, Y + 64);
+      stCrest(x, F.cr, nm, r.m.lk, P + 36, Y + 52, 44);
+      stFont(x, `750 32px ${SF.b}`); x.fillStyle = SX.ink; x.fillText(fitText(x, nm, 224), P + 68, Y + 63);
       stFont(x, `700 21px ${SF.m}`, null, '4px'); x.fillStyle = c2; x.fillText(q.z.toUpperCase(), P + 14, Y + 104);
       stFont(x, `600 20px ${SF.m}`, null, '3px'); x.fillStyle = SX.dim; x.fillText('NOW', P + 14, Y + 150);
       stFont(x, `500 54px ${SF.m}`, null, '-2px'); x.fillStyle = SX.ink; x.fillText(fmtP(q.all).replace('over ', '>').replace('under ', '<'), P + 14, Y + 206);
@@ -3119,7 +3222,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       rrPath(x, P + 6, y + 10, 56, 56, 14); x.strokeStyle = hexA(c1, .8); x.lineWidth = 2; x.stroke(); x.fillStyle = hexA(c1, .14); x.fill();
       stFont(x, `700 22px ${SF.m}`); x.fillStyle = c1; x.textAlign = 'center'; x.fillText(String(i + 1).padStart(2, '0'), P + 34, y + 46); x.textAlign = 'left';
       stFont(x, `700 32px ${SF.b}`); x.fillStyle = SX.ink; x.fillText(fitText(x, l.s.label, W - 2 * P - 260), P + 84, y + 34);
-      stFont(x, `500 22px ${SF.b}`); x.fillStyle = SX.mut; x.fillText(fitText(x, `${l.m.h} v ${l.m.a} · ${tFmt.format(Date.parse(l.m.ko))}`, W - 2 * P - 260), P + 84, y + 66);
+      const pw = stPair(x, F.cr, l.m, P + 84, y + 59, 28);
+      stFont(x, `500 22px ${SF.b}`); x.fillStyle = SX.mut; x.fillText(fitText(x, `${l.m.h} v ${l.m.a} · ${tFmt.format(Date.parse(l.m.ko))}`, W - 2 * P - 260 - pw - 8), P + 84 + pw + 8, y + 66);
       stFont(x, `500 36px ${SF.m}`); x.fillStyle = SX.ink; x.textAlign = 'right'; x.fillText(odds(l.s.price), W - P - 10, y + 40);
       stFont(x, `600 18px ${SF.m}`, null, '2px'); x.fillStyle = SX.dim; x.fillText(pct(l.s.pAdj) + (l.s.real ? '' : ' EST'), W - P - 10, y + 68); x.textAlign = 'left';
       y += ROW;
@@ -3129,6 +3233,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   async function statusPack() {
     const D = statusData(); if (!D) return null;
+    D.cr = await stCrests([...D.safe.map((r) => r.m), D.up && D.up.r.m, D.big && D.big.m, ...(D.slip ? D.slip.legs.map((l) => l.m) : [])]);
     if (document.fonts && document.fonts.load) await Promise.race([Promise.all(['650 30px "Hanken Grotesk"', '700 30px "Hanken Grotesk"', '500 30px "Martian Mono"', '850 40px "Archivo"'].map((f) => document.fonts.load(f).catch(() => {}))), new Promise((r) => setTimeout(r, 2500))]);
     const makers = [['safest', stSafe], ['upset', stUpset], ['stakes', stBig], ['slip', stSlip]];   // drawn one by one, so a slow phone stays responsive
     const out = [];
@@ -5863,7 +5968,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         ${ex ? `<div class="disp-prev">${crest(ex.m.h, ex.m.lk, 'md')}${crest(ex.m.a, ex.m.lk, 'md')}<span>${esc(ex.m.h)} v ${esc(ex.m.a)}</span></div>` : ''}</div>
       <div class="disp-row"><h5>Vibrate on tap</h5><p>A short buzz when you add a pick, switch sections or swipe a page away, on phones that can.</p>${seg('haptics', [[true, 'On'], [false, 'Off']])}</div>
       <div class="disp-row"><h5>Motion</h5><p>Sliding pages, prices flying to your coupon, bars that sweep in. “Match phone” follows your phone’s reduce-motion setting.</p>${seg('motion', [['auto', 'Match phone'], ['full', 'Full'], ['reduced', 'Reduced']])}</div>
-      <p class="note">Crests from API-Football; flags from flagcdn.com.</p>
+      <p class="note">Crests from API-Football and the open football-logos collection; flags from flagcdn.com.</p>
     </div>`;
   }
   document.addEventListener('click', (e) => {
