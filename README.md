@@ -107,6 +107,41 @@ The workflow writes one file per league to `teams/` with the results, every 6 ho
 
 Tap **Listen** and Statpad reads out the day's briefing (the safest picks, the best value, the slips), the picks in a slip, a match page's story, or a team page. It uses the phone's own text-to-speech voice, so nothing is downloaded; pick the voice and the speed in the player at the bottom of the screen. English only.
 
+## What's at stake
+
+Every hour the workflow plays the rest of each league season 10,000 times (the season simulator's method, seeded so the same inputs give the same answer) and measures how far each coming game moves both teams' chances of the title, the top places or the bottom places, after a win, a draw or a defeat. The **stakes** number adds both teams' swings between winning and losing, in percentage points: 45+ is Huge, 25+ High, 10+ Some.
+
+- Match cards show **High stakes** and **Huge stakes** badges, and the Matches tab opens with **Most at stake** and can sort by it.
+- Each match page has a **What's at stake** card: for both teams, the chance that moves most, after a win, a draw and a defeat.
+- The simulator's What-if list and team pages' next games show it too, and the spoken briefing names the game with most at stake.
+
+It covers leagues where every team plays every other home and away.
+
+## Fatigue and motivation
+
+Once a month, alongside the other tuning, Statpad tests:
+
+- **Rest**: a side with only two or three days since its last league game, against one with more.
+- **Nothing to play for**: from the season simulation run week by week over past seasons, a side whose season chances barely move whatever the result.
+- **Open games**: games where neither side has anything left to play for.
+
+Each is fitted on two past seasons after blending with the market as the site does, then checked on the last full season, which the fit never saw. It goes on only if it lowers the error there too; the Track tab shows which are on, and a match page says when one applies. football-data.co.uk lists league games only, so cup and European games don't count towards rest. The first run after this update does the fit, so it takes a few minutes longer than usual.
+
+## WhatsApp Status pack
+
+**Status pack** (Matches and Slips tabs) draws four 1080×1920 pictures for the day: the safest pick, an upset alert (the underdog at a real price of 2.60 or more with the best value, and how often it should land), the game with most at stake, and the slip at your target odds with the best chance. **Share all 4** opens the phone's share sheet; pick WhatsApp, then My status. On a computer the pictures download instead. Each carries the site's address and an 18+ note.
+
+## Ask Statpad
+
+Tap the microphone in the header, or **Ask Statpad** on the Matches tab, and ask by voice or by typing, in English or Kiswahili:
+
+- "Who wins Arsenal v Chelsea?" / "Nani atashinda Arsenal dhidi ya Chelsea?"
+- "Safest picks today", "Give me a 5 odds slip", "Best value", "Biggest games"
+- "Who will win the Premier League?", "Who gets relegated from La Liga?"
+- "How are Arsenal doing?", "What's the score in the Arsenal game?", "How are my bets doing?"
+
+The phone's browser turns speech into text (Chrome on Android, Safari on iPhone); everything else runs on the page, from the same numbers. Answers can be read aloud, and come with buttons to open the match, add the pick or the slip to the coupon, or open the simulator. Where a browser has no voice input, type instead.
+
 ## Combos, draw no bet and handicaps
 
 Each match page has a **Combos, draw no bet & handicaps** section with:

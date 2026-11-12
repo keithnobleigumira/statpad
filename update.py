@@ -725,6 +725,248 @@ def team_files(res):
     return out
 
 
+def last_played(res):
+    """The date of each team's latest league game this season (for rest days)."""
+    out = {}
+    for lk, (games, _season) in res.items():
+        if L[lk]['group'] in ('cups', 'intl'):
+            continue
+        d = out.setdefault(lk, {})
+        for g in games:
+            if g[5]:
+                for t in (g[1], g[2]):
+                    k = pretty(t)
+                    ds = g[0].strftime('%Y-%m-%d')
+                    if ds > d.get(k, ''):
+                        d[k] = ds
+    return out
+
+
+# ----------------------------------------------------------------------------------------------
+# What's at stake: the rest of each league season is played thousands of times (as the page's season
+# simulator does), and for every game in the coming days Statpad measures how much each team's title,
+# top places or relegation chances swing on the result. The same simulation, run week by week over past
+# seasons, tells the model when a team has nothing left to play for.
+# ----------------------------------------------------------------------------------------------
+STAKES_EVERY_H = 1
+STAKES_N = 10000
+SIM_SIG = 0.08          # each simulated season nudges every team's strength: ratings are never exact
+ZONES = {'ENG2': [('Top 2', 1, 2), ('Top 6', 1, 6), ('Bottom 3', -3, 0)], 'ENG3': [('Top 2', 1, 2), ('Top 6', 1, 6), ('Bottom 4', -4, 0)],
+         'ENG4': [('Top 3', 1, 3), ('Top 7', 1, 7), ('Bottom 2', -2, 0)], 'ESP2': [('Top 2', 1, 2), ('Top 6', 1, 6), ('Bottom 4', -4, 0)],
+         'ITA2': [('Top 2', 1, 2), ('Top 8', 1, 8), ('Bottom 3', -3, 0)], 'GER2': [('Top 2', 1, 2), ('Top 3', 1, 3), ('Bottom 3', -3, 0)],
+         'FRA2': [('Top 2', 1, 2), ('Top 5', 1, 5), ('Bottom 3', -3, 0)]}
+
+
+def zones_for(lk):
+    """The zones the page shows (as in its season simulator), plus a hidden European-places zone in top
+    divisions that only the motivation signal uses."""
+    z = ZONES.get(lk) or ([('Top 2', 1, 2), ('Top 6', 1, 6), ('Bottom 3', -3, 0)] if L[lk]['group'] == 'second'
+                          else [('Title', 1, 1), ('Top 4', 1, 4), ('Bottom 3', -3, 0)])
+    z = [[name, a, b, 0] for name, a, b in z]
+    if L[lk]['group'] != 'second':
+        z.append(['Top 6', 1, 6, 1])
+    return z
+
+
+NODE_SIM = r"""
+const fs = require('fs');
+const [, , htmlPath, inPath] = process.argv;
+const inp = JSON.parse(fs.readFileSync(inPath, 'utf8'));
+let E = null;
+if (inp.engine) {
+  try {
+    const html = fs.readFileSync(htmlPath, 'utf8');
+    const s = html.indexOf('/* Statpad engine'), e = html.indexOf('module.exports = ENGINE;', s);
+    if (s >= 0 && e >= 0) { const mod = { exports: null }; new Function('module', html.slice(s, e) + 'module.exports = ENGINE;')(mod); E = mod.exports; if (E.setCalib) E.setCalib(null); }
+  } catch (err) { E = null; }
+}
+const now = inp.now ? Date.parse(inp.now) : Date.now();
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function job(J) {
+  const R = rng(J.seed || 1), n = J.base.length, Z = J.zones, nzn = Z.length, FX = J.fx, F = FX.length, N = J.n, sig = J.sig;
+  if (E && J.ms) for (const [k, m] of J.ms) { try { const a = E.analyse(m, now); if (a && a.lh > 0 && a.la > 0) { FX[k][2] = a.lh; FX[k][3] = a.la; } } catch (err) {} }
+  const T = J.tgt, nt = T.length;
+  const cnt = new Float64Array(nt * 3), inz = new Float64Array(nt * 6 * nzn);
+  const pts = new Int32Array(n), gd = new Int32Array(n), gf = new Int32Array(n), nz = new Float64Array(2 * n), tie = new Float64Array(n);
+  const order = [...Array(n).keys()], pos = new Int32Array(n), res = new Int8Array(F);
+  const pois = (l) => { const L = Math.exp(-l); let k = 0, p = R(); while (p > L) { k++; p *= R(); } return k; };
+  const gauss = () => { let u = 0; while (!u) u = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * R()); };
+  const inZone = (p, z) => (z[1] < 0 ? p >= n + z[1] : p >= z[1] - 1 && p <= z[2] - 1);
+  for (let s = 0; s < N; s++) {
+    for (let t = 0; t < n; t++) { pts[t] = J.base[t][0]; gf[t] = J.base[t][1]; gd[t] = J.base[t][1] - J.base[t][2]; nz[2 * t] = gauss() * sig; nz[2 * t + 1] = gauss() * sig; tie[t] = R(); }
+    for (let k = 0; k < F; k++) {
+      const f = FX[k], i = f[0], j = f[1];
+      const h = pois(f[2] * Math.exp(nz[2 * i] + nz[2 * j + 1])), a = pois(f[3] * Math.exp(nz[2 * j] + nz[2 * i + 1]));
+      gf[i] += h; gf[j] += a; gd[i] += h - a; gd[j] += a - h;
+      if (h > a) { pts[i] += 3; res[k] = 0; } else if (h < a) { pts[j] += 3; res[k] = 2; } else { pts[i]++; pts[j]++; res[k] = 1; }
+    }
+    order.sort((x, y) => pts[y] - pts[x] || gd[y] - gd[x] || gf[y] - gf[x] || tie[y] - tie[x]);
+    for (let p = 0; p < n; p++) pos[order[p]] = p;
+    for (let q = 0; q < nt; q++) {
+      const k = T[q], o = res[k], f = FX[k];
+      cnt[q * 3 + o]++;
+      for (let side = 0; side < 2; side++) {
+        const p = pos[side ? f[1] : f[0]], b = ((q * 2 + side) * 3 + o) * nzn;
+        for (let z = 0; z < nzn; z++) if (inZone(p, Z[z])) inz[b + z]++;
+      }
+    }
+  }
+  const out = [];
+  for (let q = 0; q < nt; q++) {
+    const c = [cnt[q * 3], cnt[q * 3 + 1], cnt[q * 3 + 2]], tot = c[0] + c[1] + c[2];
+    const sides = [];
+    for (let side = 0; side < 2; side++) {
+      let best = null, mx = 0;
+      for (let z = 0; z < nzn; z++) {
+        const v = [0, 1, 2].map((o) => inz[((q * 2 + side) * 3 + o) * nzn + z]);
+        const all = (v[0] + v[1] + v[2]) / tot;
+        const pz = [0, 1, 2].map((o) => (c[o] >= 30 ? v[o] / c[o] : all));
+        const win = side ? pz[2] : pz[0], loss = side ? pz[0] : pz[2], sw = Math.abs(win - loss);
+        if (sw > mx) mx = sw;
+        if (!Z[z][3] && (!best || sw > best[5])) best = [z, all, win, pz[1], loss, sw];
+      }
+      sides.push([best, mx]);
+    }
+    out.push(sides);
+  }
+  return out;
+}
+const out = inp.jobs.map((J) => { try { return job(J); } catch (err) { return null; } });
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+def sim_seed(*parts):
+    h = 2166136261
+    for ch in '|'.join(str(x) for x in parts):
+        h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
+    return h
+
+
+def round_robin(cur):
+    """True when no pair of teams has met twice at the same ground: a league the simulator can play out."""
+    teams = {g[1] for g in cur} | {g[2] for g in cur}
+    n = len(teams)
+    return n >= 6 and len({(g[1], g[2]) for g in cur}) == len(cur) and len(cur) <= n * (n - 1)
+
+
+def stakes_jobs(state, doc):
+    """One simulation per league with a team file: the table now, every game still to play (priced games
+    use the engine's expected goals, the rest the ratings), and the coming games to measure."""
+    jobs, meta = [], []
+    upcoming = {}
+    for m in doc['matches']:
+        if parse_iso(m['ko']) > NOW and m['lk'] in SIM_LEAGUES:
+            upcoming.setdefault(m['lk'], {})[(m['h'], m['a'])] = m
+    for lk, tf in (state.get('teamfiles') or {}).items():
+        if lk not in upcoming or not tf.get('rem') or not tf.get('teams'):
+            continue
+        lg = (doc.get('leagues') or {}).get(lk) or {}
+        rows = {r[0]: r for r in lg.get('table') or []}
+        names = tf['teams']
+        if not all(nm in rows for nm in names) or lg.get('mu') is None:
+            continue
+        mu, home = lg['mu'], lg.get('home') or 0.25
+        rr = [rows[nm] for nm in names]
+        att = [r[9] or 0.0 for r in rr]
+        dfn = [r[10] or 0.0 for r in rr]
+        fx, ms, tgt = [], [], []
+        for k, (i, j) in enumerate(tf['rem']):
+            fx.append([i, j, round(math.exp(mu + home + att[i] + dfn[j]), 4), round(math.exp(mu + att[j] + dfn[i]), 4)])
+            m = upcoming[lk].get((names[i], names[j]))
+            if m:
+                ms.append([k, {x: v for x, v in m.items() if x not in ('hist', 'tn', 'sk', 'fx', 'fxw')}])
+                tgt.append(k)
+        if not tgt:
+            continue
+        jobs.append({'n': STAKES_N, 'sig': SIM_SIG, 'seed': sim_seed(lk, NOW.strftime('%Y-%m-%d')), 'zones': zones_for(lk),
+                     'base': [[r[7], r[5], r[6]] for r in rr], 'fx': fx, 'ms': ms, 'tgt': tgt})
+        meta.append((lk, [upcoming[lk][(names[tf['rem'][k][0]], names[tf['rem'][k][1]])]['id'] for k in tgt]))
+    return jobs, meta
+
+
+def refresh_stakes(state, doc):
+    """Each coming league game's stakes, refreshed hourly (the simulation is seeded, so the same inputs give
+    the same answer and don't trigger a redeploy)."""
+    cache = state.get('stakes') or {}
+    ids = {m['id'] for m in doc['matches'] if parse_iso(m['ko']) > NOW and m['lk'] in SIM_LEAGUES}
+    seen = set(state.get('stakes_seen') or [])
+    if due(state, 'stakes', STAKES_EVERY_H) or state.get('stakes_teams') != state.get('teams_sig') or not ids <= seen:
+        t0 = time.time()
+        state.setdefault('last', {})['stakes'] = iso(NOW)
+        state['stakes_seen'] = sorted(ids)
+        state['stakes_teams'] = state.get('teams_sig')
+        jobs, meta = stakes_jobs(state, doc)
+        got = run_node(NODE_SIM, {'engine': True, 'now': iso(NOW), 'jobs': jobs}, timeout=300) if jobs else []
+        if got is not None:
+            cache = {}
+            for (lk, mids), res in zip(meta, got):
+                if not res:
+                    continue
+                zn = zones_for(lk)
+                for mid, sides in zip(mids, res):
+                    rec, score = [], 0.0
+                    for best, _mx in sides:
+                        if best and best[5] >= 0.005:
+                            rec.append([zn[best[0]][0]] + [int(round(x * 1000)) for x in best[1:5]])
+                            score += best[5]
+                        else:
+                            rec.append(None)
+                    cache[mid] = {'sk': [int(round(score * 100))] + rec, 'mx': [round(sides[0][1], 4), round(sides[1][1], 4)]}
+            state['stakes'] = cache
+            log(f'stakes: {len(cache)} games in {len(jobs)} leagues ({time.time() - t0:.1f} s)')
+    for m in doc['matches']:
+        c = cache.get(m['id'])
+        if c and parse_iso(m['ko']) > NOW:
+            m['sk'] = c['sk']
+    return cache
+
+
+def apply_fx(state, doc):
+    """Fatigue and motivation for the coming league games, when the tuning switched them on."""
+    lp = state.get('last_played') or {}
+    for m in doc['matches']:   # games that have kicked off count as played, before football-data lists them
+        if L.get(m['lk'], {}).get('group') in ('cups', 'intl') or parse_iso(m['ko']) > NOW:
+            continue
+        d, ds = lp.setdefault(m['lk'], {}), m['ko'][:10]
+        for t in (m['h'], m['a']):
+            if ds > d.get(t, ''):
+                d[t] = ds
+    state['last_played'] = lp
+    if not (FX['rest'] or FX['dead'] or FX['open']):
+        return 0
+    stakes, tfs, n = state.get('stakes') or {}, state.get('teamfiles') or {}, 0
+    for m in doc['matches']:
+        if L.get(m['lk'], {}).get('group') in ('cups', 'intl') or parse_iso(m['ko']) <= NOW:
+            continue
+        ko, d = datetime.strptime(m['ko'][:10], '%Y-%m-%d'), lp.get(m['lk']) or {}
+
+        def rest(t):
+            x = d.get(t)
+            r = (ko - datetime.strptime(x, '%Y-%m-%d')).days if x else None
+            return r if r and r > 0 else None
+        rh, ra = rest(m['h']), rest(m['a'])
+        dh = da = None
+        st, tf = stakes.get(m['id']), tfs.get(m['lk']) or {}
+        if (FX['dead'] or FX['open']) and st and tf.get('teams') and tf.get('rem') is not None:
+            nt = len(tf['teams'])
+            if len(tf['rem']) <= 0.5 * nt * (nt - 1):   # as in the fit: only in the second half of the season
+                dh, da = st['mx']
+        xh, xa = fx_shift(rh, ra, dh, da)
+        if abs(xh) > 1e-4 or abs(xa) > 1e-4:
+            m['fx'] = [round(math.exp(xh), 4), round(math.exp(xa), 4)]
+            why = {}
+            if FX['rest'] and tired(rh, FX['rest'][1]) != tired(ra, FX['rest'][1]):
+                why['r'] = [rh, ra, 1 if FX['rest'][0] > 0 else -1]
+            if FX['dead'] and is_dead(dh, FX['dead'][1]) != is_dead(da, FX['dead'][1]):
+                why['d'] = [int(is_dead(dh, FX['dead'][1])), int(is_dead(da, FX['dead'][1])), 1 if FX['dead'][0] > 0 else -1]
+            if FX['open'] and is_dead(dh, FX['open'][1]) and is_dead(da, FX['open'][1]):
+                why['o'] = 1
+            m['fxw'] = why
+            n += 1
+    return n
+
+
 # ----------------------------------------------------------------------------------------------
 # Step 2: football-data fixtures (with average / best prices)
 # ----------------------------------------------------------------------------------------------
@@ -2389,13 +2631,12 @@ def season_name(code):
     return f'20{code[:2]}/{code[2:]}'
 
 
-def season_preds(cur_rows, prev_rows, P, skip=None):
-    """Every game of a season with the expected goals, and their spread, from the ratings as they stood
-    that week: built only from earlier games."""
+def season_fits(cur_rows, prev_rows, P, skip=None):
+    """The ratings at the start of each week of a season, each built only from earlier games."""
     skip = BT_SKIP_WEEKS if skip is None else skip
     cur = sorted(cur_rows, key=lambda r: r[0])
     if len(cur) < 60:
-        return []
+        return None
     games = [(r[0], r[1], r[2], r[3], r[4], False, r[5], r[6]) for r in prev_rows] + \
             [(r[0], r[1], r[2], r[3], r[4], True, r[5], r[6]) for r in cur]
     start = cur[0][0]
@@ -2408,6 +2649,16 @@ def season_preds(cur_rows, prev_rows, P, skip=None):
         rt = fit_ratings([g for g in games if g[0] < cut], teams, asof=cut, init=init, P=P)
         if rt:
             fits[w], init = rt, rt
+    return cur, start, fits
+
+
+def season_preds(cur_rows, prev_rows, P, skip=None, sf=None):
+    """Every game of a season with the expected goals, and their spread, from the ratings as they stood
+    that week: built only from earlier games."""
+    sf = sf or season_fits(cur_rows, prev_rows, P, skip)
+    if not sf:
+        return []
+    cur, start, fits = sf
     out = []
     for r in cur:
         rt = fits.get((r[0] - start).days // 7)
@@ -2458,6 +2709,118 @@ def game_loss(lh, la, hg, ag):
 
 
 # ----------------------------------------------------------------------------------------------
+# Fatigue and motivation. Rest: days since each team's previous league game (football-data only has league
+# games, so cup and European games aren't counted). Motivation: from the season simulation, a team whose
+# title, European, promotion and relegation chances barely move whatever the result has nothing left to
+# play for. Both are fitted on past seasons and stay off unless they also help on a season the fit never saw.
+# ----------------------------------------------------------------------------------------------
+FX = {'rest': None, 'dead': None, 'open': None}
+# rest: (strength, days below which a side counts as short of rest); a negative strength means short-rested
+# sides did better than the prices expected. dead: (strength, swing threshold): a side with nothing to play
+# for scores less and concedes more. open: (strength, threshold): games where neither side has anything to
+# play for have more goals.
+FX_REST_GRID = [(b, t0) for t0 in (4, 5) for b in (-0.2, -0.15, -0.1, -0.06, -0.03, 0.03, 0.06, 0.1, 0.15, 0.2)]
+FX_DEAD_GRID = [(b, thr) for thr in (0.005, 0.01, 0.02) for b in (-0.1, -0.05, 0.05, 0.1, 0.15, 0.2)]
+FX_OPEN_GRID = [(b, thr) for thr in (0.005, 0.01, 0.02) for b in (0.03, 0.06, 0.1, 0.15)]
+FX_SIMS = 2000          # simulated seasons per past week (the live stakes use 10,000)
+FX_MIN_GAIN = 1e-5      # on the unseen season, the error must drop by at least this much a game
+
+
+def tired(rest, t0):
+    """0 when rested; 1 after only two days."""
+    if rest is None:
+        return 0.0
+    return max(0.0, min(1.0, (t0 - rest) / (t0 - 2)))
+
+
+def is_dead(swing, thr):
+    return swing is not None and swing < thr
+
+
+def fx_shift(rh, ra, dh, da, F=None):
+    """The shifts in log expected goals for the home and the away side."""
+    F = FX if F is None else F
+    x = y = 0.0
+    if F.get('rest'):
+        b, t0 = F['rest']
+        x -= b * (tired(rh, t0) - tired(ra, t0))
+    if F.get('dead'):
+        b, thr = F['dead']
+        x -= b * (int(is_dead(dh, thr)) - int(is_dead(da, thr)))
+    if F.get('open'):
+        b, thr = F['open']
+        if is_dead(dh, thr) and is_dead(da, thr):
+            y += b
+    return x + y, -x + y
+
+
+def rest_days(cur_rows, prev_rows):
+    """Days since each side's previous league game, for every game of a season."""
+    last, out = {}, {}
+    for r in sorted(list(prev_rows) + list(cur_rows), key=lambda r: r[0]):
+        d, h, a = r[0], r[1], r[2]
+        out[(d, h, a)] = ((d - last[h]).days if h in last else None, (d - last[a]).days if a in last else None)
+        last[h] = last[a] = d
+    return out
+
+
+def past_stakes_jobs(lk, sf, n_sims=FX_SIMS):
+    """For each week of the second half of a past season: the table then, the games left (from that week's
+    ratings) and that week's games to measure."""
+    if not sf or lk not in SIM_LEAGUES:
+        return [], []
+    cur, start, fits = sf
+    if not round_robin(cur):
+        return [], []
+    teams = sorted({r[1] for r in cur} | {r[2] for r in cur})
+    n, idx = len(teams), {t: i for i, t in enumerate(teams)}
+    zn = zones_for(lk)
+    jobs, keys = [], []
+    for w, rt in sorted(fits.items()):
+        cut = start + timedelta(days=7 * w)
+        played = [r for r in cur if r[0] < cut]
+        if len(played) < 0.5 * n * (n - 1):
+            continue
+        later = [r for r in cur if r[0] >= cut]
+        tg = [k for k, r in enumerate(later) if r[0] < cut + timedelta(days=7)]
+        if not tg:
+            continue
+        base = [[0, 0, 0] for _ in teams]
+        for r in played:
+            i, j = idx[r[1]], idx[r[2]]
+            base[i][1] += r[3]; base[i][2] += r[4]; base[j][1] += r[4]; base[j][2] += r[3]
+            if r[3] > r[4]:
+                base[i][0] += 3
+            elif r[3] < r[4]:
+                base[j][0] += 3
+            else:
+                base[i][0] += 1; base[j][0] += 1
+        T = rt['teams']
+        fx = []
+        for r in later:
+            ah, dh = T.get(r[1], (0.0, 0.0))
+            aa, da = T.get(r[2], (0.0, 0.0))
+            fx.append([idx[r[1]], idx[r[2]], round(math.exp(rt['mu'] + rt['home'] + ah + da), 4), round(math.exp(rt['mu'] + aa + dh), 4)])
+        jobs.append({'n': n_sims, 'sig': SIM_SIG, 'seed': sim_seed(lk, cut.strftime('%Y-%m-%d')), 'zones': zn, 'base': base, 'fx': fx, 'tgt': tg})
+        keys.append([(lk, later[k][0].strftime('%Y-%m-%d'), later[k][1], later[k][2]) for k in tg])
+    return jobs, keys
+
+
+def run_past_stakes(jobs, keys):
+    """The largest swing (any zone) for each side of each measured game: (lk, date, home, away) -> (home, away)."""
+    out = {}
+    for i in range(0, len(jobs), 150):   # in batches, to keep each node run's input small
+        got = run_node(NODE_SIM, {'engine': False, 'jobs': jobs[i:i + 150]}, timeout=600)
+        if got is None:
+            return None
+        for ks, res in zip(keys[i:i + 150], got):
+            if res:
+                for k, sides in zip(ks, res):
+                    out[k] = (sides[0][1], sides[1][1])
+    return out
+
+
+# ----------------------------------------------------------------------------------------------
 # Tuning: the model's settings (memory, last season's weight, shrinkage, shots) are searched on two past
 # seasons, then checked on the last completed season, which the search never saw. They are switched on
 # only if they beat the defaults there, after blending with the market as the site does.
@@ -2469,6 +2832,7 @@ TUNE_GRID = {'sw': [0.0, 0.15, 0.3, 0.45, 0.6, 0.75], 'hl': [120.0, 180.0, 270.0
 W_GRID = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
 W_DEFAULT = 0.8
 _TUNE_JOBS = []   # (this season's rows, last season's rows); read by forked worker processes
+_TUNE_LKS = []    # the league of each
 
 
 def _tune_job(arg):
@@ -2476,17 +2840,25 @@ def _tune_job(arg):
     cur_rows, prev_rows = _TUNE_JOBS[i]
     n = l1 = l2 = 0.0
     rows = []
-    for r, lh, la, _sh, _sa in season_preds(cur_rows, prev_rows, P):
+    sf = season_fits(cur_rows, prev_rows, P)
+    lk = _TUNE_LKS[i] if i < len(_TUNE_LKS) else None
+    rd = rest_days(cur_rows, prev_rows) if full else None
+    for r, lh, la, _sh, _sa in season_preds(cur_rows, prev_rows, P, sf=sf):
         if full:
             mk = r[7]
             if mk and mk.get('p'):
-                rows.append((lh, la, r[3], r[4], mk['p'][0], mk['p'][2], (mk.get('ou') or {}).get('pO')))
+                rh, ra = rd.get((r[0], r[1], r[2]), (None, None))
+                rows.append((lh, la, r[3], r[4], mk['p'][0], mk['p'][2], (mk.get('ou') or {}).get('pO'),
+                             rh, ra, (lk, r[0].strftime('%Y-%m-%d'), r[1], r[2])))
             continue
         x, y = game_loss(lh, la, r[3], r[4])
         n += 1
         l1 += x
         l2 += y
-    return rows if full else (n, l1, l2)
+    if not full:
+        return (n, l1, l2)
+    jobs, keys = past_stakes_jobs(lk, sf) if lk else ([], [])
+    return rows, jobs, keys
 
 
 def _pool():
@@ -2526,21 +2898,23 @@ def run_tuning(state):
     global _TUNE_JOBS
     t0 = time.time()
     c1, c2, c3, c4 = (season_code(NOW, i) for i in (1, 2, 3, 4))
-    train, check = [], []
+    global _TUNE_LKS
+    train, check, tl, cl = [], [], [], []
     for lk, c in L.items():
         if not c['fd']:
             continue
         s1, s2, s3, s4 = (fd_season(lk, code) for code in (c1, c2, c3, c4))
         if len(s2) >= 60 and s3:
-            train.append((s2, s3))
+            train.append((s2, s3)); tl.append(lk)
         if len(s3) >= 60 and s4:
-            train.append((s3, s4))
+            train.append((s3, s4)); tl.append(lk)
         if len(s1) >= 60 and s2:
-            check.append((s1, s2))
+            check.append((s1, s2)); cl.append(lk)
     if len(train) < 6 or len(check) < 3:
         log('tuning: not enough past seasons', len(train), len(check))
         return None
     _TUNE_JOBS = train + check
+    _TUNE_LKS = tl + cl
     ti, ci = list(range(len(train))), list(range(len(train), len(train) + len(check)))
     pool = _pool()
     evals, cache = 0, {}
@@ -2585,10 +2959,11 @@ def run_tuning(state):
                     best0, bs0 = P, sc
         t_search = time.time() - t0
         # the market's share: model expected goals from the tuned settings, market expected goals fitted by the engine
-        tr_rows = [r for rows in _pmap(pool, _tune_job, [(i, best, True) for i in ti]) for r in rows]
-        ck_def = [r for rows in _pmap(pool, _tune_job, [(i, DEFAULT_MODEL, True) for i in ci]) for r in rows]
-        ck_new = [r for rows in _pmap(pool, _tune_job, [(i, best, True) for i in ci]) for r in rows]
-        ck_0 = [r for rows in _pmap(pool, _tune_job, [(i, best0, True) for i in ci]) for r in rows]
+        flat = lambda res: ([r for x in res for r in x[0]], [j for x in res for j in x[1]], [k for x in res for k in x[2]])
+        tr_rows, tr_jobs, tr_keys = flat(_pmap(pool, _tune_job, [(i, best, True) for i in ti]))
+        ck_def, cd_jobs, cd_keys = flat(_pmap(pool, _tune_job, [(i, DEFAULT_MODEL, True) for i in ci]))
+        ck_new, cn_jobs, cn_keys = flat(_pmap(pool, _tune_job, [(i, best, True) for i in ci]))
+        ck_0 = flat(_pmap(pool, _tune_job, [(i, best0, True) for i in ci]))[0]
     finally:
         if pool:
             pool.shutdown()
@@ -2613,12 +2988,14 @@ def run_tuning(state):
     mkt = blend_loss(ck_new, lam_ck, 1.0)
     m_0 = blend_loss(ck_0, lam_ck, 0.0) if len(ck_0) == len(ck_def) else (9, 9)
     on0 = p_on and best0 != dict(DEFAULT_MODEL) and sum(m_0) < sum(m_def) - 1e-4
+    w_live = w_best if w_on else W_DEFAULT
+    fx = safe_fx(tr_rows, lam_tr, tr_jobs, tr_keys, rows_on, lam_ck, (cn_jobs, cn_keys) if p_on else (cd_jobs, cd_keys), w_live, t0)
     r5 = lambda x: round(x, 5)
     out = {'at': iso(NOW), 'train': [season_name(c3), season_name(c2)], 'check': season_name(c1), 'check_code': c1,
            'leagues': len(check), 'games': len(ck_new), 'evals': evals, 'secs': round(time.time() - t0),
            'search_secs': round(t_search), 'finished': finished,
            'default': DEFAULT_MODEL, 'params': best, 'on': p_on, 'w': w_best, 'w_on': w_on,
-           'params0': best0, 'on0': on0,
+           'params0': best0, 'on0': on0, 'fx': fx,
            'll': {'model': [r5(m_def[0]), r5(m_new[0])], 'model_ou': [r5(m_def[1]), r5(m_new[1])],
                   'site': [r5(b_old[0]), r5(b_after[0])], 'site_ou': [r5(b_old[1]), r5(b_after[1])],
                   'market': [r5(mkt[0]), r5(mkt[1])], 'model0': [r5(m_0[0]), r5(m_0[1])]}}
@@ -2634,20 +3011,86 @@ def apply_tuning(state):
     MODEL = dict(t['params']) if t.get('on') and t.get('params') else dict(DEFAULT_MODEL)
     MODEL0 = dict(t['params0']) if t.get('on0') and t.get('params0') else dict(DEFAULT_MODEL)
     MODEL_W = t.get('w') if t.get('w_on') else None
+    f = t.get('fx') or {}
+    FX['rest'] = tuple(f['rest']['p']) if (f.get('rest') or {}).get('on') else None
+    FX['dead'] = tuple(f['dead']['p']) if (f.get('dead') or {}).get('on') else None
+    FX['open'] = tuple(f['open']['p']) if (f.get('open') or {}).get('on') else None
+
+
+def safe_fx(*a):
+    try:
+        return fit_fx(*a)
+    except Exception as e:
+        log('tuning: fatigue and motivation fit failed', repr(e))
+        return None
+
+
+def fit_fx(tr_rows, lam_tr, tr_jobs, tr_keys, ck_rows, lam_ck, ck_sj, w, t_start):
+    """Fit fatigue and motivation on the training seasons, after blending with the market as the site does;
+    each goes on only if it also lowers the error on the check season."""
+    t0 = time.time()
+    late = time.time() - t_start > TUNE_BUDGET_S * 1.4   # the run is long already: motivation waits for next month
+    st_tr = {} if late else run_past_stakes(tr_jobs, tr_keys) or {}
+    st_ck = {} if late or not st_tr else run_past_stakes(*ck_sj) or {}
+
+    def pre(rows, lams, st):
+        out = []
+        for row, (mh, ma) in zip(rows, lams):
+            lh, la, hg, ag = row[:4]
+            rh, ra, key = row[7], row[8], row[9]
+            dh, da = st.get(key, (None, None))
+            bh, ba = math.exp(w * math.log(mh) + (1 - w) * math.log(lh)), math.exp(w * math.log(ma) + (1 - w) * math.log(la))
+            out.append((bh, ba, hg, ag, rh, ra, dh, da, sum(game_loss(bh, ba, hg, ag))))
+        return out
+    P_tr, P_ck = pre(tr_rows, lam_tr, st_tr), pre(ck_rows, lam_ck, st_ck)
+
+    def loss(P, F):
+        tot, n_aff = 0.0, 0
+        for bh, ba, hg, ag, rh, ra, dh, da, base in P:
+            xh, xa = fx_shift(rh, ra, dh, da, F)
+            if xh or xa:
+                tot += sum(game_loss(bh * math.exp(xh), ba * math.exp(xa), hg, ag))
+                n_aff += 1
+            else:
+                tot += base
+        return tot / max(1, len(P)), n_aff
+
+    out, F = {'games': [len(P_tr), len(P_ck)], 'measured': [len(st_tr), len(st_ck)]}, {}
+    for name, grid in (('rest', FX_REST_GRID), ('dead', FX_DEAD_GRID), ('open', FX_OPEN_GRID)):
+        if name != 'rest' and not st_tr:
+            continue
+        base_tr, base_ck = loss(P_tr, F)[0], loss(P_ck, F)[0]
+        best, best_l = None, base_tr
+        for p in grid:
+            l_ = loss(P_tr, dict(F, **{name: p}))[0]
+            if l_ < best_l - 1e-7:
+                best, best_l = p, l_
+        if not best:
+            out[name] = {'p': None, 'on': False, 'll': [round(base_ck, 5), round(base_ck, 5)], 'n': 0}
+            continue
+        ck_l, n_aff = loss(P_ck, dict(F, **{name: best}))
+        on = ck_l < base_ck - FX_MIN_GAIN
+        out[name] = {'p': list(best), 'on': on, 'll': [round(base_ck, 5), round(ck_l, 5)], 'n': n_aff,
+                     'train': [round(base_tr, 5), round(best_l, 5)]}
+        if on:
+            F[name] = best
+    log(f"tuning: rest {out.get('rest')}, motivation {out.get('dead')}, open games {out.get('open')} ({time.time() - t0:.0f} s)")
+    return out
 
 
 def tune_due(state):
     t = state.get('tune')
     if not t:
         return due(state, 'tune', 6)   # first time: retry every 6 hours if the downloads fail
-    return due(state, 'tune', TUNE_EVERY_D * 24) or t.get('check_code') != season_code(NOW, 1) or not t.get('finished', True)
+    return due(state, 'tune', TUNE_EVERY_D * 24) or t.get('check_code') != season_code(NOW, 1) or not t.get('finished', True) \
+        or ('fx' not in t and due(state, 'tune', 6))   # fatigue and motivation came later: fit them once
 
 
 def public_tune(state):
     t = state.get('tune')
     if not t:
         return None
-    return {k: t[k] for k in ('at', 'train', 'check', 'leagues', 'games', 'default', 'params', 'on', 'params0', 'on0', 'w', 'w_on', 'll') if k in t}
+    return {k: t[k] for k in ('at', 'train', 'check', 'leagues', 'games', 'default', 'params', 'on', 'params0', 'on0', 'w', 'w_on', 'll', 'fx') if k in t}
 
 
 # ----------------------------------------------------------------------------------------------
@@ -2665,10 +3108,18 @@ def load_bt_season():
 
 
 def bt_matches(seasons):
-    """Engine input for every replayed game: the model as it stood that week, plus the pre-match prices."""
-    ms, res = [], {}
+    """Engine input for every replayed game: the model as it stood that week, plus the pre-match prices
+    (and fatigue and motivation, when the tuning switched them on)."""
+    ms, res, pend, jobs, keys = [], {}, [], [], []
+    use_fx = bool(FX['rest'] or FX['dead'] or FX['open'])
     for lk, (cur_rows, prev_rows) in seasons.items():
-        for r, lh, la, sh, sa in season_preds(cur_rows, prev_rows, MODEL):
+        sf = season_fits(cur_rows, prev_rows, MODEL)
+        rd = rest_days(cur_rows, prev_rows) if use_fx else {}
+        if FX['dead'] or FX['open']:
+            j, k = past_stakes_jobs(lk, sf)
+            jobs += j
+            keys += k
+        for r, lh, la, sh, sa in season_preds(cur_rows, prev_rows, MODEL, sf=sf):
             d, h, a, hg, ag, _hs, _as, mkt, ko = r
             if not mkt:
                 continue
@@ -2677,8 +3128,16 @@ def bt_matches(seasons):
                  'ls': [round(sh, 3), round(sa, 3)], 'mkt': mkt, 'xl': False, 'fr': False, 'clash': False}
             if MODEL_W:
                 m['wm'] = MODEL_W
+            if use_fx:
+                pend.append((m, rd.get((d, h, a), (None, None)), (lk, d.strftime('%Y-%m-%d'), h, a)))
             ms.append(m)
             res[mid] = (hg, ag)
+    st = (run_past_stakes(jobs, keys) or {}) if jobs else {}
+    for m, (rh, ra), key in pend:
+        dh, da = st.get(key, (None, None))
+        xh, xa = fx_shift(rh, ra, dh, da)
+        if abs(xh) > 1e-4 or abs(xa) > 1e-4:
+            m['fx'] = [round(math.exp(xh), 4), round(math.exp(xa), 4)]
     return ms, res
 
 
@@ -2791,12 +3250,12 @@ def main():
         elif not state.get('tune'):
             src['tuning'] = {'ok': False, 'at': iso(NOW), 'note': 'past seasons not available yet'}
     apply_tuning(state)
-    model_sig = json.dumps([MODEL, MODEL0, MODEL_W], sort_keys=True)
+    model_sig = json.dumps([MODEL, MODEL0, MODEL_W, FX], sort_keys=True)
     if model_sig != state.get('model_sig'):
         state['model_sig'] = model_sig
         retuned = True
 
-    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or 'teamfiles' not in state or retuned:
+    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or 'teamfiles' not in state or 'last_played' not in state or retuned:
         res = safe(load_results, {})
         if res:
             state['leagues'] = safe(lambda: compute_leagues(res, Teams()), state.get('leagues') or {})
@@ -2806,6 +3265,13 @@ def main():
             if tf:
                 state['teamfiles'] = dict(state['teamfiles'], **tf)
                 state['teams_changed'] = True
+                state['teams_sig'] = iso(NOW)
+            lp_new, lp_old = safe(lambda: last_played(res), {}), state.get('last_played') or {}
+            for lk_, d_ in lp_old.items():   # keep later dates seen at kick-off, before football-data lists the game
+                for t_, ds_ in d_.items():
+                    if ds_ > lp_new.setdefault(lk_, {}).get(t_, ''):
+                        lp_new[lk_][t_] = ds_
+            state['last_played'] = lp_new
             last['results'] = iso(NOW)
             src['results'] = {'ok': True, 'at': iso(NOW), 'leagues': len(res)}
         else:
@@ -2845,6 +3311,10 @@ def main():
     log('odds:', msg, '| credits left:', (state.get('quota') or {}).get('remaining'))
 
     doc = build(state, prev, seed)
+    safe(lambda: refresh_stakes(state, doc), None)
+    n_fx = safe(lambda: apply_fx(state, doc), 0)
+    if n_fx:
+        log(f'fatigue and motivation: {n_fx} games adjusted')
     doc['calib'] = safe(lambda: fit_calib(load_track(state)[0]['picks']), {'on': False, 'n': 0, 'need': CAL_MIN})
     if doc['calib'].get('on'):
         log(f"self-tuning: on from {doc['calib']['n']} graded picks (a={doc['calib']['a']}, b={doc['calib']['b']})")

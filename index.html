@@ -431,6 +431,68 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .sim-t td em, .tm-kpis em { font-style: normal; font: 700 10.5px var(--f-mono); margin-left: 4px; position: relative; z-index: 1; }
 .sim-t td em.up { color: var(--pitch); } .sim-t td em.down { color: var(--red); }
 .pstrip { display: inline-flex; gap: 1px; vertical-align: middle; }
+/* Talk to Statpad */
+.ask { display: grid; gap: 10px; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.ask-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ask-vo { font-size: 12.5px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
+.ask-log { display: grid; gap: 10px; min-height: 110px; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.ask-hello { display: grid; gap: 4px; padding: 4px 2px; } .ask-hello b { font: 700 19px/1.25 var(--f-display); } .ask-hello span { color: var(--ink-3); font-size: 13px; }
+.ask-ex { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-chip { border: 1px solid var(--rule); background: var(--card); color: var(--ink); border-radius: 99px; padding: 8px 12px; font: 600 12.5px/1.25 var(--f-body); cursor: pointer; text-align: left; max-width: 100%; }
+.ask-q { display: flex; justify-content: flex-end; }
+.ask-q span { background: var(--cobalt); color: var(--cobalt-ink); padding: 9px 13px; border-radius: 16px 16px 4px 16px; max-width: 85%; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.ask-a { background: var(--card); border: 1px solid var(--rule); border-radius: 4px 16px 16px 16px; padding: 12px 14px; box-shadow: var(--shadow); min-width: 0; overflow-wrap: anywhere; }
+.ask-lead { margin: 0 0 6px; font-weight: 650; font-size: 14px; line-height: 1.4; }
+.ask-items { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 13.5px; line-height: 1.4; color: var(--ink-2); }
+.ask-items.plain { list-style: none; padding-left: 0; }
+.ask-tail { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
+.ask-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.ask-wait { margin: 0; color: var(--ink-3); }
+.ask-in { display: flex; gap: 8px; align-items: center; position: sticky; bottom: -40px; background: var(--paper); padding: 8px 0 10px; z-index: 1; }
+.ask-in input { flex: 1; min-width: 0; border: 1px solid var(--rule); border-radius: 99px; padding: 11px 15px; font: 500 15px var(--f-body); background: var(--card); color: var(--ink); }
+.ask-in .btn { flex: none; }
+.ask-mic { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--pitch); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.ask-mic svg { width: 22px; height: 22px; }
+.ask-mic.on { background: var(--red); animation: askpulse 1.2s ease-in-out infinite; }
+@keyframes askpulse { 0%, 100% { box-shadow: 0 0 0 0 var(--red-soft); } 50% { box-shadow: 0 0 0 10px var(--red-soft); } }
+@media (prefers-reduced-motion: reduce) { .ask-mic.on { animation: none; } }
+.ask-state { margin: 0; min-height: 1.2em; font-size: 13px; color: var(--ink-2); }
+/* WhatsApp Status pack */
+.st-intro { margin-top: 0; }
+.st-acts { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 14px; }
+.st-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 700px) { .st-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.st-fig { margin: 0; display: grid; gap: 8px; min-width: 0; }
+.st-fig img { width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 12px; border: 1px solid var(--rule); background: #0d1813; display: block; }
+.st-fig figcaption { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12.5px; font-weight: 600; min-width: 0; }
+.st-fig figcaption span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* what's at stake */
+.badge.b-stk { background: var(--yellow-soft); color: var(--yellow); }
+.badge.b-stk.huge { background: var(--red-soft); color: var(--red); }
+.stk-lv { display: inline-block; font: 700 10px/1 var(--f-mono); letter-spacing: .05em; text-transform: uppercase; padding: 4px 7px; border-radius: 5px; background: var(--sunk); color: var(--ink-3); white-space: nowrap; }
+.stk-lv.huge { background: var(--red-soft); color: var(--red); } .stk-lv.high { background: var(--yellow-soft); color: var(--yellow); }
+.card h4 .stk-lv { margin-left: auto; }
+.stk-row { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--rule-2); }
+.stk h4 + .stk-row { border-top: 0; padding-top: 4px; }
+.stk-h { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.stk-h b { font-size: 14px; } .stk-h span { font-size: 12px; color: var(--ink-3); }
+.stk-track { position: relative; height: 8px; border-radius: 4px; background: var(--sunk); margin: 6px 7px; }
+.stk-span { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: color-mix(in srgb, var(--ink) 16%, transparent); }
+.stk-dot { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid var(--card); box-sizing: border-box; }
+.stk-dot.w, .stk-o .w::before { background: var(--pitch); } .stk-dot.d, .stk-o .d::before { background: var(--d); } .stk-dot.l, .stk-o .l::before { background: var(--red); }
+.stk-o { display: flex; gap: 4px 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-3); }
+.stk-o b { font-family: var(--f-mono); font-size: 11.5px; color: var(--ink); }
+.stk-o span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+.stk-row.none { font-size: 12.5px; color: var(--ink-3); } .stk-row.none b { color: var(--ink); font-size: 14px; }
+.bigg { margin: 16px 0 18px; min-width: 0; }
+.bigg-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.bigg-h h3 { margin: 0; font: 700 15px/1.2 var(--f-display); }
+.bigg-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(232px, 1fr); gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 6px; scrollbar-width: thin; }
+.bigg-c { scroll-snap-align: start; text-align: left; display: grid; gap: 5px; align-content: start; padding: 12px 13px; border-radius: var(--r); background: var(--card); border: 1px solid var(--rule); box-shadow: var(--shadow); color: var(--ink); font: inherit; cursor: pointer; min-width: 0; }
+.bigg-c .stk-lv { justify-self: start; } .bigg-c b { font-size: 14px; line-height: 1.25; } .bigg-c small { font-size: 11.5px; color: var(--ink-3); }
+.bigg-s { font-size: 12px; color: var(--ink-2); line-height: 1.35; } .bigg-s b { font: 600 11.5px var(--f-mono); }
+.wi-fx .stk-lv { justify-self: start; margin-top: 3px; font-size: 9px; padding: 3px 5px; }
+.tn-stk { grid-column: 1 / -1; font-size: 11.5px; color: var(--ink-3); } .tn-stk b { font-family: var(--f-mono); color: var(--ink-2); font-size: 11px; }
 .pstrip i { width: 6px; height: 16px; background: var(--cobalt); border-radius: 2px; }
 .wi-on { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink-2); background: var(--yellow-soft); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
 .wi-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -800,6 +862,8 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M8 7.5L12 4l4 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10.5H6.5A1.5 1.5 0 005 12v7a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0019 19v-7a1.5 1.5 0 00-1.5-1.5H16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
   <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4.5 8.5A1.5 1.5 0 016 7h2.2l1.3-2h5l1.3 2H18a1.5 1.5 0 011.5 1.5v9A1.5 1.5 0 0118 19H6a1.5 1.5 0 01-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.8" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
   <symbol id="i-install" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15.5V18a2 2 0 002 2h10a2 2 0 002-2v-2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-status" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="11.5 2.8"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 11.5a6 6 0 0012 0M12 17.5v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
   <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7.5 5.5h3v13h-3zM13.5 5.5h3v13h-3z" fill="currentColor"/></symbol>
@@ -817,6 +881,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     <div class="top-right">
       <span class="live" id="live" role="status"><span class="dot"></span><span id="liveText">Loading</span></span>
       <button class="icon-btn" id="installBtn" type="button" aria-label="Install the Statpad app" title="Install app" hidden><svg><use href="#i-install"/></svg></button>
+      <button class="icon-btn" id="askBtn" type="button" data-ask="1" aria-label="Ask Statpad" title="Ask Statpad"><svg><use href="#i-mic"/></svg></button>
       <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch colour theme"><svg><use href="#i-moon"/></svg></button>
     </div>
   </div>
@@ -839,14 +904,14 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     <section id="v-matches" class="section" data-view="matches">
       <div class="sec-head">
         <div><h2>Matches</h2><p class="sub" id="matchesSub">Tap a match for the full breakdown.</p></div>
-        <div class="ctl"><button type="button" class="btn listen-b" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen to the briefing</button></div>
+        <div class="ctl"><button type="button" class="btn listen-b" data-ask="1"><svg aria-hidden="true"><use href="#i-mic"/></svg>Ask Statpad</button><button type="button" class="btn listen-b" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen to the briefing</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
       </div>
       <div class="days" id="days-matches" role="group" aria-label="Day"></div>
       <div class="filters">
         <label class="field grow"><svg><use href="#i-search"/></svg><span class="sr">Search teams</span><input id="q" type="search" placeholder="Search a team" autocomplete="off"></label>
         <label class="field"><svg><use href="#i-filter"/></svg><span class="sr">Competition</span><select id="league"></select></label>
         <label class="field"><span class="sr">Sort</span><select id="sort">
-          <option value="ko">Kick-off</option><option value="conf">Most confident</option><option value="edge">Best value</option><option value="comp">Competition</option></select></label>
+          <option value="ko">Kick-off</option><option value="conf">Most confident</option><option value="edge">Best value</option><option value="stakes">Most at stake</option><option value="comp">Competition</option></select></label>
       </div>
       <div id="matchList"></div>
     </section>
@@ -866,7 +931,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     <section id="v-slips" class="section" data-view="slips" hidden>
       <div class="sec-head">
         <div><h2>Slips</h2><p class="sub">For the chosen day, the combination with the highest chance of landing that still pays the target. One leg per match, kicked-off games removed.</p></div>
-        <div class="ctl"><span class="lbl">Target odds</span><div class="seg" id="target"></div><button type="button" class="btn listen-b" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></div>
+        <div class="ctl"><span class="lbl">Target odds</span><div class="seg" id="target"></div><button type="button" class="btn listen-b" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
       </div>
       <div class="days" id="days-slips" role="group" aria-label="Day"></div>
       <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="priced">Matches with live prices</option></select></label></div>
@@ -1085,6 +1150,9 @@ const ENGINE = (() => {
       src = 'external';
     } else if (lm) { [lh, la] = lm; src = 'model'; }
     else return null;
+    // fatigue and motivation, when the pipeline's tuning found they help on past seasons
+    const fx = m.fx && m.fx[0] > 0 && m.fx[1] > 0 && Math.abs(Math.log(m.fx[0])) < 0.5 ? m.fx : null;
+    if (fx) { lh *= fx[0]; la *= fx[1]; }
 
     const M = matrix(lh, la), p = markets(M);
     const diverge = pMod && mk ? Math.abs(pMod.H - mk.p[0]) : null;
@@ -1134,7 +1202,7 @@ const ENGINE = (() => {
     const scores = [];
     for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) scores.push([i, j, M[i][j]]);
     scores.sort((x, y) => y[2] - x[2]);
-    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, sig: [sh, sa], wm: src === 'blend' ? wm : null, sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5) };
+    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, sig: [sh, sa], wm: src === 'blend' ? wm : null, fx, sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5) };
   }
 
   function tierOf(p) { return p >= 0.82 ? 'A' : p >= 0.70 ? 'B' : p >= 0.58 ? 'C' : null; }
@@ -1457,7 +1525,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     };
     const pick = a && a.top ? `<span class="pick"><span class="tier tier-${a.tier || 'C'}">${pct(a.top.pAdj)}</span><b>${esc(a.top.label)}</b> · ${odds(a.top.price)}${a.top.real ? '' : ' est'}</span>` : `<span class="pick">No prediction yet: no ratings or prices</span>`;
     return `<article class="fx" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}">
-      <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${a && !realMkt(m) ? '<span class="badge b-est">Model only</span>' : ''}${newsBadge(m)}</div>
+      <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${stakeBadge(m)}${a && !realMkt(m) ? '<span class="badge b-est">Model only</span>' : ''}${newsBadge(m)}</div>
       <div class="fx-teams">
         <div class="tm"><span class="pos">${m.ph || ''}</span><span class="nm">${esc(m.h)}</span>${formDots(m.fh)}<span class="xg">${a ? a.lh.toFixed(2) : ''}</span></div>
         <div class="tm"><span class="pos">${m.pa || ''}</span><span class="nm">${esc(m.a)}</span>${formDots(m.fa)}<span class="xg">${a ? a.la.toFixed(2) : ''}</span></div>
@@ -1476,7 +1544,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!rows.length) {
       box.innerHTML = `<div class="empty-state"><b>No matches here</b>${S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`; return;
     }
-    let html = '';
+    let html = S.sort !== 'stakes' && !S.q ? bigGames(rows) : '';
     if (S.sort === 'ko' || S.sort === 'comp') {
       // group by competition (ordered by first kick-off, or by group/name)
       const groups = new Map();
@@ -1492,8 +1560,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       }
       if (rows.length > S.shown) html += `<button class="more-btn" type="button" data-more="1">Show ${Math.min(60, rows.length - S.shown)} more of ${rows.length - S.shown}</button>`;
     } else {
-      const sorted = rows.slice().sort(S.sort === 'conf' ? (x, y) => ((y.a && y.a.top ? y.a.top.pAdj : 0) - (x.a && x.a.top ? x.a.top.pAdj : 0)) : (x, y) => maxEdge(y) - maxEdge(x));
-      html = `<div class="comp"><div class="comp-list">${sorted.slice(0, S.shown).map((r) => fxCard(r).replace('<div class="fx-meta">', `<div class="fx-meta"><span>${esc(lgName(r.m.lk))}</span>`)).join('')}</div></div>`;
+      const sorted = rows.slice().sort(S.sort === 'conf' ? (x, y) => ((y.a && y.a.top ? y.a.top.pAdj : 0) - (x.a && x.a.top ? x.a.top.pAdj : 0))
+        : S.sort === 'stakes' ? (x, y) => (y.started ? -1 : y.m.sk ? y.m.sk[0] : -1) - (x.started ? -1 : x.m.sk ? x.m.sk[0] : -1) || x.ko - y.ko : (x, y) => maxEdge(y) - maxEdge(x));
+      if (S.sort === 'stakes' && !rows.some((r) => r.m.sk)) html += '<div class="empty-state"><b>No stakes for these games yet</b>Stakes come from the season simulator, for leagues where every team plays every other home and away.</div>';
+      html += `<div class="comp"><div class="comp-list">${sorted.slice(0, S.shown).map((r) => fxCard(r).replace('<div class="fx-meta">', `<div class="fx-meta"><span>${esc(lgName(r.m.lk))}</span>`)).join('')}</div></div>`;
       if (rows.length > S.shown) html += `<button class="more-btn" type="button" data-more="1">Show more</button>`;
     }
     box.innerHTML = html;
@@ -1504,6 +1574,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const r = S.byId.get(id); if (!r) return;
     if (S.open !== id) Object.assign(S.qx, { r: '', g: '', b: '', m: '', hg: '', ag: '', s: [] });
     const wasOpen = $('#sheet').classList.contains('open');
+    if (S.open === 'ask:') S.fromAsk = true; else if (!wasOpen) S.fromAsk = false;
     S.open = id; if (!wasOpen) S.opener = opener || document.activeElement;
     $('#sheetBody').scrollTop = 0;
     renderSheet();
@@ -1512,7 +1583,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     setTimeout(() => $('#sheetClose').focus(), 60);
   }
   function closeSheet() {
-    S.open = null; S.teamBack = null;
+    S.open = null; S.teamBack = null; S.fromAsk = false;
     $('#sheet').classList.remove('open'); $('#scrim').classList.remove('open'); $('#sheet').setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     if (S.opener && S.opener.focus) S.opener.focus();
@@ -1545,6 +1616,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function renderSheet() {
     if (String(S.open).startsWith('team:')) { renderTeamSheet(); return; }
+    if (S.open === 'status:') { renderStatusSheet(); return; }
+    if (S.open === 'ask:') { renderAskSheet(); return; }
     const r = S.byId.get(S.open); if (!r) { closeSheet(); return; }
     const { m, a } = r, info = lgInfo(m.lk);
     $('#sheetTitle').textContent = `${info.name} · ${longFmt.format(r.ko)}`;
@@ -1586,7 +1659,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <td><button type="button" class="add" data-add="${esc(m.id)}|${s.key}" aria-pressed="${inCoupon(m.id, s.key)}" aria-label="Add ${esc(s.label)} to coupon">${inCoupon(m.id, s.key) ? '✓' : '+'}</button></td></tr>`).join('')).join('');
     const mrows = mrowsOf(groups), xrows = mrowsOf(xgroups), nx = a.sels.filter((s) => s.x).length;
     const mk = m.mkt;
-    $('#sheetBody').innerHTML = `
+    $('#sheetBody').innerHTML = `${S.fromAsk ? `<button type="button" class="btn ghost tback" data-ask="1">← ${SW() ? 'Rudi kwa Uliza Statpad' : 'Back to Ask Statpad'}</button>` : ''}
       <div class="vs">
         <div class="side"><div class="team">${teamLink(m, m.h, m.dh)}</div><div class="meta">${pos(m.ph, m.fh, m.dh)}</div></div>
         <div class="mid"><div class="xg-big">${a.lh.toFixed(2)} – ${a.la.toFixed(2)}</div><div class="xg-l">EXPECTED GOALS</div></div>
@@ -1595,6 +1668,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="chips">${chips.map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>
       <div id="sheetLive">${r.started ? liveCard(r) : ''}</div>
       ${storyCard(r)}
+      ${stakesCard(m)}
       ${newsCard(m)}
       <div class="card"><h4>Who wins <span>home · draw · away</span></h4><div class="cmp">
         <div class="cmp-row"><span class="n">Statpad</span>${sbar([a.p.H, a.p.D, a.p.A])}</div>
@@ -1883,9 +1957,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         ['Pull towards average, in games', String(d.k), String(P.k)],
         ['Shots on target, mixed with goals', pct(d.sw || 0, 0), pct(P.sw || 0, 0)],
         ['Bookmakers’ share of the blend', pct(wb, 0), pct(wn, 0)]];
+      const fx = tn.fx || null, fxOn = (k) => fx && fx[k] && fx[k].on && fx[k].p;
+      if (fx) {
+        rows.push(['Short rest (2–3 days since the last league game)', 'Not used', fxOn('rest') ? `On: ${fx.rest.p[0] < 0 ? 'nudged up' : 'nudged down'} ${Math.round(Math.abs(fx.rest.p[0]) * 100)}%` : 'Tested, left off']);
+        if (fx.dead) rows.push(['Nothing left to play for', 'Not used', fxOn('dead') ? `On: ${fx.dead.p[0] > 0 ? 'nudged down' : 'nudged up'} ${Math.round(Math.abs(fx.dead.p[0]) * 100)}%` : 'Tested, left off']);
+        if (fx.open) rows.push(['Both sides with nothing to play for: more goals', 'Not used', fxOn('open') ? `On: +${Math.round(fx.open.p[0] * 100)}% goals` : 'Tested, left off']);
+      }
+      const fxNote = fx ? ` Fatigue and motivation are tested the same way, one at a time, on top of the blend: each goes on only if it also lowers the error on ${esc(tn.check || '')}${['rest', 'dead', 'open'].filter((k) => fx[k] && fx[k].ll).map((k) => ` (${{ rest: 'short rest', dead: 'nothing to play for', open: 'open games' }[k]}: ${f3(fx[k].ll[0] / 2)} → ${f3(fx[k].ll[1] / 2)} a game, results and goals averaged)`).join('')}.` : '';
       tuneHtml = `<div class="bt-tune"><div class="bt-tune-h"><b>Settings tuned on ${esc((tn.train || []).join(' and '))}, checked on ${esc(tn.check || '')}</b><span class="chip ${tn.on || tn.w_on ? '' : 'warn'}">${tn.on || tn.w_on ? 'In use' : 'Old settings kept'}</span></div>
         <div class="tt-wrap"><table class="tt tune-t"><thead><tr><th>Setting</th><th>Before</th><th>Now</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td class="${r[1] !== r[2] ? 'edge-pos' : ''}">${r[2]}</td></tr>`).join('')}</tbody></table></div>
-        <p class="note">Prediction error on ${esc(tn.check || '')}, a season the tuning never saw (log loss on results, lower is better): Statpad <b class="mono">${f3(tn.ll.site[0])} → ${f3(tn.ll.site[1])}</b>; the model on its own ${f3(tn.ll.model[0])} → ${f3(tn.ll.model[1])}; the bookmakers on their own ${f3(tn.ll.market[0])}. ${tn.on || tn.w_on ? 'New settings are only switched on when they beat the old ones there.' : 'The tuned settings did not beat the old ones there, so the old ones stay.'} Leagues without shot counts use their own goals-only settings.</p></div>`;
+        <p class="note">Prediction error on ${esc(tn.check || '')}, a season the tuning never saw (log loss on results, lower is better): Statpad <b class="mono">${f3(tn.ll.site[0])} → ${f3(tn.ll.site[1])}</b>; the model on its own ${f3(tn.ll.model[0])} → ${f3(tn.ll.model[1])}; the bookmakers on their own ${f3(tn.ll.market[0])}. ${tn.on || tn.w_on ? 'New settings are only switched on when they beat the old ones there.' : 'The tuned settings did not beat the old ones there, so the old ones stay.'} Leagues without shot counts use their own goals-only settings.${fxNote}</p></div>`;
     }
     const ruleHtml = oA && oA[0] && tA[0] ? `<p class="note">Cautious-chance rule: without it, ${oA[0].toLocaleString('en-US')} top picks would have been Nearly definite and ${pct(oA[1] / oA[0], 1)} landed. With it, ${tA[0].toLocaleString('en-US')} were, and ${pct(tA[1] / tA[0], 1)} landed.</p>` : '';
     const llTxt = lls ? (lls[0] <= lls[1] ? 'Statpad was sharper than the bookmakers’ average prices.' : `The bookmakers’ average prices were a little sharper than Statpad, which is why Statpad leans ${pct(B.wm || 0.8, 0)} on the market.`) : '';
@@ -2010,6 +2091,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>Tap a team name in a table or on a match page. Each team page shows points against <b>expected points</b> (the chances Statpad gave before each game, added up), so you can see who is overperforming or unlucky; goals and shots on target for and against; how many goals they score per shot on target compared with the league; their attack and defence ratings through the season; home and away records; the season outlook from the simulator; the next games; and every result with the chance Statpad gave it beforehand. The pre-match chances are worked out again from the ratings each team had before that game, so they're fair, not hindsight. Team files are refreshed with the results, every 6 hours.</p>
       <h3>Listen mode</h3>
       <p>Tap <b>Listen</b> to have Statpad read out the day's briefing (safest picks, best value and the slips), the picks in each slip, a match page's story or a team page. It uses your phone's own voice, so nothing is downloaded; choose the voice and speed in the player. It's English only.</p>
+      <h3>What's at stake</h3>
+      <p>Every hour the workflow plays the rest of each league season 10,000 times, the way the season simulator does, and measures how far each coming game moves both teams' chances of the title, the top places or the bottom places, after a win, a draw or a defeat. The stakes number adds up both teams' swings between winning and losing, in percentage points: 45 or more is <b>Huge</b>, 25 or more <b>High</b>, 10 or more <b>Some</b>. Match cards show High and Huge games, the Matches tab lists the games with most at stake and can sort by it, and each match page draws the swing for both teams. It covers leagues where every team plays every other home and away.</p>
+      <h3>Fatigue and motivation</h3>
+      <p>Statpad tests two more things each month, on two past seasons, then on a third the test never saw, after blending with the market as the site does: <b>rest</b> (a side with only two or three days since its last league game, against one with more) and <b>motivation</b> (from the season simulation run week by week: a side whose season chances barely move whatever the result, and games where neither side has anything left to play for). Each goes on only if it lowers the error on the unseen season too, and the Track tab shows which are on. Football-data.co.uk lists league games only, so cup and European games don't count towards rest. When one applies to a game, its match page says so.</p>
+      <h3>WhatsApp Status pack</h3>
+      <p>On the Matches and Slips tabs, <b>Status pack</b> draws four tall pictures for the day, sized for WhatsApp Status: the safest pick, an upset alert (the underdog at a real price of 2.60 or more with the best value, with how often it should land), the game with most at stake, and the slip at your target odds with the best chance of landing. Share all four in one go, or one at a time. Each carries the site's address and an 18+ note.</p>
+      <h3>Ask Statpad</h3>
+      <p>Tap the microphone at the top, or <b>Ask Statpad</b> on the Matches tab, and ask by voice or by typing, in English or Kiswahili: who wins a game, how a team is doing, the safest picks, a slip at any odds, the best value, what's at stake, title and relegation races, live scores, or how your bets are doing. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone); the answers come from the same numbers as the rest of the page and can be read aloud. Some browsers don't offer voice input: type instead.</p>
       <h3>My bets</h3>
       <p>Save a coupon with your stake and your bookmaker's odds, and Statpad shows the chance of it landing, the odds you need to break even after the tax on winnings (15% in Uganda by default; change it in My bets), and what it's worth on average. Bets settle themselves from the same results, using the 90-minute score; a postponed leg counts at odds 1. Everything is stored on your device: use Back up to keep a copy or move to a new phone.</p>
       <h3>Slips</h3>
@@ -2154,6 +2243,247 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
     toast('Slip image saved');
   }
+  // ---------------- WhatsApp Status pack: four tall images for the day ----------------
+  const ST_W = 1080, ST_H = 1920, ST_P = 84;
+  const ST_C = { ink: '#eef3ef', mut: '#8fa199', dim: '#5f6f68', cob: '#8297ff', grn: '#3ccf8e', red: '#ff7a63', org: '#ff9a5c', yel: '#f2c14e', h: '#6f86ff', d: '#b8c2bc', a: '#ff9a5c' };
+  function wrapLines(x, txt, maxW, maxLines) {
+    const words = String(txt).split(/\s+/), lines = [];
+    let cur = '';
+    for (const w of words) {
+      const t = cur ? cur + ' ' + w : w;
+      if (x.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+    }
+    if (cur) lines.push(cur);
+    if (lines.length > maxLines) { const keep = lines.slice(0, maxLines); keep[maxLines - 1] = fitText(x, lines.slice(maxLines - 1).join(' '), maxW); return keep; }
+    return lines.map((l) => fitText(x, l, maxW));
+  }
+  function statusData() {
+    const d = briefingDay(); if (!d) return null;
+    const dk = d.key, rows = S.rows.filter((r) => r.day === dk && !r.started && r.a);
+    const safe = rows.filter((r) => r.a.top).sort((x, y) => y.a.top.pLo - x.a.top.pLo).slice(0, 3);
+    let up = null;   // the underdog (real price 2.6 or more) with the best value
+    for (const r of rows) for (const k of ['H', 'A']) {
+      const s = r.a.sels.find((x) => x.key === k);
+      if (s && s.real && s.price >= 2.6 && s.p >= 0.12 && (!up || s.edge > up.s.edge)) up = { r, s };
+    }
+    const big = rows.filter((r) => r.m.sk && r.m.sk[0] >= 10).sort((x, y) => y.m.sk[0] - x.m.sk[0])[0] || null;
+    const slip = slipFor(dk, S.target, 'all').filter((x) => x.feasible && x.legs.length).sort((x, y) => y.prob - x.prob)[0] || null;
+    return { dk, when: dayLabel(dk, true), safe, up, big, slip };
+  }
+  function statusFrame(kicker, color, D, page) {
+    const c = document.createElement('canvas'); c.width = ST_W; c.height = ST_H;
+    const x = c.getContext('2d'), P = ST_P, C = ST_C;
+    const font = (f, st) => { x.font = f; if ('fontStretch' in x) x.fontStretch = st || 'normal'; if ('letterSpacing' in x) x.letterSpacing = '0px'; };
+    const g = x.createRadialGradient(ST_W * 0.25, 260, 0, ST_W * 0.25, 260, ST_H);
+    g.addColorStop(0, '#17271f'); g.addColorStop(0.5, '#0d1813'); g.addColorStop(1, '#060a08');
+    x.fillStyle = g; x.fillRect(0, 0, ST_W, ST_H);
+    const gl = x.createRadialGradient(ST_W, 120, 0, ST_W, 120, 760); gl.addColorStop(0, color + '33'); gl.addColorStop(1, color + '00');
+    x.fillStyle = gl; x.fillRect(0, 0, ST_W, 900);
+    // logo (below WhatsApp's own bar at the top of a status)
+    const M = 70, my = 196;
+    rrPath(x, P, my, M, M, M * 8 / 30); x.fillStyle = '#101d17'; x.fill(); x.strokeStyle = 'rgba(232,239,235,.22)'; x.lineWidth = 2.5; x.stroke();
+    x.save(); x.translate(P + M / 2 - 23.3, my + M / 2 - 23.3); x.scale(46.6 / 24, 46.6 / 24);
+    x.strokeStyle = C.ink; x.lineWidth = 1.6; rrPath(x, 3, 5, 18, 14, 2); x.stroke();
+    x.lineWidth = 1.4; x.beginPath(); x.moveTo(12, 5); x.lineTo(12, 19); x.stroke();
+    x.beginPath(); x.arc(12, 12, 2.6, 0, Math.PI * 2); x.stroke();
+    x.fillStyle = '#6f86ff'; x.fillRect(15.5, 9, 3, 6); x.restore();
+    font(`850 50px ${SF.d}`, 'expanded'); if ('letterSpacing' in x) x.letterSpacing = '-1.5px';
+    x.textBaseline = 'middle'; x.textAlign = 'left';
+    x.fillStyle = C.ink; x.fillText('stat', P + M + 20, my + M / 2 + 2);
+    x.fillStyle = C.cob; x.fillText('pad', P + M + 20 + x.measureText('stat').width, my + M / 2 + 2);
+    // page dots and the day
+    for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(ST_W - P - (3 - i) * 26 - 6, my + 18, 6, 0, Math.PI * 2); x.fillStyle = i === page ? C.ink : 'rgba(143,161,153,.35)'; x.fill(); }
+    font(`500 24px ${SF.m}`); x.textAlign = 'right'; x.fillStyle = C.mut; x.fillText(String(D.when).toUpperCase(), ST_W - P, my + 58);
+    // kicker
+    x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+    font(`600 30px ${SF.m}`); x.fillStyle = color; if ('letterSpacing' in x) x.letterSpacing = '3px'; x.fillText(kicker.toUpperCase(), P, 392); if ('letterSpacing' in x) x.letterSpacing = '0px';
+    x.fillStyle = color; x.fillRect(P, 414, 64, 5);
+    // footer, above WhatsApp's reply bar
+    const fy = ST_H - 270;
+    x.fillStyle = 'rgba(143,161,153,.28)'; x.fillRect(P, fy, ST_W - 2 * P, 2);
+    const site = /\./.test(location.hostname) && !/claude|localhost|127\.|usercontent/.test(location.hostname) ? (location.hostname + location.pathname).replace(/\/(index\.html)?$/, '') : 'Statpad';
+    font(`600 32px ${SF.m}`); x.fillStyle = C.cob; x.fillText(fitText(x, site, ST_W - 2 * P), P, fy + 62);
+    font(`500 24px ${SF.b}`); x.fillStyle = C.dim; x.fillText('18+ · Chances, not certainties. Only bet what you can afford to lose.', P, fy + 106);
+    return { c, x, font, P, C };
+  }
+  function stMatchLine(F, r, y) {
+    const { x, font, P, C } = F;
+    font(`500 40px ${SF.b}`); x.fillStyle = C.mut; x.fillText(fitText(x, `${r.m.h} v ${r.m.a}`, ST_W - 2 * P), P, y);
+    font(`500 25px ${SF.m}`); x.fillStyle = C.dim; x.fillText(fitText(x, `${lgName(r.m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), ST_W - 2 * P), P, y + 50);
+  }
+  function stSafe(D) {
+    const F = statusFrame(`${D.when}'s safest pick`, ST_C.grn, D, 0), { x, font, P, C } = F, r = D.safe[0];
+    if (!r) return F.c;
+    const t = r.a.top;
+    font(`500 230px ${SF.m}`); x.fillStyle = C.ink; x.fillText(pct(t.pAdj), P - 8, 680);
+    font(`500 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('STATPAD\'S CHANCE', P, 736);
+    font(`700 66px ${SF.b}`); x.fillStyle = C.ink;
+    const L = wrapLines(x, t.label, ST_W - 2 * P, 2); L.forEach((l, i) => x.fillText(l, P, 850 + i * 76));
+    const y0 = 850 + L.length * 76 + 10;
+    stMatchLine(F, r, y0);
+    // odds and tier chips
+    const chip = (txt, X, Y, col) => { font(`600 28px ${SF.m}`); const w = x.measureText(txt).width + 44; rrPath(x, X, Y, w, 62, 14); x.fillStyle = col + '22'; x.fill(); x.fillStyle = col; x.fillText(txt, X + 22, Y + 42); return w; };
+    let cx = P; cx += chip(`ODDS ${odds(t.price)}${t.real ? '' : ' EST'}`, cx, y0 + 90, C.ink) + 14;
+    if (r.a.tier) chip(TIER_NAME[r.a.tier].toUpperCase(), cx, y0 + 90, C.grn);
+    // the next two
+    const more = D.safe.slice(1);
+    if (more.length) {
+      let y = Math.max(y0 + 250, 1290);
+      font(`600 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('ALSO SAFE', P, y); y += 22;
+      for (const q of more) {
+        x.fillStyle = 'rgba(143,161,153,.16)'; x.fillRect(P, y, ST_W - 2 * P, 2);
+        font(`650 38px ${SF.b}`); x.fillStyle = C.ink; x.fillText(fitText(x, q.a.top.label, ST_W - 2 * P - 200), P, y + 62);
+        font(`500 26px ${SF.b}`); x.fillStyle = C.mut; x.fillText(fitText(x, `${q.m.h} v ${q.m.a} · ${tFmt.format(q.ko)}`, ST_W - 2 * P - 200), P, y + 102);
+        font(`500 44px ${SF.m}`); x.fillStyle = C.ink; x.textAlign = 'right'; x.fillText(pct(q.a.top.pAdj), ST_W - P, y + 66);
+        font(`500 24px ${SF.m}`); x.fillStyle = C.mut; x.fillText(`@ ${odds(q.a.top.price)}`, ST_W - P, y + 102); x.textAlign = 'left';
+        y += 132;
+      }
+    }
+    return F.c;
+  }
+  function stUpset(D) {
+    const F = statusFrame('Upset alert', ST_C.org, D, 1), { x, font, P, C } = F, u = D.up;
+    if (!u) {
+      font(`650 56px ${SF.b}`); x.fillStyle = C.ink; wrapLines(x, 'No long shot worth a look today.', ST_W - 2 * P, 3).forEach((l, i) => x.fillText(l, P, 620 + i * 70));
+      return F.c;
+    }
+    const { r, s } = u;
+    font(`500 230px ${SF.m}`); x.fillStyle = C.ink; x.fillText(odds(s.price), P - 8, 680);
+    font(`500 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText(`BEST PRICE${s.bk ? ' · ' + String(s.bk).toUpperCase() : ''}`, P, 736);
+    font(`700 66px ${SF.b}`); x.fillStyle = C.ink;
+    const L = wrapLines(x, s.label, ST_W - 2 * P, 2); L.forEach((l, i) => x.fillText(l, P, 850 + i * 76));
+    const y0 = 850 + L.length * 76 + 10;
+    stMatchLine(F, r, y0);
+    // three numbers
+    const cols = [[pct(s.p), 'STATPAD'], [odds(1 / s.p), 'FAIR ODDS'], [s.edge >= 0 ? '+' + Math.round(s.edge * 100) + '%' : Math.round(s.edge * 100) + '%', s.edge >= 0 ? 'VALUE' : 'BELOW FAIR']];
+    const cw = (ST_W - 2 * P) / 3, yy = y0 + 200;
+    cols.forEach(([v, l], i) => { font(`500 64px ${SF.m}`); x.fillStyle = i === 2 && s.edge >= 0 ? C.grn : C.ink; x.fillText(v, P + i * cw, yy); font(`500 24px ${SF.m}`); x.fillStyle = C.mut; x.fillText(l, P + i * cw, yy + 44); });
+    font(`500 32px ${SF.b}`); x.fillStyle = C.mut;
+    const one = Math.max(2, Math.round(1 / s.p));
+    wrapLines(x, `A long shot: Statpad expects it to land about 1 time in ${one}. ${s.edge >= 0.02 ? 'The price is better than fair, but most of the time it loses.' : 'Most of the time it loses.'} Small stakes only.`, ST_W - 2 * P, 4).forEach((l, i) => x.fillText(l, P, yy + 150 + i * 46));
+    return F.c;
+  }
+  function stBig(D) {
+    const F = statusFrame('Most at stake', ST_C.red, D, 2), { x, font, P, C } = F, r = D.big;
+    if (!r) {
+      font(`650 56px ${SF.b}`); x.fillStyle = C.ink; wrapLines(x, 'No league game with much at stake today.', ST_W - 2 * P, 3).forEach((l, i) => x.fillText(l, P, 620 + i * 70));
+      return F.c;
+    }
+    const st = stakeOf(r.m);
+    font(`700 80px ${SF.b}`); x.fillStyle = C.ink;
+    x.fillText(fitText(x, r.m.h, ST_W - 2 * P), P, 550);
+    font(`500 44px ${SF.b}`); x.fillStyle = C.mut; x.fillText('v', P, 648);
+    font(`700 80px ${SF.b}`); x.fillStyle = C.ink; x.fillText(fitText(x, r.m.a, ST_W - 2 * P - 60), P + 52, 648);
+    font(`500 25px ${SF.m}`); x.fillStyle = C.dim; x.fillText(fitText(x, `${lgName(r.m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), ST_W - 2 * P), P, 712);
+    font(`600 30px ${SF.m}`); const tag = `${st.lv.toUpperCase()} STAKES · ${st.s}`, tw = x.measureText(tag).width + 44;
+    rrPath(x, P, 746, tw, 64, 14); x.fillStyle = (st.lv === 'Huge' ? C.red : C.yel) + '26'; x.fill(); x.fillStyle = st.lv === 'Huge' ? C.red : C.yel; x.fillText(tag, P + 22, 789);
+    let y = 910;
+    for (const [nm, rec] of [[r.m.h, st.h], [r.m.a, st.a]]) {
+      if (!rec) continue;
+      const q = stakeSide(nm, rec);
+      font(`700 44px ${SF.b}`); x.fillStyle = C.ink; x.fillText(fitText(x, nm, 560), P, y);
+      font(`500 28px ${SF.b}`); x.fillStyle = C.mut; x.textAlign = 'right'; x.fillText(`${q.z} · now ${fmtP(q.all)}`, ST_W - P, y); x.textAlign = 'left';
+      const ty = y + 52, tw2 = ST_W - 2 * P - 20, X0 = P + 10, X = (p) => X0 + p * tw2;
+      rrPath(x, X0, ty, tw2, 16, 8); x.fillStyle = 'rgba(143,161,153,.2)'; x.fill();
+      const lo = Math.min(q.w, q.l, q.d), hi = Math.max(q.w, q.l, q.d);
+      rrPath(x, X(lo), ty, Math.max(16, (hi - lo) * tw2), 16, 8); x.fillStyle = 'rgba(238,243,239,.28)'; x.fill();
+      for (const [p, col] of [[q.l, C.red], [q.d, C.d], [q.w, C.grn]]) { x.beginPath(); x.arc(X(p), ty + 8, 17, 0, Math.PI * 2); x.fillStyle = col; x.fill(); x.lineWidth = 5; x.strokeStyle = '#0d1813'; x.stroke(); }
+      const parts = [['WIN', q.w, C.grn], ['DRAW', q.d, C.d], ['DEFEAT', q.l, C.red]];
+      let px = P; font(`500 30px ${SF.m}`);
+      for (const [l, p, col] of parts) { x.fillStyle = col; x.fillText(`${l} ${fmtP(p)}`, px, ty + 84); px += x.measureText(`${l} ${fmtP(p)}`).width + 40; }
+      y += 250;
+    }
+    // Statpad's 1X2
+    const p = r.a.p, bw = ST_W - 2 * P, by = Math.max(y + 20, 1420);
+    font(`600 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('STATPAD: HOME · DRAW · AWAY', P, by - 24);
+    let bx = P;
+    for (const [v, col] of [[p.H, C.h], [p.D, C.d], [p.A, C.a]]) {
+      const w = v * bw; x.fillStyle = col; x.fillRect(bx, by, Math.max(2, w - 4), 64);
+      if (v > 0.12) { font(`600 30px ${SF.m}`); x.fillStyle = '#0a100e'; x.fillText(pct(v), bx + 16, by + 44); }
+      bx += w;
+    }
+    return F.c;
+  }
+  function stSlip(D) {
+    const sl = D.slip, F = statusFrame(sl ? `${sl.target}-odds slip · ${sl.name}` : `${S.target}-odds slip`, ST_C.cob, D, 3), { x, font, P, C } = F;
+    if (!sl) { font(`650 56px ${SF.b}`); x.fillStyle = C.ink; wrapLines(x, 'Not enough games for a slip today.', ST_W - 2 * P, 3).forEach((l, i) => x.fillText(l, P, 620 + i * 70)); return F.c; }
+    font(`500 190px ${SF.m}`); x.fillStyle = C.ink; x.fillText(odds(sl.odds), P - 6, 640);
+    font(`500 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('TOTAL ODDS', P, 692);
+    font(`500 64px ${SF.m}`); x.fillStyle = C.ink; x.textAlign = 'right'; x.fillText(pct(sl.prob, 1), ST_W - P, 600);
+    font(`500 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('TO LAND', ST_W - P, 644); x.textAlign = 'left';
+    const n = sl.legs.length, maxRows = 8, show = sl.legs.slice(0, n > maxRows ? maxRows - 1 : maxRows), ROW = 104;
+    let y = 760;
+    show.forEach((l) => {
+      x.fillStyle = 'rgba(143,161,153,.16)'; x.fillRect(P, y, ST_W - 2 * P, 2);
+      font(`650 36px ${SF.b}`); x.fillStyle = C.ink; x.fillText(fitText(x, l.s.label, ST_W - 2 * P - 190), P, y + 50);
+      font(`500 25px ${SF.b}`); x.fillStyle = C.mut; x.fillText(fitText(x, `${l.m.h} v ${l.m.a} · ${tFmt.format(Date.parse(l.m.ko))}`, ST_W - 2 * P - 190), P, y + 88);
+      font(`500 40px ${SF.m}`); x.fillStyle = C.ink; x.textAlign = 'right'; x.fillText(odds(l.s.price), ST_W - P, y + 54);
+      font(`500 22px ${SF.m}`); x.fillStyle = C.mut; x.fillText(pct(l.s.pAdj) + (l.s.real ? '' : ' · EST'), ST_W - P, y + 88); x.textAlign = 'left';
+      y += ROW;
+    });
+    if (n > show.length) { font(`600 30px ${SF.b}`); x.fillStyle = C.mut; x.fillText(`+ ${n - show.length} more legs on Statpad`, P, y + 56); }
+    return F.c;
+  }
+  async function statusPack() {
+    const D = statusData(); if (!D) return null;
+    if (document.fonts && document.fonts.load) await Promise.race([Promise.all(['650 30px "Hanken Grotesk"', '700 30px "Hanken Grotesk"', '500 30px "Martian Mono"', '850 40px "Archivo"'].map((f) => document.fonts.load(f).catch(() => {}))), new Promise((r) => setTimeout(r, 2500))]);
+    const makers = [['safest', stSafe], ['upset', stUpset], ['stakes', stBig], ['slip', stSlip]];
+    const out = [];
+    for (const [k, fn] of makers) {
+      const c = fn(D);
+      const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+      if (blob) out.push({ k, blob, url: URL.createObjectURL(blob), name: `statpad-${D.dk}-${out.length + 1}-${k}.jpg` });
+    }
+    return { dk: D.dk, when: D.when, imgs: out };
+  }
+  async function openStatus(opener) {
+    S.open = 'status:'; S.opener = opener || document.activeElement;
+    const sh = $('#sheet');
+    renderSheet();
+    sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; $('#sheetBody').scrollTop = 0;
+    const key = S.ver + '|' + ((briefingDay() || {}).key || '') + '|' + S.target;
+    if (!S.stPack || S.stPack.key !== key) {
+      if (S.stPack) S.stPack.imgs.forEach((i) => URL.revokeObjectURL(i.url));
+      S.stPack = null;
+      try { const pk = await statusPack(); S.stPack = pk ? Object.assign(pk, { key }) : { key, imgs: [] }; } catch (e) { S.stPack = { key, imgs: [], err: true }; }
+    }
+    if (S.open === 'status:') renderSheet();
+  }
+  function renderStatusSheet() {
+    $('#sheetTitle').textContent = 'WhatsApp Status pack';
+    const P = S.stPack;
+    if (!P) { $('#sheetBody').innerHTML = `<div class="card sim-load"><b>Drawing four images for your Status…</b><div class="ck-bar"><i style="width:60%"></i></div></div>`; return; }
+    if (!P.imgs.length) { $('#sheetBody').innerHTML = `<div class="empty-state"><b>${P.err ? 'Couldn’t draw the images' : 'No games to post yet'}</b>${P.err ? 'Try again in a moment.' : 'The pack is made from the next day with predictions.'}</div>`; return; }
+    const names = { safest: 'Safest pick', upset: 'Upset alert', stakes: 'Most at stake', slip: `${S.target}-odds slip` };
+    $('#sheetBody').innerHTML = `<p class="note st-intro">Four tall pictures for ${esc(P.when.toLowerCase() === 'today' || P.when.toLowerCase() === 'tomorrow' ? P.when.toLowerCase() : P.when)}, sized for WhatsApp Status. Tap <b>Share all 4</b>, pick WhatsApp, then <b>My status</b>.</p>
+      <div class="st-acts"><button type="button" class="btn pri" data-stshare="all">Share all 4</button><button type="button" class="btn" data-stsave="all">Save all</button></div>
+      <div class="st-grid">${P.imgs.map((im, i) => `<figure class="st-fig"><img src="${im.url}" alt="${esc(names[im.k])}" loading="lazy"><figcaption><span>${i + 1}. ${esc(names[im.k])}</span><button type="button" class="btn sm" data-stshare="${i}">Share</button></figcaption></figure>`).join('')}</div>
+      <p class="note">The pictures use today's numbers, so make a fresh pack each day. They carry the site's address and an 18+ note.</p>`;
+  }
+  async function stShare(which) {
+    const P = S.stPack; if (!P || !P.imgs.length) return;
+    const list = which === 'all' ? P.imgs : [P.imgs[+which]];
+    let files = null;
+    try { files = list.map((i) => new File([i.blob], i.name, { type: 'image/jpeg' })); } catch (e) { files = null; }
+    if (files && navigator.canShare && navigator.canShare({ files })) {
+      try { await navigator.share({ files, title: 'Statpad', text: `Statpad · ${P.when}` }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    stSave(which);
+  }
+  function stSave(which) {
+    const P = S.stPack; if (!P) return;
+    const list = which === 'all' ? P.imgs : [P.imgs[+which]];
+    list.forEach((i, k) => setTimeout(() => { const a = document.createElement('a'); a.href = i.url; a.download = i.name; document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 1000); }, k * 400));
+    toast(list.length > 1 ? 'Saving the pictures' : 'Picture saved');
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-statuspack],[data-stshare],[data-stsave]'); if (!t) return;
+    e.stopPropagation();
+    if (t.dataset.statuspack != null) openStatus(t);
+    else if (t.dataset.stshare != null) stShare(t.dataset.stshare);
+    else stSave(t.dataset.stsave);
+  });
+
   // fonts are fetched lazily; warm them up so the first shared image uses them
   if (document.fonts && document.fonts.load) setTimeout(() => ['650 30px "Hanken Grotesk"', '500 30px "Martian Mono"', '850 40px "Archivo"'].forEach((f) => document.fonts.load(f).catch(() => {})), 3000);
 
@@ -3254,6 +3584,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (m.fh && m.fa) out.push(`Form: ${esc(m.h)} have won ${wins(m.fh)} of their last ${m.fh.length}, ${esc(m.a)} ${wins(m.fa)} of ${m.fa.length}.`);
     const o = a.p.O25;
     out.push(`Expected goals: ${esc(m.h)} ${a.lh.toFixed(1)}, ${esc(m.a)} ${a.la.toFixed(1)}. ${o >= 0.58 ? `Goals look likely: over 2.5 is ${pct(o)}.` : o <= 0.42 ? `A tight game is likely: under 2.5 is ${pct(1 - o)}.` : `Over 2.5 is close to a coin flip at ${pct(o)}.`}`);
+    const sks = stakeSentence(m);
+    if (sks) out.push(sks);
+    const fxs = fxSentence(m);
+    if (fxs) out.push(fxs);
     // what the bookmakers think, and how their prices have moved
     const side = /^(H|1X|DNB_H|AH_H|H&|H_)/.test(t.key) ? 0 : /^(A|X2|DNB_A|AH_A|A&|A_)/.test(t.key) ? 2 : t.key === 'D' ? 1 : null;
     const nmS = side === 0 ? m.h : side === 2 ? m.a : 'the draw';
@@ -3391,6 +3725,71 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }).join('');
   }
 
+  // ---------------- what's at stake: how far each result moves the teams' season chances ----------------
+  const STK_LV = [[45, 'Huge'], [25, 'High'], [10, 'Some'], [0, 'Low']];
+  function stakeOf(m) {
+    if (!m || !m.sk || m.sk[0] == null) return null;
+    const s = m.sk[0], lv = STK_LV.find(([t]) => s >= t)[1];
+    return { s, lv, cls: lv.toLowerCase(), h: m.sk[1], a: m.sk[2] };
+  }
+  const stakeBadge = (m) => { const st = stakeOf(m); return st && st.s >= 25 ? `<span class="badge b-stk ${st.cls}">${st.lv} stakes</span>` : ''; };
+  const fmtP = (p) => (p >= 0.995 ? 'over 99%' : p >= 0.005 ? Math.round(p * 100) + '%' : p > 0 ? 'under 1%' : '0%');
+  const zoneWord = (z) => (/^title$/i.test(z) ? 'title chance' : /^bottom/i.test(z) ? z.toLowerCase().replace(' ', '-') + ' risk' : z.toLowerCase().replace(' ', '-') + ' chance');
+  const stakeSide = (name, rec) => ({ name, z: rec[0], all: rec[1] / 1000, w: rec[2] / 1000, d: rec[3] / 1000, l: rec[4] / 1000, sw: Math.abs(rec[2] - rec[4]) / 1000 });
+  function stakeSides(m) {
+    const st = stakeOf(m); if (!st) return [];
+    return [[m.h, st.h], [m.a, st.a]].filter((x) => x[1]).map(([n, r]) => stakeSide(n, r));
+  }
+  // one sentence for the story and the briefing
+  function stakeSentence(m) {
+    const st = stakeOf(m), ss = stakeSides(m); if (!st || !ss.length || st.s < 10) return '';
+    const [x, y] = ss.sort((p, q) => q.sw - p.sw);
+    let t = `At stake (${st.lv.toLowerCase()}): ${esc(x.name)}'s ${zoneWord(x.z)} is ${fmtP(x.w)} with a win and ${fmtP(x.l)} with a defeat`;
+    if (y && y.sw >= 0.03) t += `; ${esc(y.name)}'s ${zoneWord(y.z)} ${fmtP(y.w)} and ${fmtP(y.l)}`;
+    return t + '.';
+  }
+  // fatigue and motivation, when the pipeline's tuning switched them on for this game
+  function fxSentence(m) {
+    const w = m.fxw; if (!w || !m.fx) return '';
+    const out = [];
+    if (w.r) {
+      const [rh, ra, sg] = w.r, hs = rh != null && (ra == null || rh < ra), nm = hs ? m.h : m.a, mine = hs ? rh : ra, theirs = hs ? ra : rh;
+      out.push(`Rest: ${esc(nm)} have had only ${mine} days since their last league game${theirs ? `, ${esc(hs ? m.a : m.h)} ${theirs}` : ''}. In past seasons ${sg < 0 ? 'the prices marked short-rested sides down too far, so Statpad nudges ' + esc(nm) + ' up a little' : 'short-rested sides did worse than the prices expected, so Statpad nudges ' + esc(nm) + ' down a little'}.`);
+    }
+    if (w.d) {
+      const nm = w.d[0] ? m.h : m.a;
+      out.push(`${esc(nm)} have little left to play for: their season chances barely move whatever the result. In past seasons such sides ${w.d[2] > 0 ? 'did worse' : 'did better'} than the prices expected, and Statpad allows for it.`);
+    }
+    if (w.o) out.push('Neither side has much left to play for. Games like this had more goals in past seasons, so Statpad adds a few.');
+    return out.join(' ');
+  }
+  function stakesCard(m) {
+    const st = stakeOf(m); if (!st) return '';
+    const row = (nm, rec) => {
+      if (!rec) return `<div class="stk-row none"><b>${esc(nm)}</b><span>Little at stake: none of their season chances moves much on this result.</span></div>`;
+      const s = stakeSide(nm, rec), lo = Math.min(s.w, s.l, s.d), hi = Math.max(s.w, s.l, s.d);
+      const dot = (p, k, lab) => `<i class="stk-dot ${k}" style="left:${(p * 100).toFixed(1)}%" title="${lab}: ${fmtP(p)}"></i>`;
+      return `<div class="stk-row"><div class="stk-h"><b>${esc(nm)}</b><span>${esc(s.z)} · now ${fmtP(s.all)}</span></div>
+        <div class="stk-track" role="img" aria-label="${esc(s.z)}: ${fmtP(s.w)} with a win, ${fmtP(s.d)} with a draw, ${fmtP(s.l)} with a defeat"><i class="stk-span" style="left:${(lo * 100).toFixed(1)}%;width:${Math.max(0.5, (hi - lo) * 100).toFixed(1)}%"></i>${dot(s.l, 'l', 'Defeat')}${dot(s.d, 'd', 'Draw')}${dot(s.w, 'w', 'Win')}</div>
+        <div class="stk-o"><span class="w">Win <b>${fmtP(s.w)}</b></span><span class="d">Draw <b>${fmtP(s.d)}</b></span><span class="l">Defeat <b>${fmtP(s.l)}</b></span></div></div>`;
+    };
+    return `<div class="card stk"><h4>What's at stake <span class="stk-lv ${st.cls}">${st.lv} stakes · ${st.s}</span></h4>${row(m.h, st.h)}${row(m.a, st.a)}
+      <p class="note">From 10,000 simulated seasons: for each team, the season chance this result moves most, after a win, a draw or a defeat. The stakes number adds up how far both teams' chances swing between winning and losing, in percentage points.</p></div>`;
+  }
+  function bigGames(rows) {
+    const list = rows.filter((r) => !r.started && r.m.sk && r.m.sk[0] >= 25).sort((x, y) => y.m.sk[0] - x.m.sk[0]).slice(0, 6);
+    if (list.length < 2) return '';
+    return `<div class="bigg"><div class="bigg-h"><h3>Most at stake</h3><button type="button" class="linkbtn" data-sortstakes="1">All by stakes</button></div><div class="bigg-row">${list.map((r) => {
+      const st = stakeOf(r.m), s = stakeSides(r.m).sort((p, q) => q.sw - p.sw)[0];
+      return `<button type="button" class="bigg-c" data-open="${esc(r.m.id)}"><span class="stk-lv ${st.cls}">${st.lv} · ${st.s}</span><b>${esc(r.m.h)} v ${esc(r.m.a)}</b><small>${esc(lgName(r.m.lk))} · ${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}</small>${s ? `<span class="bigg-s">${esc(s.name)}, ${esc(s.z.toLowerCase())}: <b>${fmtP(s.w)}</b> with a win, <b>${fmtP(s.l)}</b> with a defeat</span>` : ''}</button>`;
+    }).join('')}</div></div>`;
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-sortstakes]'); if (!t) return;
+    S.sort = 'stakes'; store.set('sort', S.sort); renderMatches();
+    const el = $('#matchList'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+
   // ---------------- team files: ratings week by week, results with the chances before each game, fixtures left ----------------
   S.tf = {}; S.sim = {}; S.tseg = store.get('tseg', 'table'); S.whatif = {};
   async function loadTeamFile(lk) {
@@ -3505,7 +3904,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const nextFx = st.fx.filter((f) => f.r).sort((a, b) => a.r.ko - b.r.ko).slice(0, 12);
     const wiRows = nextFx.map((f) => {
       const k = f.i + '-' + f.j, v = wf[k] || '';
-      return `<li><span class="wi-fx">${esc(st.names[f.i])} v ${esc(st.names[f.j])}<small>${esc(dayLabel(f.r.day))} ${tFmt.format(f.r.ko)}</small></span><span class="seg wi-seg">${[['H', '1'], ['D', 'X'], ['A', '2']].map(([o, l]) => `<button type="button" data-wi="${esc(lk)}|${k}|${o}" aria-pressed="${v === o}">${l}</button>`).join('')}</span></li>`;
+      const sk = stakeOf(f.r.m);
+      return `<li><span class="wi-fx">${esc(st.names[f.i])} v ${esc(st.names[f.j])}<small>${esc(dayLabel(f.r.day))} ${tFmt.format(f.r.ko)}</small>${sk && sk.s >= 10 ? `<span class="stk-lv ${sk.cls}">${sk.lv} stakes · ${sk.s}</span>` : ''}</span><span class="seg wi-seg">${[['H', '1'], ['D', 'X'], ['A', '2']].map(([o, l]) => `<button type="button" data-wi="${esc(lk)}|${k}|${o}" aria-pressed="${v === o}">${l}</button>`).join('')}</span></li>`;
     }).join('');
     const left = st.fx.length;
     box.innerHTML = `<div class="sim">
@@ -3576,7 +3976,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     $('#sheetTitle').textContent = `${info.name} · Team`;
     const row = (L.table || []).find((r) => r[0] === name), pos = row ? L.table.indexOf(row) + 1 : null;
     const c = S.tf[lk], tf = c && c.d, T = tf && tf.t && tf.t[name];
-    const back = S.teamBack && S.byId.get(S.teamBack) ? `<button type="button" class="btn ghost tback" data-open="${esc(S.teamBack)}">← Back to the match</button>` : '';
+    const back = S.teamBack && S.byId.get(S.teamBack) ? `<button type="button" class="btn ghost tback" data-open="${esc(S.teamBack)}">← Back to the match</button>` : S.teamBack === 'ask:' ? `<button type="button" class="btn ghost tback" data-ask="1">← ${SW() ? 'Rudi kwa Uliza Statpad' : 'Back to Ask Statpad'}</button>` : '';
     const head = `<div class="tm-head">${back}<div class="tm-name">${esc(name)}</div>
       <div class="tm-meta">${pos ? `<span>${ord(pos)} of ${L.table.length}</span><span>${row[7]} pts from ${row[1]}</span>` : ''}${row ? formDots(row[8]) : ''}</div>
       <button type="button" class="btn listen-b" data-listen="team"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></div>`;
@@ -3618,7 +4018,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!up.length) return '';
     return `<div class="card"><h4>Next games</h4><ul class="tn-next">${up.map((r) => {
       const home = r.m.h === name, p = r.a.p, ps = home ? [p.H, p.D, p.A] : [p.A, p.D, p.H];
-      return `<li data-open="${esc(r.m.id)}"><span class="tx"><b>${home ? 'v' : '@'} ${esc(home ? r.m.a : r.m.h)}</b><small>${esc(lgName(r.m.lk))} · ${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}</small></span><span class="tw">Win <b>${pct(ps[0])}</b></span>${sbar(ps)}</li>`;
+      const mine = stakeSides(r.m).find((x) => x.name === name), sk = stakeOf(r.m);
+      const stk = mine && mine.sw >= 0.02 ? `<span class="tn-stk">${sk ? `<span class="stk-lv ${sk.cls}">${sk.lv} stakes</span> ` : ''}${esc(mine.z)}: <b>${fmtP(mine.w)}</b> with a win, <b>${fmtP(mine.l)}</b> with a defeat</span>` : '';
+      return `<li data-open="${esc(r.m.id)}"><span class="tx"><b>${home ? 'v' : '@'} ${esc(home ? r.m.a : r.m.h)}</b><small>${esc(lgName(r.m.lk))} · ${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}</small></span><span class="tw">Win <b>${pct(ps[0])}</b></span>${sbar(ps)}${stk}</li>`;
     }).join('')}</ul></div>`;
   }
   document.addEventListener('click', (e) => {
@@ -3639,11 +4041,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // short sentences: some phones stop reading after about 15 seconds of one long one
   const ttsSplit = (parts) => parts.flatMap((p) => String(p).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').split(/(?<=[.!?])\s+/))
     .flatMap((x) => (x.length > 170 ? x.split(/(?<=[;:])\s+/) : [x])).map((x) => x.trim()).filter(Boolean);
-  function speak(title, parts) {
+  function speak(title, parts, lang) {
     if (!ttsOK()) { toast('This browser can’t read aloud'); return; }
     ttsStop(true);
     TTS.q = ttsSplit(parts); TTS.i = 0; TTS.on = true; TTS.paused = false; TTS.title = title; TTS.gen++;
-    TTS.voice = ttsPickVoice();
+    TTS.lang = lang === 'sw' ? 'sw' : 'en';
+    if (TTS.lang === 'sw') { let vs = []; try { vs = speechSynthesis.getVoices().filter((v) => /^sw/i.test(v.lang)); } catch (e) { /* */ } TTS.voice = vs.find((v) => /KE/i.test(v.lang)) || vs[0] || null; }
+    else TTS.voice = ttsPickVoice();
     ttsPlayer(); ttsNext(TTS.gen);
   }
   function ttsNext(gen) {
@@ -3651,7 +4055,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (TTS.i >= TTS.q.length) { ttsStop(); return; }
     const u = new SpeechSynthesisUtterance(TTS.q[TTS.i]);
     u.rate = TTS.rate; u.pitch = 1;
-    if (TTS.voice) { u.voice = TTS.voice; u.lang = TTS.voice.lang; } else u.lang = 'en-GB';
+    if (TTS.voice) { u.voice = TTS.voice; u.lang = TTS.voice.lang; } else u.lang = TTS.lang === 'sw' ? 'sw-KE' : 'en-GB';
     u.onend = () => { if (gen !== TTS.gen || TTS.paused) return; TTS.i++; ttsPlayer(); ttsNext(gen); };
     u.onerror = (e) => { if (gen !== TTS.gen || TTS.paused || /interrupted|canceled/.test(e.error)) return; TTS.i++; ttsNext(gen); };
     speechSynthesis.speak(u);
@@ -3697,7 +4101,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   });
   document.addEventListener('change', (e) => {
     if (!e.target.matches('[data-ttsvoice]')) return;
-    store.set('ttsVoice', e.target.value); TTS.voice = ttsPickVoice();
+    store.set('ttsVoice', e.target.value); TTS.voice = ttsPickVoice(); TTS.lang = 'en';
     if (TTS.on && !TTS.paused) { TTS.gen++; try { speechSynthesis.cancel(); } catch (x) { /* */ } ttsNext(TTS.gen); }
   });
   if (ttsOK()) { try { speechSynthesis.onvoiceschanged = () => { if (TTS.on) ttsPlayer(); }; speechSynthesis.getVoices(); } catch (e) { /* */ } }
@@ -3726,6 +4130,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (safe.length) {
       out.push(`The safest picks.`);
       safe.forEach((r, k) => out.push(`${['One', 'Two', 'Three'][k]}: ${r.a.top.label}, in ${r.m.h} against ${r.m.a}, ${sayPct(r.a.top.pAdj)}.`));
+    }
+    const big = rows.filter((r) => r.m.sk && r.m.sk[0] >= 25).sort((x, y) => y.m.sk[0] - x.m.sk[0])[0];
+    if (big) {
+      const x = stakeSides(big.m).sort((p, q) => q.sw - p.sw)[0];
+      out.push(`The game with most at stake: ${big.m.h} against ${big.m.a}.`);
+      if (x) out.push(`A win takes ${x.name}'s ${zoneWord(x.z)} to ${fmtP(x.w).replace('%', ' percent')}; a defeat leaves it at ${fmtP(x.l).replace('%', ' percent')}.`);
     }
     const vals = ENGINE.value(rows.map((r) => ({ m: r.m, a: r.a })), 0.03).slice(0, 2);
     if (vals.length) {
@@ -3782,6 +4192,256 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     else if (what === 'match') { const r = S.byId.get(S.open); speak(r ? `${r.m.h} v ${r.m.a}` : 'This match', listenMatch()); }
     else if (what === 'team') speak(String(S.open).slice(5).split('|')[1] || 'Team', listenTeam());
   }
+
+  // ---------------- Talk to Statpad: ask by voice or by typing ----------------
+  // Speech is turned into text by the phone (Chrome on Android, Safari on iPhone); everything after that
+  // runs here, on Statpad's own numbers. English and Swahili.
+  const SRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  S.ask = { log: [], lang: store.get('askLang', 'en') === 'sw' ? 'sw' : 'en', on: false, interim: '', rec: null };
+  const NUMW = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, fifteen: 15, twenty: 20, thirty: 30, fifty: 50, hundred: 100,
+    moja: 1, mbili: 2, tatu: 3, nne: 4, tano: 5, sita: 6, saba: 7, nane: 8, tisa: 9, kumi: 10, ishirini: 20, thelathini: 30, hamsini: 50, mia: 100 };
+  const askNorm = (q) => ckPlain(String(q).replace(/(\d)[.,](\d)/g, '$1p$2')).replace(/\b[a-z]+\b/g, (w) => (NUMW[w] != null ? String(NUMW[w]) : w)).replace(/(\d)p(\d)/g, '$1.$2');
+  const SW = () => S.ask.lang === 'sw';
+  const T = (en, sw) => (SW() ? sw : en);
+  const LG_WORDS = [[/premier league|\bepl\b|english league|england/, 'EPL'], [/la ?liga|spanish|spain/, 'LaLiga'], [/bundesliga|german|germany/, 'BUN'], [/serie a|italian|italy/, 'SA'],
+    [/ligue 1|french|france/, 'L1'], [/championship/, 'ENG2'], [/league 1\b/, 'ENG3'], [/league 2\b/, 'ENG4'], [/eredivisie|dutch|netherlands|holland/, 'ERE'],
+    [/portug|primeira/, 'POR'], [/turk|super lig/, 'TUR1'], [/serie b/, 'ITA2'], [/2 bundesliga|bundesliga 2/, 'GER2'], [/ligue 2/, 'FRA2'], [/la ?liga 2|segunda/, 'ESP2']];
+  function askLeague(t, hits) {
+    for (const [re, lk] of LG_WORDS) if (re.test(t) && S.data.leagues[lk]) return lk;
+    for (const h of hits || []) { const r = (ckIndex().fx.get(h.t) || [])[0]; if (r && !['cups', 'intl'].includes(lgInfo(r.m.lk).group)) return r.m.lk; }
+    return S.data.leagues.EPL ? 'EPL' : Object.keys(S.data.leagues).find((k) => S.data.leagues[k].table) || null;
+  }
+  function askDay(t) {
+    const ds = days().filter((d) => S.rows.some((r) => r.day === d.key && !r.started && r.a));
+    const today = dayKey(Date.now()), tom = dayKey(Date.now() + 86400e3);
+    if (/\b(tomorrow|kesho)\b/.test(t)) return ds.find((d) => d.key === tom) || null;
+    if (/\b(today|tonight|leo|usiku)\b/.test(t)) return ds.find((d) => d.key === today) || null;
+    return briefingDay();
+  }
+  const swDate = (dk) => { const [y, mo, d] = String(dk).split('-').map(Number); try { return new Intl.DateTimeFormat('sw', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(y, mo - 1, d, 12)); } catch (e) { return dayLabel(dk, true); } };
+  const dayWord = (dk) => { const l = dayLabel(dk, true); return SW() ? ({ Today: 'leo', Tomorrow: 'kesho' }[l] || swDate(dk)) : l.replace(/^(Today|Tomorrow)$/, (x) => x.toLowerCase()); };
+  const zoneSw = (z) => (/^title$/i.test(z) ? 'ubingwa' : /^top (\d+)/i.test(z) ? `kumaliza ${z.match(/\d+/)[0]} bora` : /^bottom (\d+)/i.test(z) ? `kumaliza ${z.match(/\d+/)[0]} za mwisho` : z);
+  const vsW = () => T('v', 'dhidi ya');
+  // the answers: lines are shown and read aloud
+  function aMatch(r) {
+    const { m, a } = r, out = [], acts = [[T('Open the match', 'Fungua mechi'), `data-open="${esc(m.id)}"`]];
+    if (!a) return { lead: T(`${m.h} v ${m.a}: no prediction yet, as there are no ratings or prices.`, `${m.h} dhidi ya ${m.a}: bado hakuna utabiri.`), acts };
+    const lead = T(`${m.h} v ${m.a}, ${lgName(m.lk)}, ${dayWord(r.day)} at ${tFmt.format(r.ko)}.`, `${m.h} dhidi ya ${m.a}, ${lgName(m.lk)}, ${dayWord(r.day)} ${tFmt.format(r.ko)}.`);
+    const L = r.started ? liveNow(m.id) : null;
+    if (L) { const p = liveP(r, L); out.push(L.ft ? T(`Full time: ${m.h} ${L.h}–${L.a} ${m.a}.`, `Mwisho wa mchezo: ${m.h} ${L.h}, ${m.a} ${L.a}.`) : T(`Live, ${Math.round(L.min)} minutes: ${m.h} ${L.h}–${L.a} ${m.a}. Chances now: ${m.h} ${pct(p.H)}, draw ${pct(p.D)}, ${m.a} ${pct(p.A)}.`, `Mubashara, dakika ${Math.round(L.min)}: ${m.h} ${L.h}, ${m.a} ${L.a}. Nafasi sasa: ${m.h} ${pct(p.H)}, sare ${pct(p.D)}, ${m.a} ${pct(p.A)}.`)); }
+    out.push(T(`Statpad's chances: ${m.h} ${pct(a.p.H)}, draw ${pct(a.p.D)}, ${m.a} ${pct(a.p.A)}.`, `Nafasi kwa mujibu wa Statpad: ${m.h} kushinda ${pct(a.p.H)}, sare ${pct(a.p.D)}, ${m.a} kushinda ${pct(a.p.A)}.`));
+    if (a.top) {
+      out.push(T(`The pick: ${a.top.label} at ${pct(a.top.pAdj)}${a.tier ? ', ' + TIER_NAME[a.tier].toLowerCase() : ''}, odds ${odds(a.top.price)}.`, `Chaguo la Statpad: ${a.top.label}, ${pct(a.top.pAdj)}, odds ${odds(a.top.price)}.`));
+      acts.push([T('Add the pick to the coupon', 'Weka chaguo kwenye kuponi'), `data-add="${esc(m.id)}|${esc(a.top.key)}"`]);
+    }
+    const sc = a.scores[0]; out.push(T(`Most likely score: ${sc[0]}–${sc[1]}.`, `Matokeo yanayowezekana zaidi: ${sc[0]}–${sc[1]}.`));
+    const x = stakeSides(m).sort((p, q) => q.sw - p.sw)[0];
+    if (x && x.sw >= 0.05) out.push(T(`At stake: ${x.name}'s ${zoneWord(x.z)} is ${fmtP(x.w)} with a win, ${fmtP(x.l)} with a defeat.`, `Kilicho hatarini: nafasi ya ${x.name} ya ${zoneSw(x.z)} ni ${fmtP(x.w)} wakishinda, ${fmtP(x.l)} wakifungwa.`));
+    return { lead, items: out, acts, plain: true };
+  }
+  function aSafe(d) {
+    if (!d) return { lead: T('There are no games with predictions coming up.', 'Hakuna mechi zenye utabiri kwa sasa.') };
+    const rows = S.rows.filter((r) => r.day === d.key && !r.started && r.a && r.a.top).sort((x, y) => y.a.top.pLo - x.a.top.pLo).slice(0, 3);
+    if (!rows.length) return { lead: T(`No picks for ${dayWord(d.key)} yet.`, `Bado hakuna machaguo ya ${dayWord(d.key)}.`) };
+    return { lead: T(`The safest picks for ${dayWord(d.key)}:`, `Machaguo salama zaidi ya ${dayWord(d.key)}:`),
+      items: rows.map((r) => T(`${r.a.top.label}, in ${r.m.h} v ${r.m.a}: ${pct(r.a.top.pAdj)}, odds ${odds(r.a.top.price)}.`, `${r.a.top.label}, ${r.m.h} dhidi ya ${r.m.a}: ${pct(r.a.top.pAdj)}, odds ${odds(r.a.top.price)}.`)),
+      tail: T('Chances, not certainties.', 'Hizi ni nafasi, si uhakika.'), acts: rows.map((r) => [`${r.m.h} ${vsW()} ${r.m.a}`, `data-open="${esc(r.m.id)}"`]) };
+  }
+  function aSlip(d, target) {
+    if (!d) return { lead: T('There are no games for a slip yet.', 'Hakuna mechi za kutosha kwa mkeka.') };
+    const open = S.rows.filter((r) => r.day === d.key && !r.started && r.a).map((r) => ({ m: r.m, a: r.a }));
+    const best = ['A', 'B', 'C'].map((t) => ENGINE.buildSlip(open, t, target)).filter((x) => x.feasible && x.legs.length).sort((x, y) => y.prob - x.prob)[0];
+    if (!best) return { lead: T(`Statpad can't build a ${target}-odds slip from ${dayWord(d.key)}'s games.`, `Statpad haiwezi kutengeneza mkeka wa odds ${target} kwa mechi za ${dayWord(d.key)}.`) };
+    S.askSlip = best;
+    return { lead: T(`A ${target}-odds slip for ${dayWord(d.key)} (${best.name.toLowerCase()}): ${best.legs.length} picks, total odds ${odds(best.odds)}, about ${pct(best.prob, 1)} to land.`,
+      `Mkeka wa odds ${target} wa ${dayWord(d.key)}: machaguo ${best.legs.length}, jumla ya odds ${odds(best.odds)}, nafasi ya kushinda karibu ${pct(best.prob, 1)}.`),
+      items: best.legs.map((l) => `${l.s.label}: ${l.m.h} ${vsW()} ${l.m.a}, ${odds(l.s.price)}`),
+      acts: [[T('Add all to the coupon', 'Weka yote kwenye kuponi'), 'data-askslip="1"'], [T('Open Slips', 'Fungua Slips'), 'data-askgo="slips"']] };
+  }
+  function aValue(d) {
+    const rows = S.rows.filter((r) => !r.started && r.a && (!d || r.day === d.key));
+    const v = ENGINE.value(rows.map((r) => ({ m: r.m, a: r.a })), 0.03).slice(0, 3);
+    if (!v.length) return { lead: T('No real price beats Statpad\'s chance by 3% or more right now.', 'Kwa sasa hakuna bei inayozidi nafasi ya Statpad kwa asilimia 3 au zaidi.') };
+    return { lead: T('The best value right now:', 'Thamani bora kwa sasa:'),
+      items: v.map((x) => T(`${x.s.label}, ${x.m.h} v ${x.m.a}, at ${odds(x.s.price)}${x.s.bk ? ' with ' + x.s.bk : ''}: Statpad ${pct(x.s.p)}, about ${Math.round(x.s.edge * 100)}% better than fair.`,
+        `${x.s.label}, ${x.m.h} dhidi ya ${x.m.a}, odds ${odds(x.s.price)}: Statpad ${pct(x.s.p)}, karibu ${Math.round(x.s.edge * 100)}% juu ya bei ya haki.`)),
+      tail: T('Value means a good price, not a likely win.', 'Thamani ni bei nzuri, si uhakika wa kushinda.'), acts: v.map((x) => [`${x.m.h} ${vsW()} ${x.m.a}`, `data-open="${esc(x.m.id)}"`]) };
+  }
+  function aStakes(d) {
+    const rows = S.rows.filter((r) => !r.started && r.m.sk && (!d || r.day === d.key)).sort((x, y) => y.m.sk[0] - x.m.sk[0]).slice(0, 3);
+    if (!rows.length) return { lead: T('No stakes yet: they come from the season simulator, for leagues where every team plays every other home and away.', 'Bado hakuna takwimu hizi kwa mechi zijazo.') };
+    return { lead: T(`The games with most at stake${d ? ' ' + dayWord(d.key) : ''}:`, `Mechi zenye mengi hatarini${d ? ' ' + dayWord(d.key) : ''}:`),
+      items: rows.map((r) => { const x = stakeSides(r.m).sort((p, q) => q.sw - p.sw)[0], st = stakeOf(r.m);
+        return T(`${r.m.h} v ${r.m.a} (${st.lv.toLowerCase()} stakes)${x ? `: ${x.name}'s ${zoneWord(x.z)} is ${fmtP(x.w)} with a win, ${fmtP(x.l)} with a defeat` : ''}.`,
+          `${r.m.h} dhidi ya ${r.m.a}${x ? `: nafasi ya ${x.name} ya ${zoneSw(x.z)} ni ${fmtP(x.w)} wakishinda, ${fmtP(x.l)} wakifungwa` : ''}.`); }),
+      acts: rows.map((r) => [`${r.m.h} ${vsW()} ${r.m.a}`, `data-open="${esc(r.m.id)}"`]) };
+  }
+  async function aTitle(lk, kind) {
+    const L = lk && S.data.leagues[lk];
+    if (!L) return { lead: T('Which league? Try "Who will win the Premier League?"', 'Ligi gani? Jaribu "Nani atashinda Premier League?"') };
+    let sim = null;
+    try { sim = await simLeague(lk, {}); } catch (e) { sim = null; }
+    if (!sim) return { lead: T(`The season simulator isn't ready for the ${L.name} yet.`, `Kiigaji cha msimu bado hakipo tayari kwa ${L.name}.`) };
+    const st = sim.st, res = sim.base || sim.res, zi = kind === 'down' ? st.zones.length - 1 : kind === 'top' ? 1 : 0, z = st.zones[zi];
+    const list = st.names.map((n, i) => [n, zoneP(res, i, z, st.n)]).sort((x, y) => y[1] - x[1]).filter((x) => x[1] >= 0.005).slice(0, 4);
+    const zn = z[0];
+    return { lead: T(`${L.name}, ${SIM_N.toLocaleString('en-US')} simulated seasons. ${/^title$/i.test(zn) ? 'Title' : zn} chances:`, `${L.name}, misimu ${SIM_N.toLocaleString('en-US')} iliyoigwa. Nafasi za ${zoneSw(zn)}:`),
+      items: list.map(([n, p]) => `${n}: ${fmtP(p)}`), acts: [[T('Open the season simulator', 'Fungua kiigaji cha msimu'), `data-gosim="${esc(lk)}"`]] };
+  }
+  function aLive(hits) {
+    let rows = S.rows.filter((r) => r.started && liveNow(r.m.id) && !liveNow(r.m.id).ft);
+    if (hits.length) { const keys = new Set(hits.map((h) => h.t)); const mine = rows.filter((r) => keys.has(ckKey(r.m.h)) || keys.has(ckKey(r.m.a))); if (mine.length) rows = mine; }
+    if (!rows.length) return { lead: T('None of Statpad\'s games is in play right now.', 'Hakuna mechi ya Statpad inayoendelea sasa hivi.') };
+    return { lead: T('In play now:', 'Zinazoendelea sasa:'), items: rows.slice(0, 5).map((r) => { const L = liveNow(r.m.id); return `${r.m.h} ${L.h}–${L.a} ${r.m.a}, ${L.st === 'HT' ? T('half time', 'mapumziko') : Math.round(L.min) + "'"}`; }),
+      acts: rows.slice(0, 3).map((r) => [`${r.m.h} ${vsW()} ${r.m.a}`, `data-open="${esc(r.m.id)}"`]) };
+  }
+  function aBets() {
+    const open = S.bets.filter((b) => b.status === 'open'), done = S.bets.filter((b) => b.status !== 'open');
+    if (!S.bets.length) return { lead: T('You have no saved bets. Save a coupon in Bets to follow it here.', 'Huna bet zilizohifadhiwa. Hifadhi kuponi kwenye Bets ili kuifuatilia.'), acts: [[T('Open Bets', 'Fungua Bets'), 'data-askgo="coupon"']] };
+    const items = open.slice(0, 4).map((b) => {
+      const ns = b.legs.map((l) => legNow(l)), lost = ns.some((n) => n.st === 'lost'), won = ns.filter((n) => n.st === 'won').length;
+      const p = lost ? 0 : ns.reduce((a, n) => a * (n.st === 'won' ? 1 : n.st === 'void' ? 1 : n.w == null ? 1 : n.w), 1);
+      return T(`${b.legs.length}-leg bet at ${odds(b.odds)}: ${lost ? 'a leg has lost' : `${won} won so far, about ${pct(p)} to land`}.`, `Bet ya machaguo ${b.legs.length}, odds ${odds(b.odds)}: ${lost ? 'chaguo moja limepoteza' : `${won} yameshinda, nafasi ya kushinda karibu ${pct(p)}`}.`);
+    });
+    const w = done.filter((b) => b.status === 'won').length, l = done.filter((b) => b.status === 'lost').length;
+    return { lead: T(`You have ${open.length} open bet${open.length === 1 ? '' : 's'}${done.length ? `, and ${w} won and ${l} lost so far` : ''}.`, `Una bet ${open.length} zilizo wazi${done.length ? `; zilizoshinda ${w}, zilizopoteza ${l}` : ''}.`), items, acts: [[T('Open My bets', 'Fungua bet zangu'), 'data-askbets="1"']] };
+  }
+  function aTeam(r, name) {
+    const lk = r.m.lk, L = S.data.leagues[lk], row = L && L.table && L.table.find((x) => x[0] === name);
+    const home = r.m.h === name, opp = home ? r.m.a : r.m.h, p = r.a ? (home ? r.a.p.H : r.a.p.A) : null;
+    const items = [];
+    if (row) items.push(T(`${name} are ${ord(L.table.indexOf(row) + 1)} in the ${L.name} with ${row[7]} points from ${row[1]} games.`, `${name} wako nafasi ya ${L.table.indexOf(row) + 1} kwenye ${L.name}, na pointi ${row[7]} kutoka mechi ${row[1]}.`));
+    if (!r.started && p != null) items.push(T(`Next: ${home ? 'at home to' : 'away at'} ${opp}, ${dayWord(r.day)} at ${tFmt.format(r.ko)}. Statpad gives them ${pct(p)} to win.`, `Mechi ijayo: ${home ? 'nyumbani dhidi ya' : 'ugenini dhidi ya'} ${opp}, ${dayWord(r.day)} ${tFmt.format(r.ko)}. Statpad inawapa ${pct(p)} kushinda.`));
+    const x = stakeSides(r.m).find((q) => q.name === name);
+    if (x && x.sw >= 0.03) items.push(T(`At stake: their ${zoneWord(x.z)} is ${fmtP(x.w)} with a win, ${fmtP(x.l)} with a defeat.`, `Kilicho hatarini: nafasi yao ya ${zoneSw(x.z)} ni ${fmtP(x.w)} wakishinda, ${fmtP(x.l)} wakifungwa.`));
+    const acts = [[T('Open the match', 'Fungua mechi'), `data-open="${esc(r.m.id)}"`]];
+    if (row) acts.unshift([T('Team page', 'Ukurasa wa timu'), `data-team="${esc(lk)}|${esc(name)}"`]);
+    return { lead: items.shift() || name + '.', items, acts, plain: true };
+  }
+  const ASK_EX = () => T(['Who wins Arsenal v Chelsea?', 'Safest picks today', 'Give me a 5 odds slip', 'Biggest games this weekend', 'Who will win the Premier League?', 'Best value', 'How are my bets doing?'],
+    ['Nani atashinda Arsenal dhidi ya Chelsea?', 'Machaguo salama ya leo', 'Nipe mkeka wa odds tano', 'Mechi kubwa', 'Nani atashinda Premier League?', 'Thamani bora', 'Bet zangu zinaendeleaje?']);
+  function exampleMatch() {
+    const r = S.rows.filter((x) => !x.started && x.a).sort((x, y) => (y.m.sk ? y.m.sk[0] : 0) - (x.m.sk ? x.m.sk[0] : 0) || x.ko - y.ko)[0];
+    return r ? T(`Who wins ${r.m.h} v ${r.m.a}?`, `Nani atashinda ${r.m.h} dhidi ya ${r.m.a}?`) : ASK_EX()[0];
+  }
+  function askExamples() { const ex = ASK_EX().slice(); ex[0] = exampleMatch(); return ex; }
+  function aHelp() {
+    return { lead: T('Ask about any game or team, the safest picks, a slip at any odds, value, what\'s at stake, title races, live scores or your bets. For example:', 'Niulize kuhusu mechi au timu yoyote, machaguo salama, mkeka wa odds yoyote, thamani, mechi kubwa, mbio za ubingwa, matokeo ya moja kwa moja au bet zako. Kwa mfano:'),
+      items: askExamples(), plain: true, chips: true };
+  }
+  async function askAnswer(q) {
+    const t = askNorm(q), { hits } = ckHits(q, true), fx = hits.length ? ckFixture(hits) : null;
+    const has = (re) => re.test(t);
+    if (!t) return aHelp();
+    if (has(/\b(help|what can (you|i)|how do(es)? (this|it) work|msaada|nisaidie|naweza kuuliza)\b/)) return aHelp();
+    if (has(/\b(my bets?|my tickets?|my slips?|bet zangu|dau langu|tiketi zangu|mikeka yangu)\b/)) return aBets();
+    if (has(/\b(score|scores|live|in play|playing now|matokeo|inaendelea|zinazoendelea|mubashara|goli)\b/) && !has(/\b(likely|correct|most|expected|yanayowezekana)\b/)) return aLive(hits);
+    if (fx && fx.sure) return aMatch(fx.r);
+    const lgNamed = LG_WORDS.some(([re]) => re.test(t));
+    if (has(/\b(title|win the league|league winner|champions?|relegat\w*|go down|drop|top 4|ubingwa|bingwa|atashinda ligi|kushuka( daraja)?)\b/) || (lgNamed && !fx && has(/\b(win|wins|winner|atashinda|kushinda)\b/))) {
+      const kind = has(/\b(relegat\w*|go down|drop|kushuka)\b/) ? 'down' : has(/\btop 4\b/) ? 'top' : 'title';
+      return aTitle(askLeague(t, hits), kind);
+    }
+    if (has(/\b(stakes?|big(gest)? games?|most important|matters? most|mechi kubwa|muhimu|hatarini)\b/)) return aStakes(has(/\b(today|tomorrow|leo|kesho)\b/) ? askDay(t) : null);
+    if (has(/\b(value|edge|best price|overpriced|underpriced|thamani)\b/)) return aValue(has(/\b(today|tomorrow|leo|kesho)\b/) ? askDay(t) : null);
+    const mt = t.match(/\bodds? (\d+(?:\.\d+)?)\b|\b(\d+(?:\.\d+)?) ?(?:x |-)?odds?\b/);
+    if (mt || has(/\b(slip|slips|acca|accumulator|multi ?bet|mkeka|tiketi|combo)\b/)) {
+      const tg = Math.min(500, Math.max(1.5, mt ? +(mt[1] || mt[2]) : S.target));
+      return aSlip(askDay(t), tg);
+    }
+    if (has(/\b(safe|safest|sure|banker|bankers|best bets?|tips?|predictions?|picks?|uhakika|salama|utabiri|machaguo)\b/) && !fx) return aSafe(askDay(t));
+    if (fx) {
+      const tk = hits.sort((x, y) => y.w - x.w)[0].t, r = fx.r, name = ckKey(r.m.h) === tk ? r.m.h : ckKey(r.m.a) === tk ? r.m.a : null;
+      if (name && !has(/\b(who|win|wins|beat|predict\w*|odds|chances?|nani|atashinda|dhidi)\b/)) return aTeam(r, name);
+      return aMatch(r);
+    }
+    if (has(/\b(today|tomorrow|leo|kesho|weekend|games|matches|mechi)\b/)) return aSafe(askDay(t));
+    return { lead: T('Sorry, I couldn\'t match that to a question I can answer. Try one of these:', 'Samahani, sikuelewa swali hilo. Jaribu mojawapo ya haya:'), items: askExamples(), plain: true, chips: true, miss: true };
+  }
+  const askSay = (A) => [A.lead, ...(A.items || []), A.tail || ''].filter(Boolean).map((x) => String(x).replace(/<[^>]+>/g, '')
+    .replace(/(\d)–(\d)/g, '$1 $2').replace(/over 99%/g, SW() ? 'zaidi ya asilimia 99' : 'over 99 percent').replace(/under 1%/g, SW() ? 'chini ya asilimia 1' : 'under 1 percent')
+    .replace(/(\d+(?:\.\d+)?)%/g, SW() ? 'asilimia $1' : '$1 percent').replace(/\bv\b/g, SW() ? 'dhidi ya' : 'against'));
+  async function ask(q, spoken) {
+    q = String(q || '').trim(); if (!q) return;
+    const item = { q, A: null, at: Date.now(), lang: S.ask.lang };
+    S.ask.log.push(item); if (S.ask.log.length > 12) S.ask.log.shift();
+    renderAskLog();
+    try { item.A = await askAnswer(q); } catch (e) { item.A = { lead: T('Something went wrong answering that.', 'Kuna hitilafu.') }; }
+    renderAskLog();
+    if (spoken || S.ask.voiceOut) speak(T('Statpad answers', 'Statpad inajibu'), askSay(item.A), S.ask.lang);
+  }
+  function askListen() {
+    if (!SRec) { toast(T('Voice input isn’t available in this browser: type your question', 'Kivinjari hiki hakina sauti: andika swali lako')); return; }
+    if (S.ask.on) { try { S.ask.rec.stop(); } catch (e) { /* */ } return; }
+    ttsStop(true);
+    const rec = new SRec();
+    rec.lang = SW() ? 'sw-KE' : (/^en-/i.test(navigator.language || '') ? navigator.language : 'en-GB');
+    rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
+    S.ask.rec = rec; S.ask.on = true; S.ask.interim = ''; S.ask.err = '';
+    let final = '';
+    rec.onresult = (e) => {
+      let txt = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) final += r[0].transcript; else txt += r[0].transcript; }
+      S.ask.interim = (final + ' ' + txt).trim(); renderAskMic();
+    };
+    rec.onerror = (e) => { S.ask.err = e.error === 'not-allowed' || e.error === 'service-not-allowed' ? T('Allow the microphone for this site to ask by voice.', 'Ruhusu maikrofoni kwa tovuti hii.') : e.error === 'no-speech' ? T('I didn’t hear anything. Tap the mic and speak.', 'Sikusikia chochote. Gusa maikrofoni na uongee.') : e.error === 'network' ? T('Voice needs an internet connection.', 'Sauti inahitaji intaneti.') : ''; };
+    rec.onend = () => { S.ask.on = false; const q = (final || S.ask.interim).trim(); S.ask.interim = ''; renderAskMic(); if (q) ask(q, true); };
+    try { rec.start(); } catch (e) { S.ask.on = false; }
+    renderAskMic();
+  }
+  function openAsk(opener) {
+    if (S.open && S.open !== 'ask:') S.askBack = S.open;
+    S.open = 'ask:'; if (!$('#sheet').classList.contains('open')) S.opener = opener || document.activeElement;
+    renderSheet();
+    const sh = $('#sheet'); sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
+    setTimeout(() => { const b = $('#sheetBody'); b.scrollTop = b.scrollHeight; }, 30);
+  }
+  function askCard(it) {
+    const A = it.A, sw = it.lang === 'sw', D = (x) => (sw ? String(x).replace(/over 99%/g, '>99%').replace(/under 1%/g, '<1%') : x);
+    const body = !A ? `<p class="ask-wait">${T('Thinking…', 'Nafikiri…')}</p>` : `<p class="ask-lead">${esc(D(A.lead))}</p>${A.items && A.items.length ? `<ul class="ask-items${A.plain ? ' plain' : ''}">${A.items.map((x) => A.chips ? `<li><button type="button" class="ask-chip" data-askq="${esc(x)}">${esc(x)}</button></li>` : `<li>${esc(D(x))}</li>`).join('')}</ul>` : ''}${A.tail ? `<p class="ask-tail">${esc(A.tail)}</p>` : ''}
+      <div class="ask-acts"><button type="button" class="btn sm listen-b" data-asksay="${S.ask.log.indexOf(it)}"><svg aria-hidden="true"><use href="#i-speaker"/></svg>${T('Listen', 'Sikiliza')}</button>${(A.acts || []).map(([l, attr]) => `<button type="button" class="btn sm" ${attr}>${esc(l)}</button>`).join('')}</div>`;
+    return `<div class="ask-q"><span>${esc(it.q)}</span></div><div class="ask-a">${body}</div>`;
+  }
+  function renderAskLog() {
+    const box = $('#askLog'); if (!box || S.open !== 'ask:') return;
+    box.innerHTML = S.ask.log.length ? S.ask.log.map(askCard).join('') : `<div class="ask-hello"><b>${T('Ask Statpad anything about the games.', 'Uliza Statpad chochote kuhusu mechi.')}</b><span>${SRec ? T('Tap the microphone and speak, or type below.', 'Gusa maikrofoni na uongee, au andika hapa chini.') : T('Type your question below.', 'Andika swali lako hapa chini.')}</span></div><div class="ask-ex">${askExamples().map((x) => `<button type="button" class="ask-chip" data-askq="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
+    const b = $('#sheetBody'); if (b) b.scrollTop = b.scrollHeight;
+  }
+  function renderAskMic() {
+    const m = $('#askMic'), st = $('#askState'); if (!m || !st) return;
+    m.classList.toggle('on', S.ask.on); m.setAttribute('aria-pressed', S.ask.on);
+    st.textContent = S.ask.on ? (S.ask.interim || T('Listening…', 'Nasikiliza…')) : S.ask.err || '';
+  }
+  function renderAskSheet() {
+    $('#sheetTitle').textContent = T('Ask Statpad', 'Uliza Statpad');
+    $('#sheetBody').innerHTML = `<div class="ask">
+      <div class="ask-top"><div class="seg" role="group" aria-label="Language"><button type="button" data-asklang="en" aria-pressed="${!SW()}">English</button><button type="button" data-asklang="sw" aria-pressed="${SW()}">Kiswahili</button></div>
+        <label class="ask-vo"><input type="checkbox" id="askVoice"${S.ask.voiceOut ? ' checked' : ''}> ${T('Read answers aloud', 'Soma majibu kwa sauti')}</label></div>
+      <div id="askLog" class="ask-log" aria-live="polite"></div>
+      <form class="ask-in" id="askForm"><input id="askText" type="text" autocomplete="off" enterkeyhint="send" placeholder="${esc(T('Ask about a game, a team, a slip…', 'Uliza kuhusu mechi, timu, mkeka…'))}" aria-label="${esc(T('Your question', 'Swali lako'))}">
+        ${SRec ? `<button type="button" class="ask-mic" id="askMic" aria-label="${esc(T('Ask by voice', 'Uliza kwa sauti'))}" aria-pressed="false"><svg aria-hidden="true"><use href="#i-mic"/></svg></button>` : ''}
+        <button type="submit" class="btn pri">${T('Ask', 'Uliza')}</button></form>
+      <p class="ask-state" id="askState" aria-live="polite"></p>
+      <p class="note">${T('Answers come from Statpad\'s own numbers on this page. Voice is turned into text by your phone\'s browser.', 'Majibu yanatoka kwenye takwimu za Statpad. Sauti inageuzwa kuwa maandishi na kivinjari cha simu yako.')}</p></div>`;
+    renderAskLog(); renderAskMic();
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-ask],[data-askq],[data-asksay],[data-asklang],[data-askslip],[data-askbets],[data-askgo],#askMic'); if (!t) return;
+    e.stopPropagation();
+    if (t.id === 'askMic') { askListen(); return; }
+    if (t.dataset.ask != null) { openAsk(t); return; }
+    if (t.dataset.askq != null) { ask(t.dataset.askq, false); return; }
+    if (t.dataset.asksay != null) { const it = S.ask.log[+t.dataset.asksay]; if (it && it.A) speak(T('Statpad answers', 'Statpad inajibu'), askSay(it.A), S.ask.lang); return; }
+    if (t.dataset.asklang) { S.ask.lang = t.dataset.asklang; store.set('askLang', S.ask.lang); renderAskSheet(); return; }
+    if (t.dataset.askslip) { const s = S.askSlip; if (!s) return; for (const l of s.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: null, from: s.tier }); saveCoupon(); toast(T(`${s.legs.length} legs added to the coupon`, `Machaguo ${s.legs.length} yamewekwa kwenye kuponi`)); return; }
+    if (t.dataset.askbets) { closeSheet(); S.bseg = 'mine'; store.set('bseg', 'mine'); setTab('coupon'); return; }
+    if (t.dataset.askgo) { closeSheet(); setTab(t.dataset.askgo); }
+  });
+  document.addEventListener('submit', (e) => {
+    if (e.target.id !== 'askForm') return;
+    e.preventDefault(); const i = $('#askText'); const q = i.value; i.value = ''; ask(q, false);
+  });
+  document.addEventListener('change', (e) => { if (e.target.id === 'askVoice') S.ask.voiceOut = e.target.checked; });
 
   // ---------------- events ----------------
   document.addEventListener('click', (e) => {
