@@ -127,6 +127,31 @@ Once a month, alongside the other tuning, Statpad tests:
 
 Each is fitted on two past seasons after blending with the market as the site does, then checked on the last full season, which the fit never saw. It goes on only if it lowers the error there too; the Track tab shows which are on, and a match page says when one applies. football-data.co.uk lists league games only, so cup and European games don't count towards rest. The first run after this update does the fit, so it takes a few minutes longer than usual.
 
+## Live shock map
+
+While games are in play, the Matches tab opens with a dot-matrix world map of them, also under **Shock map**. Each game sits in its country and pulses faster and wider as its chances move:
+
+- **Red, shock**: the favourite's chance of winning has collapsed since kick-off.
+- **Amber, wobble**: a smaller shift.
+- **Blue**: going to plan.
+- **Grey**: kicks off within a few hours.
+
+The shock number is the fall in the favourite's chance in percentage points; a small favourite collapsing, or a big swing in the last ten minutes, counts too. Chances in play come from the score, the minute, red cards and each side's expected goals before kick-off. Tap a dot or a row for the match. The map only animates while it's on screen, and stays still if the phone asks for reduced motion.
+
+## Goal seek
+
+**Slips → Goal seek**: enter your stake and what you want to collect (or tap ×10 … ×1000). Statpad works out the odds needed after tax on winnings (set in My bets), then searches every combination of one pick per match, at real bookmaker prices and up to 12 legs, for the slip with the highest chance of paying at least that. Choose today, today and tomorrow, or the next 3 days.
+
+It shows:
+
+- the best chance, and "about 1 in N";
+- what the slip returns on average;
+- the legs, with a button to add them all to the coupon;
+- a value-only version, where every leg beats the bookmaker's price;
+- the **price of ambition**: a curve of the best chance for every amount you could aim for, so you can see what halving the goal buys.
+
+Ask Statpad understands it too: "turn 10,000 into 500,000", "I want 1 million from 5k", or in Kiswahili "nataka laki tano kutoka elfu kumi".
+
 ## WhatsApp Status pack
 
 **Status pack** (Matches and Slips tabs) draws four 1080×1920 pictures for the day, styled like a heads-up display over a floodlit pitch, each built around its own data graphic:

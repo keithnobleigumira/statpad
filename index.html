@@ -431,6 +431,56 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .sim-t td em, .tm-kpis em { font-style: normal; font: 700 10.5px var(--f-mono); margin-left: 4px; position: relative; z-index: 1; }
 .sim-t td em.up { color: var(--pitch); } .sim-t td em.down { color: var(--red); }
 .pstrip { display: inline-flex; gap: 1px; vertical-align: middle; }
+/* live shock map */
+.shk { margin: 14px 0 18px; border-radius: var(--r); overflow: hidden; background: #050b12; border: 1px solid #12324a; box-shadow: var(--shadow); color: #eaf4ff; }
+.shk-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px 8px; }
+.shk-h h3 { margin: 0; font: 700 15px/1.2 var(--f-display); display: flex; align-items: center; gap: 8px; color: #eaf4ff; }
+.shk .linkbtn { color: #8fdcff; }
+canvas.shk-cv { display: block; width: 100%; height: 230px; cursor: pointer; }
+canvas.shk-cv.big { height: min(58vh, 520px); border-radius: 14px; border: 1px solid #12324a; }
+.shk-list { display: grid; }
+.shk .shk-list { padding: 4px 6px 8px; }
+.shk-row { display: flex; gap: 12px; align-items: center; text-align: left; width: 100%; background: none; border: 0; border-top: 1px solid rgba(140,190,230,.12); padding: 10px 8px; color: inherit; font: inherit; cursor: pointer; }
+.shk-row:first-child { border-top: 0; }
+.shk-sc { flex: none; width: 46px; display: grid; justify-items: center; line-height: 1; }
+.shk-sc b { font: 600 20px var(--f-mono); } .shk-sc small { font: 600 9px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; opacity: .7; margin-top: 3px; }
+.shk-row.shock .shk-sc b { color: #ff3d7f; } .shk-row.wobble .shk-sc b { color: #ffc24d; } .shk-row.calm .shk-sc b { color: #3fd6ff; } .shk-row.done .shk-sc b { color: #9aa8b5; }
+.shk-tx { display: grid; gap: 3px; min-width: 0; } .shk-tx b { font-size: 14px; } .shk-tx small { font-size: 12px; opacity: .75; line-height: 1.35; }
+.sheet-body > .shk-list { margin-top: 12px; background: #050b12; border-radius: 14px; border: 1px solid #12324a; color: #eaf4ff; padding: 4px 8px; }
+.shk-none { margin: 0; padding: 10px 8px 6px; font-size: 13px; opacity: .8; }
+.shk-key { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); margin-top: 10px; }
+.shk-key i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+/* goal seek */
+.gs-form { display: grid; gap: 14px; }
+.gs-in { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: end; }
+.gs-in label { display: grid; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); min-width: 0; }
+.gs-amt { display: flex; align-items: center; gap: 6px; border: 1px solid var(--rule); border-radius: 12px; background: var(--paper); padding: 0 12px; min-width: 0; }
+.gs-amt em { font: 600 12px var(--f-mono); font-style: normal; color: var(--ink-3); }
+.gs-amt input { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font: 600 19px var(--f-mono); padding: 11px 0; outline: none; }
+.gs-arrow { font-size: 20px; color: var(--ink-3); padding-bottom: 12px; }
+@media (max-width: 420px) { .gs-in { grid-template-columns: 1fr; } .gs-arrow { display: none; } }
+.gs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.gs-chips .chip { border: 1px solid var(--rule); background: var(--card); color: var(--ink); border-radius: 99px; padding: 7px 12px; font: 600 12.5px var(--f-mono); cursor: pointer; }
+.gs-opts { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.gs-val { font-size: 12.5px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
+.gs-res { display: grid; gap: 12px; margin-top: 12px; }
+.gs-hero { display: grid; gap: 14px; }
+.gs-top { display: flex; gap: 18px; align-items: center; }
+.gs-stats { display: grid; gap: 8px; min-width: 0; } .gs-stats span { display: grid; } .gs-stats small { font: 600 10.5px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); } .gs-stats b { font-size: 16px; }
+.gs-big { flex: none; display: grid; justify-items: center; align-content: center; width: 124px; height: 124px; border-radius: 50%; border: 6px solid var(--cobalt); background: color-mix(in srgb, var(--cobalt) 10%, transparent); text-align: center; }
+.gs-big b { font: 600 30px var(--f-mono); letter-spacing: -.04em; } .gs-big span { font-size: 11px; color: var(--ink-3); max-width: 100px; line-height: 1.25; }
+.gs-sum p { margin: 0 0 8px; font-size: 14px; line-height: 1.45; } .gs-sum p:last-child { margin: 0; }
+.gs-ev { color: var(--ink-2); font-size: 13px !important; }
+.gs-legs { list-style: none; margin: 0; padding: 0; display: grid; }
+.gs-legs li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--rule-2); }
+.gs-legs li:first-child { border-top: 0; }
+.gs-legs li div { display: grid; gap: 2px; min-width: 0; } .gs-legs b { font-size: 14px; } .gs-legs small { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gs-p { font: 600 12px var(--f-mono); color: var(--ink-3); } .gs-legs .mono { font-size: 15px; font-weight: 600; }
+.gs-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.gs-ch { width: 100%; height: auto; display: block; }
+.gs-ch text { font: 500 11.5px var(--f-mono); fill: var(--ink-3); }
+.gs-ch .gr { stroke: var(--rule-2); stroke-width: 1; } .gs-ch .ln { fill: none; stroke: var(--cobalt); stroke-width: 2.5; } .gs-ch .ar { fill: color-mix(in srgb, var(--cobalt) 14%, transparent); }
+.gs-ch .gl { stroke: var(--red); stroke-dasharray: 4 4; } .gs-ch .gd { fill: var(--red); stroke: var(--card); stroke-width: 2; } .gs-ch .gt { fill: #fff; font-weight: 700; font-size: 12px; } .gs-ch .gb { fill: var(--red); }
 /* Talk to Statpad */
 .ask { display: grid; gap: 10px; min-width: 0; grid-template-columns: minmax(0, 1fr); }
 .ask-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
@@ -871,6 +921,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M8 7.5L12 4l4 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10.5H6.5A1.5 1.5 0 005 12v7a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0019 19v-7a1.5 1.5 0 00-1.5-1.5H16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
   <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4.5 8.5A1.5 1.5 0 016 7h2.2l1.3-2h5l1.3 2H18a1.5 1.5 0 011.5 1.5v9A1.5 1.5 0 0118 19H6a1.5 1.5 0 01-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.8" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
   <symbol id="i-install" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15.5V18a2 2 0 002 2h10a2 2 0 002-2v-2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".6"/><path d="M12 12l6-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="9" r="1.6" fill="currentColor"/></symbol>
   <symbol id="i-status" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="11.5 2.8"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></symbol>
   <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 11.5a6 6 0 0012 0M12 17.5v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
@@ -913,7 +964,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     <section id="v-matches" class="section" data-view="matches">
       <div class="sec-head">
         <div><h2>Matches</h2><p class="sub" id="matchesSub">Tap a match for the full breakdown.</p></div>
-        <div class="ctl"><button type="button" class="btn listen-b" data-ask="listen"><svg aria-hidden="true"><use href="#i-mic"/></svg>Ask Statpad</button><button type="button" class="btn listen-b" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen to the briefing</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
+        <div class="ctl"><button type="button" class="btn listen-b" data-ask="listen"><svg aria-hidden="true"><use href="#i-mic"/></svg>Ask Statpad</button><button type="button" class="btn listen-b" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen to the briefing</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button><button type="button" class="btn listen-b" data-shockmap="1"><svg aria-hidden="true"><use href="#i-radar"/></svg>Shock map</button></div>
       </div>
       <div class="days" id="days-matches" role="group" aria-label="Day"></div>
       <div class="filters">
@@ -939,12 +990,13 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 
     <section id="v-slips" class="section" data-view="slips" hidden>
       <div class="sec-head">
-        <div><h2>Slips</h2><p class="sub">For the chosen day, the combination with the highest chance of landing that still pays the target. One leg per match, kicked-off games removed.</p></div>
-        <div class="ctl"><span class="lbl">Target odds</span><div class="seg" id="target"></div><button type="button" class="btn listen-b" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
+        <div><h2>Slips</h2><p class="sub" id="slipsSub">For the chosen day, the combination with the highest chance of landing that still pays the target. One leg per match, kicked-off games removed.</p></div>
+        <div class="ctl"><div class="seg" id="slipSeg" role="group" aria-label="Slips or goal seek"><button type="button" data-sseg="slips">Target odds</button><button type="button" data-sseg="goal">Goal seek</button></div><span class="lbl sl-only">Target odds</span><div class="seg sl-only" id="target"></div><button type="button" class="btn listen-b sl-only" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
       </div>
       <div class="days" id="days-slips" role="group" aria-label="Day"></div>
       <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="priced">Matches with live prices</option></select></label></div>
       <div class="slips" id="slips"></div>
+      <div id="goalBox" hidden></div>
       <div class="callout"><b>Read this before you stake.</b> A slip's hit chance is the product of its legs, and every leg can lose. The tiers only describe how likely each leg is; none of them is safe. Estimated prices (marked “est”) are what a fair book would offer. Check the real price before betting.</div>
     </section>
 
@@ -1553,7 +1605,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!rows.length) {
       box.innerHTML = `<div class="empty-state"><b>No matches here</b>${S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`; return;
     }
-    let html = S.sort !== 'stakes' && !S.q ? bigGames(rows) : '';
+    S.shk.games = shockGames(); S.shk.key = (S.shk.key || 0) + 1; S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
+    let html = (!S.q ? shockCard(rows) : '') + (S.sort !== 'stakes' && !S.q ? bigGames(rows) : '');
     if (S.sort === 'ko' || S.sort === 'comp') {
       // group by competition (ordered by first kick-off, or by group/name)
       const groups = new Map();
@@ -1575,7 +1628,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       html += `<div class="comp"><div class="comp-list">${sorted.slice(0, S.shown).map((r) => fxCard(r).replace('<div class="fx-meta">', `<div class="fx-meta"><span>${esc(lgName(r.m.lk))}</span>`)).join('')}</div></div>`;
       if (rows.length > S.shown) html += `<button class="more-btn" type="button" data-more="1">Show more</button>`;
     }
-    box.innerHTML = html;
+    box.innerHTML = html; shkAttach();
   }
 
   // ---------------- detail sheet ----------------
@@ -1627,6 +1680,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function renderSheet() {
     if (String(S.open).startsWith('team:')) { renderTeamSheet(); return; }
     if (S.open === 'status:') { renderStatusSheet(); return; }
+    if (S.open === 'shock:') { renderShockSheet(); return; }
     if (S.ask && S.ask.cur && S.open !== 'ask:') askAbortRec();
     if (S.open === 'ask:') { if (!$('#askForm')) renderAskSheet(); return; }
     const r = S.byId.get(S.open); if (!r) { closeSheet(); return; }
@@ -1734,6 +1788,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // ---------------- slips ----------------
   function renderSlips() {
     if (!S.ready) { showProgress(); return; }
+    const goal = S.sseg === 'goal';
+    for (const b of document.querySelectorAll('[data-sseg]')) b.setAttribute('aria-pressed', String(b.dataset.sseg === (goal ? 'goal' : 'slips')));
+    for (const el of [$('#days-slips'), $('#slips'), ...document.querySelectorAll('#v-slips .filters, #v-slips .sl-only')]) if (el) el.hidden = goal;
+    $('#goalBox').hidden = !goal;
+    $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.' : 'For the chosen day, the combination with the highest chance of landing that still pays the target. One leg per match, kicked-off games removed.';
+    if (goal) { renderGoal(); return; }
     if (S.day === 'all') S.day = pickDefaultDay();
     renderDays('days-slips', false);
     $('#target').innerHTML = TARGETS.map((t) => `<button type="button" data-target="${t}" aria-pressed="${S.target === t}"><span class="mono">${t}</span></button>`).join('');
@@ -2106,6 +2166,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>Every hour the workflow plays the rest of each league season 10,000 times, the way the season simulator does, and measures how far each coming game moves both teams' chances of the title, the top places or the bottom places, after a win, a draw or a defeat. The stakes number adds up both teams' swings between winning and losing, in percentage points: 45 or more is <b>Huge</b>, 25 or more <b>High</b>, 10 or more <b>Some</b>. Match cards show High and Huge games, the Matches tab lists the games with most at stake and can sort by it, and each match page draws the swing for both teams. It covers leagues where every team plays every other home and away.</p>
       <h3>Fatigue and motivation</h3>
       <p>Statpad tests two more things each month, on two past seasons, then on a third the test never saw, after blending with the market as the site does: <b>rest</b> (a side with only two or three days since its last league game, against one with more) and <b>motivation</b> (from the season simulation run week by week: a side whose season chances barely move whatever the result, and games where neither side has anything left to play for). Each goes on only if it lowers the error on the unseen season too, and the Track tab shows which are on. Football-data.co.uk lists league games only, so cup and European games don't count towards rest. When one applies to a game, its match page says so.</p>
+      <h3>Live shock map</h3>
+      <p>While games are in play, the Matches tab opens with a map of them (also under <b>Shock map</b>). Each game sits in its country and pulses faster and wider the further the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes: red for a shock, amber for a wobble, blue when it's going to plan, grey for games kicking off soon. The shock number is that fall in percentage points (a small favourite collapsing counts more). Chances in play come from the score, the minute, red cards and each side's expected goals before kick-off. Tap a dot for the match.</p>
+      <h3>Goal seek</h3>
+      <p>Under <b>Slips → Goal seek</b>, say what you want to turn your stake into. Statpad works out the odds needed after tax on winnings, then searches every combination of one pick per match, at real bookmaker prices and up to 12 legs, for the slip with the highest chance of paying that much. It shows that chance honestly, what such a slip returns on average, a value-only version if you want every leg to beat the bookmaker's price, and the price of ambition: the best chance for every amount you could aim for. You can also ask by voice: "turn 10,000 into 500,000".</p>
       <h3>WhatsApp Status pack</h3>
       <p>On the Matches and Slips tabs, <b>Status pack</b> draws four tall pictures for the day, sized for WhatsApp Status and each built around its own data graphic: the safest pick on a confidence dial, an upset alert on a radar (the underdog at a real price of 2.60 or more with the best value, with how often it should land), the game with most at stake as three futures forking from one result, and the slip at your target odds as an odds ascent. Share all four in one go, or one at a time. Each carries the site's address and an 18+ note.</p>
       <h3>Ask Statpad</h3>
@@ -3706,6 +3770,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       el.classList.add('live'); const [h, d, a] = el.children; h.style.width = p.H * 100 + '%'; d.style.width = p.D * 100 + '%'; a.style.width = p.A * 100 + '%';
     }
     const sl = $('#sheetLive'); if (sl && S.open) { const r = S.byId.get(S.open); if (r) sl.innerHTML = liveCard(r); }
+    const was = S.shk.liveN || 0;
+    shockRefresh(); S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
+    if (S.tab === 'matches' && !!was !== !!S.shk.liveN) renderMatches();
   }
   function liveTxt(id) {
     const g = S.live && S.live.games && S.live.games[id]; if (!g) return '';
@@ -4555,8 +4622,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (row) acts.unshift([T('Team page', 'Ukurasa wa timu'), `data-team="${esc(lk)}|${esc(name)}"`]);
     return { lead: items.shift() || name + '.', items, acts, plain: true };
   }
-  const ASK_EX = () => T(['Who wins Arsenal v Chelsea?', 'Safest picks today', 'Give me a 5 odds slip', 'Biggest games this weekend', 'Who will win the Premier League?', 'Best value', 'How are my bets doing?'],
-    ['Nani atashinda Arsenal dhidi ya Chelsea?', 'Machaguo salama ya leo', 'Nipe mkeka wa odds tano', 'Mechi kubwa', 'Nani atashinda Premier League?', 'Thamani bora', 'Bet zangu zinaendeleaje?']);
+  const ASK_EX = () => T(['Who wins Arsenal v Chelsea?', 'Safest picks today', 'Give me a 5 odds slip', 'Turn 10,000 into 500,000', 'Biggest games this weekend', 'Who will win the Premier League?', 'Best value', 'How are my bets doing?'],
+    ['Nani atashinda Arsenal dhidi ya Chelsea?', 'Machaguo salama ya leo', 'Nipe mkeka wa odds tano', 'Geuza elfu kumi kuwa laki tano', 'Mechi kubwa', 'Nani atashinda Premier League?', 'Thamani bora', 'Bet zangu zinaendeleaje?']);
   function exampleMatch() {
     const r = S.rows.filter((x) => !x.started && x.a).sort((x, y) => (y.m.sk ? y.m.sk[0] : 0) - (x.m.sk ? x.m.sk[0] : 0) || x.ko - y.ko)[0];
     return r ? T(`Who wins ${r.m.h} v ${r.m.a}?`, `Nani atashinda ${r.m.h} dhidi ya ${r.m.a}?`) : ASK_EX()[0];
@@ -4655,6 +4722,41 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       items: rows.map(({ r, s }) => T(`${s.label}, in ${r.m.h} v ${r.m.a}: ${pct(s.pAdj)}, odds ${odds(s.price)}.`, `${s.label}, ${r.m.h} dhidi ya ${r.m.a}: ${pct(s.pAdj)}, odds ${odds(s.price)}.`)),
       tail: T('Chances, not certainties.', 'Hizi ni nafasi, si uhakika.'), acts: rows.map(({ r }) => [`${r.m.h} ${vsW()} ${r.m.a}`, `data-open="${esc(r.m.id)}"`]) };
   }
+  // money in a question: "10k", "10,000", "half a million"? no; "1.5 million", "elfu kumi", "laki tano", "milioni moja"
+  function askAmounts(q) {
+    const t = askNorm(String(q).replace(/(\d)[,\s](?=\d{3}\b)/g, '$1').replace(/(\d)[,\s](?=\d{3}\b)/g, '$1').replace(/(\d+(?:\.\d+)?)\s*([km])\b/gi, (x, n, u) => n + (u.toLowerCase() === 'k' ? ' thousand' : ' million')));
+    const w = t.split(' '), out = [];
+    for (let i = 0; i < w.length; i++) {
+      const n = parseFloat(w[i]);
+      if (isFinite(n) && /^\d/.test(w[i])) {
+        const nx = w[i + 1] || '';
+        if (/^(thousand|thousands)$/.test(nx)) { out.push(n * 1e3); i++; } else if (/^(million|millions|mil|mn)$/.test(nx)) { out.push(n * 1e6); i++; } else out.push(n);
+      } else if (/^(elfu|laki|milioni)$/.test(w[i]) && isFinite(parseFloat(w[i + 1]))) { out.push(parseFloat(w[i + 1]) * ({ elfu: 1e3, laki: 1e5, milioni: 1e6 })[w[i]]); i++; }
+    }
+    return out;
+  }
+  function askGoalQ(q, t) {
+    if (!/\b(turn|into|make|from|become|grow|want|collect|win|get|reach|nataka|geuza|kuwa|kutoka|pata|shinda|fikia)\b/.test(t)) return null;
+    const a = askAmounts(q).filter((x) => x >= 100);
+    if (a.length < 2) return null;
+    const stake = Math.min(...a), goal = Math.max(...a);
+    return goal > stake * 1.2 ? { stake, goal } : null;
+  }
+  function aGoal(stake, goal) {
+    Object.assign(S.gs, { stake, goal }); store.set('goalseek', S.gs);
+    const res = gsRun(), cur = S.bcfg.cur, M = (x) => `${cur} ${Math.round(x).toLocaleString('en-US')}`;
+    const acts = [[T('Open goal seek', 'Fungua goal seek'), 'data-askgo="goal"']];
+    if (res.err) return { lead: T('Set a goal bigger than your stake.', 'Weka lengo kubwa kuliko dau lako.'), acts };
+    const m = res.main;
+    if (!m) return { lead: T(`Turning ${M(stake)} into ${M(goal)} needs odds of ${odds(res.need)}, more than the next games can reach. Try a smaller goal.`, `Kugeuza ${M(stake)} kuwa ${M(goal)} kunahitaji odds ${odds(res.need)}; mechi zijazo haziwezi kufikia. Jaribu lengo dogo.`), acts };
+    S.gsLast = m;
+    const ev = m.prob * gsNet(stake, m.odds), half = res.sol.pick(gsOdds(stake, Math.max(stake * 1.5, goal / 2), res.tax)), one = Math.round(1 / Math.max(1e-6, m.prob)).toLocaleString('en-US');
+    return { lead: T(`To turn ${M(stake)} into ${M(goal)} you need odds of ${odds(res.need)} after tax. The best chance Statpad can find is ${fmtGs(m.prob)}${m.prob < 0.5 ? `, about 1 in ${one}` : ''}, with ${m.legs.length} legs:`,
+        `Kugeuza ${M(stake)} kuwa ${M(goal)} kunahitaji odds ${odds(res.need)} baada ya kodi. Nafasi bora ambayo Statpad inaweza kupata ni ${fmtGs(m.prob)}${m.prob < 0.5 ? `, karibu 1 kati ya ${one}` : ''}, kwa machaguo ${m.legs.length}:`),
+      items: m.legs.map((l) => `${l.s.label}: ${l.m.h} ${vsW()} ${l.m.a}, ${odds(l.s.price)}`),
+      tail: T(`On average it returns ${M(ev)} for your ${M(stake)}.${half ? ` Halve the goal and the chance is ${fmtGs(half.prob)}.` : ''}`, `Kwa wastani inarudisha ${M(ev)} kwa ${M(stake)} yako.${half ? ` Ukipunguza lengo kwa nusu, nafasi ni ${fmtGs(half.prob)}.` : ''}`),
+      acts: [[T('Add all to the coupon', 'Weka yote kwenye kuponi'), 'data-gsadd="1"'], ...acts] };
+  }
   const MISS = () => ({ lead: T('Sorry, I couldn\'t match that to a question I can answer. Try one of these:', 'Samahani, sikuelewa swali hilo. Jaribu mojawapo ya haya:'), items: askExamples(), plain: true, chips: true, miss: true });
   async function askAnswer(q) {
     const t = askNorm(q), has = (re) => re.test(t), C = S.ask.ctx || null;
@@ -4685,6 +4787,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const lk = askLeague(t, []) || (found[0] && [...(askTeams().teams.get(found[0].names[0]) || { lks: [] }).lks][0]);
       return set({ k: 'title', kind }, aTitle(lk, kind));
     }
+    const gq = askGoalQ(q, t);
+    if (gq) return set(null, aGoal(gq.stake, gq.goal));
     if (has(/\b(stakes?|big(gest)? games?|most important|matters? most|mechi kubwa|muhimu|hatarini)\b/)) return set({ k: 'stakes' }, aStakes(anyDay ? askDay(t) : null));
     if (has(/\b(value|edge|best price|overpriced|underpriced|thamani)\b/)) return set({ k: 'value' }, aValue(anyDay ? askDay(t) : null));
     const mt = t.match(/\bodds? (?:of )?(\d+(?:\.\d+)?)\b|\b(\d+(?:\.\d+)?) ?(?:x |-)?odds?\b/);
@@ -4903,6 +5007,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (t.dataset.asklang) { askAbortRec(); S.ask.lang = t.dataset.asklang; S.ask.ctx = null; store.set('askLang', S.ask.lang); renderAskSheet(); return; }
     if (t.dataset.askslip) { const s = S.askSlip; if (!s) return; for (const l of s.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: null, from: s.tier }); saveCoupon(); toast(T(`${s.legs.length} legs added to the coupon`, `Machaguo ${s.legs.length} yamewekwa kwenye kuponi`)); return; }
     if (t.dataset.askbets) { closeSheet(); S.bseg = 'mine'; store.set('bseg', 'mine'); setTab('coupon'); return; }
+    if (t.dataset.askgo === 'goal') { closeSheet(); S.sseg = 'goal'; store.set('sseg', 'goal'); setTab('slips'); return; }
     if (t.dataset.askgo) { closeSheet(); setTab(t.dataset.askgo); }
   });
   document.addEventListener('submit', (e) => {
@@ -4913,6 +5018,353 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   document.addEventListener('change', (e) => {
     if (e.target.id === 'askVoice') S.ask.voiceOut = e.target.checked;
     if (e.target.id === 'askSil') { S.ask.sil = +e.target.value; store.set('askSil2', S.ask.sil); renderAskMic(); }
+  });
+
+  // ---------------- live shock map: every game in play on a world map, pulsing as its chances move ----------------
+  const GEO_MASK = 'k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|7m.1.3.3.2.p.bg|5i.1.2.5.2.h.2.6.10.5.3.13.b8|58.5.3.15.c.3.2.1.4.5.4.2.1.12.bf|4x.1i.7.5.1.1v.2.5.9.6.3z.2.6q|4s.4.6.6.2.d.1.p.9.26.2.h.3s.5.22.2.4o|4q.8.5.3.1.c.4.k.6.2u.3e.2.1.1.1.5.6.6.4.5.2.3.1l.a.4k|4o.e.1.2.2.5.2.q.6.2n.1.5.1z.1.1.2.3.1.2.3.17.4.6.4.2.1.1.2.1.2.1v.a.4m|4o.i.2.8.2.f.1.3.d.2i.2.2.1l.7.1.1.2.4.2.2.2.b.3n.2.2.c.4g|45.5.l.f.1.i.k.2l.1o.1.1.7.1.6.8.2.3x.9.5.3.4a|49.7.3.3.7.c.1.p.9.2q.1r.1.2.j.4e.9.46|4d.4.3.5.7.3.1.1.1.1.2.o.6.2u.4.1.1s.1.4.7.4.3.4a.7.6.1.43|3n.1.2.6.f.3.a.5.b.4.1.f.f.2u.3.1.1v.5.6.7.8m|3d.8.k.2.s.1.6.a.1.2.n.2r.1.1.1u.6.3z.1.o.8.45|3b.9.3.2.8.2.n.8.5.p.h.2m.1.1.23.2.2q.6.1s.c.2c.1.1p|37.7.6.4.1.1.6.4.9.2.1.2.1.6.9.8.g.2.m.9.1.1.2.2c.3.1.4f.2.2.a.1j.3.5.q.1.1.3p|3e.2.2.b.5.7.6.9.c.6.a.6.18.27.4c.c.1k.14.1.2.17.1.3.6.1.7.1z|3h.n.2.3.7.4.4.5.2.q.17.23.1.1.1.2.46.8.1j.1e.1b.b.1.4.2.5.1.1.1p|3o.7.v.3.3.h.1.6.1a.20.1.2.47.8.1g.1.1.1e.1h.2.29|33.9.3.2.3e.21.46.7.1k.1b.4.2.1j.1.26|34.g.k.2.8.8.4.9.6.5.8.1.1d.1p.1.9.45.7.1i.1.1.3.1.16.2.2.1.2.2.1.1j.4.22|33.g.2.3.c.1.3.3.8.5.5.8.5.6.2.8.1.8.16.1m.2.4.4a.5.s.3.i.b.1.13.4.l.a.a.s.2.21|32.d.1.7.2.4.3.2.2.5.6.2.2.7.3.3.2.2.5.6.2.a.1d.2.1.1k.1.8.45.6.r.7.5.1.7.1.2.1t.1.v.o.2.24|31.c.3.j.1.6.8.9.3.2.8.7.3.8.2.4.1.5.13.1r.2.2.45.6.q.8.5.1.5.4.4.2k.1.2.j.a.2.8.1q|33.8.3.m.1.6.a.5.3.3.8.8.1.l.2.1.10.4.1.1q.43.8.q.8.2.4.1.b.2.1.1.2k.6.1.d.b.2.6.1q|5.15.2.1t.3.a.p.g.7.9.6.2.r.y.1.1.1j.2.6.44.1.1.5.m.b.2.5.4.9.1.2l.5.b.1.r.1j.2|14.1.1.d.1x.s.f.8.7.10.1.3.t.3.3.1b.1.4.3.5.2h.1.2.2.1.1.1.2.1.2.1e.6.k.a.3.i.1.48.15|11.r.15.1.n.5.1.m.a.a.a.f.1.i.2.1.r.2.1.1g.2.3.2l.2.1.3.1.b.1j.2.f.b.3.h.1.4a.14|y.17.j.3.1.7.3.1.3.3.9.t.1.2.5.2.4.6.e.3.7.2.5.i.1.1.o.6.1.1.1.1i.2c.2.1.j.1.2.1.3.1h.6.9.b.2.4t.g.3.2.c.7|x.1e.5.7.1.q.a.e.1.9.7.5.3.1.1.5.3.1.7.8.5.1.2.1.3.i.v.1g.2c.z.1.1.q.3.l.9.6.9.3.59.5.h.1|2.q.2v.2.9.4.3.7.1.6.6.4.6.1.4.6.7.a.1.3.c.z.1e.29.4.2.14.m.1.8.2.8.3.2.d.4.8.3.5.1.4n.1.11|5.n.2u.d.2.2.3.d.4.4.c.3.1.1.7.c.3.3.d.1.1.r.1.1.17.2f.1.1.1.2.1a.a.4.9.6.1.1.1.10.3.6.1.5o|9.m.2s.5.5.3.b.3.3.1.2.2.2.1.f.3.9.9.5.5.g.m.1.2.1.1.10.2o.1f.7.3.7.1c.4.5u|a.m.34.1.14.1.b.9.1.9.i.i.15.2q.1f.6.3.5.1c.4.5w|a.2.5.i.31.1.1a.1.4.i.n.h.12.2n.13.2.e.7.1d.2.3.3.5y|1.1.i.8.4.6.46.2.1.k.e.2.8.i.v.1.4.p.2.b.3.1k.1.1.14.6.6.4.3.1.7k|1.2.g.6.4b.2.5.1.3.m.b.5.6.j.3.1.r.s.4.2.c.1i.k.4.l.b.7r|1.7.7.c.4e.3.4.d.l.4.3.m.p.z.i.1h.h.8.i.b.7s|b.3.d.9.2.43.2.8.9.6.1.g.1.1.r.1.3.j.x.1.2.h.1f.j.7.l.3.5.2.7i.1.2.1.4.2|12.42.3.a.9.1.7.f.s.k.1.1.11.d.1g.l.6.o.4.7t.3|12.3t.1.4.6.6.3.4.g.g.q.m.14.6.1g.1.1.m.5.8n.3|j.4.c.40.a.1.d.2.c.7.2.4.s.k.2q.m.6.8q.2|u.41.i.3.m.1.2.5.3.1.t.h.2q.m.6.8o.1.4.1|t.41.j.1.6.1.3.6.1.3.9.5.x.e.1z.1.o.o.8.7v.2.o.8|s.41.r.1.3.c.19.e.2n.p.8.7k.6.5.2.k.c|t.t.2.34.x.c.1a.c.2n.o.9.7i.7.3.5.h.f|u.1.2.n.1.6.4.2w.y.g.17.1.3.7.2n.p.8.7h.8.1.5.h.h|q.3.2.o.2.9.5.2s.y.g.2.1.6.1.12.2.1.2.2b.1.c.r.2.1.4.7.7.70.e.7.2.1.6.1.j|10.i.2.4.i.2.1.2h.z.g.8.3.3u.1.1.q.j.70.d.5.x|10.g.4.2.o.2g.y.h.8.4.3t.1.1.9.1.f.a.6m.7.1.b.6.a.6.y|10.1.4.1.1.2.1.7.v.3.1.2b.1.1.u.h.1.2.4.7.3t.8.3.c.d.6l.z.6.2.1.w|19.7.2.2.w.2.1.2b.v.t.34.1.2.4.k.4.6.a.b.1.4.6g.10.7.10|19.4.3.3.x.1.2.1.1.2a.v.u.35.3.v.a.4.1.b.6f.y.c.y|17.4.4.3.y.2.1.1.1.2a.w.t.33.9.n.2.3.9.3.1.6.3.3.6d.10.c.y|16.3.19.2.3.2g.o.u.33.7.m.4.4.9.8.6j.z.e.y|13.4.1b.1.2.1.1.2h.h.2.4.u.34.6.l.6.4.6.a.6i.10.f.x|10.4.1h.2.2.2i.j.x.30.1.2.6.k.4.4.1.1.2.e.6g.11.d.10|y.2.2.1.1i.2s.b.z.1.1.2w.1.4.7.k.2.1.5.4.1.c.6e.13.d.10|v.3.1o.1.5.2o.5.17.2r.6.4.4.k.3.2.2.b.2.3.6f.4.1.z.d.b.1.o|2s.2n.6.16.2p.9.4.6.j.4.2.2.6.6q.3.1.1.1.5.1.q.8.14|q.1.1v.1.4.2p.6.12.2.5.2l.8.6.6.h.b.1.6u.2.4.4.1.q.8.14|n.1.1z.1.5.1.1.2l.6.1a.2l.7.3.a.a.7k.1.2.q.8.14|2o.1.4.1.1.2l.2.1.3.1a.2l.7.4.b.6.7m.1.3.p.5.17|b.1.2d.1.7.2j.7.1a.2i.8.4.c.6.7p.r.4.17|5.2.2p.2n.3.19.2l.3.7.c.6.7m.2.3.q.3.18|2x.2n.1.16.3.2.2y.9.3.7n.3.3.q.2.19|2v.2.2.3r.4.2.2v.7.5.7q.3.3.p.1.1b|2w.3g.5.1.2.4.5.2.2u.1.2.1.a.7q.3.4.m.2.1c|2y.4.2.36.6.2.a.2.1.1.35.7s.3.4.20|30.4.2.32.a.2.8.5.1.3.2w.7w.3.2.2.1.1z|32.3.2.2z.2.7.c.9.2t.1.3.7v.4.2.22|33.1.3.2y.1.9.b.b.2q.81.4.1.23|33.3.1.2x.1.9.b.a.2.2.2q.7y.5.1.23|34.3a.j.1.2.2.2u.29.1.5k.6.2.22|34.3a.1.1.6.1.e.1.2u.26.3.n.6.4r.7.3.21|35.2t.1.g.2.2.2.3.3a.1r.2.8.6.l.8.4q.8.1.23|34.3e.3.1.1.1.3a.s.1.x.6.4.6.k.a.4p.o.1.1o|34.2r.1.g.4.6.3c.q.3.w.7.7.1.l.8.4r.9.2.b.1.1r|34.36.3.5.3g.r.5.s.9.2.6.j.8.4r.b.2.8.1.1t|34.32.6.3.3i.k.2.6.5.r.l.g.7.4r.b.4.3.1.1x|34.30.8.2.3j.i.6.5.6.p.m.g.7.4p.c.7.1y|33.30.3f.p.4.2.8.7.6.m.p.e.8.4h.1.4.e.8.1x|33.2z.3g.o.e.1.1.6.8.k.r.c.a.4e.3.1.d.8.20|33.2z.3h.n.b.2.4.6.9.i.r.d.9.4c.j.1.4.2.21|34.2z.3f.o.b.2.6.7.7.h.9.6.c.e.8.1.2.48.k.1.27|34.2u.3l.l.n.6.6.j.5.b.8.g.b.46.n.1.25|34.2u.3l.j.e.3.a.6.4.9.1.1.2.3.5.13.7.1.2.3p.2.f.l.3.25|33.2t.3m.j.g.2.b.4.2.1.2.6.1.3.4.1a.6.3s.3.d.n.4.24|34.2s.3m.i.5.2.a.2.d.1.6.7.6.1b.8.3o.4.4.2.6.p.4.24|34.2n.1.1.1.1.3m.i.i.2.d.2.7.6.5.1b.8.3n.5.1.7.4.p.4.24|35.2m.1.2.2n.1.z.j.w.1.9.4.8.18.a.3j.g.5.n.4.25|36.2k.2.2.3o.h.w.2.a.1.2.3.4.19.a.3k.e.7.m.3.26|38.2j.1.1.2s.1.w.g.r.5.b.1.1.3.7.19.a.3m.3.1.b.5.k.4.26|37.2k.3r.e.n.1.7.3.d.3.9.1a.7.3m.2.5.9.5.i.5.26|38.2k.3v.5.2.1.b.4.1.b.7.1.p.6.2.6.1.1.1.u.4.3t.9.7.e.8.27|38.2k.3w.1.c.k.12.1.5.3.4.4p.c.6.7.1.5.9.27|39.2k.3v.1.a.n.1e.4o.d.6.d.a.26|3a.2h.3x.3.1.1.4.p.p.4.1.1.d.2.4.4n.e.6.6.d.2.1.27|3b.2g.3w.10.16.2.5.4m.f.1.a.5.1.3.2.2.2b|3d.2b.3z.x.1f.4q.h.1.3.3.2.6.2f|3g.26.3z.11.1d.4q.i.1.1.1.3.4.2.1.2g|3h.24.3y.13.1c.4r.b.1.6.5.1.1.2m|3h.23.3i.1.f.1a.e.3.p.4s.f.1.2.4.2o|3i.21.3y.1e.9.6.o.4t.i.2.2p|3j.1z.3z.1e.9.a.j.4v.f.4.2p|3j.3.4.1r.3z.1h.7.f.5.5.3.4v.39|3k.3.3.1r.3z.1k.4.5n.39|3k.3.3.19.1.1.2.1.4.9.40.78.1.1.39|3l.3.3.z.1.1.2.7.8.1.3.5.3y.39.4.3z.38|3m.4.2.y.8.2.1.1.c.4.3x.2e.1.3.1.q.5.3z.38|3n.3.2.x.q.4.3h.1.d.2j.1.r.5.3x.39|3l.1.2.2.3.t.t.4.3j.1.a.2h.1.u.6.3v.g.1.2t|3m.1.1.3.4.q.t.5.3r.2l.4.r.6.3t.3b|3n.5.3.q.u.5.3p.2n.4.r.7.3r.3b|3q.3.3.p.v.4.3p.2n.4.s.7.3.1.1.2.3h.h.1.2v|3r.2.4.o.v.4.3n.2p.5.r.e.3h.g.1.2w|3s.1.4.p.v.3.3n.2q.5.q.2.1.9.1.2.3g.3d|3s.2.5.m.x.1.3n.2s.4.r.1.1.8.2.9.3.1.1.6.2y.3d|3s.3.5.l.12.1.3i.2s.4.t.6.4.l.2v.5.2.38|3t.3.5.k.13.1.3g.2u.4.t.5.5.l.2t.5.2.39|3v.2.5.j.4j.2v.6.13.k.2r.5.3.39|3w.1.6.h.4k.2v.6.15.j.2o.7.3.39|44.g.s.9.a.1.37.2x.6.15.m.14.1.1c.a.2.3a|45.f.r.2.3.7.3g.2y.5.16.i.6.1.11.2.17.e.1.3a|45.g.t.1.5.5.3d.30.4.15.k.5.1.y.5.14.3s|46.f.f.6.h.4.3b.30.4.14.m.4.1.t.a.v.5.1.3v|1b.1.2t.h.d.7.i.4.3b.2z.5.12.o.1.4.s.b.s.7.1.3v|45.h.d.6.k.7.38.2y.6.10.1.1.s.r.d.r.43|1c.2.2r.i.c.6.s.3.1.2.30.30.7.x.u.p.h.p.7.3.3u|1c.1.2t.i.a.7.t.8.2x.30.7.y.u.o.h.p.5.4.3v|48.g.9.8.u.8.2x.2z.7.w.w.n.j.n.6.4.3v|4a.h.1.c.j.4.5.6.1.1.2.1.3.3.2r.31.6.u.x.m.l.n.t.4.37|4d.r.1a.1.2p.31.7.r.z.l.m.o.s.3.38|4e.p.41.32.7.p.10.j.o.p.r.4.37|4h.m.40.33.7.m.14.i.o.3.1.1.1.k.q.4.37|4j.7.1.c.1h.2.2h.33.8.j.16.f.q.4.3.l.p.3.38|4m.2.5.a.1.8.3r.34.6.j.17.e.y.m.n.3.39|4u.i.3c.1.d.35.6.i.19.c.10.m.m.3.39|4v.i.3o.39.4.d.1d.c.10.m.o.1.39|4w.i.3o.39.3.c.1f.b.10.m.n.2.2.1.36|50.d.3q.39.1.1.1.8.1i.b.10.m.m.1.1.1.1.1.1.3.33|52.2.1.8.18.1.2g.3b.1.5.1m.c.10.3.2.h.m.2.4.1.34|55.8.3p.3c.1.2.1p.a.p.1.b.3.2.h.n.1.39|56.7.n.2.31.3c.1r.a.11.3.5.d.o.1.3.2.1.2.31|57.6.m.2.34.39.f.1.1d.9.p.1.b.3.6.c.q.1.5.1.31|58.4.k.4.3.4.2x.3b.a.5.1e.8.11.2.7.c.q.2.1.1.1.2.31|59.4.g.e.e.1.2l.39.3.b.1e.8.10.3.7.a.s.1.1.1.35|58.5.g.7.1.b.3.4.2.1.2l.3n.1e.7.12.1.b.4.p.1.7.2.34|59.1.1.3.f.7.2.j.2o.3l.1f.5.2.1.10.1.c.3.o.1.7.1.2.1.33|5c.3.5.4.4.8.2.k.2n.3k.1g.6.1.2.z.3.a.2.o.1.9.1.4.1.30|5d.8.2.2.2.v.2o.3j.1g.3.4.2.y.4.z.1.e.3.2z|5g.3.4.12.2l.3i.1i.2.4.3.y.4.19.7.2z|5h.3.3.13.2l.3h.1o.3.z.2.18.3.1.5.2z|5i.1.5.13.2l.3f.1p.4.z.2.x.1.9.1.3.3.1.1.2z|5p.13.2l.3d.1q.4.10.3.u.2.d.3.31|5p.14.2m.p.5.2h.1q.3.11.4.s.3.d.3.31|5p.1b.2g.k.a.2g.2v.4.r.5.d.1.31|5p.1e.2e.c.1.4.d.2e.2l.4.7.5.p.8.3d|5p.1f.2f.4.o.2d.2n.5.5.6.m.8.3f|5p.1g.3d.26.2o.5.4.6.l.8.3g|5q.1g.3b.1.1.24.2q.5.4.5.9.1.a.8.3h|5p.1h.3e.22.2s.5.4.4.j.9.3h|5o.1i.3e.21.2q.1.3.5.3.4.g.d.3g|5n.1k.3d.1z.2x.5.3.4.e.e.k.1.2v|19.1.4c.1m.3b.1z.2z.6.3.2.b.1.2.e.j.1.2w|5m.1m.3b.1x.2y.1.3.7.d.j.5.1.6.1.5.2.2v|5k.1n.3c.1w.30.1.2.7.d.i.4.9.6.2.2v|5k.1n.1.1.3a.1v.35.6.1.1.b.h.k.1.2w|4x.2.k.1m.2.4.38.1u.37.7.b.h.4.1.f.1.6.1.2p|4x.1.l.1s.1.2.34.1u.38.7.c.g.4.1.6.1.7.3.6.5.3.1.2g|5i.1s.1.5.32.1u.35.1.3.8.b.e.5.2.1.3.h.6.2k|5i.1r.1.9.30.1s.3a.8.2.1.8.d.6.5.5.1.a.1.3.4.4.2.1.2.2b|5i.21.30.1r.39.1.2.8.a.d.5.6.l.1.7.6.29|5k.23.2x.1o.3f.a.2.1.4.d.5.3.1.2.k.1.1.3.3.b.25|5k.29.2s.1n.3f.9.c.2.1.5.6.3.1.3.7.2.3.4.4.5.1.e.i.1.1k|5i.2d.2r.1m.3g.8.h.2.1.1.6.2.1.3.8.1.7.1.4.1.1.k.20|5i.2e.2r.1k.3i.7.r.2.2.3.o.k.d.1.1.1.1i|5h.2g.2r.1i.3l.5.r.2.2.1.t.i.c.2.1j|5i.2j.2n.1i.1.1.3k.4.r.2.4.1.t.h.a.2.1k|5i.2k.2m.1i.3p.1.1h.1.2.1.7.h.4.6.6.1.1e|5i.2k.2n.1i.3p.4.1g.1.8.i.4.2.9.1.1d|5k.2i.2n.1i.3o.6.4.2.19.1.9.g.h.1.1c|5l.2h.2o.1h.3q.c.1g.h.k.1.19|5l.2h.2o.1h.3t.1.2.a.n.1.9.1.d.c.2.5.i.1.3.1.16|5m.2g.2p.1g.3z.9.f.4.p.3.2.7.5.4.i.2.18|5m.2g.2p.1g.47.1.1.1.1.3.3.4.6.4.r.6.6.4.o.1.12|5n.2e.2p.1h.4p.3.y.1.8.4.2.1.l.1.11|5n.2d.2q.1h.4g.2.6.3.19.5.k.2.12|5o.2c.2r.1h.4n.1.1e.4.1m|5o.2a.2t.1i.4l.1.25.1.z|5p.29.2u.1h.51.1.1.1.j.2.22|5q.27.2v.1h.5.1.4t.2.3.2.h.2.22|5q.26.2v.1i.h.1.4j.1.1.8.1.1.9.3.22|5r.25.2u.1j.h.1.4i.c.b.3.21|5r.23.2v.1k.h.2.4g.c.b.4.21|f.1.5c.22.2v.1k.f.4.4g.d.a.4.21|5s.22.2v.1k.f.4.48.3.4.d.1.1.9.4.21|5s.22.2u.1m.d.5.46.6.3.c.c.7.1y|5u.20.2u.1l.d.7.45.6.1.f.b.8.16.1.q|5v.1z.2u.1l.c.6.1.1.44.o.a.8.1x|5x.1x.2u.1k.9.b.43.1.1.q.8.8.19.1.m.1|5z.1v.2u.1j.a.a.42.1.1.u.5.9.19.1.k.1.2|61.1t.2t.1h.c.b.41.y.4.a.1w|1p.1.4c.1s.2t.1f.e.b.41.1c.1r.2.3|63.1q.2v.1e.e.b.41.1d.1v|63.1q.2w.1c.f.a.41.1e.1v|63.1q.2w.1a.i.9.41.1f.1u|64.1o.2y.17.k.9.3z.1i.1t|64.1n.2z.17.k.8.i.1.3e.1n.1r|64.1n.30.17.i.9.3s.1t.v.1.4.1.p|64.1m.31.17.h.a.e.1.3c.1u.w.1.t|64.1m.32.17.g.9.3q.1x.w.2.r|64.1l.34.16.g.9.3p.1y.y.1.q|63.1l.35.16.g.9.3n.23.1m|63.1g.3a.16.g.8.3p.22.1m|63.1e.3c.16.g.8.3o.24.1l|63.1b.3f.16.g.8.3o.25.1k|63.1a.3g.15.i.6.3p.26.1.1.1h|63.19.3i.11.m.3.3s.25.1.1.1h|63.18.3j.z.4j.26.1i|63.18.3j.10.4g.1.1.26.1i|62.19.3j.10.4h.27.1i|62.19.3k.z.4i.26.1i|62.19.3k.y.4j.27.1h|62.19.3l.x.4k.26.1h|61.19.3n.v.4l.26.1h|61.18.3p.t.4n.25.1h|61.17.3q.s.4o.25.1h|61.14.1.2.3r.r.4o.24.1i|61.14.3u.q.4p.24.1i|61.14.3v.o.4r.23.1i|61.13.3w.n.4s.r.6.16.1i|61.13.3x.l.4t.o.c.12.1j|61.12.3x.k.4v.j.i.10.1k|61.12.3x.j.4w.h.l.6.1.r.1l|60.11.40.f.4y.h.n.4.1.s.1l|60.r.1.9.41.6.56.9.w.2.2.r.1m|60.s.3.4.44.1.5c.5.y.1.3.1.1.p.1m|5z.u.aw.o.19.2.c|5z.u.as.2.3.m.1b.2.b|5y.w.ax.l.1d.1.a|5y.x.ax.k.1d.1.1.1.8|5x.x.ay.k.1d.3.8|5x.w.b0.i.1f.3.2.2.3|5x.v.b3.6.1.5.1i.8.3|5x.s.d0.7.4|5y.l.d5.6.6|5x.n.d5.5.6|5x.m.d7.3.7|5w.n.bi.1.1o.3.7|5w.i.bn.8.1b.2.1.5.8|5x.1.1.f.bo.7.1a.6.b|5w.1.1.j.bm.5.1b.5.c|5w.1.1.g.2.1.bm.5.1a.5.d|5v.2.1.g.bq.2.1a.5.f|7.1.5q.f.d1.8.e|5y.f.cz.7.h|5v.1.1.g.cy.7.i|5w.e.d0.8.i|5x.c.d1.7.j|5u.2.1.c.d2.5.k|5u.g.dq|5v.h.do|5v.1.1.f.do|5u.h.dp|5u.g.dq|5u.f.7l.1.1.1.63|5t.f.ds|5t.1.1.c.dt|5u.c.du|5u.1.1.a.du|5w.a.i.4.d8|5u.1.1.9.1.1.h.1.db|5x.1.1.3.1.4.dt|5y.2.1.1.1.4.dt|5x.2.1.2.2.5.dr|61.1.3.5.1o.1.c1|63.1.1.9.1.1.1j.1.c0|66.1.1.2.dq|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0|k0';   // land on a half-degree grid (Natural Earth), run lengths per row
+  let GEO = null;
+  function geoMask() {
+    if (GEO) return GEO;
+    const W = 720, H = 360, bits = new Uint8Array(W * H);
+    GEO_MASK.split('|').forEach((row, j) => { let i = 0, cur = 0; for (const r of row.split('.')) { const n = parseInt(r, 36); if (cur) bits.fill(1, j * W + i, j * W + i + n); i += n; cur ^= 1; } });
+    GEO = { W, H, bits }; return GEO;
+  }
+  const isLand = (lon, lat) => { const g = geoMask(), i = Math.floor((lon + 180) * 2), j = Math.floor((90 - lat) * 2); return i >= 0 && i < g.W && j >= 0 && j < g.H && g.bits[j * g.W + i] === 1; };
+  const GEO_CC = { England: [52.6, -1.6], Scotland: [56.5, -4.2], Spain: [40.2, -3.7], Italy: [42.9, 12.6], Germany: [51.1, 10.3], France: [46.7, 2.4], Netherlands: [52.2, 5.4], Portugal: [39.7, -8.1],
+    Belgium: [50.6, 4.6], 'Saudi Arabia': [24.3, 45.1], Turkey: [39.1, 34.8], Greece: [39.3, 22.0], Austria: [47.5, 14.5], Switzerland: [46.8, 8.2], Denmark: [56.0, 9.4], Norway: [61.0, 9.5],
+    Sweden: [62.0, 15.5], Poland: [52.1, 19.4], Romania: [45.9, 24.9], Czechia: [49.8, 15.4], Serbia: [44.0, 20.9], Ireland: [53.2, -8.0], Finland: [62.5, 26.0], Brazil: [-14.2, -51.9],
+    Argentina: [-34.6, -64.0], Mexico: [23.6, -102.5], USA: [39.5, -98.4], Japan: [36.2, 138.2], China: [34.5, 104.0], Europe: [49.0, 9.0], World: [20.0, 10.0] };
+  const GEO_NAT = Object.fromEntries(('Albania:41.1,20.1|Algeria:28,2.6|Andorra:42.5,1.5|Armenia:40.1,45|Australia:-25.3,133.8|Azerbaijan:40.1,47.6|Belarus:53.7,28|Bosnia and Herzegovina:44.2,17.7|Bosnia:44.2,17.7|Bulgaria:42.7,25.5|Cameroon:5.7,12.4|Canada:56.1,-106.3|Chile:-35.7,-71.5|Colombia:4.6,-74.3|Costa Rica:9.7,-83.8|Croatia:45.1,15.2|Cyprus:35.1,33.4|Ecuador:-1.8,-78.2|Egypt:26.8,30.8|Estonia:58.6,25|Faroe Islands:61.9,-6.9|Georgia:42.3,43.4|Ghana:7.9,-1|Gibraltar:36.1,-5.3|Hungary:47.2,19.5|Iceland:64.9,-19|Iran:32.4,53.7|Israel:31,34.9|Ivory Coast:7.5,-5.5|Jamaica:18.1,-77.3|Kazakhstan:48,66.9|Kenya:0,37.9|Kosovo:42.6,20.9|Latvia:56.9,24.6|Liechtenstein:47.2,9.6|Lithuania:55.2,23.9|Luxembourg:49.8,6.1|Malta:35.9,14.4|Moldova:47.4,28.4|Montenegro:42.7,19.4|Morocco:31.8,-7.1|Nigeria:9.1,8.7|North Macedonia:41.6,21.7|Northern Ireland:54.8,-6.5|Panama:8.5,-80.8|Paraguay:-23.4,-58.4|Peru:-9.2,-75|Qatar:25.4,51.2|San Marino:43.9,12.5|Senegal:14.5,-14.5|Slovakia:48.7,19.7|Slovenia:46.2,15|South Africa:-30.6,22.9|South Korea:35.9,127.8|Korea Republic:35.9,127.8|Tunisia:33.9,9.5|Uganda:1.4,32.3|Ukraine:48.4,31.2|Uruguay:-32.5,-55.8|Wales:52.1,-3.8|Venezuela:6.4,-66.6|United States:39.5,-98.4|Mexico:23.6,-102.5|New Zealand:-40.9,174.9|Russia:56,38|DR Congo:-4,21.8|Mali:17.6,-4|Zambia:-13.1,27.8|Tanzania:-6.4,34.9|Rwanda:-1.9,29.9|Ethiopia:9.1,40.5').split('|').map((x) => { const [n, c] = x.split(':'); return [n, c.split(',').map(Number)]; }));
+  function geoOf(m) {
+    const info = lgInfo(m.lk), c = info.country;
+    if (c && GEO_CC[c] && c !== 'Europe' && c !== 'World') return GEO_CC[c];
+    const nat = GEO_NAT[m.h] || GEO_CC[m.h]; if (nat) return nat;
+    const tm = askTeams().teams.get(m.h);   // a club in a European cup: its own league's country
+    if (tm) for (const lk of tm.lks) { const cc = lgInfo(lk).country; if (cc && GEO_CC[cc] && cc !== 'Europe' && cc !== 'World') return GEO_CC[cc]; }
+    return GEO_CC[c] || null;
+  }
+  const SHK_COL = { shock: '#ff3d7f', wobble: '#ffc24d', calm: '#3fd6ff', done: '#9aa8b5', soon: '#6b7a88' };
+  function shockOf(r) {
+    const L = liveNow(r.m.id); if (!L || !r.a) return null;
+    const pre = r.a.p, fin = L.ft ? { H: +(L.h > L.a), D: +(L.h === L.a), A: +(L.h < L.a) } : liveP(r, L);
+    const fav = pre.H >= pre.A ? 'H' : 'A', dog = fav === 'H' ? 'A' : 'H';
+    const drop = Math.max(0, pre[fav] - fin[fav]);
+    let recent = 0, thenFav = pre[fav];   // how far the chances moved in the last ten minutes
+    if (!L.ft && L.min > 10) {
+      const t = L.min - 10, upto = (s) => L.goals.filter((g) => g[0] <= t && g[1] === s).length, rd = (s) => L.reds.filter((g) => g[0] <= t && g[1] === s).length;
+      const then = livePH(r.a.lh, r.a.la, upto('h'), upto('a'), t, t <= 45 ? '1H' : '2H', rd('h'), rd('a'));
+      recent = Math.max(Math.abs(fin.H - then.H), Math.abs(fin.A - then.A)); thenFav = then[fav];
+    }
+    const shock = Math.min(1, Math.max(drop, 0.55 * drop / Math.max(0.2, pre[fav]), recent * 0.8));   // a 36% favourite falling to 8% is a shock too
+    const lv = L.ft ? (fin[fav] === 0 ? 'shock' : 'done') : shock >= 0.35 ? 'shock' : shock >= 0.15 ? 'wobble' : 'calm';
+    const favN = fav === 'H' ? r.m.h : r.m.a, dogN = dog === 'H' ? r.m.h : r.m.a, dl = (dog === 'H' ? L.h - L.a : L.a - L.h);
+    let what;
+    if (L.ft) what = fin[fav] === 0 ? (fin.D ? `${favN} held to a draw` : `Upset: ${dogN} beat ${favN}`) : `${favN} did the job`;
+    else if (dl > 0) what = `${dogN} lead the favourites`;
+    else if (dl === 0 && drop >= 0.15) what = `${favN} being held`;
+    else if (recent >= 0.15) what = fin[fav] < thenFav ? `${favN} wobbling` : dl < 0 ? `${favN} pulling away` : `${favN} fighting back`;
+    else what = 'Going to plan';
+    return { r, L, pre, now: fin, fav, favN, dogN, drop, recent, shock, lv, what };
+  }
+  const shkAbbr = (n) => String(n).replace(/^(FC|AFC|AC|AS|SC|SV|VfB|VfL|TSG|1\.|RB|Real|Club|Sporting|Athletic)\s+/i, '').replace(/[^A-Za-zÀ-ž]/g, '').slice(0, 3).toUpperCase();
+  function shockGames() {
+    const now = Date.now(), out = [], seen = new Map();
+    for (const r of S.rows) {
+      if (!r.a) continue;
+      const s = shockOf(r), soon = !s && !r.started && r.ko > now && r.ko - now < 4 * 3600e3;
+      if (!s && !soon) continue;
+      if (s && s.L.ft && now - s.L.at > 3 * 3600e3) continue;
+      const base = geoOf(r.m); if (!base) continue;
+      const key = base.join(','), k = seen.get(key) || 0; seen.set(key, k + 1);
+      const a = k * 2.4, d = k ? 0.75 * Math.sqrt(k) : 0;   // games in one country spread out in a spiral
+      out.push(Object.assign(s || { r, lv: 'soon', shock: 0 }, { lat: base[0] + d * Math.sin(a), lon: base[1] + d * Math.cos(a) / Math.cos(base[0] * Math.PI / 180) }));
+    }
+    return out.sort((x, y) => (y.shock || 0) - (x.shock || 0));
+  }
+  // ---- drawing
+  S.shk = { games: [], cvs: new Set(), raf: 0, io: null };
+  function shkView(cv, G) {
+    const W = cv.clientWidth, H = cv.clientHeight, pts = G.length ? G : [{ lat: 48, lon: 8 }];
+    let lo0 = Math.min(...pts.map((g) => g.lon)), lo1 = Math.max(...pts.map((g) => g.lon)), la0 = Math.min(...pts.map((g) => g.lat)), la1 = Math.max(...pts.map((g) => g.lat));
+    const padLo = Math.max(6, (lo1 - lo0) * 0.12), padLa = Math.max(4, (la1 - la0) * 0.14);
+    lo0 -= padLo; lo1 += padLo; la0 -= padLa; la1 += padLa;
+    const midLa = (la0 + la1) / 2, kx = Math.cos(midLa * Math.PI / 180);
+    let spLo = Math.max(28, lo1 - lo0), spLa = Math.max(16, la1 - la0);
+    const ratio = (spLo * kx) / spLa;
+    if (ratio < W / H) spLo = spLa * (W / H) / kx; else spLa = spLo * kx / (W / H);
+    const cLo = (lo0 + lo1) / 2, cLa = midLa, sc = W / (spLo * kx);
+    return { W, H, sc, kx, cLo, cLa, px: (lon, lat) => [W / 2 + (lon - cLo) * kx * sc, H / 2 - (lat - cLa) * sc], inv: (x, y) => [cLo + (x - W / 2) / (kx * sc), cLa - (y - H / 2) / sc] };
+  }
+  function shkBase(cv, V, n, live) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1), b = document.createElement('canvas');
+    b.width = Math.round(V.W * dpr); b.height = Math.round(V.H * dpr);
+    const x = b.getContext('2d'); x.scale(dpr, dpr);
+    const g = x.createLinearGradient(0, 0, 0, V.H); g.addColorStop(0, '#071019'); g.addColorStop(1, '#03070c'); x.fillStyle = g; x.fillRect(0, 0, V.W, V.H);
+    const gl = x.createRadialGradient(V.W * 0.7, 0, 0, V.W * 0.7, 0, V.W); gl.addColorStop(0, 'rgba(63,214,255,.10)'); gl.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gl; x.fillRect(0, 0, V.W, V.H);
+    // graticule every 10 degrees
+    x.strokeStyle = 'rgba(120,170,210,.07)'; x.lineWidth = 1;
+    const [l0, t0] = V.inv(0, 0), [l1, t1] = V.inv(V.W, V.H);
+    for (let lo = Math.ceil(l0 / 10) * 10; lo <= l1; lo += 10) { const [X] = V.px(lo, 0); x.beginPath(); x.moveTo(X, 0); x.lineTo(X, V.H); x.stroke(); }
+    for (let la = Math.ceil(t1 / 10) * 10; la <= t0; la += 10) { const [, Y] = V.px(0, la); x.beginPath(); x.moveTo(0, Y); x.lineTo(V.W, Y); x.stroke(); }
+    // land as a dot matrix
+    const pitch = V.W > 600 ? 5 : 4, dr = V.W > 600 ? 1.15 : 0.95;
+    x.fillStyle = 'rgba(126,170,210,.45)';
+    for (let Y = pitch / 2; Y < V.H; Y += pitch) for (let X = pitch / 2; X < V.W; X += pitch) { const [lo, la] = V.inv(X, Y); if (isLand(lo, la)) { x.beginPath(); x.arc(X, Y, dr, 0, Math.PI * 2); x.fill(); } }
+    // scanlines, frame
+    x.fillStyle = 'rgba(255,255,255,.025)'; for (let Y = 0; Y < V.H; Y += 3) x.fillRect(0, Y, V.W, 1);
+    x.strokeStyle = 'rgba(63,214,255,.5)'; x.lineWidth = 2;
+    for (const [X, Y, sx, sy] of [[8, 8, 1, 1], [V.W - 8, 8, -1, 1], [8, V.H - 8, 1, -1], [V.W - 8, V.H - 8, -1, -1]]) { x.beginPath(); x.moveTo(X, Y + sy * 16); x.lineTo(X, Y); x.lineTo(X + sx * 16, Y); x.stroke(); }
+    x.font = `600 10px ${SF.m}`; if ('letterSpacing' in x) x.letterSpacing = '2px'; x.fillStyle = 'rgba(200,225,245,.7)';
+    x.fillText(live ? `LIVE · ${n} IN PLAY` : 'NO GAMES IN PLAY', 18, 24);
+    x.textAlign = 'right'; x.fillStyle = 'rgba(200,225,245,.45)'; x.fillText(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), V.W - 18, 24); x.textAlign = 'left';
+    return b;
+  }
+  function shkPrep(cv) {
+    const G = S.shk.games, V = shkView(cv, G), dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (cv.width !== Math.round(V.W * dpr) || cv.height !== Math.round(V.H * dpr)) { cv.width = Math.round(V.W * dpr); cv.height = Math.round(V.H * dpr); }
+    const live = G.filter((g) => g.L && !g.L.ft).length;
+    cv._v = V; cv._base = shkBase(cv, V, live, live > 0); cv._dpr = dpr; cv._key = S.shk.key;
+  }
+  function shkDraw(cv, t) {
+    if (!cv._base || cv._key !== S.shk.key || Math.abs(cv._v.W - cv.clientWidth) > 1) shkPrep(cv);
+    const x = cv.getContext('2d'), V = cv._v, dpr = cv._dpr, G = S.shk.games, still = REDUCED();
+    x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cv._base, 0, 0); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const pts = [];
+    for (const g of G) {
+      const [X, Y] = V.px(g.lon, g.lat), col = SHK_COL[g.lv], s = g.shock || 0;
+      pts.push([X, Y, g]);
+      if (g.lv === 'soon') { x.fillStyle = col; x.beginPath(); x.arc(X, Y, 3, 0, Math.PI * 2); x.fill(); continue; }
+      const live = g.L && !g.L.ft;
+      if (live) {
+        const P = 2600 - 1700 * s, reach = 10 + 46 * s;
+        for (let k = 0; k < (s > 0.3 ? 3 : 2); k++) {
+          const ph = still ? 0.45 + k * 0.2 : ((t / P) + k / 3) % 1;
+          x.strokeStyle = col; x.globalAlpha = (1 - ph) * (0.25 + 0.65 * s); x.lineWidth = 1.5 + 2 * s;
+          x.beginPath(); x.arc(X, Y, 5 + ph * reach, 0, Math.PI * 2); x.stroke();
+        }
+        x.globalAlpha = 1;
+      }
+      x.save(); x.shadowColor = col; x.shadowBlur = 8 + 18 * s; x.fillStyle = col;
+      x.beginPath(); x.arc(X, Y, live ? 3.5 + 3 * s : 3.5, 0, Math.PI * 2); live ? x.fill() : (x.lineWidth = 2, x.strokeStyle = col, x.stroke()); x.restore();
+    }
+    // labels for the biggest shocks
+    x.font = `700 10.5px ${SF.m}`; if ('letterSpacing' in x) x.letterSpacing = '1px';
+    const lab = G.filter((g) => g.L && g.lv !== 'calm' && g.lv !== 'done').slice(0, V.W > 600 ? 5 : 3), boxes = [];
+    for (const g of lab) {
+      const [X, Y] = V.px(g.lon, g.lat), txt = `${shkAbbr(g.r.m.h)} ${g.L.h}–${g.L.a} ${shkAbbr(g.r.m.a)} ${g.L.ft ? 'FT' : Math.round(g.L.min) + "'"}`, w = x.measureText(txt).width + 12;
+      let bx = X + 14, by = Y - 26; if (bx + w > V.W - 6) bx = X - 14 - w; if (by < 30) by = Y + 12;
+      for (const b of boxes) if (bx < b[0] + b[2] && bx + w > b[0] && by < b[1] + 18 && by + 18 > b[1]) by = b[1] + 21;
+      boxes.push([bx, by, w]);
+      x.strokeStyle = SHK_COL[g.lv]; x.globalAlpha = 0.6; x.lineWidth = 1; x.beginPath(); x.moveTo(X, Y); x.lineTo(bx < X ? bx + w : bx, by + 9); x.stroke(); x.globalAlpha = 1;
+      x.fillStyle = 'rgba(5,10,16,.85)'; rrPath(x, bx, by, w, 18, 4); x.fill(); x.strokeStyle = SHK_COL[g.lv]; x.stroke();
+      x.fillStyle = '#eaf4ff'; x.fillText(txt, bx + 6, by + 13);
+    }
+    cv._pts = pts;
+  }
+  const REDUCED = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function shkLoop(t) {
+    S.shk.raf = 0;
+    let any = false;
+    for (const cv of [...S.shk.cvs]) { if (!cv.isConnected) { S.shk.cvs.delete(cv); continue; } if (cv._vis && !document.hidden) { shkDraw(cv, t); any = true; } }
+    if (any && !REDUCED()) S.shk.raf = requestAnimationFrame(shkLoop);
+  }
+  function shkKick() { if (!S.shk.raf) S.shk.raf = requestAnimationFrame(shkLoop); }
+  function shkAttach() {
+    if (!S.shk.io && 'IntersectionObserver' in window) S.shk.io = new IntersectionObserver((es) => { for (const e of es) e.target._vis = e.isIntersecting; shkKick(); });
+    for (const cv of document.querySelectorAll('canvas.shk-cv')) {
+      if (S.shk.cvs.has(cv)) continue;
+      S.shk.cvs.add(cv); cv._vis = !S.shk.io; if (S.shk.io) S.shk.io.observe(cv);
+      if (cv.clientWidth) shkDraw(cv, performance.now());   // never blank, even before it scrolls into view
+    }
+    shkKick();
+  }
+  document.addEventListener('visibilitychange', shkKick);
+  function shockRefresh() {
+    S.shk.games = shockGames(); S.shk.key = (S.shk.key || 0) + 1;
+    for (const el of document.querySelectorAll('[data-shklist]')) el.innerHTML = shockList(+el.dataset.shklist);
+    shkKick();
+  }
+  function shockList(n) {
+    const G = S.shk.games.filter((g) => g.L);
+    if (!G.length) { const nx = S.shk.games.find((g) => g.lv === 'soon'); return `<p class="shk-none">${nx ? `Nothing in play yet. The map lights up at kick-off: next ${esc(nx.r.m.h)} v ${esc(nx.r.m.a)}, ${tFmt.format(nx.r.ko)}.` : 'Nothing in play right now.'}</p>`; }
+    return G.slice(0, n).map((g) => {
+      const fp = g.pre[g.fav], np = g.now[g.fav];
+      return `<button type="button" class="shk-row ${g.lv}" data-open="${esc(g.r.m.id)}"><span class="shk-sc"><b>${Math.round((g.shock || 0) * 100)}</b><small>${g.lv === 'shock' ? 'shock' : 'shift'}</small></span>
+        <span class="shk-tx"><b>${esc(g.r.m.h)} ${g.L.h}–${g.L.a} ${esc(g.r.m.a)}</b><small>${g.L.ft ? 'Full time' : g.L.st === 'HT' ? 'Half time' : Math.round(g.L.min) + "'"} · ${esc(g.what)} · ${esc(g.favN)} to win ${pct(fp)} → ${g.L.ft ? (np ? 'won' : 'didn’t') : pct(np)}</small></span></button>`;
+    }).join('');
+  }
+  function shockCard(rows) {
+    const live = S.shk.games.filter((g) => g.L && !g.L.ft);
+    if (!live.length) return '';
+    return `<div class="shk"><div class="shk-h"><h3><span class="live-dot"></span>Live shock map</h3><button type="button" class="linkbtn" data-shockmap="1">Full screen</button></div>
+      <canvas class="shk-cv" data-shkcv="card" role="img" aria-label="Map of the games in play"></canvas><div class="shk-list" data-shklist="3">${shockList(3)}</div></div>`;
+  }
+  function openShock(opener) {
+    S.shk.games = shockGames(); S.shk.key = (S.shk.key || 0) + 1;
+    S.open = 'shock:'; S.opener = opener || document.activeElement;
+    renderSheet();
+    const sh = $('#sheet'); sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; $('#sheetBody').scrollTop = 0;
+  }
+  function renderShockSheet() {
+    $('#sheetTitle').textContent = 'Live shock map';
+    $('#sheetBody').innerHTML = `<canvas class="shk-cv big" data-shkcv="sheet" role="img" aria-label="Map of the games in play"></canvas>
+      <div class="shk-key"><span><i style="background:${SHK_COL.shock}"></i>Shock: the favourite's chance has collapsed</span><span><i style="background:${SHK_COL.wobble}"></i>Wobble</span><span><i style="background:${SHK_COL.calm}"></i>Going to plan</span><span><i style="background:${SHK_COL.soon}"></i>Kicks off soon</span></div>
+      <div class="shk-list" data-shklist="40">${shockList(40)}</div>
+      <p class="note">Each dot is a game, placed in its country. It pulses faster and wider the more the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes. The shock number is that fall, in percentage points. Tap a dot or a row for the match. Live scores are checked every few minutes.</p>`;
+    requestAnimationFrame(shkAttach);
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-shockmap]'); if (b) { e.stopPropagation(); openShock(b); return; }
+    const cv = e.target.closest('canvas.shk-cv'); if (!cv || !cv._pts) return;
+    const rc = cv.getBoundingClientRect(), X = e.clientX - rc.left, Y = e.clientY - rc.top;
+    let best = null; for (const [px, py, g] of cv._pts) { const d = Math.hypot(px - X, py - Y); if (d < 26 && (!best || d < best.d)) best = { d, g }; }
+    if (best) openMatch(best.g.r.m.id, cv);
+  });
+
+  // ---------------- goal seek: the best chance of turning a stake into a sum ----------------
+  // An exact search (a knapsack over log odds): one pick per match, real bookmaker prices only, and the set
+  // of legs whose odds reach the target with the highest chance of all landing. It also gives the best chance
+  // for every smaller target, which draws the "price of ambition" curve.
+  const GS_STEP = 0.02, GS_LEGS = 12;
+  S.gs = Object.assign({ stake: 10000, goal: 500000, days: 1, value: false }, store.get('goalseek', {}));
+  S.sseg = store.get('sseg', 'slips') === 'goal' ? 'goal' : 'slips';
+  function gsOdds(stake, goal, tax) { return 1 + (goal / stake - 1) / Math.max(0.05, 1 - tax); }   // tax is taken off the winnings
+  function gsRows(days) {
+    const now = Date.now(), ks = days === 1 ? [dayKey(now)] : Array.from({ length: days }, (_, i) => dayKey(now + i * 86400e3));
+    let rows = S.rows.filter((r) => !r.started && r.a && r.ko > now && ks.includes(r.day));
+    if (days === 1 && rows.length < 4) { const nx = briefingDay(); if (nx) rows = S.rows.filter((r) => !r.started && r.a && r.ko > now && r.day === nx.key); }
+    return rows;
+  }
+  function gsCands(rows, valueOnly) {
+    const out = [];
+    for (const r of rows) {
+      const ss = r.a.sels.filter((s) => !s.x && s.real && s.price >= 1.05 && s.pAdj > 0.02 && s.pAdj < 0.995 && (!valueOnly || (s.edge != null && s.edge >= 0)));
+      ss.sort((a, b) => b.price - a.price);
+      const front = []; let bp = -1;
+      for (const s of ss) if (s.pAdj > bp + 1e-9) { front.push(s); bp = s.pAdj; }   // nothing else pays more and lands more often
+      if (front.length) out.push({ r, opts: front.slice(0, 10) });
+    }
+    const eff = (o) => Math.max(...o.opts.map((s) => Math.log(s.price) / -Math.log(s.pAdj)));
+    return out.sort((a, b) => eff(b) - eff(a)).slice(0, 90);
+  }
+  function gsSolve(rows, maxOdds, valueOnly) {
+    const C = gsCands(rows, valueOnly), TB = Math.max(2, Math.ceil(Math.log(Math.max(1.06, maxOdds)) / GS_STEP)), W = TB + 1, N = GS_LEGS;
+    let dp = new Float64Array((N + 1) * W).fill(-Infinity); dp[0] = 0;
+    const back = [];
+    for (const c of C) {
+      const nd = dp.slice(), ch = new Int32Array((N + 1) * W).fill(-1);
+      const st = c.opts.map((s) => [Math.max(1, Math.round(Math.log(s.price) / GS_STEP)), Math.log(s.pAdj)]);
+      for (let n = 0; n < N; n++) for (let b = 0; b < W; b++) {
+        const v = dp[n * W + b]; if (v === -Infinity) continue;
+        for (let k = 0; k < st.length; k++) { const nb = Math.min(TB, b + st[k][0]), nv = v + st[k][1], ix = (n + 1) * W + nb; if (nv > nd[ix]) { nd[ix] = nv; ch[ix] = b * 16 + k; } }
+      }
+      back.push(ch); dp = nd;
+    }
+    // best chance for odds of at least each bucket
+    const best = new Float64Array(W).fill(-Infinity), arg = new Int32Array(W).fill(-1);
+    for (let b = TB; b >= 0; b--) {
+      let v = b < TB ? best[b + 1] : -Infinity, a = b < TB ? arg[b + 1] : -1;
+      for (let n = 1; n <= N; n++) if (dp[n * W + b] > v) { v = dp[n * W + b]; a = n * W + b; }
+      best[b] = v; arg[b] = a;
+    }
+    const legsAt = (ix) => {
+      const legs = []; let n = Math.floor(ix / W), b = ix % W;
+      for (let i = C.length - 1; i >= 0 && n > 0; i--) { const c = back[i][n * W + b]; if (c < 0) continue; const k = c % 16; legs.push({ m: C[i].r.m, a: C[i].r.a, r: C[i].r, s: C[i].opts[k] }); b = Math.floor(c / 16); n--; }
+      return legs.reverse();
+    };
+    const pick = (odds) => {   // the best slip paying at least these odds (rounding is checked on the real prices)
+      let b = Math.max(0, Math.ceil(Math.log(odds) / GS_STEP - 1e-9));
+      for (let tries = 0; tries < 6 && b <= TB; tries++, b++) {
+        if (arg[b] < 0) return null;
+        const legs = legsAt(arg[b]), o = legs.reduce((a, l) => a * l.s.price, 1);
+        if (o >= odds * 0.999) return { legs, odds: o, prob: legs.reduce((a, l) => a * l.s.pAdj, 1) };
+      }
+      return null;
+    };
+    const curve = []; for (let b = Math.round(Math.log(1.3) / GS_STEP); b <= TB; b++) if (best[b] > -Infinity) curve.push([Math.exp(b * GS_STEP), Math.exp(best[b])]);
+    return { pick, curve, n: C.length };
+  }
+  function gsRun() {
+    const g = S.gs, tax = S.bcfg.tax, need = gsOdds(g.stake, g.goal, tax), rows = gsRows(g.days);
+    if (!(g.stake > 0) || !(g.goal > g.stake)) return { err: 'Set a goal bigger than your stake.' };
+    const sol = gsSolve(rows, Math.min(1e5, need * 2.5), false);
+    const res = { need, tax, rows: rows.length, sol, main: sol.pick(need) };
+    if (g.value) { const sv = gsSolve(rows, need * 1.05, true); res.value = sv.pick(need); }
+    return res;
+  }
+  const gsMoney = (x) => `${esc(S.bcfg.cur)} ${Math.round(x).toLocaleString('en-US')}`;
+  const gsOne = (p) => (p >= 0.5 ? '' : `about 1 in ${p > 0 ? Math.round(1 / p).toLocaleString('en-US') : '∞'}`);
+  function gsNet(stake, odds) { return collectFor(stake, odds, 0, S.bcfg.tax).net; }
+  function gsChart(res) {
+    const g = S.gs, pts = res.sol.curve.map(([o, p]) => [gsNet(g.stake, o), p]).filter(([v]) => v > g.stake * 1.2);
+    if (pts.length < 3) return '';
+    const W = 380, H = 220, L = 40, R = 10, T = 12, B = 28, v0 = pts[0][0], v1 = pts[pts.length - 1][0];
+    const pMin = Math.max(1e-4, Math.min(...pts.map((x) => x[1]))), pMax = Math.min(1, Math.max(...pts.map((x) => x[1])));
+    const X = (v) => L + (W - L - R) * Math.log(v / v0) / Math.log(v1 / v0), Y = (p) => T + (H - T - B) * (Math.log(pMax) - Math.log(Math.max(pMin, p))) / Math.max(1e-6, Math.log(pMax) - Math.log(pMin));
+    const path = pts.map(([v, p], i) => `${i ? 'L' : 'M'}${X(v).toFixed(1)},${Y(p).toFixed(1)}`).join('');
+    const gx = X(Math.min(v1, Math.max(v0, g.goal))), gp = res.main ? res.main.prob : null;
+    const yt = [0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001].filter((p) => p <= pMax * 1.02 && p >= pMin * 0.98);
+    const xt = [2, 5, 10, 20, 50, 100, 200, 500, 1000, 5000].map((k) => k * g.stake).filter((v) => v >= v0 && v <= v1);
+    return `<svg class="gs-ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Best chance for each amount you could aim for">
+      ${yt.map((p) => `<line x1="${L}" x2="${W - R}" y1="${Y(p)}" y2="${Y(p)}" class="gr"/><text x="${L - 6}" y="${Y(p) + 4}" text-anchor="end">${p >= 0.01 ? Math.round(p * 100) + '%' : (p * 100).toFixed(1) + '%'}</text>`).join('')}
+      ${xt.map((v) => `<line x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H - B}" class="gr"/><text x="${X(v)}" y="${H - B + 17}" text-anchor="middle">×${Math.round(v / g.stake)}</text>`).join('')}
+      <path d="${path}L${X(v1)},${H - B}L${X(v0)},${H - B}Z" class="ar"/><path d="${path}" class="ln"/>
+      ${gp ? (() => { const lab = `Your goal: ${fmtGs(gp)}`, lw = lab.length * 7.4 + 14, right = gx > W - lw - 24, lx = right ? gx - 12 - lw : gx + 12, ly = Math.min(H - B - 26, Math.max(T, Y(gp) - 34));
+        return `<line x1="${gx}" x2="${gx}" y1="${T}" y2="${H - B}" class="gl"/><circle cx="${gx}" cy="${Y(gp)}" r="5.5" class="gd"/><rect x="${lx}" y="${ly}" width="${lw}" height="22" rx="6" class="gb"/><text x="${lx + 7}" y="${ly + 15}" class="gt">${lab}</text>`; })() : ''}
+    </svg>`;
+  }
+  const fmtGs = (p) => (p >= 0.1 ? Math.round(p * 100) + '%' : p >= 0.001 ? (p * 100).toFixed(1) + '%' : '<0.1%');
+  function renderGoal() {
+    const box = $('#goalBox'); if (!box) return;
+    const g = S.gs, cur = esc(S.bcfg.cur);
+    if (!box.querySelector('.gs-form')) {
+      box.innerHTML = `<div class="card gs-form">
+        <div class="gs-in"><label><span>Stake</span><span class="gs-amt"><em>${cur}</em><input id="gsStake" inputmode="numeric" autocomplete="off" value="${g.stake.toLocaleString('en-US')}"></span></label>
+          <span class="gs-arrow" aria-hidden="true">→</span>
+          <label><span>I want to collect</span><span class="gs-amt"><em>${cur}</em><input id="gsGoal" inputmode="numeric" autocomplete="off" value="${g.goal.toLocaleString('en-US')}"></span></label></div>
+        <div class="gs-chips" role="group" aria-label="Quick goals">${[10, 50, 100, 500, 1000].map((k) => `<button type="button" class="chip" data-gsx="${k}">×${k}</button>`).join('')}</div>
+        <div class="gs-opts"><div class="seg" role="group" aria-label="Games from">${[[1, 'Today'], [2, 'Today + tomorrow'], [3, 'Next 3 days']].map(([d, l]) => `<button type="button" data-gsdays="${d}" aria-pressed="${g.days === d}">${l}</button>`).join('')}</div>
+          <label class="gs-val"><input type="checkbox" id="gsValue"${g.value ? ' checked' : ''}> Only legs that beat the bookmaker's price</label></div></div>
+        <div id="gsOut"></div>`;
+    }
+    const out = $('#gsOut'); if (!out) return;
+    const res = gsRun();
+    if (res.err) { out.innerHTML = `<div class="empty-state"><b>${esc(res.err)}</b></div>`; return; }
+    const m = res.main, tx = res.tax ? ` after ${Math.round(res.tax * 100)}% tax on winnings` : '';
+    if (!m) { out.innerHTML = `<div class="empty-state"><b>Out of reach with these games</b>Turning ${gsMoney(g.stake)} into ${gsMoney(g.goal)} needs odds of ${odds(res.need)}${tx}, more than ${GS_LEGS} legs from ${res.rows} games can reach. Lower the goal or add more days.</div>`; return; }
+    const net = gsNet(g.stake, m.odds), ev = m.prob * net;
+    const half = res.sol.pick(gsOdds(g.stake, Math.max(g.stake * 1.5, g.goal / 2), res.tax)), fifth = res.sol.pick(gsOdds(g.stake, Math.max(g.stake * 1.3, g.goal / 5), res.tax));
+    const leg = (l) => `<li><div><b>${esc(l.s.label)}</b><small>${esc(l.m.h)} v ${esc(l.m.a)} · ${esc(dayLabel(l.r.day))} ${tFmt.format(l.r.ko)}</small></div><span class="gs-p">${pct(l.s.pAdj)}</span><span class="mono">${odds(l.s.price)}</span></li>`;
+    S.gsLast = m;
+    const v = res.value;
+    out.innerHTML = `<div class="gs-res">
+      <div class="card gs-hero"><div class="gs-top"><div class="gs-big"><b>${fmtGs(m.prob)}</b><span>${gsOne(m.prob) || 'chance'}</span></div>
+          <div class="gs-stats"><span><small>Best chance</small><b>${m.legs.length} legs</b></span><span><small>Total odds</small><b class="mono">${odds(m.odds)}</b></span><span><small>Pays</small><b>${gsMoney(net)}</b></span></div></div>
+        <div class="gs-sum"><p>Turning <b>${gsMoney(g.stake)}</b> into <b>${gsMoney(g.goal)}</b> needs odds of <b class="mono">${odds(res.need)}</b>${tx}.</p>
+          <p>The best chance Statpad can find: <b>${m.legs.length} legs</b> at total odds <b class="mono">${odds(m.odds)}</b>, paying ${gsMoney(net)} if every leg lands.</p>
+          <p class="gs-ev">On average a slip like this returns <b>${gsMoney(ev)}</b> for your ${gsMoney(g.stake)} (${ev >= g.stake ? '+' : '−'}${Math.abs(Math.round((ev / g.stake - 1) * 100))}%). ${m.prob < 0.05 ? `${Math.round((1 - m.prob) * 100)} times in 100 you lose the whole stake.` : ''}</p></div></div>
+      <div class="card"><h4>The legs <span>${m.legs.length} picks · one per match · real prices</span></h4><ul class="gs-legs">${m.legs.map(leg).join('')}</ul>
+        <div class="gs-acts"><button type="button" class="btn pri" data-gsadd="1">Add all to the coupon</button><button type="button" class="btn listen-b" data-gssay="1"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></div></div>
+      ${v ? `<div class="card gs-v"><h4>Value-only version <span>every leg beats the bookmaker's price</span></h4><p><b>${fmtGs(v.prob)}</b> to land (${v.legs.length} legs, odds ${odds(v.odds)}). On average it returns ${gsMoney(v.prob * gsNet(g.stake, v.odds))} for your ${gsMoney(g.stake)}.</p><ul class="gs-legs">${v.legs.map(leg).join('')}</ul></div>` : g.value ? `<div class="card gs-v"><h4>Value-only version</h4><p>Not enough value legs to reach these odds. Try more days or a smaller goal.</p></div>` : ''}
+      <div class="card"><h4>The price of ambition <span>best chance for each amount</span></h4>${gsChart(res)}
+        <p class="note">${half ? `Aim for ${gsMoney(Math.max(g.stake * 1.5, g.goal / 2))} instead and the best chance is ${fmtGs(half.prob)}` : ''}${fifth ? `; for ${gsMoney(Math.max(g.stake * 1.3, g.goal / 5))}, ${fmtGs(fifth.prob)}` : ''}. Every step up in the goal costs chance: no slip makes a small stake into a big sum likely.</p></div>
+      <p class="note">Chances are Statpad's, from ${res.sol.n} games${g.days > 1 ? ` over ${g.days} days` : ''}, using real bookmaker prices only and at most ${GS_LEGS} legs. Change the tax in My bets settings. 18+, and only stake what you can afford to lose.</p></div>`;
+  }
+  let gsT = 0;
+  document.addEventListener('input', (e) => {
+    if (e.target.id !== 'gsStake' && e.target.id !== 'gsGoal') return;
+    const v = +String(e.target.value).replace(/[^\d.]/g, '');
+    if (e.target.id === 'gsStake') S.gs.stake = v; else S.gs.goal = v;
+    store.set('goalseek', S.gs); clearTimeout(gsT); gsT = setTimeout(renderGoal, 300);
+  });
+  document.addEventListener('change', (e) => { if (e.target.id === 'gsValue') { S.gs.value = e.target.checked; store.set('goalseek', S.gs); renderGoal(); } });
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-gsx],[data-gsdays],[data-gsadd],[data-gssay],[data-sseg]'); if (!t) return;
+    if (t.dataset.sseg) { S.sseg = t.dataset.sseg; store.set('sseg', S.sseg); renderSlips(); return; }
+    if (t.dataset.gsx) { S.gs.goal = S.gs.stake * +t.dataset.gsx; const i = $('#gsGoal'); if (i) i.value = S.gs.goal.toLocaleString('en-US'); store.set('goalseek', S.gs); renderGoal(); return; }
+    if (t.dataset.gsdays) { S.gs.days = +t.dataset.gsdays; store.set('goalseek', S.gs); for (const b of document.querySelectorAll('[data-gsdays]')) b.setAttribute('aria-pressed', String(b === t)); renderGoal(); return; }
+    if (t.dataset.gsadd) { const m = S.gsLast; if (!m) return; for (const l of m.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: null, from: 'goal' }); saveCoupon(); toast(`${m.legs.length} legs added to the coupon`); return; }
+    if (t.dataset.gssay) { const m = S.gsLast; if (!m) return; speak('Goal seek', [`To turn ${S.gs.stake.toLocaleString('en-US')} into ${S.gs.goal.toLocaleString('en-US')}, the best chance is ${fmtGs(m.prob).replace('%', ' percent')}, with ${m.legs.length} legs at total odds of ${odds(m.odds)}.`, ...m.legs.map((l, i) => `${i + 1}: ${l.s.label}, in ${l.m.h} against ${l.m.a}, at ${odds(l.s.price)}.`)]); }
   });
 
   // ---------------- events ----------------
