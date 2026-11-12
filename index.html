@@ -454,6 +454,10 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .ask-mic { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--pitch); color: #fff; display: grid; place-items: center; cursor: pointer; }
 .ask-mic svg { width: 22px; height: 22px; }
 .ask-mic.on { background: var(--red); animation: askpulse 1.2s ease-in-out infinite; }
+.ask-mic .k, .ask-mic.on .m { display: none; } .ask-mic.on .k { display: block; }
+.ask-state.on { display: grid; gap: 4px; }
+.ask-cd { display: block; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--red) 20%, transparent); overflow: hidden; } .ask-cd b { display: block; height: 100%; background: var(--red); transition: width .2s linear; }
+.ask-vo select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 4px 6px; max-width: 100%; } .ask-state .ask-heard { font-weight: 600; } .ask-state small { font-size: 12px; font-weight: 500; color: var(--ink-2); }
 @keyframes askpulse { 0%, 100% { box-shadow: 0 0 0 0 var(--red-soft); } 50% { box-shadow: 0 0 0 10px var(--red-soft); } }
 @media (prefers-reduced-motion: reduce) { .ask-mic.on { animation: none; } }
 .ask-state { margin: 0; min-height: 1.2em; font-size: 13.5px; color: var(--ink-2); }
@@ -2105,7 +2109,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>WhatsApp Status pack</h3>
       <p>On the Matches and Slips tabs, <b>Status pack</b> draws four tall pictures for the day, sized for WhatsApp Status: the safest pick, an upset alert (the underdog at a real price of 2.60 or more with the best value, with how often it should land), the game with most at stake, and the slip at your target odds with the best chance of landing. Share all four in one go, or one at a time. Each carries the site's address and an 18+ note.</p>
       <h3>Ask Statpad</h3>
-      <p>Tap the microphone at the top, or <b>Ask Statpad</b> on the Matches tab, and speak straight away, or type, in English or Kiswahili: who wins a game, how a team is doing, the safest picks, a slip at any odds, the best value, what's at stake, title and relegation races, live scores, or how your bets are doing. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so it needs the internet and the microphone allowed for the site; the answers come from the same numbers as the rest of the page and are read aloud. Follow-ups such as "and tomorrow?" work, and so do names a little off. Some browsers don't offer voice input: type instead.</p>
+      <p>Tap the microphone at the top, or <b>Ask Statpad</b> on the Matches tab, and speak straight away, or type, in English or Kiswahili. It listens until you've finished, sending your question once you've been quiet for 3 seconds (5, or only when you tap ✓, if you prefer): who wins a game, how a team is doing, the safest picks, a slip at any odds, the best value, what's at stake, title and relegation races, live scores, or how your bets are doing. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so it needs the internet and the microphone allowed for the site; the answers come from the same numbers as the rest of the page and are read aloud. Follow-ups such as "and tomorrow?" work, and so do names a little off. Some browsers don't offer voice input: type instead.</p>
       <h3>My bets</h3>
       <p>Save a coupon with your stake and your bookmaker's odds, and Statpad shows the chance of it landing, the odds you need to break even after the tax on winnings (15% in Uganda by default; change it in My bets), and what it's worth on average. Bets settle themselves from the same results, using the 90-minute score; a postponed leg counts at odds 1. Everything is stored on your device: use Back up to keep a copy or move to a new phone.</p>
       <h3>Slips</h3>
@@ -4498,62 +4502,112 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const n = navigator.language || '';
     return [...new Set([/^en-(GB|US|AU|CA|IN|IE|NZ|ZA|KE|NG|GH|TZ|PH|SG)$/i.test(n) ? n : null, 'en-GB', 'en-US'].filter(Boolean))];
   }
+  // Listening waits until you've finished: the phone's recogniser stops at the first short pause (Android
+  // especially), so Statpad keeps it going, joins the pieces, and only sends the question after you've been
+  // quiet for a few seconds, or when you tap the button.
+  const ASK_WAIT = 9000, ASK_MAX = 45000, ASK_MAX_TAP = 90000;
+  S.ask.sil = [3000, 5000, 0].includes(+store.get('askSil2', 3000)) ? +store.get('askSil2', 3000) : 3000;   // 0: only when you tap ✓
   function askListen() {
     if (!SRec) { toast(T('Voice input isn’t available in this browser: type your question', 'Kivinjari hiki hakina sauti: andika swali lako')); return; }
-    if (S.ask.cur) { askStopRec(); return; }
+    if (S.ask.cur) { askEnd(S.ask.cur); return; }   // tapping again sends what you've said
     ttsStop(true); ttsPlayer();
-    askStartRec(askLangs(), store.get('askLangIdx' + S.ask.lang, 0) || 0);
-  }
-  function askStartRec(langs, k) {
-    if (k >= langs.length) k = 0;
-    let rec;
-    try { rec = new SRec(); } catch (e) { S.ask.err = T('Couldn’t start the microphone. Type your question instead.', 'Maikrofoni haikuanza. Andika swali lako.'); renderAskMic(); return; }
-    rec.lang = langs[k]; rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = false;
-    const my = { rec, text: '', alts: [], retry: false, got: false };
+    const langs = askLangs();
+    const my = { langs, k: Math.min(+store.get('askLangIdx' + S.ask.lang, 0) || 0, langs.length - 1), done: '', cur: '', alts: [], t0: Date.now(), last: 0, heard: false, restarts: 0, sessions: 0, ended: false };
     S.ask.cur = my; S.ask.on = true; S.ask.interim = ''; S.ask.err = '';
+    my.tick = setInterval(() => askTick(my), 200);
+    askSession(my);
+    renderAskMic();
+  }
+  function askJoin(a, b) {   // what earlier sessions heard + what this one hears, without repeating words
+    a = (a || '').trim(); b = (b || '').trim();
+    if (!a) return b; if (!b) return a;
+    const al = a.toLowerCase(), bl = b.toLowerCase();
+    if (bl.startsWith(al)) return b; if (al.includes(bl)) return a;
+    const aw = a.split(/\s+/), bw = b.split(/\s+/), lw = (w) => w.toLowerCase();
+    for (let n = Math.min(aw.length, bw.length - 1); n >= 1; n--) if (aw.slice(-n).map(lw).join(' ') === bw.slice(0, n).map(lw).join(' ')) return a + ' ' + bw.slice(n).join(' ');
+    return a + ' ' + b;
+  }
+  const askHeard = (my) => askJoin(my.done, my.cur);
+  const askSil = () => (S.ask.sil ? S.ask.sil : Infinity);
+  const askMax = () => (S.ask.sil ? ASK_MAX : ASK_MAX_TAP);
+  function askErrMsg(er) {
+    const framed = (() => { try { return window.self !== window.top; } catch (x) { return true; } })();
+    return er === 'not-allowed' || er === 'service-not-allowed'
+      ? (framed ? T('The microphone is blocked inside this preview. It works on your Statpad site; here, type your question.', 'Maikrofoni imezuiwa hapa. Inafanya kazi kwenye tovuti ya Statpad; hapa andika swali lako.')
+        : T('Statpad needs the microphone: allow it in the browser’s site settings (the icon left of the address), then tap the mic again.', 'Ruhusu maikrofoni kwenye mipangilio ya tovuti ya kivinjari, kisha gusa maikrofoni tena.'))
+      : er === 'audio-capture' ? T('No microphone found, or another app is using it.', 'Maikrofoni haipatikani, au programu nyingine inaitumia.')
+      : er === 'network' ? T('Voice needs an internet connection. You can type instead.', 'Sauti inahitaji intaneti. Unaweza kuandika.')
+      : er === 'language-not-supported' ? T('Your phone can’t take voice in this language. Type instead.', 'Simu yako haipokei sauti kwa lugha hii. Andika badala yake.')
+      : T('Voice input stopped. Tap the mic to try again.', 'Sauti imesimama. Gusa maikrofoni kujaribu tena.');
+  }
+  function askSession(my) {
+    let rec;
+    try { rec = new SRec(); } catch (e) { askFinish(my, T('Couldn’t start the microphone. Type your question instead.', 'Maikrofoni haikuanza. Andika swali lako.')); return; }
+    rec.lang = my.langs[my.k]; rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = true;
+    my.rec = rec; my.cur = ''; my.sessions++; my.badLang = false; my.fatal = null; my.base = my.done;
     rec.onresult = (e) => {
-      const finals = [], all = [];
+      if (my.rec !== rec || my.ended) return;
+      const all = [];
       for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i], tx = (r[0] && r[0].transcript) || '';
         all.push(tx);
-        if (r.isFinal) { finals.push(tx); my.alts = Array.from(r).map((x) => x.transcript).filter(Boolean); }
+        if (r.isFinal) my.alts = Array.from(r).map((x) => askJoin(my.base, x.transcript)).filter(Boolean);
       }
-      my.text = askMerge(all); my.got = true;
-      S.ask.interim = my.text; renderAskMic();
+      const t = askMerge(all), before = askHeard(my);
+      if (t) my.cur = t;
+      const now = askHeard(my);
+      if (now && now !== before) { my.heard = true; my.last = Date.now(); }   // only new words keep it listening
+      S.ask.interim = now; renderAskMic();
     };
-    rec.onspeechend = () => { try { rec.stop(); } catch (e) { /* already stopping */ } };
     rec.onerror = (e) => {
-      if (S.ask.cur !== my) return;
+      if (my.rec !== rec) return;
       const er = e.error;
-      if (er === 'language-not-supported' && k + 1 < langs.length) { my.retry = true; return; }
-      const framed = (() => { try { return window.self !== window.top; } catch (x) { return true; } })();
-      S.ask.err = er === 'not-allowed' || er === 'service-not-allowed'
-        ? (framed ? T('The microphone is blocked inside this preview. It works on your Statpad site; here, type your question.', 'Maikrofoni imezuiwa hapa. Inafanya kazi kwenye tovuti ya Statpad; hapa andika swali lako.')
-          : T('Statpad needs the microphone: allow it in the browser’s site settings (the icon left of the address), then tap the mic again.', 'Ruhusu maikrofoni kwenye mipangilio ya tovuti ya kivinjari, kisha gusa maikrofoni tena.'))
-        : er === 'no-speech' ? T('I didn’t hear anything. Tap the mic and speak after the beep.', 'Sikusikia chochote. Gusa maikrofoni na uongee.')
-        : er === 'audio-capture' ? T('No microphone found, or another app is using it.', 'Maikrofoni haipatikani, au programu nyingine inaitumia.')
-        : er === 'network' ? T('Voice needs an internet connection. You can type instead.', 'Sauti inahitaji intaneti. Unaweza kuandika.')
-        : er === 'language-not-supported' ? T('Your phone can’t take voice in this language. Type instead.', 'Simu yako haipokei sauti kwa lugha hii. Andika badala yake.')
-        : er === 'aborted' ? '' : T('Voice input stopped. Tap the mic to try again.', 'Sauti imesimama. Gusa maikrofoni kujaribu tena.');
+      if (er === 'no-speech' || er === 'aborted') return;
+      if (er === 'language-not-supported' && my.k + 1 < my.langs.length) { my.k++; store.set('askLangIdx' + S.ask.lang, my.k); my.badLang = true; return; }
+      my.fatal = er;
     };
     rec.onend = () => {
-      clearTimeout(my.timer);
-      if (S.ask.cur !== my) return;
-      S.ask.cur = null; S.ask.on = false; S.ask.interim = '';
-      if (my.retry) { store.set('askLangIdx' + S.ask.lang, k + 1); askStartRec(langs, k + 1); return; }
-      renderAskMic();
-      const q = my.text.trim();
-      if (q) { S.ask.err = ''; renderAskMic(); ask(q, true, my.alts); }
+      if (my.rec !== rec) return;
+      my.done = askHeard(my); my.cur = '';
+      if (my.ended) return;
+      if (my.stopping) { askFinish(my); return; }
+      if (my.fatal) { askFinish(my, my.heard && my.fatal === 'network' ? null : askErrMsg(my.fatal)); return; }
+      const now = Date.now();
+      // the recogniser stopped by itself: carry on if you may still be talking
+      const more = my.badLang || (!my.heard && now - my.t0 < ASK_WAIT) || (my.heard && now - my.last < askSil(my));
+      if (more && my.restarts < 40 && now - my.t0 < askMax()) { my.restarts++; setTimeout(() => { if (S.ask.cur === my && !my.ended) askSession(my); }, 80); return; }
+      askFinish(my);
     };
-    my.timer = setTimeout(() => {   // some phones never end on their own
-      try { rec.stop(); } catch (e) { /* */ }
-      setTimeout(() => { if (S.ask.cur === my) { try { rec.abort(); } catch (e) { /* */ } rec.onend(); } }, 1500);
-    }, 12000);
-    try { rec.start(); } catch (e) { S.ask.cur = null; S.ask.on = false; S.ask.err = T('Couldn’t start the microphone. Tap it again.', 'Maikrofoni haikuanza. Gusa tena.'); }
+    try { rec.start(); } catch (e) { askFinish(my, T('Couldn’t start the microphone. Tap it again.', 'Maikrofoni haikuanza. Gusa tena.')); }
+  }
+  function askTick(my) {
+    if (S.ask.cur !== my || my.ended || my.stopping) return;
+    const now = Date.now();
+    if (now - my.t0 > askMax() || (my.heard && now - my.last > askSil(my))) askEnd(my);
+    else if (!my.heard && now - my.t0 > ASK_WAIT + 1000) askFinish(my);
+    else renderAskMic();
+  }
+  // finish gracefully: let the recogniser deliver its last words, then send
+  function askEnd(my) {
+    if (my.ended || my.stopping) return;
+    my.stopping = true;
+    try { my.rec && my.rec.stop(); } catch (e) { /* */ }
+    setTimeout(() => askFinish(my), 900);
     renderAskMic();
   }
-  function askStopRec() { const c = S.ask.cur; if (c) try { c.rec.stop(); } catch (e) { /* */ } }
-  function askAbortRec() { const c = S.ask.cur; if (!c) return; S.ask.cur = null; S.ask.on = false; S.ask.interim = ''; clearTimeout(c.timer); try { c.rec.abort(); } catch (e) { /* */ } renderAskMic(); }
+  function askFinish(my, err) {
+    if (my.ended) return;
+    my.ended = true; clearInterval(my.tick);
+    const rec = my.rec; my.rec = null;
+    const q = askHeard(my).trim();
+    try { if (rec) rec.abort(); } catch (e) { /* */ }
+    if (S.ask.cur === my) { S.ask.cur = null; S.ask.on = false; S.ask.interim = ''; }
+    S.ask.err = err || (q ? '' : T('I didn’t hear anything. Tap the mic and speak.', 'Sikusikia chochote. Gusa maikrofoni na uongee.'));
+    renderAskMic();
+    if (q && !err) ask(q, true, my.alts);
+  }
+  function askStopRec() { if (S.ask.cur) askEnd(S.ask.cur); }
+  function askAbortRec() { const c = S.ask.cur; if (!c) return; c.ended = true; clearInterval(c.tick); const r = c.rec; c.rec = null; S.ask.cur = null; S.ask.on = false; S.ask.interim = ''; try { if (r) r.abort(); } catch (e) { /* */ } renderAskMic(); }
   function openAsk(opener, listen) {
     if (S.open && S.open !== 'ask:') S.askBack = S.open;
     S.open = 'ask:'; if (!$('#sheet').classList.contains('open')) S.opener = opener || document.activeElement;
@@ -4575,19 +4629,25 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function renderAskMic() {
     const m = $('#askMic'), st = $('#askState'); if (!st) return;
-    if (m) { m.classList.toggle('on', S.ask.on); m.setAttribute('aria-pressed', String(S.ask.on)); m.setAttribute('aria-label', S.ask.on ? T('Stop listening', 'Acha kusikiliza') : T('Ask by voice', 'Uliza kwa sauti')); }
+    const c = S.ask.cur, sending = !!(c && c.stopping);
+    if (m) { m.classList.toggle('on', S.ask.on); m.setAttribute('aria-pressed', String(S.ask.on)); m.setAttribute('aria-label', S.ask.on ? T('Done: send my question', 'Tayari: tuma swali') : T('Ask by voice', 'Uliza kwa sauti')); }
     st.classList.toggle('on', S.ask.on); st.classList.toggle('err', !S.ask.on && !!S.ask.err);
-    st.textContent = S.ask.on ? (S.ask.interim ? '“' + S.ask.interim + '”' : T('Listening… speak now', 'Nasikiliza… ongea sasa')) : S.ask.err || '';
+    if (!S.ask.on) { st.textContent = S.ask.err || ''; return; }
+    const sil = askSil(), quiet = c && c.heard && !sending ? Date.now() - c.last : 0, left = isFinite(sil) && quiet > 1200 ? Math.max(0, sil - quiet) : null;
+    const hint = sending ? T('Sending…', 'Inatuma…') : left != null ? T(`Sending in ${Math.ceil(left / 1000)}… keep talking to add more, or tap ✓`, `Inatuma baada ya ${Math.ceil(left / 1000)}… endelea kuongea kuongeza, au gusa ✓`)
+      : isFinite(sil) ? T('Take your time. I send it when you’ve been quiet for a moment, or tap ✓.', 'Chukua muda wako. Natuma ukinyamaza kidogo, au gusa ✓.') : T('Take your time, then tap ✓ to send.', 'Chukua muda wako, kisha gusa ✓ kutuma.');
+    st.innerHTML = `${S.ask.interim ? `<span class="ask-heard">“${esc(S.ask.interim)}”</span>` : `<span class="ask-heard">${T('Listening…', 'Nasikiliza…')}</span>`}<small>${hint}</small>${left != null ? `<i class="ask-cd"><b style="width:${(100 * left / sil).toFixed(0)}%"></b></i>` : ''}`;
   }
   function renderAskSheet() {
     $('#sheetTitle').textContent = T('Ask Statpad', 'Uliza Statpad');
     $('#sheetBody').innerHTML = `<div class="ask">
       <div class="ask-top"><div class="seg" role="group" aria-label="Language"><button type="button" data-asklang="en" aria-pressed="${!SW()}">English</button><button type="button" data-asklang="sw" aria-pressed="${SW()}">Kiswahili</button></div>
-        <label class="ask-vo"><input type="checkbox" id="askVoice"${S.ask.voiceOut ? ' checked' : ''}> ${T('Read typed answers aloud', 'Soma majibu kwa sauti')}</label></div>
+        <label class="ask-vo"><input type="checkbox" id="askVoice"${S.ask.voiceOut ? ' checked' : ''}> ${T('Read typed answers aloud', 'Soma majibu kwa sauti')}</label>
+        ${SRec ? `<label class="ask-vo">${T('Send my question', 'Tuma swali')} <select id="askSil">${[[3000, T('after a 3-second pause', 'nikinyamaza sekunde 3')], [5000, T('after a 5-second pause', 'nikinyamaza sekunde 5')], [0, T('only when I tap ✓', 'nikigusa ✓ tu')]].map(([v, l]) => `<option value="${v}"${S.ask.sil === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>` : ''}</div>
       <div id="askLog" class="ask-log" aria-live="polite"></div>
       <p class="ask-state" id="askState" aria-live="polite"></p>
       <form class="ask-in" id="askForm"><input id="askText" type="text" autocomplete="off" enterkeyhint="send" placeholder="${esc(T('Ask about a game, a team, a slip…', 'Uliza kuhusu mechi, timu, mkeka…'))}" aria-label="${esc(T('Your question', 'Swali lako'))}">
-        ${SRec ? `<button type="button" class="ask-mic" id="askMic" aria-label="${esc(T('Ask by voice', 'Uliza kwa sauti'))}" aria-pressed="false"><svg aria-hidden="true"><use href="#i-mic"/></svg></button>` : ''}
+        ${SRec ? `<button type="button" class="ask-mic" id="askMic" aria-label="${esc(T('Ask by voice', 'Uliza kwa sauti'))}" aria-pressed="false"><svg class="m" aria-hidden="true"><use href="#i-mic"/></svg><svg class="k" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
         <button type="submit" class="btn pri">${T('Ask', 'Uliza')}</button></form>
       <p class="note">${T('Answers come from Statpad\'s own numbers on this page. Your phone\'s browser turns speech into text, so it needs the internet and the microphone allowed.', 'Majibu yanatoka kwenye takwimu za Statpad. Kivinjari cha simu yako kinageuza sauti kuwa maandishi, kwa hiyo kinahitaji intaneti na ruhusa ya maikrofoni.')}</p></div>`;
     renderAskLog(true); renderAskMic();
@@ -4609,7 +4669,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     e.preventDefault(); askAbortRec(); const i = $('#askText'); const q = i.value; i.value = ''; i.blur(); ask(q, false);
   });
   document.addEventListener('input', (e) => { if (e.target.id === 'askText' && S.ask.cur) askAbortRec(); });
-  document.addEventListener('change', (e) => { if (e.target.id === 'askVoice') S.ask.voiceOut = e.target.checked; });
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'askVoice') S.ask.voiceOut = e.target.checked;
+    if (e.target.id === 'askSil') { S.ask.sil = +e.target.value; store.set('askSil2', S.ask.sil); renderAskMic(); }
+  });
 
   // ---------------- events ----------------
   document.addEventListener('click', (e) => {

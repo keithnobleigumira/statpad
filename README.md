@@ -133,7 +133,7 @@ Each is fitted on two past seasons after blending with the market as the site do
 
 ## Ask Statpad
 
-Tap the microphone in the header, or **Ask Statpad** on the Matches tab, and speak straight away (it starts listening), or type. English or Kiswahili:
+Tap the microphone in the header, or **Ask Statpad** on the Matches tab, and speak straight away (it starts listening), or type. English or Kiswahili. It listens until you've finished: pauses mid-sentence are fine, and it sends your question once you've been quiet for 3 seconds, or when you tap ✓. In the Ask panel you can make that 5 seconds, or only when you tap ✓.
 
 - "Who wins Arsenal v Chelsea?" / "Nani atashinda Arsenal dhidi ya Chelsea?"
 - "Safest picks today", "Give me a 5 odds slip", "Best value", "Biggest games"
