@@ -129,7 +129,13 @@ Each is fitted on two past seasons after blending with the market as the site do
 
 ## WhatsApp Status pack
 
-**Status pack** (Matches and Slips tabs) draws four 1080×1920 pictures for the day: the safest pick, an upset alert (the underdog at a real price of 2.60 or more with the best value, and how often it should land), the game with most at stake, and the slip at your target odds with the best chance. **Share all 4** opens the phone's share sheet; pick WhatsApp, then My status. On a computer the pictures download instead. Each carries the site's address and an 18+ note.
+**Status pack** (Matches and Slips tabs) draws four 1080×1920 pictures for the day, styled like a heads-up display over a floodlit pitch, each built around its own data graphic:
+
+- **Safest pick**: a confidence dial, lit to Statpad's chance, with the cautious floor marked.
+- **Upset alert**: a radar locked on the underdog at a real price of 2.60 or more with the best value. It shows fair odds against the price and lights one dot in N for how often it should land.
+- **Most at stake**: three futures forking from each team's chance now to its chance after a win, a draw and a defeat.
+- **Your slip**: the odds climbing leg by leg while the chance of landing drains away.
+ **Share all 4** opens the phone's share sheet; pick WhatsApp, then My status. On a computer the pictures download instead. Each carries the site's address and an 18+ note.
 
 ## Ask Statpad
 

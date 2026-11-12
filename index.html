@@ -2107,7 +2107,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Fatigue and motivation</h3>
       <p>Statpad tests two more things each month, on two past seasons, then on a third the test never saw, after blending with the market as the site does: <b>rest</b> (a side with only two or three days since its last league game, against one with more) and <b>motivation</b> (from the season simulation run week by week: a side whose season chances barely move whatever the result, and games where neither side has anything left to play for). Each goes on only if it lowers the error on the unseen season too, and the Track tab shows which are on. Football-data.co.uk lists league games only, so cup and European games don't count towards rest. When one applies to a game, its match page says so.</p>
       <h3>WhatsApp Status pack</h3>
-      <p>On the Matches and Slips tabs, <b>Status pack</b> draws four tall pictures for the day, sized for WhatsApp Status: the safest pick, an upset alert (the underdog at a real price of 2.60 or more with the best value, with how often it should land), the game with most at stake, and the slip at your target odds with the best chance of landing. Share all four in one go, or one at a time. Each carries the site's address and an 18+ note.</p>
+      <p>On the Matches and Slips tabs, <b>Status pack</b> draws four tall pictures for the day, sized for WhatsApp Status and each built around its own data graphic: the safest pick on a confidence dial, an upset alert on a radar (the underdog at a real price of 2.60 or more with the best value, with how often it should land), the game with most at stake as three futures forking from one result, and the slip at your target odds as an odds ascent. Share all four in one go, or one at a time. Each carries the site's address and an 18+ note.</p>
       <h3>Ask Statpad</h3>
       <p>Tap the microphone at the top, or <b>Ask Statpad</b> on the Matches tab, and speak straight away, or type, in English or Kiswahili. It listens until you've finished, sending your question once you've been quiet for 3 seconds (5, or only when you tap ✓, if you prefer): who wins a game, how a team is doing, the safest picks, a slip at any odds, the best value, what's at stake, title and relegation races, live scores, or how your bets are doing. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so it needs the internet and the microphone allowed for the site; the answers come from the same numbers as the rest of the page and are read aloud. Follow-ups such as "and tomorrow?" work, and so do names a little off. Some browsers don't offer voice input: type instead.</p>
       <h3>My bets</h3>
@@ -2281,164 +2281,405 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const slip = slipFor(dk, S.target, 'all').filter((x) => x.feasible && x.legs.length).sort((x, y) => y.prob - x.prob)[0] || null;
     return { dk, when: dayLabel(dk, true), safe, up, big, slip };
   }
-  function statusFrame(kicker, color, D, page) {
+  // ---- the look: a night stadium seen as a heads-up display. Each picture has its own data graphic:
+  // a confidence reactor, a shock radar, three futures forking from one result, and an odds ascent.
+  const SX = { bg: '#03060a', ink: '#f3f7ff', mut: 'rgba(222,232,242,.66)', dim: 'rgba(200,214,226,.40)', faint: 'rgba(200,220,240,.12)' };
+  const ST_TH = { safe: ['#35f2b0', '#19c8ff'], upset: ['#ff4fd8', '#ffa03c'], stakes: ['#ff4b5c', '#ffc94d'], slip: ['#6f8cff', '#b86bff'] };
+  const hexA = (h, a) => { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+  function srng(seed) { let a = seed >>> 0 || 1; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const shash = (s) => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h; };
+  function stFont(x, f, stretch, ls) { x.font = f; if ('fontStretch' in x) x.fontStretch = stretch || 'normal'; if ('letterSpacing' in x) x.letterSpacing = ls || '0px'; }
+  function stGrad(x, X0, Y0, X1, Y1, stops) { const g = x.createLinearGradient(X0, Y0, X1, Y1); stops.forEach(([o, c]) => g.addColorStop(o, c)); return g; }
+  function stGlow(x, color, blur, fn) { x.save(); x.shadowColor = color; x.shadowBlur = blur; fn(); x.restore(); }
+  // text with a gradient across it and a soft glow
+  function stBigText(x, txt, X, Y, c1, c2, glow, align) {
+    x.textAlign = align || 'left';
+    const w = x.measureText(txt).width, x0 = align === 'center' ? X - w / 2 : align === 'right' ? X - w : X;
+    x.fillStyle = stGrad(x, x0, Y - 120, x0 + w, Y, [[0, c1], [1, c2]]);
+    stGlow(x, glow, 36, () => x.fillText(txt, X, Y));
+    x.fillText(txt, X, Y);
+    x.textAlign = 'left';
+    return w;
+  }
+  // red and cyan ghosts either side: the "signal interference" look
+  function stAberr(x, txt, X, Y, off, align) {
+    x.textAlign = align || 'center';
+    x.save(); x.globalCompositeOperation = 'lighter';
+    x.fillStyle = 'rgba(255,40,90,.75)'; x.fillText(txt, X - off, Y);
+    x.fillStyle = 'rgba(40,230,255,.75)'; x.fillText(txt, X + off, Y + 1);
+    x.restore();
+    x.fillStyle = SX.ink; x.fillText(txt, X, Y);
+    x.textAlign = 'left';
+  }
+  // frosted glass: the background, blurred, behind a thin lit edge
+  function stGlass(F, X, Y, w, h, r) {
+    const { x, bg, c1, c2 } = F;
+    x.save(); rrPath(x, X, Y, w, h, r); x.clip();
+    if ('filter' in x) { x.filter = 'blur(22px) brightness(.8)'; x.drawImage(bg, 0, 0); x.filter = 'none'; }
+    x.fillStyle = stGrad(x, X, Y, X, Y + h, [[0, 'rgba(255,255,255,.075)'], [1, 'rgba(255,255,255,.02)']]); x.fillRect(X, Y, w, h);
+    x.restore();
+    rrPath(x, X, Y, w, h, r);
+    x.strokeStyle = stGrad(x, X, Y, X + w, Y + h, [[0, hexA(c1, .75)], [0.45, 'rgba(255,255,255,.07)'], [1, hexA(c2, .55)]]); x.lineWidth = 2; x.stroke();
+  }
+  function stChip(F, txt, X, Y, col, solid) {
+    const { x } = F;
+    stFont(x, `600 25px ${SF.m}`, null, '2px');
+    const w = x.measureText(txt).width + 40;
+    rrPath(x, X, Y, w, 58, 29);
+    x.fillStyle = solid ? hexA(col, .2) : 'rgba(255,255,255,.04)'; x.fill();
+    x.strokeStyle = hexA(col, solid ? .9 : .45); x.lineWidth = 2; x.stroke();
+    x.fillStyle = solid ? col : SX.ink; x.textBaseline = 'middle'; x.fillText(txt, X + 20, Y + 30); x.textBaseline = 'alphabetic';
+    stFont(x, `600 25px ${SF.m}`);
+    return w;
+  }
+  function stBackground(c1, c2, seed) {
+    const bg = document.createElement('canvas'); bg.width = ST_W; bg.height = ST_H;
+    const x = bg.getContext('2d'), W = ST_W, H = ST_H, R = srng(seed);
+    x.fillStyle = SX.bg; x.fillRect(0, 0, W, H);
+    const fog = (X, Y, rad, col) => { const g = x.createRadialGradient(X, Y, 0, X, Y, rad); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H); };
+    fog(880, 240, 950, hexA(c1, .30)); fog(120, 1500, 900, hexA(c2, .22)); fog(540, 980, 620, hexA(c1, .07));
+    // floodlight beams from the top corners
+    x.save(); x.globalCompositeOperation = 'lighter';
+    for (const [sx, dir] of [[-60, 1], [W + 60, -1]]) {
+      const g = x.createLinearGradient(sx, -40, sx + dir * 700, 1200); g.addColorStop(0, 'rgba(255,255,255,.10)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g; x.beginPath(); x.moveTo(sx, -40); x.lineTo(sx + dir * 420, 1300); x.lineTo(sx + dir * 900, 1300); x.closePath(); x.fill();
+    }
+    x.restore();
+    // the pitch, in perspective, glowing under the horizon
+    const hy = 1330, vx = 540;
+    x.save(); x.beginPath(); x.rect(0, hy, W, H - hy); x.clip();
+    x.strokeStyle = stGrad(x, 0, hy, 0, H, [[0, hexA(c1, 0)], [0.35, hexA(c1, .22)], [1, hexA(c1, .5)]]); x.lineWidth = 2;
+    for (let i = -16; i <= 16; i++) { x.beginPath(); x.moveTo(vx + i * 14, hy); x.lineTo(vx + i * 190, H + 60); x.stroke(); }
+    for (let k = 1; k <= 16; k++) { const z = k / 16, y = hy + (H - hy) * z * z; x.globalAlpha = 0.1 + 0.7 * z; x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); }
+    x.globalAlpha = 0.45; x.lineWidth = 3; x.strokeStyle = hexA(c2, .6);
+    const ey = hy + (H - hy) * 0.42; x.beginPath(); x.ellipse(vx, ey, 300, 62, 0, 0, Math.PI * 2); x.stroke();
+    x.beginPath(); x.moveTo(0, ey); x.lineTo(W, ey); x.stroke();
+    x.restore();
+    x.fillStyle = stGrad(x, 0, 0, W, 0, [[0, hexA(c1, 0)], [0.5, hexA(c1, .9)], [1, hexA(c2, 0)]]); x.fillRect(0, hy - 1, W, 3);
+    // data points drifting like dust in the lights
+    for (let i = 0; i < 190; i++) {
+      const px = R() * W, py = R() * H, big = R() < 0.08, rr = big ? 2.4 + R() * 2.4 : 0.8 + R() * 1.5;
+      x.fillStyle = R() < 0.5 ? hexA(c1, 0.1 + R() * 0.45) : `rgba(255,255,255,${0.06 + R() * 0.3})`;
+      x.beginPath(); x.arc(px, py, rr, 0, Math.PI * 2); x.fill();
+    }
+    // scanlines, grain and a vignette
+    x.fillStyle = 'rgba(255,255,255,.022)'; for (let y = 0; y < H; y += 4) x.fillRect(0, y, W, 1);
+    const n = document.createElement('canvas'); n.width = n.height = 128; const nx = n.getContext('2d'), im = nx.createImageData(128, 128);
+    for (let i = 0; i < im.data.length; i += 4) { const v = R() * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 22; }
+    nx.putImageData(im, 0, 0); x.fillStyle = x.createPattern(n, 'repeat'); x.fillRect(0, 0, W, H);
+    const v = x.createRadialGradient(540, 900, 520, 540, 960, 1300); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.6)'); x.fillStyle = v; x.fillRect(0, 0, W, H);
+    return bg;
+  }
+  function stFrame(kind, D, page, kicker, id) {
+    const [c1, c2] = ST_TH[kind], P = 72, W = ST_W;
     const c = document.createElement('canvas'); c.width = ST_W; c.height = ST_H;
-    const x = c.getContext('2d'), P = ST_P, C = ST_C;
-    const font = (f, st) => { x.font = f; if ('fontStretch' in x) x.fontStretch = st || 'normal'; if ('letterSpacing' in x) x.letterSpacing = '0px'; };
-    const g = x.createRadialGradient(ST_W * 0.25, 260, 0, ST_W * 0.25, 260, ST_H);
-    g.addColorStop(0, '#17271f'); g.addColorStop(0.5, '#0d1813'); g.addColorStop(1, '#060a08');
-    x.fillStyle = g; x.fillRect(0, 0, ST_W, ST_H);
-    const gl = x.createRadialGradient(ST_W, 120, 0, ST_W, 120, 760); gl.addColorStop(0, color + '33'); gl.addColorStop(1, color + '00');
-    x.fillStyle = gl; x.fillRect(0, 0, ST_W, 900);
-    // logo (below WhatsApp's own bar at the top of a status)
-    const M = 70, my = 196;
-    rrPath(x, P, my, M, M, M * 8 / 30); x.fillStyle = '#101d17'; x.fill(); x.strokeStyle = 'rgba(232,239,235,.22)'; x.lineWidth = 2.5; x.stroke();
-    x.save(); x.translate(P + M / 2 - 23.3, my + M / 2 - 23.3); x.scale(46.6 / 24, 46.6 / 24);
-    x.strokeStyle = C.ink; x.lineWidth = 1.6; rrPath(x, 3, 5, 18, 14, 2); x.stroke();
-    x.lineWidth = 1.4; x.beginPath(); x.moveTo(12, 5); x.lineTo(12, 19); x.stroke();
-    x.beginPath(); x.arc(12, 12, 2.6, 0, Math.PI * 2); x.stroke();
-    x.fillStyle = '#6f86ff'; x.fillRect(15.5, 9, 3, 6); x.restore();
-    font(`850 50px ${SF.d}`, 'expanded'); if ('letterSpacing' in x) x.letterSpacing = '-1.5px';
-    x.textBaseline = 'middle'; x.textAlign = 'left';
-    x.fillStyle = C.ink; x.fillText('stat', P + M + 20, my + M / 2 + 2);
-    x.fillStyle = C.cob; x.fillText('pad', P + M + 20 + x.measureText('stat').width, my + M / 2 + 2);
-    // page dots and the day
-    for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(ST_W - P - (3 - i) * 26 - 6, my + 18, 6, 0, Math.PI * 2); x.fillStyle = i === page ? C.ink : 'rgba(143,161,153,.35)'; x.fill(); }
-    font(`500 24px ${SF.m}`); x.textAlign = 'right'; x.fillStyle = C.mut; x.fillText(String(D.when).toUpperCase(), ST_W - P, my + 58);
-    // kicker
+    const x = c.getContext('2d'), bg = stBackground(c1, c2, shash(D.dk + kind));
+    x.drawImage(bg, 0, 0);
+    const F = { c, x, bg, c1, c2, P, W };
+    // corner brackets of the display
+    x.strokeStyle = hexA(c1, .75); x.lineWidth = 3;
+    for (const [X, Y, sx, sy] of [[40, 160, 1, 1], [W - 40, 160, -1, 1], [40, 1720, 1, -1], [W - 40, 1720, -1, -1]]) { x.beginPath(); x.moveTo(X, Y + sy * 46); x.lineTo(X, Y); x.lineTo(X + sx * 46, Y); x.stroke(); }
+    // logo
+    const M = 64, my = 196;
+    rrPath(x, P, my, M, M, 17); x.fillStyle = 'rgba(10,18,16,.85)'; x.fill(); x.strokeStyle = hexA(c1, .6); x.lineWidth = 2.5; x.stroke();
+    x.save(); x.translate(P + M / 2 - 21, my + M / 2 - 21); x.scale(42 / 24, 42 / 24);
+    x.strokeStyle = SX.ink; x.lineWidth = 1.6; rrPath(x, 3, 5, 18, 14, 2); x.stroke();
+    x.lineWidth = 1.4; x.beginPath(); x.moveTo(12, 5); x.lineTo(12, 19); x.stroke(); x.beginPath(); x.arc(12, 12, 2.6, 0, Math.PI * 2); x.stroke();
+    x.fillStyle = c1; x.fillRect(15.5, 9, 3, 6); x.restore();
+    stFont(x, `850 46px ${SF.d}`, 'expanded', '-1.5px'); x.textBaseline = 'middle';
+    x.fillStyle = SX.ink; x.fillText('stat', P + M + 18, my + M / 2 + 2);
+    x.fillStyle = c1; x.fillText('pad', P + M + 18 + x.measureText('stat').width, my + M / 2 + 2);
+    // page and day
+    stFont(x, `600 24px ${SF.m}`, null, '3px'); x.textAlign = 'right';
+    x.fillStyle = SX.mut; x.fillText(`[ 0${page + 1} / 04 ]`, W - P, my + 16);
+    x.fillStyle = c1; x.fillText(String(D.when).toUpperCase(), W - P, my + 52);
     x.textAlign = 'left'; x.textBaseline = 'alphabetic';
-    font(`600 30px ${SF.m}`); x.fillStyle = color; if ('letterSpacing' in x) x.letterSpacing = '3px'; x.fillText(kicker.toUpperCase(), P, 392); if ('letterSpacing' in x) x.letterSpacing = '0px';
-    x.fillStyle = color; x.fillRect(P, 414, 64, 5);
+    // kicker: a live dot, the label, and a ruler running off to the edge
+    const ky = 338;
+    stGlow(x, c1, 18, () => { x.fillStyle = c1; x.beginPath(); x.arc(P + 9, ky - 10, 9, 0, Math.PI * 2); x.fill(); });
+    stFont(x, `700 28px ${SF.m}`, null, '5px'); x.fillStyle = SX.ink;
+    const kw = x.measureText(kicker.toUpperCase()).width; x.fillText(kicker.toUpperCase(), P + 32, ky);
+    const rx = P + 32 + kw + 24;
+    x.fillStyle = hexA(c1, .5); x.fillRect(rx, ky - 11, W - P - rx, 2);
+    for (let tx = rx; tx < W - P; tx += 18) x.fillRect(tx, ky - 17 + ((tx - rx) % 90 === 0 ? -4 : 2), 2, (tx - rx) % 90 === 0 ? 16 : 8);
     // footer, above WhatsApp's reply bar
-    const fy = ST_H - 270;
-    x.fillStyle = 'rgba(143,161,153,.28)'; x.fillRect(P, fy, ST_W - 2 * P, 2);
-    const site = /\./.test(location.hostname) && !/claude|localhost|127\.|usercontent/.test(location.hostname) ? (location.hostname + location.pathname).replace(/\/(index\.html)?$/, '') : 'Statpad';
-    font(`600 32px ${SF.m}`); x.fillStyle = C.cob; x.fillText(fitText(x, site, ST_W - 2 * P), P, fy + 62);
-    font(`500 24px ${SF.b}`); x.fillStyle = C.dim; x.fillText('18+ · Chances, not certainties. Only bet what you can afford to lose.', P, fy + 106);
-    return { c, x, font, P, C };
+    const fy = 1668;
+    x.fillStyle = stGrad(x, P, 0, W - P, 0, [[0, hexA(c1, .8)], [1, hexA(c2, 0)]]); x.fillRect(P, fy, W - 2 * P, 2);
+    const site = /\./.test(location.hostname) && !/claude|localhost|127\.|usercontent/.test(location.hostname) ? (location.hostname + location.pathname).replace(/\/(index\.html)?$/, '') : 'statpad';
+    stFont(x, `700 30px ${SF.m}`, null, '1px'); x.fillStyle = c1; x.fillText(fitText(x, site, W - 2 * P - 230), P, fy + 50);
+    stFont(x, `500 21px ${SF.m}`, null, '2px'); x.fillStyle = SX.dim; x.fillText('18+ · CHANCES, NOT CERTAINTIES', P, fy + 88);
+    // a code strip made from the match: decoration that's unique to each picture
+    const hR = srng(shash(id || D.dk + kind)); let bx = W - P - 200;
+    while (bx < W - P) { const bw = 2 + Math.floor(hR() * 5); x.fillStyle = hR() < 0.25 ? c1 : 'rgba(230,240,255,.55)'; x.fillRect(bx, fy + 26, bw, 52); bx += bw + 3 + Math.floor(hR() * 5); }
+    stFont(x, `500 16px ${SF.m}`, null, '2px'); x.fillStyle = SX.dim; x.textAlign = 'right'; x.fillText(`${D.dk.replace(/-/g, '')} · ${kind.toUpperCase()}`, W - P, fy + 98); x.textAlign = 'left';
+    return F;
   }
-  function stMatchLine(F, r, y) {
-    const { x, font, P, C } = F;
-    font(`500 40px ${SF.b}`); x.fillStyle = C.mut; x.fillText(fitText(x, `${r.m.h} v ${r.m.a}`, ST_W - 2 * P), P, y);
-    font(`500 25px ${SF.m}`); x.fillStyle = C.dim; x.fillText(fitText(x, `${lgName(r.m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), ST_W - 2 * P), P, y + 50);
+  function stEmpty(F, msg) {
+    const { x, P, W } = F;
+    stFont(x, `800 70px ${SF.d}`, 'expanded', '-1px'); x.fillStyle = SX.ink;
+    wrapLines(x, msg, W - 2 * P, 4).forEach((l, i) => x.fillText(l, P, 720 + i * 86));
+    return F.c;
   }
+  function stMatch(F, r, y) {
+    const { x, P, W, c1 } = F;
+    stFont(x, `600 40px ${SF.b}`); x.fillStyle = SX.mut;
+    const h = r.m.h, a = r.m.a, gap = '   ';
+    const full = fitText(x, `${h}${gap}v${gap}${a}`, W - 2 * P);
+    if (full === `${h}${gap}v${gap}${a}`) {
+      x.fillText(h, P, y); let X = P + x.measureText(h + gap).width;
+      x.fillStyle = c1; x.fillText('v', X, y); X += x.measureText('v' + gap).width;
+      x.fillStyle = SX.mut; x.fillText(a, X, y);
+    } else x.fillText(full, P, y);
+    stFont(x, `500 23px ${SF.m}`, null, '3px'); x.fillStyle = SX.dim;
+    x.fillText(fitText(x, `${lgName(r.m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), W - 2 * P), P, y + 46);
+  }
+  // 1. SAFEST PICK: the confidence reactor
   function stSafe(D) {
-    const F = statusFrame(`${D.when}'s safest pick`, ST_C.grn, D, 0), { x, font, P, C } = F, r = D.safe[0];
-    if (!r) return F.c;
-    const t = r.a.top;
-    font(`500 230px ${SF.m}`); x.fillStyle = C.ink; x.fillText(pct(t.pAdj), P - 8, 680);
-    font(`500 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('STATPAD\'S CHANCE', P, 736);
-    font(`700 66px ${SF.b}`); x.fillStyle = C.ink;
-    const L = wrapLines(x, t.label, ST_W - 2 * P, 2); L.forEach((l, i) => x.fillText(l, P, 850 + i * 76));
-    const y0 = 850 + L.length * 76 + 10;
-    stMatchLine(F, r, y0);
-    // odds and tier chips
-    const chip = (txt, X, Y, col) => { font(`600 28px ${SF.m}`); const w = x.measureText(txt).width + 44; rrPath(x, X, Y, w, 62, 14); x.fillStyle = col + '22'; x.fill(); x.fillStyle = col; x.fillText(txt, X + 22, Y + 42); return w; };
-    let cx = P; cx += chip(`ODDS ${odds(t.price)}${t.real ? '' : ' EST'}`, cx, y0 + 90, C.ink) + 14;
-    if (r.a.tier) chip(TIER_NAME[r.a.tier].toUpperCase(), cx, y0 + 90, C.grn);
-    // the next two
+    const r = D.safe[0], F = stFrame('safe', D, 0, `${D.when}'s safest pick`, r && r.m.id), { x, P, W, c1, c2 } = F;
+    if (!r) return stEmpty(F, 'No picks yet. Check back later.');
+    const t = r.a.top, p = t.pAdj, cx = W / 2, cy = 700, R = 262, A0 = Math.PI * 0.75, SW = Math.PI * 1.5, ang = (f) => A0 + SW * f;
+    // tick ring
+    for (let i = 0; i <= 100; i++) {
+      const f = i / 100, a = ang(f), major = i % 10 === 0, r0 = R + 34, r1 = r0 + (major ? 26 : 12);
+      x.strokeStyle = f <= p ? hexA(c1, major ? 1 : .8) : `rgba(255,255,255,${major ? .3 : .14})`; x.lineWidth = major ? 4 : 2;
+      x.beginPath(); x.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); x.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); x.stroke();
+    }
+    stFont(x, `600 20px ${SF.m}`, null, '1px'); x.fillStyle = SX.dim; x.textAlign = 'center';
+    for (const f of [0, 1]) { const a = ang(f), rr = R + 92; x.fillText(String(f * 100), cx + Math.cos(a) * rr, cy + Math.sin(a) * rr + 7); }
+    x.textAlign = 'left';
+    // track and the lit arc
+    x.lineCap = 'round'; x.lineWidth = 40;
+    x.strokeStyle = 'rgba(255,255,255,.06)'; x.beginPath(); x.arc(cx, cy, R, A0, A0 + SW); x.stroke();
+    const g = x.createConicGradient ? x.createConicGradient(A0, cx, cy) : null;
+    if (g) { g.addColorStop(0, c2); g.addColorStop(0.75, c1); g.addColorStop(1, c1); }
+    x.strokeStyle = g || c1;
+    stGlow(x, c1, 50, () => { x.beginPath(); x.arc(cx, cy, R, A0, ang(p)); x.stroke(); });
+    x.beginPath(); x.arc(cx, cy, R, A0, ang(p)); x.stroke();
+    const ea = ang(p);
+    stGlow(x, '#ffffff', 30, () => { x.fillStyle = '#ffffff'; x.beginPath(); x.arc(cx + Math.cos(ea) * R, cy + Math.sin(ea) * R, 13, 0, Math.PI * 2); x.fill(); });
+    x.lineCap = 'butt';
+    // the cautious floor, as a notch
+    if (t.pLo != null) {
+      const la = ang(Math.max(0, t.pLo)); x.fillStyle = '#ffffff';
+      x.beginPath(); x.moveTo(cx + Math.cos(la) * (R - 30), cy + Math.sin(la) * (R - 30)); x.lineTo(cx + Math.cos(la - 0.035) * (R - 52), cy + Math.sin(la - 0.035) * (R - 52)); x.lineTo(cx + Math.cos(la + 0.035) * (R - 52), cy + Math.sin(la + 0.035) * (R - 52)); x.closePath(); x.fill();
+    }
+    // inner rings
+    x.strokeStyle = 'rgba(255,255,255,.16)'; x.lineWidth = 2; x.setLineDash([3, 11]); x.beginPath(); x.arc(cx, cy, R - 64, 0, Math.PI * 2); x.stroke(); x.setLineDash([]);
+    x.strokeStyle = hexA(c1, .35); x.lineWidth = 3;
+    for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.3; x.beginPath(); x.arc(cx, cy, R - 86, a, a + 0.55); x.stroke(); }
+    // the number
+    stFont(x, `500 196px ${SF.m}`, null, '-6px');
+    const num = String(Math.round(p * 100)), nw = x.measureText(num).width;
+    stBigText(x, num, cx - 22, cy + 52, '#ffffff', c1, hexA(c1, .8), 'center');
+    stFont(x, `500 64px ${SF.m}`); x.fillStyle = c1; x.fillText('%', cx - 22 + nw / 2 + 6, cy - 34);
+    stFont(x, `600 20px ${SF.m}`, null, '5px'); x.fillStyle = SX.mut; x.textAlign = 'center';
+    x.fillText('STATPAD CHANCE', cx, cy + 108);
+    if (t.pLo != null) { x.fillStyle = c1; x.fillText(`FLOOR ${Math.round(t.pLo * 100)}%`, cx, cy + 144); }
+    x.textAlign = 'left';
+    // the pick
+    stFont(x, `800 70px ${SF.d}`, 'expanded', '-1px');
+    const L = wrapLines(x, t.label.toUpperCase(), W - 2 * P, 2);
+    let y = 1090; L.forEach((l) => { stBigText(x, l, P, y, '#ffffff', c1, hexA(c1, .45)); y += 80; });
+    stMatch(F, r, y + 4);
+    let X = P; y += 84;
+    X += stChip(F, `ODDS ${odds(t.price)}${t.real ? '' : ' EST'}`, X, y, c1, true) + 12;
+    if (r.a.tier) X += stChip(F, TIER_NAME[r.a.tier].toUpperCase(), X, y, c1) + 12;
+    if (r.a.lh && X < W - P - 220) stChip(F, `xG ${r.a.lh.toFixed(1)}–${r.a.la.toFixed(1)}`, X, y, c2);
+    // the next two, each with its own small dial
     const more = D.safe.slice(1);
     if (more.length) {
-      let y = Math.max(y0 + 250, 1290);
-      font(`600 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('ALSO SAFE', P, y); y += 22;
-      for (const q of more) {
-        x.fillStyle = 'rgba(143,161,153,.16)'; x.fillRect(P, y, ST_W - 2 * P, 2);
-        font(`650 38px ${SF.b}`); x.fillStyle = C.ink; x.fillText(fitText(x, q.a.top.label, ST_W - 2 * P - 200), P, y + 62);
-        font(`500 26px ${SF.b}`); x.fillStyle = C.mut; x.fillText(fitText(x, `${q.m.h} v ${q.m.a} · ${tFmt.format(q.ko)}`, ST_W - 2 * P - 200), P, y + 102);
-        font(`500 44px ${SF.m}`); x.fillStyle = C.ink; x.textAlign = 'right'; x.fillText(pct(q.a.top.pAdj), ST_W - P, y + 66);
-        font(`500 24px ${SF.m}`); x.fillStyle = C.mut; x.fillText(`@ ${odds(q.a.top.price)}`, ST_W - P, y + 102); x.textAlign = 'left';
-        y += 132;
+      const py = Math.max(y + 92, 1400), ph = 1640 - py;
+      stGlass(F, P - 12, py, W - 2 * P + 24, ph, 26);
+      stFont(x, `600 19px ${SF.m}`, null, '4px'); x.fillStyle = SX.dim; x.fillText('ALSO SAFE', P + 14, py + 38);
+      const rowH = (ph - 50) / more.length;
+      more.forEach((q, i) => {
+        const yy = py + 50 + i * rowH, mid = yy + rowH / 2, qp = q.a.top.pAdj, gx = P + 44;
+        x.lineWidth = 8; x.strokeStyle = 'rgba(255,255,255,.1)'; x.beginPath(); x.arc(gx, mid, 30, 0, Math.PI * 2); x.stroke();
+        x.strokeStyle = c1; x.lineCap = 'round'; x.beginPath(); x.arc(gx, mid, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * qp); x.stroke(); x.lineCap = 'butt';
+        stFont(x, `600 18px ${SF.m}`); x.fillStyle = SX.ink; x.textAlign = 'center'; x.fillText(String(Math.round(qp * 100)), gx, mid + 7); x.textAlign = 'left';
+        stFont(x, `700 34px ${SF.b}`); x.fillStyle = SX.ink; x.fillText(fitText(x, q.a.top.label, W - 2 * P - 260), P + 100, mid - 6);
+        stFont(x, `500 23px ${SF.b}`); x.fillStyle = SX.mut; x.fillText(fitText(x, `${q.m.h} v ${q.m.a} · ${tFmt.format(q.ko)}`, W - 2 * P - 260), P + 100, mid + 28);
+        stFont(x, `500 36px ${SF.m}`); x.fillStyle = SX.ink; x.textAlign = 'right'; x.fillText(odds(q.a.top.price), W - P - 14, mid + 12); x.textAlign = 'left';
+      });
+    }
+    return F.c;
+  }
+  // 2. UPSET ALERT: the shock radar
+  function stUpset(D) {
+    const u = D.up, F = stFrame('upset', D, 1, 'Upset alert', u && u.r.m.id), { x, P, W, c1, c2 } = F;
+    if (!u) return stEmpty(F, 'No long shot worth a look today.');
+    const { r, s } = u, cx = W / 2, cy = 690, R = 300, Rn = srng(shash(r.m.id));
+    // radar: rings, crosshair, bearing ticks
+    for (let k = 1; k <= 4; k++) { x.strokeStyle = hexA(c1, k === 4 ? .45 : .18); x.lineWidth = k === 4 ? 3 : 2; x.beginPath(); x.arc(cx, cy, R * k / 4, 0, Math.PI * 2); x.stroke(); }
+    x.strokeStyle = hexA(c1, .2); x.lineWidth = 2; x.beginPath(); x.moveTo(cx - R - 30, cy); x.lineTo(cx + R + 30, cy); x.moveTo(cx, cy - R - 30); x.lineTo(cx, cy + R + 30); x.stroke();
+    for (let i = 0; i < 72; i++) { const a = i * Math.PI / 36, r0 = R + 8, r1 = r0 + (i % 6 ? 8 : 18); x.strokeStyle = hexA(c1, i % 6 ? .3 : .7); x.beginPath(); x.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); x.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); x.stroke(); }
+    // the sweep
+    const sa = -Math.PI * 0.18;
+    if (x.createConicGradient) {
+      const g = x.createConicGradient(sa - 1.1, cx, cy); g.addColorStop(0, hexA(c1, 0)); g.addColorStop(0.175, hexA(c1, .42)); g.addColorStop(0.176, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = g; x.beginPath(); x.moveTo(cx, cy); x.arc(cx, cy, R, sa - 1.1, sa); x.closePath(); x.fill();
+    }
+    x.strokeStyle = hexA(c1, .95); x.lineWidth = 3; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(sa) * R, cy + Math.sin(sa) * R); x.stroke();
+    for (let i = 0; i < 9; i++) { const a = Rn() * Math.PI * 2, rr = 60 + Rn() * (R - 70); x.fillStyle = hexA(c2, .25 + Rn() * .35); x.beginPath(); x.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 3 + Rn() * 3, 0, Math.PI * 2); x.fill(); }
+    // the target, just caught by the sweep
+    const ta = sa - 0.12, tr = R * 0.78, tx = cx + Math.cos(ta) * tr, ty = cy + Math.sin(ta) * tr;
+    stGlow(x, c2, 40, () => { x.fillStyle = c2; x.beginPath(); x.arc(tx, ty, 12, 0, Math.PI * 2); x.fill(); });
+    x.strokeStyle = hexA(c2, .8); x.lineWidth = 2; x.beginPath(); x.arc(tx, ty, 30, 0, Math.PI * 2); x.stroke();
+    stFont(x, `700 20px ${SF.m}`, null, '3px'); x.fillStyle = c2; x.fillText(fitText(x, (s.key === 'H' ? r.m.h : r.m.a).toUpperCase(), 260), tx + 42, ty - 6);
+    x.fillStyle = SX.dim; x.fillText('LOCKED', tx + 42, ty + 20);
+    // the price, with interference
+    x.save(); x.translate(cx, cy + 10); x.scale(1, 0.5); const sh = x.createRadialGradient(0, 0, 0, 0, 0, 300); sh.addColorStop(0, 'rgba(3,6,10,.85)'); sh.addColorStop(1, 'rgba(3,6,10,0)'); x.fillStyle = sh; x.fillRect(-300, -300, 600, 600); x.restore();
+    stFont(x, `500 188px ${SF.m}`, null, '-6px'); stAberr(x, odds(s.price), cx, cy + 66, 7);
+    stFont(x, `600 20px ${SF.m}`, null, '5px'); x.fillStyle = SX.mut; x.textAlign = 'center';
+    x.fillText(`BEST PRICE${s.bk ? ' · ' + String(s.bk).toUpperCase() : ''}`, cx, cy - 96); x.textAlign = 'left';
+    // a seismograph line: the shock
+    const sy = 1000; x.lineWidth = 3; x.strokeStyle = stGrad(x, 0, 0, W, 0, [[0, hexA(c1, 0)], [0.5, c2], [1, hexA(c1, 0)]]);
+    x.beginPath(); for (let X = 0; X <= W; X += 6) { const d = Math.abs(X - 660), amp = d < 90 ? (90 - d) * 0.75 : 0; const yv = sy + (Rn() - 0.5) * 10 + (amp ? Math.sin(X / 7) * amp : 0); X ? x.lineTo(X, yv) : x.moveTo(X, yv); } x.stroke();
+    // the pick
+    stFont(x, `800 64px ${SF.d}`, 'expanded', '-1px');
+    const L = wrapLines(x, s.label.toUpperCase(), W - 2 * P, 2);
+    let y = 1135; L.forEach((l) => { stBigText(x, l, P, y, c1, c2, hexA(c1, .5)); y += 74; });
+    stMatch(F, r, y - 4);
+    // price gap: fair odds against the real price
+    const fair = 1 / s.p, gy = y + 130;
+    stGlass(F, P - 12, gy - 64, W - 2 * P + 24, Math.min(1650, gy + 200) - (gy - 64), 26);
+    const lo = Math.min(fair, s.price) * 0.8, hi = Math.max(fair, s.price) * 1.12, gx0 = P, gx1 = W - P - 190, mx = (v) => gx0 + (gx1 - gx0) * (v - lo) / (hi - lo);
+    x.fillStyle = 'rgba(255,255,255,.09)'; rrPath(x, gx0, gy, gx1 - gx0, 12, 6); x.fill();
+    const a0 = mx(Math.min(fair, s.price)), a1 = mx(Math.max(fair, s.price)), good = s.price >= fair;
+    stGlow(x, good ? '#35f2b0' : c1, 24, () => { x.fillStyle = good ? '#35f2b0' : c1; rrPath(x, a0, gy, Math.max(12, a1 - a0), 12, 6); x.fill(); });
+    stFont(x, `600 20px ${SF.m}`, null, '2px');
+    for (const [v, lab, up] of [[fair, `FAIR ${odds(fair)}`, true], [s.price, `PRICE ${odds(s.price)}`, false]]) {
+      const X = mx(v); x.fillStyle = '#ffffff'; x.fillRect(X - 2, gy - 12, 4, 36);
+      x.fillStyle = up ? SX.mut : SX.ink; x.textAlign = 'center'; x.fillText(lab, Math.min(gx1 - 60, Math.max(gx0 + 60, X)), up ? gy - 22 : gy + 54); x.textAlign = 'left';
+    }
+    stFont(x, `600 46px ${SF.m}`); x.fillStyle = s.edge >= 0 ? '#35f2b0' : c1; x.textAlign = 'right';
+    x.fillText(`${s.edge >= 0 ? '+' : ''}${Math.round(s.edge * 100)}%`, W - P, gy + 22);
+    stFont(x, `600 18px ${SF.m}`, null, '3px'); x.fillStyle = SX.dim; x.fillText(s.edge >= 0 ? 'VALUE' : 'BELOW FAIR', W - P, gy + 50); x.textAlign = 'left';
+    // one in N: lit dots
+    const n = Math.max(2, Math.min(12, Math.round(1 / s.p))), dy = gy + 104, step = Math.min(78, (W - 2 * P) / n);
+    for (let i = 0; i < n; i++) {
+      const X = P + 22 + i * step;
+      if (i === 0) stGlow(x, c2, 30, () => { x.fillStyle = c2; x.beginPath(); x.arc(X, dy, 20, 0, Math.PI * 2); x.fill(); });
+      else { x.strokeStyle = 'rgba(255,255,255,.3)'; x.lineWidth = 3; x.beginPath(); x.arc(X, dy, 18, 0, Math.PI * 2); x.stroke(); }
+    }
+    stFont(x, `600 21px ${SF.m}`, null, '3px'); x.fillStyle = SX.mut;
+    x.fillText(fitText(x, `LANDS ABOUT 1 TIME IN ${n} · SMALL STAKES ONLY`, W - 2 * P - 20), P + 4, dy + 60);
+    return F.c;
+  }
+  // 3. MOST AT STAKE: three futures forking from one result
+  function stBig(D) {
+    const r = D.big, F = stFrame('stakes', D, 2, 'Most at stake', r && r.m.id), { x, P, W, c1, c2 } = F;
+    if (!r) return stEmpty(F, 'No league game with much at stake today.');
+    const st = stakeOf(r.m);
+    // names
+    const nw = W - 2 * P - 250, nameFont = (t) => { let z = 66; for (; z > 40; z -= 2) { stFont(x, `850 ${z}px ${SF.d}`, 'expanded', '-1px'); if (x.measureText(t).width <= nw) break; } };
+    nameFont(r.m.h.toUpperCase()); stBigText(x, fitText(x, r.m.h.toUpperCase(), nw), P, 480, '#ffffff', c2, hexA(c1, .4));
+    stFont(x, `700 26px ${SF.m}`, null, '6px'); x.fillStyle = c1; x.fillText('VERSUS', P, 532);
+    nameFont(r.m.a.toUpperCase()); stBigText(x, fitText(x, r.m.a.toUpperCase(), nw), P, 610, '#ffffff', c2, hexA(c1, .4));
+    stFont(x, `500 23px ${SF.m}`, null, '3px'); x.fillStyle = SX.dim; x.fillText(fitText(x, `${lgName(r.m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), nw), P, 662);
+    // the stakes dial
+    const dx = W - P - 105, dy = 520, dr = 92, sc = Math.min(1, st.s / 100);
+    x.lineWidth = 16; x.strokeStyle = 'rgba(255,255,255,.08)'; x.beginPath(); x.arc(dx, dy, dr, Math.PI * 0.8, Math.PI * 2.2); x.stroke();
+    x.lineCap = 'round'; x.strokeStyle = stGrad(x, dx - dr, 0, dx + dr, 0, [[0, c2], [1, c1]]);
+    stGlow(x, c1, 30, () => { x.beginPath(); x.arc(dx, dy, dr, Math.PI * 0.8, Math.PI * (0.8 + 1.4 * sc)); x.stroke(); }); x.lineCap = 'butt';
+    stFont(x, `500 70px ${SF.m}`, null, '-3px'); x.fillStyle = SX.ink; x.textAlign = 'center'; x.fillText(String(st.s), dx, dy + 22);
+    stFont(x, `700 18px ${SF.m}`, null, '4px'); x.fillStyle = st.lv === 'Huge' ? c1 : c2; x.fillText(`${st.lv.toUpperCase()}`, dx, dy + 62);
+    x.fillStyle = SX.dim; x.fillText('STAKES', dx, dy + 88); x.textAlign = 'left';
+    // a fork for each team: now, then win / draw / defeat
+    const sides = [[r.m.h, st.h], [r.m.a, st.a]].filter((q) => q[1]);
+    const ph = 340, top0 = 720;
+    sides.forEach(([nm, rec], k) => {
+      const q = stakeSide(nm, rec), Y = top0 + k * (ph + 26);
+      stGlass(F, P - 12, Y, W - 2 * P + 24, ph, 26);
+      const yT = Y + 56, yB = Y + ph - 46, my = (v) => yB - (yB - yT) * v, ox = P + 300, ex = W - P - 210;
+      stFont(x, `750 36px ${SF.b}`); x.fillStyle = SX.ink; x.fillText(fitText(x, nm, 270), P + 14, Y + 64);
+      stFont(x, `700 21px ${SF.m}`, null, '4px'); x.fillStyle = c2; x.fillText(q.z.toUpperCase(), P + 14, Y + 104);
+      stFont(x, `600 20px ${SF.m}`, null, '3px'); x.fillStyle = SX.dim; x.fillText('NOW', P + 14, Y + 150);
+      stFont(x, `500 54px ${SF.m}`, null, '-2px'); x.fillStyle = SX.ink; x.fillText(fmtP(q.all).replace('over ', '>').replace('under ', '<'), P + 14, Y + 206);
+      // scale
+      x.strokeStyle = 'rgba(255,255,255,.08)'; x.lineWidth = 2; x.setLineDash([4, 8]);
+      for (const v of [0, 0.5, 1]) { x.beginPath(); x.moveTo(ox, my(v)); x.lineTo(W - P, my(v)); x.stroke(); }
+      x.setLineDash([]);
+      stFont(x, `500 16px ${SF.m}`); x.fillStyle = SX.dim; x.textAlign = 'right'; for (const v of [0, 0.5, 1]) x.fillText(`${v * 100}`, W - P, my(v) - 6); x.textAlign = 'left';
+      // the three futures
+      const oy = my(q.all), outs = [['WIN', q.w, '#35f2b0'], ['DRAW', q.d, '#c4cfd8'], ['DEFEAT', q.l, c1]];
+      outs.forEach(([lab, v, col]) => {
+        const ey = my(v);
+        x.strokeStyle = col; x.lineWidth = 4;
+        stGlow(x, col, 22, () => { x.beginPath(); x.moveTo(ox, oy); x.bezierCurveTo(ox + 170, oy, ex - 170, ey, ex, ey); x.stroke(); });
+        x.fillStyle = col; x.beginPath(); x.arc(ex, ey, 9, 0, Math.PI * 2); x.fill();
+      });
+      // labels, kept apart
+      const labs = outs.map(([lab, v, col]) => ({ lab, v, col, y: my(v) })).sort((a, b) => a.y - b.y);
+      for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 40) labs[i].y = labs[i - 1].y + 40;
+      const over = labs[labs.length - 1].y - (Y + ph - 18); if (over > 0) labs.forEach((l) => { l.y -= over; });
+      labs.forEach((l) => { stFont(x, `700 22px ${SF.m}`, null, '2px'); x.fillStyle = l.col; x.fillText(l.lab, ex + 22, l.y + 8); stFont(x, `600 26px ${SF.m}`); x.fillStyle = SX.ink; x.fillText(fmtP(l.v).replace('over ', '>').replace('under ', '<'), ex + 22 + (l.lab.length * 18 + 14), l.y + 9); });
+      stGlow(x, '#ffffff', 26, () => { x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ox, oy, 12, 0, Math.PI * 2); x.fill(); });
+    });
+    // Statpad's result chances
+    const p = r.a.p, by = top0 + sides.length * (ph + 26) + 40;
+    if (by < 1600) {
+      stFont(x, `600 19px ${SF.m}`, null, '4px'); x.fillStyle = SX.dim; x.fillText('STATPAD · HOME / DRAW / AWAY', P, by);
+      let bx = P; const bw = W - 2 * P;
+      for (const [v, col] of [[p.H, '#6f8cff'], [p.D, '#c4cfd8'], [p.A, c2]]) {
+        const w = v * bw; stGlow(x, col, 16, () => { x.fillStyle = col; rrPath(x, bx, by + 18, Math.max(4, w - 6), 46, 10); x.fill(); });
+        if (v > 0.12) { stFont(x, `700 24px ${SF.m}`); x.fillStyle = '#05080b'; x.fillText(pct(v), bx + 14, by + 50); }
+        bx += w;
       }
     }
     return F.c;
   }
-  function stUpset(D) {
-    const F = statusFrame('Upset alert', ST_C.org, D, 1), { x, font, P, C } = F, u = D.up;
-    if (!u) {
-      font(`650 56px ${SF.b}`); x.fillStyle = C.ink; wrapLines(x, 'No long shot worth a look today.', ST_W - 2 * P, 3).forEach((l, i) => x.fillText(l, P, 620 + i * 70));
-      return F.c;
-    }
-    const { r, s } = u;
-    font(`500 230px ${SF.m}`); x.fillStyle = C.ink; x.fillText(odds(s.price), P - 8, 680);
-    font(`500 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText(`BEST PRICE${s.bk ? ' · ' + String(s.bk).toUpperCase() : ''}`, P, 736);
-    font(`700 66px ${SF.b}`); x.fillStyle = C.ink;
-    const L = wrapLines(x, s.label, ST_W - 2 * P, 2); L.forEach((l, i) => x.fillText(l, P, 850 + i * 76));
-    const y0 = 850 + L.length * 76 + 10;
-    stMatchLine(F, r, y0);
-    // three numbers
-    const cols = [[pct(s.p), 'STATPAD'], [odds(1 / s.p), 'FAIR ODDS'], [s.edge >= 0 ? '+' + Math.round(s.edge * 100) + '%' : Math.round(s.edge * 100) + '%', s.edge >= 0 ? 'VALUE' : 'BELOW FAIR']];
-    const cw = (ST_W - 2 * P) / 3, yy = y0 + 200;
-    cols.forEach(([v, l], i) => { font(`500 64px ${SF.m}`); x.fillStyle = i === 2 && s.edge >= 0 ? C.grn : C.ink; x.fillText(v, P + i * cw, yy); font(`500 24px ${SF.m}`); x.fillStyle = C.mut; x.fillText(l, P + i * cw, yy + 44); });
-    font(`500 32px ${SF.b}`); x.fillStyle = C.mut;
-    const one = Math.max(2, Math.round(1 / s.p));
-    wrapLines(x, `A long shot: Statpad expects it to land about 1 time in ${one}. ${s.edge >= 0.02 ? 'The price is better than fair, but most of the time it loses.' : 'Most of the time it loses.'} Small stakes only.`, ST_W - 2 * P, 4).forEach((l, i) => x.fillText(l, P, yy + 150 + i * 46));
-    return F.c;
-  }
-  function stBig(D) {
-    const F = statusFrame('Most at stake', ST_C.red, D, 2), { x, font, P, C } = F, r = D.big;
-    if (!r) {
-      font(`650 56px ${SF.b}`); x.fillStyle = C.ink; wrapLines(x, 'No league game with much at stake today.', ST_W - 2 * P, 3).forEach((l, i) => x.fillText(l, P, 620 + i * 70));
-      return F.c;
-    }
-    const st = stakeOf(r.m);
-    font(`700 80px ${SF.b}`); x.fillStyle = C.ink;
-    x.fillText(fitText(x, r.m.h, ST_W - 2 * P), P, 550);
-    font(`500 44px ${SF.b}`); x.fillStyle = C.mut; x.fillText('v', P, 648);
-    font(`700 80px ${SF.b}`); x.fillStyle = C.ink; x.fillText(fitText(x, r.m.a, ST_W - 2 * P - 60), P + 52, 648);
-    font(`500 25px ${SF.m}`); x.fillStyle = C.dim; x.fillText(fitText(x, `${lgName(r.m.lk)} · ${tFmt.format(r.ko)}`.toUpperCase(), ST_W - 2 * P), P, 712);
-    font(`600 30px ${SF.m}`); const tag = `${st.lv.toUpperCase()} STAKES · ${st.s}`, tw = x.measureText(tag).width + 44;
-    rrPath(x, P, 746, tw, 64, 14); x.fillStyle = (st.lv === 'Huge' ? C.red : C.yel) + '26'; x.fill(); x.fillStyle = st.lv === 'Huge' ? C.red : C.yel; x.fillText(tag, P + 22, 789);
-    let y = 910;
-    for (const [nm, rec] of [[r.m.h, st.h], [r.m.a, st.a]]) {
-      if (!rec) continue;
-      const q = stakeSide(nm, rec);
-      font(`700 44px ${SF.b}`); x.fillStyle = C.ink; x.fillText(fitText(x, nm, 560), P, y);
-      font(`500 28px ${SF.b}`); x.fillStyle = C.mut; x.textAlign = 'right'; x.fillText(`${q.z} · now ${fmtP(q.all)}`, ST_W - P, y); x.textAlign = 'left';
-      const ty = y + 52, tw2 = ST_W - 2 * P - 20, X0 = P + 10, X = (p) => X0 + p * tw2;
-      rrPath(x, X0, ty, tw2, 16, 8); x.fillStyle = 'rgba(143,161,153,.2)'; x.fill();
-      const lo = Math.min(q.w, q.l, q.d), hi = Math.max(q.w, q.l, q.d);
-      rrPath(x, X(lo), ty, Math.max(16, (hi - lo) * tw2), 16, 8); x.fillStyle = 'rgba(238,243,239,.28)'; x.fill();
-      for (const [p, col] of [[q.l, C.red], [q.d, C.d], [q.w, C.grn]]) { x.beginPath(); x.arc(X(p), ty + 8, 17, 0, Math.PI * 2); x.fillStyle = col; x.fill(); x.lineWidth = 5; x.strokeStyle = '#0d1813'; x.stroke(); }
-      const parts = [['WIN', q.w, C.grn], ['DRAW', q.d, C.d], ['DEFEAT', q.l, C.red]];
-      let px = P; font(`500 30px ${SF.m}`);
-      for (const [l, p, col] of parts) { x.fillStyle = col; x.fillText(`${l} ${fmtP(p)}`, px, ty + 84); px += x.measureText(`${l} ${fmtP(p)}`).width + 40; }
-      y += 250;
-    }
-    // Statpad's 1X2
-    const p = r.a.p, bw = ST_W - 2 * P, by = Math.max(y + 20, 1420);
-    font(`600 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('STATPAD: HOME · DRAW · AWAY', P, by - 24);
-    let bx = P;
-    for (const [v, col] of [[p.H, C.h], [p.D, C.d], [p.A, C.a]]) {
-      const w = v * bw; x.fillStyle = col; x.fillRect(bx, by, Math.max(2, w - 4), 64);
-      if (v > 0.12) { font(`600 30px ${SF.m}`); x.fillStyle = '#0a100e'; x.fillText(pct(v), bx + 16, by + 44); }
-      bx += w;
-    }
-    return F.c;
-  }
+  // 4. SLIP: the odds ascent
   function stSlip(D) {
-    const sl = D.slip, F = statusFrame(sl ? `${sl.target}-odds slip · ${sl.name}` : `${S.target}-odds slip`, ST_C.cob, D, 3), { x, font, P, C } = F;
-    if (!sl) { font(`650 56px ${SF.b}`); x.fillStyle = C.ink; wrapLines(x, 'Not enough games for a slip today.', ST_W - 2 * P, 3).forEach((l, i) => x.fillText(l, P, 620 + i * 70)); return F.c; }
-    font(`500 190px ${SF.m}`); x.fillStyle = C.ink; x.fillText(odds(sl.odds), P - 6, 640);
-    font(`500 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('TOTAL ODDS', P, 692);
-    font(`500 64px ${SF.m}`); x.fillStyle = C.ink; x.textAlign = 'right'; x.fillText(pct(sl.prob, 1), ST_W - P, 600);
-    font(`500 26px ${SF.m}`); x.fillStyle = C.mut; x.fillText('TO LAND', ST_W - P, 644); x.textAlign = 'left';
-    const n = sl.legs.length, maxRows = 8, show = sl.legs.slice(0, n > maxRows ? maxRows - 1 : maxRows), ROW = 104;
-    let y = 760;
-    show.forEach((l) => {
-      x.fillStyle = 'rgba(143,161,153,.16)'; x.fillRect(P, y, ST_W - 2 * P, 2);
-      font(`650 36px ${SF.b}`); x.fillStyle = C.ink; x.fillText(fitText(x, l.s.label, ST_W - 2 * P - 190), P, y + 50);
-      font(`500 25px ${SF.b}`); x.fillStyle = C.mut; x.fillText(fitText(x, `${l.m.h} v ${l.m.a} · ${tFmt.format(Date.parse(l.m.ko))}`, ST_W - 2 * P - 190), P, y + 88);
-      font(`500 40px ${SF.m}`); x.fillStyle = C.ink; x.textAlign = 'right'; x.fillText(odds(l.s.price), ST_W - P, y + 54);
-      font(`500 22px ${SF.m}`); x.fillStyle = C.mut; x.fillText(pct(l.s.pAdj) + (l.s.real ? '' : ' · EST'), ST_W - P, y + 88); x.textAlign = 'left';
+    const sl = D.slip, F = stFrame('slip', D, 3, sl ? `${sl.target}-odds slip` : `${S.target}-odds slip`, sl && sl.legs.map((l) => l.m.id).join('|')), { x, P, W, c1, c2 } = F;
+    if (!sl) return stEmpty(F, 'Not enough games for a slip today.');
+    // total odds and the chance it lands
+    stFont(x, `500 176px ${SF.m}`, null, '-7px');
+    stBigText(x, odds(sl.odds), P - 6, 560, '#ffffff', c2, hexA(c1, .7));
+    stFont(x, `600 20px ${SF.m}`, null, '5px'); x.fillStyle = SX.mut; x.fillText(`TOTAL ODDS · ${sl.legs.length} LEGS · ${String(sl.name).toUpperCase()}`, P, 612);
+    const gx = W - P - 92, gy = 470, gr = 82;
+    x.lineWidth = 14; x.strokeStyle = 'rgba(255,255,255,.08)'; x.beginPath(); x.arc(gx, gy, gr, 0, Math.PI * 2); x.stroke();
+    x.lineCap = 'round'; x.strokeStyle = c2; stGlow(x, c2, 26, () => { x.beginPath(); x.arc(gx, gy, gr, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0.02, sl.prob)); x.stroke(); }); x.lineCap = 'butt';
+    stFont(x, `600 36px ${SF.m}`, null, '-1px'); x.fillStyle = SX.ink; x.textAlign = 'center'; x.fillText(pct(sl.prob, 1), gx, gy + 10);
+    stFont(x, `700 15px ${SF.m}`, null, '3px'); x.fillStyle = SX.dim; x.fillText('TO LAND', gx, gy + 38); x.textAlign = 'left';
+    // the ascent: odds multiplying up, the chance draining away
+    const cy0 = 660, ch = 380; stGlass(F, P - 12, cy0, W - 2 * P + 24, ch, 26);
+    const n = sl.legs.length, cum = [1], pr = [1];
+    sl.legs.forEach((l, i) => { cum.push(cum[i] * l.s.price); pr.push(pr[i] * l.s.pAdj); });
+    const X0 = P + 50, X1 = W - P - 70, Yb = cy0 + ch - 60, Yt = cy0 + 70, lx = (i) => X0 + (X1 - X0) * i / n, lyO = (v) => Yb - (Yb - Yt) * Math.log(v) / Math.log(Math.max(1.01, cum[n])), lyP = (v) => Yb - (Yb - Yt) * v;
+    stFont(x, `600 17px ${SF.m}`, null, '3px'); x.fillStyle = c1; x.fillText('━ ODDS CLIMB', P + 14, cy0 + 40); x.fillStyle = '#ffb05c'; x.fillText('┅ CHANCE FALLS', P + 230, cy0 + 40);
+    // area under the climb
+    x.beginPath(); x.moveTo(lx(0), Yb); cum.forEach((v, i) => x.lineTo(lx(i), lyO(v))); x.lineTo(lx(n), Yb); x.closePath();
+    x.fillStyle = stGrad(x, 0, Yt, 0, Yb, [[0, hexA(c1, .35)], [1, hexA(c1, 0)]]); x.fill();
+    x.strokeStyle = stGrad(x, X0, 0, X1, 0, [[0, c1], [1, c2]]); x.lineWidth = 5; x.lineJoin = 'round';
+    stGlow(x, c1, 26, () => { x.beginPath(); cum.forEach((v, i) => (i ? x.lineTo(lx(i), lyO(v)) : x.moveTo(lx(i), lyO(v)))); x.stroke(); });
+    x.strokeStyle = '#ffb05c'; x.lineWidth = 3; x.setLineDash([10, 9]); x.beginPath(); pr.forEach((v, i) => (i ? x.lineTo(lx(i), lyP(v)) : x.moveTo(lx(i), lyP(v)))); x.stroke(); x.setLineDash([]);
+    cum.forEach((v, i) => {
+      const X = lx(i), Y = lyO(v);
+      x.fillStyle = i === n ? '#ffffff' : c1; x.beginPath(); x.arc(X, Y, i === n ? 11 : 7, 0, Math.PI * 2); x.fill();
+      if (i && (n <= 6 || i === n || i % 2 === 0)) { stFont(x, `600 18px ${SF.m}`); x.fillStyle = SX.ink; x.textAlign = 'center'; x.fillText(`×${odds(v)}`, X, Y - 18); x.textAlign = 'left'; }
+    });
+    stFont(x, `700 19px ${SF.m}`); x.fillStyle = '#ffb05c'; x.textAlign = 'center'; x.fillText(pct(pr[n], 1), lx(n), Math.min(Yb + 34, lyP(pr[n]) + 34)); x.textAlign = 'left';
+    // the legs
+    const show = sl.legs.slice(0, n > 6 ? 5 : 6), ROW = 92;
+    stGlass(F, P - 12, cy0 + ch + 22, W - 2 * P + 24, 1650 - (cy0 + ch + 22), 26);
+    let y = cy0 + ch + 34;
+    show.forEach((l, i) => {
+      rrPath(x, P + 6, y + 10, 56, 56, 14); x.strokeStyle = hexA(c1, .8); x.lineWidth = 2; x.stroke(); x.fillStyle = hexA(c1, .14); x.fill();
+      stFont(x, `700 22px ${SF.m}`); x.fillStyle = c1; x.textAlign = 'center'; x.fillText(String(i + 1).padStart(2, '0'), P + 34, y + 46); x.textAlign = 'left';
+      stFont(x, `700 32px ${SF.b}`); x.fillStyle = SX.ink; x.fillText(fitText(x, l.s.label, W - 2 * P - 260), P + 84, y + 34);
+      stFont(x, `500 22px ${SF.b}`); x.fillStyle = SX.mut; x.fillText(fitText(x, `${l.m.h} v ${l.m.a} · ${tFmt.format(Date.parse(l.m.ko))}`, W - 2 * P - 260), P + 84, y + 66);
+      stFont(x, `500 36px ${SF.m}`); x.fillStyle = SX.ink; x.textAlign = 'right'; x.fillText(odds(l.s.price), W - P - 10, y + 40);
+      stFont(x, `600 18px ${SF.m}`, null, '2px'); x.fillStyle = SX.dim; x.fillText(pct(l.s.pAdj) + (l.s.real ? '' : ' EST'), W - P - 10, y + 68); x.textAlign = 'left';
       y += ROW;
     });
-    if (n > show.length) { font(`600 30px ${SF.b}`); x.fillStyle = C.mut; x.fillText(`+ ${n - show.length} more legs on Statpad`, P, y + 56); }
+    if (n > show.length) { stFont(x, `700 22px ${SF.m}`, null, '3px'); x.fillStyle = c1; x.fillText(`+ ${n - show.length} MORE ${n - show.length === 1 ? 'LEG' : 'LEGS'} ON STATPAD`, P + 6, y + 32); }
     return F.c;
   }
   async function statusPack() {
     const D = statusData(); if (!D) return null;
     if (document.fonts && document.fonts.load) await Promise.race([Promise.all(['650 30px "Hanken Grotesk"', '700 30px "Hanken Grotesk"', '500 30px "Martian Mono"', '850 40px "Archivo"'].map((f) => document.fonts.load(f).catch(() => {}))), new Promise((r) => setTimeout(r, 2500))]);
-    const makers = [['safest', stSafe], ['upset', stUpset], ['stakes', stBig], ['slip', stSlip]];
+    const makers = [['safest', stSafe], ['upset', stUpset], ['stakes', stBig], ['slip', stSlip]];   // drawn one by one, so a slow phone stays responsive
     const out = [];
     for (const [k, fn] of makers) {
       const c = fn(D);
