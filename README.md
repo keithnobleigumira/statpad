@@ -135,22 +135,29 @@ Each is fitted on two past seasons after blending with the market as the site do
 
 ## Live shock map
 
-While games are in play, the Matches tab opens with a dot-matrix world map of them, also under **Shock map**. Each game sits in its country and pulses faster and wider as its chances move:
+While games are in play, the Matches tab opens with a turning globe of them, also under **Shock map** (full screen). Land is drawn as an even dot matrix, so games anywhere in the world have a place: the globe turns on its own, slows down while a shock passes the middle, and spins with a drag (tilts too, with a mouse). Each game sits in its country; a game in play sends up a beam of light that rises higher for a bigger shock, and pulses faster and wider as its chances move:
 
 - **Red, shock**: the favourite's chance of winning has collapsed since kick-off.
 - **Amber, wobble**: a smaller shift.
 - **Blue**: going to plan.
-- **Grey**: kicks off within a few hours.
+- **Grey**: kicks off within the next six hours.
 
 The shock number is the fall in the favourite's chance in percentage points; a small favourite collapsing, or a big swing in the last ten minutes, counts too. Chances in play come from the score, the minute, red cards and each side's expected goals before kick-off. Tap a dot or a row for the match. The map only animates while it's on screen, and stays still if the phone asks for reduced motion.
 
 ## Goal seek
 
-**Slips → Goal seek**: enter your stake and what you want to collect (or tap ×10 … ×1000). Statpad works out the odds needed after tax on winnings (set in My bets), then searches every combination of one pick per match, at real bookmaker prices and up to 12 legs, for the slip with the highest chance of paying at least that. Choose today, today and tomorrow, or the next 3 days.
+**Slips → Goal seek**: enter your stake and what you want to collect (or tap ×10 … ×1000). Statpad works out the odds needed after tax on winnings (set in My bets), then searches every combination of one pick per match, up to 12 legs, for the slip most likely to land in full while paying at least that. Choose today, today and tomorrow, or the next 3 days.
+
+Every leg is weighed before it can be used:
+
+- **Price:** what a typical bookmaker pays (the market average), not the single best price one bookmaker somewhere offers. Double chance is priced from the market and marked est.
+- **Chance:** Statpad's cautious chance (one standard deviation below its estimate), and never above the bookmakers' own consensus, so a long shot that only looks good on paper can't buy its way in.
+- **Minimum per leg:** every leg must clear the chance you set under **Every leg at least** (Any, 25%, 40%, 55% or 70%; 40% unless you change it).
 
 It shows:
 
-- the best chance, and "about 1 in N";
+- the chance the whole slip lands (cautious, and Statpad's central estimate), and "about 1 in N";
+- **Weighing the options**: the same goal with every minimum per leg, with the number of legs, the weakest leg and the chance it all lands. Long shots buy odds with few legs but each one rarely lands; safer legs need more of them, and every extra leg is another way to lose. Tap a row to use it;
 - what the slip returns on average;
 - the legs, with a button to add them all to the coupon;
 - a value-only version, where every leg beats the bookmaker's price;

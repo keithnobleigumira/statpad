@@ -428,8 +428,9 @@ h2 { font: 800 clamp(24px, 3.6vw, 32px)/1 var(--f-display); font-stretch: 115%; 
 .shk-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px 8px; }
 .shk-h h3 { margin: 0; font: 700 15px/1.2 var(--f-display); display: flex; align-items: center; gap: 8px; color: #eaf4ff; }
 .shk .linkbtn { color: #8fdcff; }
-canvas.shk-cv { display: block; width: 100%; height: 230px; cursor: pointer; }
-canvas.shk-cv.big { height: min(58vh, 520px); border-radius: 14px; border: 1px solid #12324a; }
+canvas.shk-cv { display: block; width: 100%; height: 300px; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+canvas.shk-cv:active { cursor: grabbing; }
+canvas.shk-cv.big { height: min(62vh, 560px); border-radius: 14px; border: 1px solid #12324a; }
 .shk-list { display: grid; }
 .shk .shk-list { padding: 4px 6px 8px; }
 .shk-row { display: flex; gap: 12px; align-items: center; text-align: left; width: 100%; background: none; border: 0; border-top: 1px solid rgba(140,190,230,.12); padding: 10px 8px; color: inherit; font: inherit; cursor: pointer; }
@@ -467,7 +468,13 @@ canvas.shk-cv.big { height: min(58vh, 520px); border-radius: 14px; border: 1px s
 .gs-legs li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--rule-2); }
 .gs-legs li:first-child { border-top: 0; }
 .gs-legs li div { display: grid; gap: 2px; min-width: 0; } .gs-legs b { font-size: 14px; } .gs-legs small { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gs-p { font: 600 12px var(--f-mono); color: var(--ink-3); } .gs-legs .mono { font-size: 15px; font-weight: 600; }
+.gs-p { font: 600 12px var(--f-mono); color: var(--ink-3); } .gs-legs .mono { font-size: 15px; font-weight: 600; text-align: right; }
+.gs-lp { display: block; height: 4px; border-radius: 2px; background: var(--sunk); margin-top: 5px; max-width: 220px; overflow: hidden; } .gs-lp i { display: block; height: 100%; background: var(--pitch); border-radius: 2px; }
+.gs-est { display: block; font: 500 10px var(--f-mono); color: var(--ink-3); }
+.gs-fl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .gs-fl .lbl { font-size: 12.5px; color: var(--ink-2); }
+.gs-alt tbody tr { cursor: pointer; } .gs-alt tbody tr.on td { background: var(--cobalt-soft); } .gs-alt tbody tr.on td:first-child { box-shadow: inset 3px 0 0 var(--cobalt); }
+.gs-alt .gs-na { color: var(--ink-3); font-family: var(--f-body); text-align: right; }
+.gs-long .gs-big { border-color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
 .gs-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .gs-ch { width: 100%; height: auto; display: block; }
 .gs-ch text { font: 500 11.5px var(--f-mono); fill: var(--ink-3); }
@@ -2660,9 +2667,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Fatigue and motivation</h3>
       <p>Statpad tests two more things each month, on two past seasons, then on a third the test never saw, after blending with the market as the site does: <b>rest</b> (a side with only two or three days since its last league game, against one with more) and <b>motivation</b> (from the season simulation run week by week: a side whose season chances barely move whatever the result, and games where neither side has anything left to play for). Each goes on only if it lowers the error on the unseen season too, and the Track tab shows which are on. Football-data.co.uk lists league games only, so cup and European games don't count towards rest. When one applies to a game, its match page says so.</p>
       <h3>Live shock map</h3>
-      <p>While games are in play, the Matches tab opens with a map of them (also under <b>Shock map</b>). Each game sits in its country and pulses faster and wider the further the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes: red for a shock, amber for a wobble, blue when it's going to plan, grey for games kicking off soon. The shock number is that fall in percentage points (a small favourite collapsing counts more). Chances in play come from the score, the minute, red cards and each side's expected goals before kick-off. Tap a dot for the match.</p>
+      <p>While games are in play, the Matches tab opens with a map of them (also under <b>Shock map</b>). It's a globe that turns on its own (drag it to spin; it slows down while a shock passes the middle), so games anywhere in the world have a place. Each game sits in its country with a beam of light that rises higher for a bigger shock, and pulses faster and wider the further the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes: red for a shock, amber for a wobble, blue when it's going to plan, grey for games kicking off soon. The shock number is that fall in percentage points (a small favourite collapsing counts more). Chances in play come from the score, the minute, red cards and each side's expected goals before kick-off. Tap a dot for the match.</p>
       <h3>Goal seek</h3>
-      <p>Under <b>Slips → Goal seek</b>, say what you want to turn your stake into. Statpad works out the odds needed after tax on winnings, then searches every combination of one pick per match, at real bookmaker prices and up to 12 legs, for the slip with the highest chance of paying that much. It shows that chance honestly, what such a slip returns on average, a value-only version if you want every leg to beat the bookmaker's price, and the price of ambition: the best chance for every amount you could aim for. You can also ask by voice: "turn 10,000 into 500,000".</p>
+      <p>Under <b>Slips → Goal seek</b>, say what you want to turn your stake into. Statpad works out the odds needed after tax on winnings, then searches every combination of one pick per match, at real bookmaker prices and up to 12 legs, for the slip most likely to land in full while paying that much. Every leg is weighed before it can be used: its price is what a typical bookmaker pays (the market average, not the single best price somewhere), its chance is the cautious one and never above the bookmakers' own consensus, and it must clear the minimum chance you set for every leg (40% unless you change it), so long shots can't be used to buy odds. A table weighs the same goal with every minimum, from any chance to 70%+: long shots need fewer legs but each rarely lands, safer legs need more of them. It shows the chance honestly, what such a slip returns on average, a value-only version if you want every leg to beat the bookmaker's price, and the price of ambition: the best chance for every amount you could aim for. You can also ask by voice: "turn 10,000 into 500,000".</p>
       <h3>WhatsApp Status pack</h3>
       <p>On the Matches and Slips tabs, <b>Status pack</b> draws four tall pictures for the day, sized for WhatsApp Status and each built around its own data graphic: the safest pick on a confidence dial, an upset alert on a radar (the underdog at a real price of 2.60 or more with the best value, with how often it should land), the game with most at stake as three futures forking from one result, and the slip at your target odds as an odds ascent. Share all four in one go, or one at a time. Each carries the site's address and an 18+ note.</p>
       <h3>Ask Statpad</h3>
@@ -4585,7 +4592,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   setInterval(esTick, 10e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) esTick(); });
-  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, esStatus, esTick, esRow, esTuple, esPair, esSim };   // for the test scripts
+  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, esStatus, esTick, esRow, esTuple, esPair, esSim, gsRun: () => gsRun(), gsSolve: (...a) => gsSolve(...a), gsRows: (d) => gsRows(d) };   // for the test scripts
   document.addEventListener('input', (e) => {
     const d = e.target.dataset || {};
     if (d.man) {
@@ -5545,9 +5552,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!m) return { lead: T(`Turning ${M(stake)} into ${M(goal)} needs odds of ${odds(res.need)}, more than the next games can reach. Try a smaller goal.`, `Kugeuza ${M(stake)} kuwa ${M(goal)} kunahitaji odds ${odds(res.need)}; mechi zijazo haziwezi kufikia. Jaribu lengo dogo.`), acts };
     S.gsLast = m;
     const ev = m.prob * gsNet(stake, m.odds), half = res.sol.pick(gsOdds(stake, Math.max(stake * 1.5, goal / 2), res.tax)), one = Math.round(1 / Math.max(1e-6, m.prob)).toLocaleString('en-US');
-    return { lead: T(`To turn ${M(stake)} into ${M(goal)} you need odds of ${odds(res.need)} after tax. The best chance Statpad can find is ${fmtGs(m.prob)}${m.prob < 0.5 ? `, about 1 in ${one}` : ''}, with ${m.legs.length} legs:`,
-        `Kugeuza ${M(stake)} kuwa ${M(goal)} kunahitaji odds ${odds(res.need)} baada ya kodi. Nafasi bora ambayo Statpad inaweza kupata ni ${fmtGs(m.prob)}${m.prob < 0.5 ? `, karibu 1 kati ya ${one}` : ''}, kwa machaguo ${m.legs.length}:`),
-      items: m.legs.map((l) => `${l.s.label}: ${l.m.h} ${vsW()} ${l.m.a}, ${odds(l.s.price)}`),
+    return { lead: T(`To turn ${M(stake)} into ${M(goal)} you need odds of ${odds(res.need)} after tax. The likeliest slip with every leg ${gsFloorTxt(S.gs.floor)} has ${m.legs.length} legs, and the chance they all land is ${fmtGs(m.prob)}${m.prob < 0.5 ? `, about 1 in ${one}` : ''}:`,
+        `Kugeuza ${M(stake)} kuwa ${M(goal)} kunahitaji odds ${odds(res.need)} baada ya kodi. Mkeka wenye nafasi kubwa zaidi una machaguo ${m.legs.length}, na nafasi yote yashinde ni ${fmtGs(m.prob)}${m.prob < 0.5 ? `, karibu 1 kati ya ${one}` : ''}:`),
+      items: m.legs.map((l) => `${l.s.label}: ${l.m.h} ${vsW()} ${l.m.a}, ${odds(l.price)} (${pct(l.pc)})`),
       tail: T(`On average it returns ${M(ev)} for your ${M(stake)}.${half ? ` Halve the goal and the chance is ${fmtGs(half.prob)}.` : ''}`, `Kwa wastani inarudisha ${M(ev)} kwa ${M(stake)} yako.${half ? ` Ukipunguza lengo kwa nusu, nafasi ni ${fmtGs(half.prob)}.` : ''}`),
       acts: [[T('Add all to the coupon', 'Weka yote kwenye kuponi'), 'data-gsadd="1"'], ...acts] };
   }
@@ -5867,88 +5874,132 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const now = Date.now(), out = [], seen = new Map();
     for (const r of S.rows) {
       if (!r.a) continue;
-      const s = shockOf(r), soon = !s && !r.started && r.ko > now && r.ko - now < 4 * 3600e3;
+      const s = shockOf(r), soon = !s && !r.started && r.ko > now && r.ko - now < 6 * 3600e3;
       if (!s && !soon) continue;
       if (s && s.L.ft && now - s.L.at > 3 * 3600e3) continue;
       const base = geoOf(r.m); if (!base) continue;
       const key = base.join(','), k = seen.get(key) || 0; seen.set(key, k + 1);
-      const a = k * 2.4, d = k ? 0.75 * Math.sqrt(k) : 0;   // games in one country spread out in a spiral
+      const a = k * 2.4, d = k ? 1.05 * Math.sqrt(k) : 0;   // games in one country spread out in a spiral
       out.push(Object.assign(s || { r, lv: 'soon', shock: 0 }, { lat: base[0] + d * Math.sin(a), lon: base[1] + d * Math.cos(a) / Math.cos(base[0] * Math.PI / 180) }));
     }
     return out.sort((x, y) => (y.shock || 0) - (x.shock || 0));
   }
-  // ---- drawing
+  // ---- drawing: a turning globe (orthographic projection), land as an even dot matrix, every game in its country.
+  // It turns on its own, eases off while a shock crosses the middle, and spins with a drag; tap a dot for the match.
   S.shk = { games: [], cvs: new Set(), raf: 0, io: null };
-  function shkView(cv, G) {
-    const W = cv.clientWidth, H = cv.clientHeight, pts = G.length ? G : [{ lat: 48, lon: 8 }];
-    let lo0 = Math.min(...pts.map((g) => g.lon)), lo1 = Math.max(...pts.map((g) => g.lon)), la0 = Math.min(...pts.map((g) => g.lat)), la1 = Math.max(...pts.map((g) => g.lat));
-    const padLo = Math.max(6, (lo1 - lo0) * 0.12), padLa = Math.max(4, (la1 - la0) * 0.14);
-    lo0 -= padLo; lo1 += padLo; la0 -= padLa; la1 += padLa;
-    const midLa = (la0 + la1) / 2, kx = Math.cos(midLa * Math.PI / 180);
-    let spLo = Math.max(28, lo1 - lo0), spLa = Math.max(16, la1 - la0);
-    const ratio = (spLo * kx) / spLa;
-    if (ratio < W / H) spLo = spLa * (W / H) / kx; else spLa = spLo * kx / (W / H);
-    const cLo = (lo0 + lo1) / 2, cLa = midLa, sc = W / (spLo * kx);
-    return { W, H, sc, kx, cLo, cLa, px: (lon, lat) => [W / 2 + (lon - cLo) * kx * sc, H / 2 - (lat - cLa) * sc], inv: (x, y) => [cLo + (x - W / 2) / (kx * sc), cLa - (y - H / 2) / sc] };
+  const D2R = Math.PI / 180, GLOBE = new Map();
+  function globeDots(n) {   // a Fibonacci lattice: n points spread evenly over the sphere, kept where there's land
+    if (GLOBE.has(n)) return GLOBE.get(n);
+    const out = [], ga = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < n; i++) {
+      const z = 1 - (2 * i + 1) / n, r = Math.sqrt(1 - z * z), th = ga * i, x = r * Math.cos(th), y = r * Math.sin(th);
+      if (isLand(Math.atan2(y, x) / D2R, Math.asin(z) / D2R)) out.push(x, y, z);
+    }
+    const a = new Float32Array(out); GLOBE.set(n, a); return a;
   }
-  function shkBase(cv, V, n, live) {
+  const unitV = (lat, lon) => { const c = Math.cos(lat * D2R); return [c * Math.cos(lon * D2R), c * Math.sin(lon * D2R), Math.sin(lat * D2R)]; };
+  function shkFocus(G) {   // where to look first: the biggest shock in play, else the games' middle, else Europe
+    const live = G.filter((g) => g.L && !g.L.ft), top = live[0] || G[0];
+    if (!top) return { lon: 12, lat: 30 };
+    return { lon: top.lon, lat: Math.max(-20, Math.min(36, top.lat * 0.6 + 4)) };
+  }
+  function shkView(cv) {
+    const W = cv.clientWidth, H = cv.clientHeight, R = Math.max(40, Math.min(W * 0.46, H * 0.43));
+    return { W, H, R, cx: W / 2, cy: H / 2 + 8 };
+  }
+  function shkBase(V, n, live) {   // space, stars, the frame and the read-out; redrawn only when the games change
     const dpr = Math.min(2, window.devicePixelRatio || 1), b = document.createElement('canvas');
     b.width = Math.round(V.W * dpr); b.height = Math.round(V.H * dpr);
     const x = b.getContext('2d'); x.scale(dpr, dpr);
-    const g = x.createLinearGradient(0, 0, 0, V.H); g.addColorStop(0, '#071019'); g.addColorStop(1, '#03070c'); x.fillStyle = g; x.fillRect(0, 0, V.W, V.H);
-    const gl = x.createRadialGradient(V.W * 0.7, 0, 0, V.W * 0.7, 0, V.W); gl.addColorStop(0, 'rgba(63,214,255,.10)'); gl.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gl; x.fillRect(0, 0, V.W, V.H);
-    // graticule every 10 degrees
-    x.strokeStyle = 'rgba(120,170,210,.07)'; x.lineWidth = 1;
-    const [l0, t0] = V.inv(0, 0), [l1, t1] = V.inv(V.W, V.H);
-    for (let lo = Math.ceil(l0 / 10) * 10; lo <= l1; lo += 10) { const [X] = V.px(lo, 0); x.beginPath(); x.moveTo(X, 0); x.lineTo(X, V.H); x.stroke(); }
-    for (let la = Math.ceil(t1 / 10) * 10; la <= t0; la += 10) { const [, Y] = V.px(0, la); x.beginPath(); x.moveTo(0, Y); x.lineTo(V.W, Y); x.stroke(); }
-    // land as a dot matrix
-    const pitch = V.W > 600 ? 5 : 4, dr = V.W > 600 ? 1.15 : 0.95;
-    x.fillStyle = 'rgba(126,170,210,.45)';
-    for (let Y = pitch / 2; Y < V.H; Y += pitch) for (let X = pitch / 2; X < V.W; X += pitch) { const [lo, la] = V.inv(X, Y); if (isLand(lo, la)) { x.beginPath(); x.arc(X, Y, dr, 0, Math.PI * 2); x.fill(); } }
-    // scanlines, frame
-    x.fillStyle = 'rgba(255,255,255,.025)'; for (let Y = 0; Y < V.H; Y += 3) x.fillRect(0, Y, V.W, 1);
+    const g = x.createRadialGradient(V.cx, V.cy, V.R * 0.2, V.cx, V.cy, Math.max(V.W, V.H) * 0.75); g.addColorStop(0, '#0a1626'); g.addColorStop(1, '#02050a');
+    x.fillStyle = g; x.fillRect(0, 0, V.W, V.H);
+    let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0, n2 = Math.round(V.W * V.H / 900); i < n2; i++) { const a = rnd(); x.fillStyle = `rgba(200,225,255,${(0.08 + 0.5 * a * a).toFixed(2)})`; x.fillRect(rnd() * V.W, rnd() * V.H, a > 0.92 ? 1.6 : 1, a > 0.92 ? 1.6 : 1); }
+    const halo = x.createRadialGradient(V.cx, V.cy, V.R * 0.96, V.cx, V.cy, V.R * 1.32); halo.addColorStop(0, 'rgba(63,214,255,.28)'); halo.addColorStop(0.35, 'rgba(63,150,255,.10)'); halo.addColorStop(1, 'rgba(63,150,255,0)');
+    x.fillStyle = halo; x.beginPath(); x.arc(V.cx, V.cy, V.R * 1.32, 0, Math.PI * 2); x.fill();
+    const sea = x.createRadialGradient(V.cx - V.R * 0.35, V.cy - V.R * 0.4, V.R * 0.1, V.cx, V.cy, V.R); sea.addColorStop(0, '#0f2a44'); sea.addColorStop(0.7, '#08182a'); sea.addColorStop(1, '#050f1c');
+    x.fillStyle = sea; x.beginPath(); x.arc(V.cx, V.cy, V.R, 0, Math.PI * 2); x.fill();
     x.strokeStyle = 'rgba(63,214,255,.5)'; x.lineWidth = 2;
     for (const [X, Y, sx, sy] of [[8, 8, 1, 1], [V.W - 8, 8, -1, 1], [8, V.H - 8, 1, -1], [V.W - 8, V.H - 8, -1, -1]]) { x.beginPath(); x.moveTo(X, Y + sy * 16); x.lineTo(X, Y); x.lineTo(X + sx * 16, Y); x.stroke(); }
-    x.font = `600 10px ${SF.m}`; if ('letterSpacing' in x) x.letterSpacing = '2px'; x.fillStyle = 'rgba(200,225,245,.7)';
+    x.font = `600 10px ${SF.m}`; if ('letterSpacing' in x) x.letterSpacing = '2px'; x.fillStyle = 'rgba(200,225,245,.75)';
     x.fillText(live ? `LIVE · ${n} IN PLAY` : 'NO GAMES IN PLAY', 18, 24);
-    x.textAlign = 'right'; x.fillStyle = 'rgba(200,225,245,.45)'; x.fillText(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), V.W - 18, 24); x.textAlign = 'left';
+    x.textAlign = 'right'; x.fillStyle = 'rgba(200,225,245,.45)'; x.fillText(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), V.W - 18, 24);
+    x.textAlign = 'left'; x.fillStyle = 'rgba(200,225,245,.35)'; x.fillText(V.W > 340 ? 'DRAG TO SPIN · TAP A GAME' : 'DRAG · TAP', 18, V.H - 16);
     return b;
   }
   function shkPrep(cv) {
-    const G = S.shk.games, V = shkView(cv, G), dpr = Math.min(2, window.devicePixelRatio || 1);
+    const G = S.shk.games, V = shkView(cv), dpr = Math.min(2, window.devicePixelRatio || 1);
     if (cv.width !== Math.round(V.W * dpr) || cv.height !== Math.round(V.H * dpr)) { cv.width = Math.round(V.W * dpr); cv.height = Math.round(V.H * dpr); }
     const live = G.filter((g) => g.L && !g.L.ft).length;
-    cv._v = V; cv._base = shkBase(cv, V, live, live > 0); cv._dpr = dpr; cv._key = S.shk.key;
+    cv._v = V; cv._base = shkBase(V, live, live > 0); cv._dpr = dpr; cv._key = S.shk.key;
+    cv._dots = globeDots(Math.round(Math.min(30000, Math.max(6000, 4 * Math.PI * V.R * V.R / 10.5))));
+    for (const g of G) g.u = g.u || unitV(g.lat, g.lon);
+    if (!cv._rot) { const f = shkFocus(G); cv._rot = { lon: f.lon, lat: f.lat, v: 0, t: 0 }; }
   }
+  const SHK_SPIN = -7;   // degrees a second, turning west to east like the earth
+  let GRAT = null;
+  const grat = () => GRAT || (GRAT = [...Array.from({ length: 12 }, (_, m) => Array.from({ length: 61 }, (_, i) => unitV(-90 + i * 3, -180 + m * 30))),
+    ...[-60, -30, 0, 30, 60].map((la) => Array.from({ length: 121 }, (_, i) => unitV(la, -180 + i * 3)))]);
   function shkDraw(cv, t) {
-    if (!cv._base || cv._key !== S.shk.key || Math.abs(cv._v.W - cv.clientWidth) > 1) shkPrep(cv);
-    const x = cv.getContext('2d'), V = cv._v, dpr = cv._dpr, G = S.shk.games, still = REDUCED();
-    x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cv._base, 0, 0); x.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const pts = [];
-    for (const g of G) {
-      const [X, Y] = V.px(g.lon, g.lat), col = SHK_COL[g.lv], s = g.shock || 0;
-      pts.push([X, Y, g]);
-      if (g.lv === 'soon') { x.fillStyle = col; x.beginPath(); x.arc(X, Y, 3, 0, Math.PI * 2); x.fill(); continue; }
-      const live = g.L && !g.L.ft;
-      if (live) {
-        const P = 2600 - 1700 * s, reach = 10 + 46 * s;
-        for (let k = 0; k < (s > 0.3 ? 3 : 2); k++) {
-          const ph = still ? 0.45 + k * 0.2 : ((t / P) + k / 3) % 1;
-          x.strokeStyle = col; x.globalAlpha = (1 - ph) * (0.25 + 0.65 * s); x.lineWidth = 1.5 + 2 * s;
-          x.beginPath(); x.arc(X, Y, 5 + ph * reach, 0, Math.PI * 2); x.stroke();
-        }
-        x.globalAlpha = 1;
-      }
-      x.save(); x.shadowColor = col; x.shadowBlur = 8 + 18 * s; x.fillStyle = col;
-      x.beginPath(); x.arc(X, Y, live ? 3.5 + 3 * s : 3.5, 0, Math.PI * 2); live ? x.fill() : (x.lineWidth = 2, x.strokeStyle = col, x.stroke()); x.restore();
+    if (!cv._base || cv._key !== S.shk.key || Math.abs(cv._v.W - cv.clientWidth) > 1 || Math.abs(cv._v.H - cv.clientHeight) > 1) shkPrep(cv);
+    const x = cv.getContext('2d'), V = cv._v, dpr = cv._dpr, G = S.shk.games, still = REDUCED(), rot = cv._rot;
+    // turn: on its own unless dragged, easing off while a shock or a wobble is near the middle; a flick carries on and fades
+    const dt = rot.t ? Math.min(0.06, (t - rot.t) / 1000) : 0; rot.t = t;
+    let c0 = Math.cos(rot.lon * D2R), s0 = Math.sin(rot.lon * D2R), cp = Math.cos(rot.lat * D2R), sp = Math.sin(rot.lat * D2R);
+    const P = (u) => { const a = u[0] * c0 + u[1] * s0; return [V.cx + V.R * (u[1] * c0 - u[0] * s0), V.cy - V.R * (cp * u[2] - sp * a), sp * u[2] + cp * a]; };
+    if (!still && !cv._drag) {
+      let dwell = 0;
+      for (const g of G) if (g.L && !g.L.ft && g.lv !== 'calm') { const z = P(g.u)[2]; if (z > 0.8) dwell = Math.max(dwell, ((z - 0.8) / 0.2) * (0.5 + 0.5 * Math.min(1, g.shock * 2))); }
+      rot.v += (SHK_SPIN * (1 - 0.85 * dwell) - rot.v) * Math.min(1, dt * 1.6);
+      rot.lon += rot.v * dt;
+      c0 = Math.cos(rot.lon * D2R); s0 = Math.sin(rot.lon * D2R);
     }
-    // labels for the biggest shocks
+    x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cv._base, 0, 0); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // graticule every 30 degrees, front half only
+    x.strokeStyle = 'rgba(120,190,240,.10)'; x.lineWidth = 1; x.beginPath();
+    const line = (pts) => { let on = false; for (const u of pts) { const [X, Y, Z] = P(u); if (Z > 0) { if (on) x.lineTo(X, Y); else x.moveTo(X, Y); on = true; } else on = false; } };
+    for (const g of grat()) line(g);
+    x.stroke();
+    // land: brighter towards the middle, shrinking towards the edge
+    const D = cv._dots, sz = V.R > 150 ? 2.1 : 1.7, bucket = [[], [], [], []];
+    for (let i = 0; i < D.length; i += 3) {
+      const ex = D[i], ey = D[i + 1], ez = D[i + 2], a = ex * c0 + ey * s0, Z = sp * ez + cp * a; if (Z <= 0.02) continue;
+      bucket[Z > 0.75 ? 3 : Z > 0.5 ? 2 : Z > 0.25 ? 1 : 0].push(V.cx + V.R * (ey * c0 - ex * s0), V.cy - V.R * (cp * ez - sp * a), Z);
+    }
+    ['rgba(110,170,215,.28)', 'rgba(125,190,235,.48)', 'rgba(140,205,245,.68)', 'rgba(165,222,255,.88)'].forEach((col, k) => {
+      x.fillStyle = col; const b = bucket[k];
+      for (let i = 0; i < b.length; i += 3) { const d = sz * (0.55 + 0.45 * b[i + 2]); x.fillRect(b[i] - d / 2, b[i + 1] - d / 2, d, d); }
+    });
+    x.strokeStyle = 'rgba(63,214,255,.35)'; x.lineWidth = 1; x.beginPath(); x.arc(V.cx, V.cy, V.R, 0, Math.PI * 2); x.stroke();
+    // games: a light beam for each game in play (taller for a bigger shock), pulsing rings, then the dot
+    const pts = [], order = G.map((g) => [g, P(g.u)]).filter(([, p]) => p[2] > 0.04).sort((a, b) => a[1][2] - b[1][2]);
+    for (const [g, [X, Y, Z]] of order) {
+      const col = SHK_COL[g.lv], s = g.shock || 0, live = g.L && !g.L.ft, fade = Math.min(1, Z * 3);
+      pts.push([X, Y, g]);
+      x.globalAlpha = fade;
+      if (g.lv === 'soon') { x.fillStyle = col; x.beginPath(); x.arc(X, Y, 2.6, 0, Math.PI * 2); x.fill(); x.globalAlpha = 1; continue; }
+      if (live) {
+        const h = 0.07 + 0.38 * s, top = [g.u[0] * (1 + h), g.u[1] * (1 + h), g.u[2] * (1 + h)], [TX, TY] = P(top);
+        const bm = x.createLinearGradient(X, Y, TX, TY); bm.addColorStop(0, col); bm.addColorStop(1, 'rgba(0,0,0,0)');
+        x.strokeStyle = bm; x.lineWidth = 2 + 2.5 * s; x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(TX, TY); x.stroke();
+        const Pd = 2600 - 1700 * s, reach = (8 + 34 * s) * (0.5 + 0.5 * Z);
+        for (let k = 0; k < (s > 0.3 ? 3 : 2); k++) {
+          const ph = still ? 0.45 + k * 0.2 : ((t / Pd) + k / 3) % 1;
+          x.strokeStyle = col; x.globalAlpha = fade * (1 - ph) * (0.25 + 0.65 * s); x.lineWidth = 1.2 + 1.8 * s;
+          x.beginPath(); x.ellipse(X, Y, 4 + ph * reach, (4 + ph * reach) * Math.max(0.35, Z), 0, 0, Math.PI * 2); x.stroke();
+        }
+        x.globalAlpha = fade;
+      }
+      x.save(); x.shadowColor = col; x.shadowBlur = 8 + 16 * s; x.fillStyle = col; x.strokeStyle = col;
+      x.beginPath(); x.arc(X, Y, live ? 3.2 + 2.8 * s : 3.2, 0, Math.PI * 2); if (live) x.fill(); else { x.lineWidth = 2; x.stroke(); } x.restore();
+      x.globalAlpha = 1;
+    }
+    // labels for the biggest shocks on the near side
     x.font = `700 10.5px ${SF.m}`; if ('letterSpacing' in x) x.letterSpacing = '1px';
-    const lab = G.filter((g) => g.L && g.lv !== 'calm' && g.lv !== 'done').slice(0, V.W > 600 ? 5 : 3), boxes = [];
-    for (const g of lab) {
-      const [X, Y] = V.px(g.lon, g.lat), txt = `${shkAbbr(g.r.m.h)} ${g.L.h}–${g.L.a} ${shkAbbr(g.r.m.a)} ${g.L.ft ? 'FT' : Math.round(g.L.min) + "'"}`, w = x.measureText(txt).width + 12;
-      let bx = X + 14, by = Y - 26; if (bx + w > V.W - 6) bx = X - 14 - w; if (by < 30) by = Y + 12;
+    const lab = order.filter(([g, p]) => g.L && g.lv !== 'calm' && g.lv !== 'done' && p[2] > 0.35).sort((a, b) => (b[0].shock || 0) - (a[0].shock || 0)).slice(0, V.W > 600 ? 5 : 3), boxes = [];
+    for (const [g, [X, Y]] of lab) {
+      const txt = `${shkAbbr(g.r.m.h)} ${g.L.h}–${g.L.a} ${shkAbbr(g.r.m.a)} ${g.L.ft ? 'FT' : Math.round(g.L.min) + "'"}`, w = x.measureText(txt).width + 12;
+      let bx = X + 14, by = Y - 30; if (bx + w > V.W - 6) bx = X - 14 - w; if (bx < 6) bx = 6; if (by < 32) by = Y + 14;
       for (const b of boxes) if (bx < b[0] + b[2] && bx + w > b[0] && by < b[1] + 18 && by + 18 > b[1]) by = b[1] + 21;
       boxes.push([bx, by, w]);
       x.strokeStyle = SHK_COL[g.lv]; x.globalAlpha = 0.6; x.lineWidth = 1; x.beginPath(); x.moveTo(X, Y); x.lineTo(bx < X ? bx + w : bx, by + 9); x.stroke(); x.globalAlpha = 1;
@@ -5965,11 +6016,34 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (any && !REDUCED()) S.shk.raf = requestAnimationFrame(shkLoop);
   }
   function shkKick() { if (!S.shk.raf) S.shk.raf = requestAnimationFrame(shkLoop); }
+  function shkGrab(cv) {   // drag to spin (and tilt, with a mouse); a short tap still opens the game under it
+    let p0 = null;
+    cv.addEventListener('pointerdown', (e) => {
+      if (e.button > 0) return;
+      p0 = { id: e.pointerId, x: e.clientX, y: e.clientY, lon: cv._rot ? cv._rot.lon : 0, lat: cv._rot ? cv._rot.lat : 0, t: performance.now(), lx: e.clientX, mouse: e.pointerType === 'mouse' };
+      cv._moved = false;
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (!p0 || e.pointerId !== p0.id || !cv._rot || !cv._v) return;
+      const dx = e.clientX - p0.x, dy = e.clientY - p0.y;
+      if (!cv._drag && Math.hypot(dx, dy) > 6) { cv._drag = true; cv._moved = true; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } }
+      if (!cv._drag) return;
+      const k = 90 / cv._v.R, now = performance.now();
+      cv._rot.lon = p0.lon - dx * k;
+      if (p0.mouse) cv._rot.lat = Math.max(-60, Math.min(70, p0.lat + dy * k));
+      cv._rot.v = -((e.clientX - p0.lx) * k) / Math.max(0.008, (now - p0.t) / 1000); p0.lx = e.clientX; p0.t = now;
+      cv._rot.v = Math.max(-240, Math.min(240, cv._rot.v));
+      if (REDUCED()) shkDraw(cv, now); else shkKick();
+    });
+    const up = (e) => { if (p0 && e.pointerId === p0.id) { p0 = null; cv._drag = false; if (cv._rot) cv._rot.t = 0; shkKick(); } };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  }
   function shkAttach() {
     if (!S.shk.io && 'IntersectionObserver' in window) S.shk.io = new IntersectionObserver((es) => { for (const e of es) e.target._vis = e.isIntersecting; shkKick(); });
     for (const cv of document.querySelectorAll('canvas.shk-cv')) {
       if (S.shk.cvs.has(cv)) continue;
       S.shk.cvs.add(cv); cv._vis = !S.shk.io; if (S.shk.io) S.shk.io.observe(cv);
+      shkGrab(cv);
       if (cv.clientWidth) shkDraw(cv, performance.now());   // never blank, even before it scrolls into view
     }
     shkKick();
@@ -6006,23 +6080,31 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     $('#sheetBody').innerHTML = `<canvas class="shk-cv big" data-shkcv="sheet" role="img" aria-label="Map of the games in play"></canvas>
       <div class="shk-key"><span><i style="background:${SHK_COL.shock}"></i>Shock: the favourite's chance has collapsed</span><span><i style="background:${SHK_COL.wobble}"></i>Wobble</span><span><i style="background:${SHK_COL.calm}"></i>Going to plan</span><span><i style="background:${SHK_COL.soon}"></i>Kicks off soon</span></div>
       <div class="shk-list" data-shklist="40">${shockList(40)}</div>
-      <p class="note">Each dot is a game, placed in its country. It pulses faster and wider the more the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes. The shock number is that fall, in percentage points. Tap a dot or a row for the match. Scores come from ESPN every 30 seconds to a minute while this page is open.</p>`;
+      <p class="note">Each dot is a game, placed in its country; drag the globe to spin it round to the rest of the world. A game in play sends up a beam that rises higher for a bigger shock, and it pulses faster and wider the more the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes. The shock number is that fall, in percentage points. Tap a dot or a row for the match. Scores come from ESPN every 30 seconds to a minute while this page is open.</p>`;
     requestAnimationFrame(shkAttach);
   }
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-shockmap]'); if (b) { e.stopPropagation(); openShock(b); return; }
     const cv = e.target.closest('canvas.shk-cv'); if (!cv || !cv._pts) return;
+    if (cv._moved) { cv._moved = false; return; }   // that was a spin, not a tap
     const rc = cv.getBoundingClientRect(), X = e.clientX - rc.left, Y = e.clientY - rc.top;
     let best = null; for (const [px, py, g] of cv._pts) { const d = Math.hypot(px - X, py - Y); if (d < 26 && (!best || d < best.d)) best = { d, g }; }
     if (best) openMatch(best.g.r.m.id, cv);
   });
 
   // ---------------- goal seek: the best chance of turning a stake into a sum ----------------
-  // An exact search (a knapsack over log odds): one pick per match, real bookmaker prices only, and the set
-  // of legs whose odds reach the target with the highest chance of all landing. It also gives the best chance
-  // for every smaller target, which draws the "price of ambition" curve.
-  const GS_STEP = 0.02, GS_LEGS = 12;
-  S.gs = Object.assign({ stake: 10000, goal: 500000, days: 1, value: false }, store.get('goalseek', {}));
+  // An exact search (a knapsack over log odds): one pick per match, and of all the sets of legs whose odds reach
+  // the target, the one most likely to land in full. Each leg is weighed with care before it can be used:
+  //  - its price is what a typical bookmaker pays (the market average), not the single best price somewhere;
+  //  - its chance is the cautious one (one standard deviation below Statpad's estimate), and never above the
+  //    bookmakers' own consensus, so a long shot that only looks good on paper can't buy its way in;
+  //  - it must clear the minimum chance you pick for every leg (40% unless you change it).
+  // It also gives the best chance for every smaller target, which draws the "price of ambition" curve.
+  const GS_STEP = 0.02, GS_LEGS = 12, GS_PEN = Math.log(0.995);   // each extra leg costs a little: one more thing to go wrong
+  const GS_FLOORS = [[0, 'Any'], [0.25, '25%+'], [0.4, '40%+'], [0.55, '55%+'], [0.7, '70%+']];
+  const GS_KEYS = new Set(['H', 'D', 'A', 'O25', 'U25', '1X', 'X2']);
+  S.gs = Object.assign({ stake: 10000, goal: 500000, days: 1, value: false, floor: 0.4 }, store.get('goalseek', {}));
+  if (!GS_FLOORS.some(([f]) => f === S.gs.floor)) S.gs.floor = 0.4;
   S.sseg = store.get('sseg', 'slips') === 'goal' ? 'goal' : 'slips';
   function gsOdds(stake, goal, tax) { return 1 + (goal / stake - 1) / Math.max(0.05, 1 - tax); }   // tax is taken off the winnings
   function gsRows(days) {
@@ -6031,25 +6113,40 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (days === 1 && rows.length < 4) { const nx = briefingDay(); if (nx) rows = S.rows.filter((r) => !r.started && r.a && r.ko > now && r.day === nx.key); }
     return rows;
   }
-  function gsCands(rows, valueOnly) {
+  function gsLeg(r, s) {   // a typical bookmaker's price and a careful chance for one selection, or null
+    const mk = r.m.mkt || null, i = { H: 0, D: 1, A: 2 }[s.key], ou = mk && mk.ou, o = s.key === 'O25' ? 0 : 1;
+    let price = null, fair = null, est = false;
+    if (i != null && mk && mk.p) { price = mk.avg && mk.avg[i] > 1 ? mk.avg[i] : s.real ? s.price : null; fair = mk.p[i]; }
+    else if ((s.key === 'O25' || s.key === 'U25') && ou && ou.pO > 0) { price = ou.avg && ou.avg[o] > 1 ? ou.avg[o] : s.real ? s.price : null; fair = o ? 1 - ou.pO : ou.pO; }
+    else if ((s.key === '1X' || s.key === 'X2') && mk && mk.p) { price = s.price; fair = s.key === '1X' ? mk.p[0] + mk.p[1] : mk.p[2] + mk.p[1]; est = true; }
+    if (!(price > 1) || fair == null) return null;
+    return { price, pc: Math.max(0, Math.min(s.pLo, s.pAdj, fair)), pa: s.pAdj, est };
+  }
+  function gsCands(rows, valueOnly, floor) {
     const out = [];
     for (const r of rows) {
-      const ss = r.a.sels.filter((s) => !s.x && s.real && s.price >= 1.05 && s.pAdj > 0.02 && s.pAdj < 0.995 && (!valueOnly || (s.edge != null && s.edge >= 0)));
-      ss.sort((a, b) => b.price - a.price);
+      const xs = [];
+      for (const s of r.a.sels) {
+        if (s.x || !GS_KEYS.has(s.key)) continue;
+        const L = gsLeg(r, s); if (!L || L.price < 1.05 || L.pc < Math.max(floor, 0.02) || L.pc > 0.995) continue;
+        if (valueOnly && !(s.edge != null && s.edge >= 0)) continue;
+        xs.push(Object.assign({ s }, L));
+      }
+      xs.sort((a, b) => b.price - a.price);
       const front = []; let bp = -1;
-      for (const s of ss) if (s.pAdj > bp + 1e-9) { front.push(s); bp = s.pAdj; }   // nothing else pays more and lands more often
+      for (const x of xs) if (x.pc > bp + 1e-9) { front.push(x); bp = x.pc; }   // nothing else pays more and lands more often
       if (front.length) out.push({ r, opts: front.slice(0, 10) });
     }
-    const eff = (o) => Math.max(...o.opts.map((s) => Math.log(s.price) / -Math.log(s.pAdj)));
+    const eff = (o) => Math.max(...o.opts.map((x) => Math.log(x.price) / -Math.log(x.pc)));
     return out.sort((a, b) => eff(b) - eff(a)).slice(0, 90);
   }
-  function gsSolve(rows, maxOdds, valueOnly) {
-    const C = gsCands(rows, valueOnly), TB = Math.max(2, Math.ceil(Math.log(Math.max(1.06, maxOdds)) / GS_STEP)), W = TB + 1, N = GS_LEGS;
+  function gsSolve(rows, maxOdds, valueOnly, floor) {
+    const C = gsCands(rows, valueOnly, floor || 0), TB = Math.max(2, Math.ceil(Math.log(Math.max(1.06, maxOdds)) / GS_STEP)), W = TB + 1, N = GS_LEGS;
     let dp = new Float64Array((N + 1) * W).fill(-Infinity); dp[0] = 0;
     const back = [];
     for (const c of C) {
       const nd = dp.slice(), ch = new Int32Array((N + 1) * W).fill(-1);
-      const st = c.opts.map((s) => [Math.max(1, Math.round(Math.log(s.price) / GS_STEP)), Math.log(s.pAdj)]);
+      const st = c.opts.map((x) => [Math.max(1, Math.round(Math.log(x.price) / GS_STEP)), Math.log(x.pc) + GS_PEN]);
       for (let n = 0; n < N; n++) for (let b = 0; b < W; b++) {
         const v = dp[n * W + b]; if (v === -Infinity) continue;
         for (let k = 0; k < st.length; k++) { const nb = Math.min(TB, b + st[k][0]), nv = v + st[k][1], ix = (n + 1) * W + nb; if (nv > nd[ix]) { nd[ix] = nv; ch[ix] = b * 16 + k; } }
@@ -6065,27 +6162,33 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     const legsAt = (ix) => {
       const legs = []; let n = Math.floor(ix / W), b = ix % W;
-      for (let i = C.length - 1; i >= 0 && n > 0; i--) { const c = back[i][n * W + b]; if (c < 0) continue; const k = c % 16; legs.push({ m: C[i].r.m, a: C[i].r.a, r: C[i].r, s: C[i].opts[k] }); b = Math.floor(c / 16); n--; }
-      return legs.reverse();
+      for (let i = C.length - 1; i >= 0 && n > 0; i--) {
+        const c = back[i][n * W + b]; if (c < 0) continue;
+        const x = C[i].opts[c % 16]; legs.push({ m: C[i].r.m, a: C[i].r.a, r: C[i].r, s: x.s, price: x.price, pc: x.pc, pa: x.pa, est: x.est });
+        b = Math.floor(c / 16); n--;
+      }
+      return legs.sort((x, y) => x.r.ko - y.r.ko);
     };
-    const pick = (odds) => {   // the best slip paying at least these odds (rounding is checked on the real prices)
+    const pick = (odds) => {   // the likeliest slip paying at least these odds (rounding is checked on the prices themselves)
       let b = Math.max(0, Math.ceil(Math.log(odds) / GS_STEP - 1e-9));
       for (let tries = 0; tries < 6 && b <= TB; tries++, b++) {
         if (arg[b] < 0) return null;
-        const legs = legsAt(arg[b]), o = legs.reduce((a, l) => a * l.s.price, 1);
-        if (o >= odds * 0.999) return { legs, odds: o, prob: legs.reduce((a, l) => a * l.s.pAdj, 1) };
+        const legs = legsAt(arg[b]), o = legs.reduce((a, l) => a * l.price, 1);
+        if (o >= odds * 0.999) return { legs, odds: o, prob: legs.reduce((a, l) => a * l.pc, 1), mid: legs.reduce((a, l) => a * l.pa, 1), weak: Math.min(...legs.map((l) => l.pc)) };
       }
       return null;
     };
-    const curve = []; for (let b = Math.round(Math.log(1.3) / GS_STEP); b <= TB; b++) if (best[b] > -Infinity) curve.push([Math.exp(b * GS_STEP), Math.exp(best[b])]);
+    const curve = []; for (let b = Math.round(Math.log(1.3) / GS_STEP); b <= TB; b++) if (best[b] > -Infinity) curve.push([Math.exp(b * GS_STEP), Math.exp(best[b] - Math.floor(arg[b] / W) * GS_PEN)]);
     return { pick, curve, n: C.length };
   }
   function gsRun() {
     const g = S.gs, tax = S.bcfg.tax, need = gsOdds(g.stake, g.goal, tax), rows = gsRows(g.days);
     if (!(g.stake > 0) || !(g.goal > g.stake)) return { err: 'Set a goal bigger than your stake.' };
-    const sol = gsSolve(rows, Math.min(1e5, need * 2.5), false);
+    const sol = gsSolve(rows, Math.min(1e5, need * 2.5), false, g.floor);
     const res = { need, tax, rows: rows.length, sol, main: sol.pick(need) };
-    if (g.value) { const sv = gsSolve(rows, need * 1.05, true); res.value = sv.pick(need); }
+    // the same goal with every other minimum leg chance: the trade-off between fewer long legs and more safe ones
+    res.alt = GS_FLOORS.map(([f, lab]) => ({ f, lab, m: f === g.floor ? res.main : gsSolve(rows, need * 1.05, false, f).pick(need) }));
+    if (g.value) { const sv = gsSolve(rows, need * 1.05, true, g.floor); res.value = sv.pick(need); }
     return res;
   }
   const gsMoney = (x) => `${esc(S.bcfg.cur)} ${Math.round(x).toLocaleString('en-US')}`;
@@ -6110,6 +6213,18 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     </svg>`;
   }
   const fmtGs = (p) => (p >= 0.1 ? Math.round(p * 100) + '%' : p >= 0.001 ? (p * 100).toFixed(1) + '%' : '<0.1%');
+  const gsFloorTxt = (f) => (f ? `at least ${Math.round(f * 100)}%` : 'any chance');
+  function gsAltCard(res) {
+    const g = S.gs;
+    if (!res.alt.some((x) => x.m)) return '';
+    const bestP = Math.max(...res.alt.map((x) => (x.m ? x.m.prob : 0)));
+    return `<div class="card"><h4>Weighing the options <span>same goal, different minimum per leg</span></h4>
+      <div class="tt-wrap"><table class="tt gs-alt"><thead><tr><th>Every leg</th><th>Legs</th><th>Weakest leg</th><th>All land</th></tr></thead><tbody>
+      ${res.alt.map((x) => `<tr data-gsfloor="${x.f}" class="${x.f === g.floor ? 'on' : ''}" tabindex="0" role="button" aria-pressed="${x.f === g.floor}"><td>${esc(gsFloorTxt(x.f))}</td>
+        ${x.m ? `<td>${x.m.legs.length}</td><td>${pct(x.m.weak, 0)}</td><td class="${x.m.prob >= bestP * 0.999 ? 'edge-pos' : ''}">${fmtGs(x.m.prob)}</td>` : '<td colspan="3" class="gs-na">can’t reach it</td>'}</tr>`).join('')}
+      </tbody></table></div>
+      <p class="note">Long shots buy odds with few legs, but each one rarely lands; safer legs need more of them, and every extra leg is another way to lose. Statpad finds the likeliest slip for each minimum so you can see what the trade costs. Tap a row to use it.</p></div>`;
+  }
   function renderGoal() {
     const box = $('#goalBox'); if (!box) return;
     const g = S.gs, cur = esc(S.bcfg.cur);
@@ -6120,32 +6235,41 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           <label><span>I want to collect</span><span class="gs-amt"><em>${cur}</em><input id="gsGoal" inputmode="numeric" autocomplete="off" value="${g.goal.toLocaleString('en-US')}"></span></label></div>
         <div class="gs-chips" role="group" aria-label="Quick goals">${[10, 50, 100, 500, 1000].map((k) => `<button type="button" class="chip" data-gsx="${k}">×${k}</button>`).join('')}</div>
         <div class="gs-opts"><div class="seg" role="group" aria-label="Games from">${[[1, 'Today'], [2, 'Today + tomorrow'], [3, 'Next 3 days']].map(([d, l]) => `<button type="button" data-gsdays="${d}" aria-pressed="${g.days === d}">${l}</button>`).join('')}</div>
+          <div class="gs-fl"><span class="lbl">Every leg at least</span><div class="seg" id="gsFloorSeg" role="group" aria-label="Minimum chance for every leg">${GS_FLOORS.map(([f, l]) => `<button type="button" data-gsfloor="${f}" aria-pressed="${g.floor === f}">${l}</button>`).join('')}</div></div>
           <label class="gs-val"><input type="checkbox" id="gsValue"${g.value ? ' checked' : ''}> Only legs that beat the bookmaker's price</label></div></div>
         <div id="gsOut"></div>`;
     }
+    for (const b of document.querySelectorAll('#gsFloorSeg [data-gsfloor]')) b.setAttribute('aria-pressed', String(+b.dataset.gsfloor === g.floor));
     const out = $('#gsOut'); if (!out) return;
     const res = gsRun();
     if (res.err) { out.innerHTML = `<div class="empty-state"><b>${esc(res.err)}</b></div>`; return; }
     const m = res.main, tx = res.tax ? ` after ${Math.round(res.tax * 100)}% tax on winnings` : '';
-    if (!m) { out.innerHTML = `<div class="empty-state"><b>Out of reach with these games</b>Turning ${gsMoney(g.stake)} into ${gsMoney(g.goal)} needs odds of ${odds(res.need)}${tx}, more than ${GS_LEGS} legs from ${res.rows} games can reach. Lower the goal or add more days.</div>`; return; }
-    const net = gsNet(g.stake, m.odds), ev = m.prob * net;
+    if (!m) {
+      const other = res.alt.find((x) => x.m);
+      out.innerHTML = `<div class="empty-state"><b>Out of reach with legs of ${esc(gsFloorTxt(g.floor))}</b>Turning ${gsMoney(g.stake)} into ${gsMoney(g.goal)} needs odds of ${odds(res.need)}${tx}. No slip of up to ${GS_LEGS} legs from ${res.rows} games gets there with every leg ${esc(gsFloorTxt(g.floor))}. ${other ? 'Lower the minimum per leg (below), add more days, or lower the goal.' : 'Add more days or lower the goal.'}</div>${gsAltCard(res)}`;
+      S.gsLast = null; return;
+    }
+    const net = gsNet(g.stake, m.odds), ev = m.prob * net, long = m.prob < 0.01;
     const half = res.sol.pick(gsOdds(g.stake, Math.max(g.stake * 1.5, g.goal / 2), res.tax)), fifth = res.sol.pick(gsOdds(g.stake, Math.max(g.stake * 1.3, g.goal / 5), res.tax));
-    const leg = (l) => `<li><div><b>${esc(l.s.label)}</b><small>${esc(l.m.h)} v ${esc(l.m.a)} · ${esc(dayLabel(l.r.day))} ${tFmt.format(l.r.ko)}</small></div><span class="gs-p">${pct(l.s.pAdj)}</span><span class="mono">${odds(l.s.price)}</span></li>`;
+    const leg = (l) => `<li><div><b>${esc(l.s.label)}</b><small>${esc(l.m.h)} v ${esc(l.m.a)} · ${esc(dayLabel(l.r.day))} ${tFmt.format(l.r.ko)}</small>
+      <span class="gs-lp"><i style="width:${Math.round(l.pc * 100)}%"></i></span></div><span class="gs-p">${pct(l.pc)}</span><span class="mono">${odds(l.price)}${l.est ? '<small class="gs-est">est</small>' : ''}</span></li>`;
     S.gsLast = m;
     const v = res.value;
     out.innerHTML = `<div class="gs-res">
-      <div class="card gs-hero"><div class="gs-top"><div class="gs-big"><b>${fmtGs(m.prob)}</b><span>${gsOne(m.prob) || 'chance'}</span></div>
-          <div class="gs-stats"><span><small>Best chance</small><b>${m.legs.length} legs</b></span><span><small>Total odds</small><b class="mono">${odds(m.odds)}</b></span><span><small>Pays</small><b>${gsMoney(net)}</b></span></div></div>
+      <div class="card gs-hero${long ? ' gs-long' : ''}"><div class="gs-top"><div class="gs-big"><b>${fmtGs(m.prob)}</b><span>${gsOne(m.prob) || 'chance it all lands'}</span></div>
+          <div class="gs-stats"><span><small>Legs</small><b>${m.legs.length}, each ${esc(gsFloorTxt(g.floor))}</b></span><span><small>Total odds</small><b class="mono">${odds(m.odds)}</b></span><span><small>Pays</small><b>${gsMoney(net)}</b></span></div></div>
         <div class="gs-sum"><p>Turning <b>${gsMoney(g.stake)}</b> into <b>${gsMoney(g.goal)}</b> needs odds of <b class="mono">${odds(res.need)}</b>${tx}.</p>
-          <p>The best chance Statpad can find: <b>${m.legs.length} legs</b> at total odds <b class="mono">${odds(m.odds)}</b>, paying ${gsMoney(net)} if every leg lands.</p>
-          <p class="gs-ev">On average a slip like this returns <b>${gsMoney(ev)}</b> for your ${gsMoney(g.stake)} (${ev >= g.stake ? '+' : '−'}${Math.abs(Math.round((ev / g.stake - 1) * 100))}%). ${m.prob < 0.05 ? `${Math.round((1 - m.prob) * 100)} times in 100 you lose the whole stake.` : ''}</p></div></div>
-      <div class="card"><h4>The legs <span>${m.legs.length} picks · one per match · real prices</span></h4><ul class="gs-legs">${m.legs.map(leg).join('')}</ul>
+          <p>The likeliest slip that gets there with every leg ${esc(gsFloorTxt(g.floor))}: <b>${m.legs.length} legs</b> at total odds <b class="mono">${odds(m.odds)}</b> at typical bookmaker prices. The chance all of them land is <b>${fmtGs(m.prob)}</b> on Statpad's cautious estimate${m.mid > m.prob * 1.05 ? `, ${fmtGs(m.mid)} on its central one` : ''}.</p>
+          <p class="gs-ev">${long ? `<b>This is close to a lottery ticket.</b> ` : ''}On average a slip like this returns <b>${gsMoney(ev)}</b> for your ${gsMoney(g.stake)} (${ev >= g.stake ? '+' : '−'}${Math.abs(Math.round((ev / g.stake - 1) * 100))}%). ${m.prob < 0.2 ? `${Math.round((1 - m.prob) * 100)} times in 100 you lose the whole stake.` : ''}</p></div></div>
+      <div class="card"><h4>The legs <span>${m.legs.length} picks · one per match · bar = cautious chance</span></h4><ul class="gs-legs">${m.legs.map(leg).join('')}</ul>
         <div class="gs-acts"><button type="button" class="btn pri" data-gsadd="1">Add all to the coupon</button><button type="button" class="btn listen-b" data-gssay="1"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></div></div>
-      ${v ? `<div class="card gs-v"><h4>Value-only version <span>every leg beats the bookmaker's price</span></h4><p><b>${fmtGs(v.prob)}</b> to land (${v.legs.length} legs, odds ${odds(v.odds)}). On average it returns ${gsMoney(v.prob * gsNet(g.stake, v.odds))} for your ${gsMoney(g.stake)}.</p><ul class="gs-legs">${v.legs.map(leg).join('')}</ul></div>` : g.value ? `<div class="card gs-v"><h4>Value-only version</h4><p>Not enough value legs to reach these odds. Try more days or a smaller goal.</p></div>` : ''}
+      ${gsAltCard(res)}
+      ${v ? `<div class="card gs-v"><h4>Value-only version <span>every leg beats the best bookmaker's price</span></h4><p><b>${fmtGs(v.prob)}</b> to land (${v.legs.length} legs, odds ${odds(v.odds)}). On average it returns ${gsMoney(v.prob * gsNet(g.stake, v.odds))} for your ${gsMoney(g.stake)}.</p><ul class="gs-legs">${v.legs.map(leg).join('')}</ul></div>` : g.value ? `<div class="card gs-v"><h4>Value-only version</h4><p>Not enough value legs to reach these odds. Try more days, a smaller goal or a lower minimum per leg.</p></div>` : ''}
       <div class="card"><h4>The price of ambition <span>best chance for each amount</span></h4>${gsChart(res)}
         <p class="note">${half ? `Aim for ${gsMoney(Math.max(g.stake * 1.5, g.goal / 2))} instead and the best chance is ${fmtGs(half.prob)}` : ''}${fifth ? `; for ${gsMoney(Math.max(g.stake * 1.3, g.goal / 5))}, ${fmtGs(fifth.prob)}` : ''}. Every step up in the goal costs chance: no slip makes a small stake into a big sum likely.</p></div>
-      <p class="note">Chances are Statpad's, from ${res.sol.n} games${g.days > 1 ? ` over ${g.days} days` : ''}, using real bookmaker prices only and at most ${GS_LEGS} legs. Change the tax in My bets settings. 18+, and only stake what you can afford to lose.</p></div>`;
+      <p class="note">Prices are the bookmakers' average (est: double chance, priced from the market), so your own bookmaker may pay a little more or less; check before you stake. Chances are Statpad's cautious ones, never above the bookmakers' consensus, from ${res.sol.n} games${g.days > 1 ? ` over ${g.days} days` : ''}, at most ${GS_LEGS} legs. Change the tax in My bets settings. 18+, and only stake what you can afford to lose.</p></div>`;
   }
+  document.addEventListener('keydown', (e) => { const t = e.target.closest && e.target.closest('tr[data-gsfloor]'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); t.click(); } });
   let gsT = 0;
   document.addEventListener('input', (e) => {
     if (e.target.id !== 'gsStake' && e.target.id !== 'gsGoal') return;
@@ -6155,12 +6279,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   });
   document.addEventListener('change', (e) => { if (e.target.id === 'gsValue') { S.gs.value = e.target.checked; store.set('goalseek', S.gs); renderGoal(); } });
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-gsx],[data-gsdays],[data-gsadd],[data-gssay],[data-sseg]'); if (!t) return;
+    const t = e.target.closest('[data-gsx],[data-gsdays],[data-gsfloor],[data-gsadd],[data-gssay],[data-sseg]'); if (!t) return;
+    if (t.dataset.gsfloor != null) { S.gs.floor = +t.dataset.gsfloor; store.set('goalseek', S.gs); buzz(8); renderGoal(); return; }
     if (t.dataset.sseg) { S.sseg = t.dataset.sseg; store.set('sseg', S.sseg); renderSlips(); return; }
     if (t.dataset.gsx) { S.gs.goal = S.gs.stake * +t.dataset.gsx; const i = $('#gsGoal'); if (i) i.value = S.gs.goal.toLocaleString('en-US'); store.set('goalseek', S.gs); renderGoal(); return; }
     if (t.dataset.gsdays) { S.gs.days = +t.dataset.gsdays; store.set('goalseek', S.gs); for (const b of document.querySelectorAll('[data-gsdays]')) b.setAttribute('aria-pressed', String(b === t)); renderGoal(); return; }
     if (t.dataset.gsadd) { const m = S.gsLast; if (!m) return; for (const l of m.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: null, from: 'goal' }); saveCoupon(); toast(`${m.legs.length} legs added to the coupon`); return; }
-    if (t.dataset.gssay) { const m = S.gsLast; if (!m) return; speak('Goal seek', [`To turn ${S.gs.stake.toLocaleString('en-US')} into ${S.gs.goal.toLocaleString('en-US')}, the best chance is ${fmtGs(m.prob).replace('%', ' percent')}, with ${m.legs.length} legs at total odds of ${odds(m.odds)}.`, ...m.legs.map((l, i) => `${i + 1}: ${l.s.label}, in ${l.m.h} against ${l.m.a}, at ${odds(l.s.price)}.`)]); }
+    if (t.dataset.gssay) { const m = S.gsLast; if (!m) return; speak('Goal seek', [`To turn ${S.gs.stake.toLocaleString('en-US')} into ${S.gs.goal.toLocaleString('en-US')}, the likeliest slip has ${m.legs.length} legs at total odds of ${odds(m.odds)}, and the chance they all land is ${fmtGs(m.prob).replace('%', ' percent')}.`, ...m.legs.map((l, i) => `${i + 1}: ${l.s.label}, in ${l.m.h} against ${l.m.a}, at ${odds(l.price)}, ${Math.round(l.pc * 100)} percent.`)]); }
   });
 
   // ---------------- headline games, competition chips, motion helpers ----------------
@@ -6312,7 +6437,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const up = (e) => { if (pid === e.pointerId) { pid = null; end(); } };
     sh.addEventListener('pointerup', up); sh.addEventListener('pointercancel', up);
     let tb = null, drag = false;
-    body.addEventListener('touchstart', (e) => { tb = can() && body.scrollTop <= 0 && e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; drag = false; }, { passive: true });
+    body.addEventListener('touchstart', (e) => { tb = can() && body.scrollTop <= 0 && e.touches.length === 1 && !e.target.closest('canvas.shk-cv') ? [e.touches[0].clientX, e.touches[0].clientY] : null; drag = false; }, { passive: true });
     body.addEventListener('touchmove', (e) => {
       if (!tb) return;
       const x = e.touches[0].clientX, y = e.touches[0].clientY, dx = x - tb[0], d = y - tb[1];
