@@ -1069,6 +1069,24 @@ def fd_market(row, upd):
     return m
 
 
+def fd_close(row):
+    """The closing consensus in a past season's row (football-data's closing columns): chances for home, draw, away
+    and over 2.5, read like the live consensus. Used to measure closing-line value in the replay."""
+    avg = [fnum(col(row, 'AvgCH')), fnum(col(row, 'AvgCD')), fnum(col(row, 'AvgCA'))]
+    if not all(x and x > 1 for x in avg):
+        return None
+    p = demargin(avg)
+    ps = [fnum(col(row, 'PSCH')), fnum(col(row, 'PSCD')), fnum(col(row, 'PSCA'))]
+    if all(x and x > 1 for x in ps):
+        p = [(3 * a + b) / 4 for a, b in zip(demargin(ps), p)]
+    out = {'H': p[0], 'D': p[1], 'A': p[2]}
+    o, u = fnum(col(row, 'AvgC>2.5')), fnum(col(row, 'AvgC<2.5'))
+    if o and u and o > 1 and u > 1:
+        out['O25'] = demargin([o, u])[0]
+        out['U25'] = 1 - out['O25']
+    return {k: round(v, 4) for k, v in out.items()}
+
+
 def load_fd_fixtures():
     out = []
     upd = iso(NOW)
@@ -3456,6 +3474,7 @@ for (const m of inp.matches) {
     k: a.top ? a.top.key : null, pp: a.top ? a.top.pAdj : null, pr: a.top ? a.top.price : null, r: a.top ? !!a.top.real : false,
     pu: a.top ? (a.top.pRaw != null ? a.top.pRaw : a.top.pAdj) : null,
     t: a.top && a.top.pLo != null ? a.tier : undefined, pl: a.top && a.top.pLo != null ? a.top.pLo : undefined,
+    vb: E.value([{ m, a }], inp.vb_min || 0.02).map((v) => [v.s.key, v.s.price, +v.s.p.toFixed(4), +v.s.edge.toFixed(4), v.s.bk || null]),
   };
   if (Date.parse(m.ko) > now) { const d = fmt.format(new Date(m.ko)); (byDay[d] = byDay[d] || []).push({ m, a }); }
 }
@@ -3466,6 +3485,7 @@ for (const [d, list] of Object.entries(byDay)) {
       legs: sl.legs.map((l) => ({ id: l.m.id, k: l.s.key, pr: l.s.price, pp: l.s.pAdj, r: !!l.s.real, ko: l.m.ko, h: l.m.h, a: l.m.a })) };
   });
 }
+out.ver = E.VERSION || null;
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -3482,7 +3502,7 @@ def run_engine(doc):
         js, inp = Path(td) / 'engine_run.js', Path(td) / 'in.json'
         js.write_text(NODE_ENGINE)
         inp.write_text(json.dumps({'now': iso(NOW), 'tz': TRACK_TZ, 'target': TRACK_TARGET, 'matches': doc['matches'],
-                                   'calib': doc.get('calib'), 'mcal': doc.get('mcal')}))
+                                   'calib': doc.get('calib'), 'mcal': doc.get('mcal'), 'vb_min': VB_MIN}))
         r = subprocess.run([node, str(js), str(INDEX_FILE), str(inp)], capture_output=True, text=True, timeout=300)
         if r.returncode != 0:
             log('track: engine failed', (r.stderr or '')[-300:])
@@ -3565,13 +3585,124 @@ def find_result(rec, state):
     return None
 
 
+VB_MIN = 0.02             # the Value board's lowest setting: every value bet it shows is tracked
+
+
+def vb_band(e):
+    """The Value board's edge settings: 2-4%, 4-7%, 7% and up."""
+    return '7' if e >= 0.07 else '4' if e >= 0.04 else '2'
+
+
+def new_vb():
+    # bets, won, units profit, sum of squared profits (for the error range), sum of CLV, bets with a closing
+    # price, bets that beat it, and the largest fall from a peak in the running total (units)
+    return {'n': 0, 'w': 0, 'u': 0.0, 'u2': 0.0, 'c': 0.0, 'nc': 0, 'b': 0, 'pk': 0.0, 'dd': 0.0}
+
+
+def vb_add(a, won, price, clv):
+    pr = price - 1 if won else -1.0
+    a['n'] += 1; a['w'] += int(won)
+    a['u'] = round(a['u'] + pr, 4); a['u2'] = round(a['u2'] + pr * pr, 4)
+    if clv is not None:
+        a['c'] = round(a['c'] + clv, 4); a['nc'] += 1; a['b'] += int(clv > 0)
+    a['pk'] = max(a['pk'], a['u']); a['dd'] = round(max(a['dd'], a['pk'] - a['u']), 4)
+    return pr
+
+
+def thin_curve(c, n=90):
+    """A running total cut down to about n points for a small chart (always keeps the last)."""
+    if len(c) <= n:
+        return [round(x, 2) for x in c]
+    step = (len(c) - 1) / (n - 1)
+    return [round(c[round(i * step)], 2) for i in range(n)]
+
+
+def new_ver():
+    return {'n': 0, 'll': [0, 0.0, 0.0], 'br': [0, 0.0, 0.0], 't': {t: [0, 0, 0.0] for t in ('A', 'B', 'C')}, 'vb': new_vb(),
+            'from': None, 'to': None}
+
+
 def new_agg():
     return {'n': 0, 'nr': 0, 'void': 0,
             'tiers': {t: [0, 0, 0.0] for t in ('A', 'B', 'C', '-')},          # picks, wins, sum of stated chance
             'cal': [[0, 0.0, 0] for _ in range(10)],                          # 1X2 outcomes: count, sum p, happened
             'll': [0, 0.0, 0.0, 0.0],                                         # games, log loss: Statpad, market, model
             'clv': [0, 0.0, 0],                                               # picks, sum CLV, beat the close
-            'slips': {t: [0, 0, 0.0, 0.0] for t in ('A', 'B', 'C')}}          # played, won, units profit, sum chance
+            'slips': {t: [0, 0, 0.0, 0.0] for t in ('A', 'B', 'C')},          # played, won, units profit, sum chance
+            'br': [0, 0.0, 0.0, 0.0],                                         # games, Brier score: Statpad, market, model
+            'vb': new_vb(), 'vbb': {},                                        # value bets, and by edge setting
+            'ver': {}}                                                        # the same, per engine version
+
+
+# The ledger: every graded prediction and value bet, one row each, appended to a CSV per month of kick-off in
+# the repo's ledger folder. Rows are only ever added, never changed, so any engine version can be checked later.
+LEDGER_DIR = Path(ENV('STATPAD_LEDGER') or ROOT / 'ledger')
+LEDGER_COLS = ['graded_utc', 'engine', 'kind', 'match_id', 'competition', 'kickoff_utc', 'home', 'away', 'home_goals', 'away_goals',
+               'pick', 'market', 'level', 'chance', 'cautious_chance', 'price', 'real_price', 'bookmaker', 'edge',
+               'first_seen_utc', 'first_pick', 'first_chance', 'first_price', 'closing_fair_chance', 'won', 'profit_units', 'clv',
+               'statpad_home', 'statpad_draw', 'statpad_away', 'market_home', 'market_draw', 'market_away',
+               'model_home', 'model_draw', 'model_away']
+PICK_TEXT = {'H': '{h} to win', 'D': 'Draw', 'A': '{a} to win', '1X': '{h} or draw', 'X2': '{a} or draw', 'O15': 'Over 1.5 goals',
+             'O25': 'Over 2.5 goals', 'U25': 'Under 2.5 goals', 'U35': 'Under 3.5 goals', 'BTTS': 'Both teams to score',
+             'BTTS_N': 'Both teams to score: no', 'H_O05': '{h} to score', 'A_O05': '{a} to score', 'H_O15': '{h} 2+ goals',
+             'A_O15': '{a} 2+ goals'}
+
+
+def pick_text(k, h, a):
+    return PICK_TEXT.get(k, k or '').replace('{h}', h).replace('{a}', a)
+
+
+def ledger_row(kind, rec, hs, as_, ver, key, chance, cautious, price, real, bk, edge, first, won, clv, level):
+    num = lambda x, n=4: '' if x is None else round(x, n)
+    tri = lambda q: [num(x) for x in q] if q and len(q) == 3 else ['', '', '']
+    f = first or [None, None, None, None]
+    cp = (rec.get('cp') or {}).get(key)
+    profit = (round(price - 1, 4) if won else -1.0) if price and price > 1 else ''
+    return [iso(NOW), ver or '', kind, rec['id'], (L.get(rec['lk']) or {}).get('name', rec['lk']), rec['ko'], rec['h'], rec['a'], hs, as_,
+            pick_text(key, rec['h'], rec['a']), key, level or '', num(chance), num(cautious), num(price, 3), int(bool(real)), bk or '', num(edge),
+            f[0] or '', f[1] or '', num(f[2]), num(f[3], 3), num(cp), int(bool(won)), profit, num(clv),
+            *tri(rec.get('p')), *tri(rec.get('m')), *tri(rec.get('pm'))]
+
+
+def ledger_flush(state):
+    buf = state.get('ledger_buf') or []
+    if not buf:
+        return 0
+    LEDGER_DIR.mkdir(parents=True, exist_ok=True)
+    by = {}
+    for r in buf:
+        by.setdefault(str(r[5])[:7], []).append(r)
+    for ym, rows in sorted(by.items()):
+        f = LEDGER_DIR / f'{ym}.csv'
+        new = not f.exists()
+        with f.open('a', newline='', encoding='utf-8') as fh:
+            w = csv.writer(fh)
+            if new:
+                w.writerow(LEDGER_COLS)
+            w.writerows(rows)
+    state['ledger_buf'] = []
+    log(f'ledger: {len(buf)} rows added')
+    return len(buf)
+
+
+def ledger_index():
+    """The ledger's months and row counts, newest first, for the page's download links."""
+    out = []
+    if LEDGER_DIR.is_dir():
+        for f in sorted(LEDGER_DIR.glob('*.csv'), reverse=True):
+            if re.fullmatch(r'\d{4}-\d{2}', f.stem):
+                with f.open(encoding='utf-8') as fh:
+                    out.append([f.stem, max(0, sum(1 for _ in fh) - 1)])
+    return out
+
+
+def publish_ledger():
+    if not LEDGER_DIR.is_dir():
+        return
+    dst = OUT_DIR / 'ledger'
+    dst.mkdir(parents=True, exist_ok=True)
+    for f in LEDGER_DIR.glob('*.csv'):
+        shutil.copyfile(f, dst / f.name)
 
 
 def load_track(state):
@@ -3580,11 +3711,15 @@ def load_track(state):
     if repo and (not tr or (repo.get('updated') or '') > (tr.get('updated') or '')):
         tr = {'since': repo.get('since') or iso(NOW), 'updated': repo.get('updated') or iso(NOW),
               'saved_at': repo.get('saved_at'), 'agg': repo.get('agg') or new_agg(),
-              'picks': repo.get('picks') or [], 'slips': repo.get('slips') or [], 'new': 0}
+              'picks': repo.get('picks') or [], 'slips': repo.get('slips') or [], 'vbets': repo.get('vbets') or [], 'new': 0}
         if not state.get('slips_open') and repo.get('open'):
             state['slips_open'] = repo['open']
     if not tr:
-        tr = {'since': iso(NOW), 'updated': iso(NOW), 'saved_at': None, 'agg': new_agg(), 'picks': [], 'slips': [], 'new': 0}
+        tr = {'since': iso(NOW), 'updated': iso(NOW), 'saved_at': None, 'agg': new_agg(), 'picks': [], 'slips': [], 'vbets': [], 'new': 0}
+    # records made before value bets, Brier scores and engine versions were kept
+    for k, v in (('br', [0, 0.0, 0.0, 0.0]), ('vb', new_vb()), ('vbb', {}), ('ver', {})):
+        tr['agg'].setdefault(k, v)
+    tr.setdefault('vbets', [])
     state['track'] = tr
     return tr, repo
 
@@ -3600,6 +3735,7 @@ def track_update(doc, state):
     r4 = lambda xs: [round(x, 4) for x in xs] if xs else None
 
     # 1) snapshot every open match (the last snapshot before kick-off is the one that gets graded)
+    ver = (eng or {}).get('ver')
     if eng:
         for mid, e in eng['picks'].items():
             m = by_id.get(mid)
@@ -3615,6 +3751,23 @@ def track_update(doc, state):
                 rec['pl'] = round(e['pl'], 4)
             if rec.get('op') is None and best:
                 rec['op'] = best
+            if ver:
+                rec['v'] = ver
+            if 'f' not in rec:   # the first prediction, kept as it was: time, pick, chance, price
+                rec['f'] = [iso(NOW), e['k'], round(e['pp'], 4), e['pr']]
+            # the consensus now; at kick-off this is the closing consensus that value bets are measured against
+            mk, cp = m.get('mkt') or {}, {}
+            if mk.get('p') and len(mk['p']) == 3:
+                cp = {'H': mk['p'][0], 'D': mk['p'][1], 'A': mk['p'][2]}
+            ou = mk.get('ou') or {}
+            if ou.get('pO') and ou.get('line') in (None, 2.5):
+                cp['O25'], cp['U25'] = ou['pO'], round(1 - ou['pO'], 4)
+            rec['cp'] = cp
+            # value bets: taken once, at the price when the Value board first shows them
+            vbs = rec.setdefault('vb', {})
+            for key, price, p_, edge, bk in e.get('vb') or []:
+                if key not in vbs:
+                    vbs[key] = [iso(NOW), price, p_, edge, bk]
             pend[mid] = rec
 
         # 2) slips: keep the latest version for each day, freeze it once its first game kicks off
@@ -3668,6 +3821,33 @@ def track_update(doc, state):
             ll[1] = round(ll[1] - math.log(max(1e-6, rec['p'][oc])), 5)
             ll[2] = round(ll[2] - math.log(max(1e-6, rec['m'][oc])), 5)
             ll[3] = round(ll[3] - math.log(max(1e-6, rec['pm'][oc])), 5)
+        ver_r = rec.get('v') or 'pre'
+        V = agg['ver'].setdefault(ver_r, new_ver())
+        V['n'] += 1
+        V['from'] = min(V['from'] or rec['ko'], rec['ko']); V['to'] = max(V['to'] or rec['ko'], rec['ko'])
+        if t in V['t']:
+            vt = V['t'][t]
+            vt[0] += 1; vt[1] += int(won); vt[2] = round(vt[2] + rec['pp'], 4)
+        if rec.get('m') and rec.get('pm'):
+            bs = lambda q: sum((q[i] - (1 if i == oc else 0)) ** 2 for i in range(3))
+            br = agg['br']
+            br[0] += 1; br[1] = round(br[1] + bs(rec['p']), 5); br[2] = round(br[2] + bs(rec['m']), 5); br[3] = round(br[3] + bs(rec['pm']), 5)
+            V['ll'][0] += 1
+            V['ll'][1] = round(V['ll'][1] - math.log(max(1e-6, rec['p'][oc])), 5)
+            V['ll'][2] = round(V['ll'][2] - math.log(max(1e-6, rec['m'][oc])), 5)
+            V['br'][0] += 1; V['br'][1] = round(V['br'][1] + bs(rec['p']), 5); V['br'][2] = round(V['br'][2] + bs(rec['m']), 5)
+        buf = state.setdefault('ledger_buf', [])
+        for key, (t0, vpr, vp, vedge, vbk) in (rec.get('vb') or {}).items():
+            okv = settle(key, hs, as_)
+            if okv is None:
+                continue
+            cpk = (rec.get('cp') or {}).get(key)
+            vclv = round(vpr * cpk - 1, 4) if cpk else None
+            vb_add(agg['vb'], okv, vpr, vclv)
+            vb_add(agg['vbb'].setdefault(vb_band(vedge), new_vb()), okv, vpr, vclv)
+            vb_add(V['vb'], okv, vpr, vclv)
+            tr['vbets'].append([mid, rec['lk'], rec['ko'], rec['h'], rec['a'], hs, as_, key, vpr, vbk, vedge, vp, int(bool(okv)), vclv, t0, ver_r])
+            buf.append(ledger_row('value', rec, hs, as_, ver_r, key, vp, None, vpr, True, vbk, vedge, [t0, key, vp, vpr], okv, vclv, None))
         clv = None
         side = {'H': 0, 'D': 1, 'A': 2}.get(rec['k'])
         if side is not None and rec.get('r') and rec.get('op') and rec.get('cl') and rec['cl'][side] > 1:
@@ -3676,6 +3856,9 @@ def track_update(doc, state):
             c[0] += 1; c[1] = round(c[1] + clv, 4); c[2] += int(clv > 0)
         tr['picks'].append([mid, rec['lk'], rec['ko'], rec['h'], rec['a'], hs, as_, rec['src'], rec['k'], rec['pp'],
                             rec['pr'], int(bool(rec['r'])), t, int(won), clv] + rec['p'] + [rec.get('pu') or rec['pp']])
+        cpk = (rec.get('cp') or {}).get(rec['k'])
+        buf.append(ledger_row('pick', rec, hs, as_, ver_r, rec['k'], rec['pp'], rec.get('pl'), rec['pr'], rec['r'], None, None, rec.get('f'), won,
+                              round(rec['pr'] * cpk - 1, 4) if cpk and rec.get('r') and rec['pr'] and rec['pr'] > 1 else None, t if t != '-' else None))
         scores[mid] = [hs, as_, rec['ko']]
         del pend[mid]
         changed = True
@@ -3712,6 +3895,7 @@ def track_update(doc, state):
     tr['picks'] = [p for p in tr['picks'] if p[2] >= keep_from]
     keep_day = (NOW - timedelta(days=TRACK_KEEP_DAYS)).strftime('%Y-%m-%d')
     tr['slips'] = [s for s in tr['slips'] if s['d'] >= keep_day]
+    tr['vbets'] = [v for v in tr['vbets'] if v[2] >= keep_from]
     if changed:
         tr['updated'] = iso(NOW)
         tr['new'] = tr.get('new', 0) + 1
@@ -3725,18 +3909,29 @@ def track_update(doc, state):
         if t != '-' and w_lo <= parse_iso(rec['ko']) <= w_hi:
             waiting.append([rec['id'], rec['lk'], rec['ko'], rec['h'], rec['a'], rec['k'], rec['pp'], rec['pr'], int(bool(rec['r'])), t])
     waiting.sort(key=lambda w: (w[2], w[0]))
+    # value bets taken and not yet settled: games from 4 hours ago to a day and a half ahead
+    vwait, vopen = [], 0
+    for rec in pend.values():
+        for key, (t0, vpr, vp, vedge, vbk) in (rec.get('vb') or {}).items():
+            vopen += 1
+            if w_lo <= parse_iso(rec['ko']) <= w_hi:
+                vwait.append([rec['id'], rec['lk'], rec['ko'], rec['h'], rec['a'], key, vpr, vedge, vbk, t0, vp])
+    vwait.sort(key=lambda w: (w[2], w[0]))
     pub = {'app': 'Statpad', 'schema': 1, 'since': tr['since'], 'updated': tr['updated'], 'saved_at': tr.get('saved_at'),
            'tz': TRACK_TZ, 'target': TRACK_TARGET, 'agg': agg, 'picks': tr['picks'], 'slips': tr['slips'],
-           'open': open_, 'pending': len(pend), 'pend_t': pend_t, 'waiting': waiting[:150]}
+           'open': open_, 'pending': len(pend), 'pend_t': pend_t, 'waiting': waiting[:150],
+           'vbets': tr['vbets'], 'vwait': vwait[:120], 'vopen': vopen, 'ver': ver, 'vb_min': VB_MIN}
     # commit to the repo: new grades at most every few hours, and a keep-alive commit regardless
     saved = parse_iso(tr['saved_at']) if tr.get('saved_at') else None
     keepalive = repo is None or saved is None or NOW - saved >= timedelta(days=KEEPALIVE_DAYS)
     if keepalive or (tr.get('new') and NOW - saved >= timedelta(hours=SAVE_EVERY_H)):
         tr['saved_at'] = pub['saved_at'] = iso(NOW)
         tr['new'] = 0
+        ledger_flush(state)
         TRACK_FILE.write_text(json.dumps(pub, ensure_ascii=False, separators=(',', ':')))
         log('track: saved track.json for commit' + (' (keep-alive)' if keepalive else ''))
-    log(f"track: {len(pend)} predictions waiting, {agg['n']} graded, {len(open_)} slips in play")
+    pub['ledger'] = ledger_index()
+    log(f"track: {len(pend)} predictions waiting, {agg['n']} graded, {len(open_)} slips in play, {vopen} value bets open")
     return pub
 
 
@@ -3785,13 +3980,14 @@ for (const m of inp.matches) {
   out.picks[m.id] = { k: a.top ? a.top.key : null, pp: a.top ? a.top.pAdj : null, pr: a.top ? a.top.price : null,
     t: a.top ? a.tier : null, ok: ob ? ob.key : null, op: ob ? ob.pAdj : null,
     p: [a.p.H, a.p.D, a.p.A], m: a.mkt ? a.mkt.p : null, pm: a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A] : null };
-  for (const v of E.value([{ m, a }], 0.03)) out.value.push([m.id, v.s.key, v.s.price, v.s.p]);
+  for (const v of E.value([{ m, a }], inp.vb_min || 0.02)) out.value.push([m.id, v.s.key, v.s.price, v.s.p, +v.s.edge.toFixed(4)]);
   const d = m.ko.slice(0, 10); (byDay[d] = byDay[d] || []).push({ m, a });
 }
 for (const [d, list] of Object.entries(byDay)) {
   out.slips[d] = ['C', 'B', 'A'].map((t) => { const sl = E.buildSlip(list, t, inp.target);
     return { t, f: sl.feasible, o: sl.odds, p: sl.prob, legs: sl.legs.map((l) => [l.m.id, l.s.key]) }; });
 }
+out.ver = E.VERSION || null;
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -3837,8 +4033,11 @@ def fd_season(lk, code):
                 h, a = col(row, 'HomeTeam', 'Home'), col(row, 'AwayTeam', 'Away')
                 hg, ag = fnum(col(row, 'FTHG', 'HG')), fnum(col(row, 'FTAG', 'AG'))
                 if d and h and a and hg is not None and ag is not None:
+                    mk = fd_market(row, None)
+                    if mk:
+                        mk['cl'] = fd_close(row)   # closing consensus, for closing-line value in the replay
                     rows.append((d, h, a, int(hg), int(ag), fnum(col(row, 'HST')), fnum(col(row, 'AST')),
-                                 fd_market(row, None), uk_to_utc(d, col(row, 'Time'))))   # football-data times are UK time
+                                 mk, uk_to_utc(d, col(row, 'Time'))))   # football-data times are UK time
         _FD_SEASONS[key] = rows
     return _FD_SEASONS[key]
 
@@ -4359,6 +4558,52 @@ def bt_matches(seasons):
     return ms, res
 
 
+VH_SEASONS = 5           # past seasons for the value-bet history
+
+
+def value_history():
+    """Every value bet the Value board's rule would have flagged on the last five full seasons of football-data's
+    main leagues: the best listed price at least 2% above the consensus's fair price (margin taken off, Pinnacle
+    weighted three times), chance 18% or more, on home, draw, away and over/under 2.5. 1 unit each, in kick-off
+    order, with closing-line value against the closing consensus. Needs no model, so it covers every game."""
+    t0 = time.time()
+    bets, seasons = [], []
+    for k in range(1, VH_SEASONS + 1):
+        code = season_code(NOW, k)
+        n0 = len(bets)
+        for lk, c in L.items():
+            if not c['fd']:
+                continue
+            for d, h, a, hg, ag, _hs, _as, mk, ko in fd_season(lk, code):
+                if not mk:
+                    continue
+                cand = [(key, mk['p'][i], mk['best'][i]) for i, key in enumerate(('H', 'D', 'A'))]
+                ou = mk.get('ou')
+                if ou and ou.get('pO') and ou.get('best'):
+                    cand += [('O25', ou['pO'], ou['best'][0]), ('U25', 1 - ou['pO'], ou['best'][1])]
+                cl = mk.get('cl') or {}
+                for key, p, pr in cand:
+                    if p >= 0.18 and pr and pr > 1 and p * pr - 1 >= VB_MIN:
+                        bets.append((ko or d, code, key, p * pr - 1, pr, bool(settle(key, hg, ag)), cl.get(key)))
+        if len(bets) > n0:
+            seasons.append(code)
+    if len(bets) < 200:
+        log('value history: not enough games', len(bets))
+        return None
+    bets.sort(key=lambda b: b[0])
+    allv, bands, by_s, by_k, curve = new_vb(), {}, {}, {}, [0.0]
+    for ko, code, key, edge, pr, won, clp in bets:
+        clv = round(pr * clp - 1, 4) if clp else None
+        vb_add(allv, won, pr, clv)
+        vb_add(bands.setdefault(vb_band(edge), new_vb()), won, pr, clv)
+        vb_add(by_s.setdefault(season_name(code), new_vb()), won, pr, clv)
+        vb_add(by_k.setdefault('1X2' if key in ('H', 'D', 'A') else 'Goals', new_vb()), won, pr, clv)
+        curve.append(allv['u'])
+    log(f'value history: {len(bets)} bets on {len(seasons)} seasons, {allv["u"] / allv["n"]:+.3f} a unit ({time.time() - t0:.0f} s)')
+    return {'at': iso(NOW), 'seasons': [season_name(c) for c in sorted(seasons)], 'min': VB_MIN, 'all': allv, 'bands': bands,
+            'by_season': by_s, 'by_kind': by_k, 'curve': thin_curve(curve), 'leagues': sum(1 for c in L.values() if c['fd'])}
+
+
 def run_backtest(state):
     t0 = time.time()
     seasons, label = load_bt_season()
@@ -4367,7 +4612,7 @@ def run_backtest(state):
     if len(ms) < 200:
         log('backtest: not enough games with prices', len(ms))
         return None
-    eng = run_node(NODE_BT, {'target': TRACK_TARGET, 'matches': ms, 'mcal': public_mcal(state)})
+    eng = run_node(NODE_BT, {'target': TRACK_TARGET, 'matches': ms, 'mcal': public_mcal(state), 'vb_min': VB_MIN})
     if not eng:
         return None
     agg = new_agg()
@@ -4400,11 +4645,24 @@ def run_backtest(state):
             ll[1] = round(ll[1] - math.log(max(1e-6, e['p'][oc])), 4)
             ll[2] = round(ll[2] - math.log(max(1e-6, e['m'][oc])), 4)
             ll[3] = round(ll[3] - math.log(max(1e-6, e['pm'][oc])), 4)
-    for mid, key, price, p in eng['value']:
+    # value bets: 1 unit on everything the Value board would have shown, at its best price, in kick-off order;
+    # closing-line value against the closing consensus (football-data's closing prices)
+    by_mid = {m['id']: m for m in ms}
+    vb, vbb, curve = new_vb(), {}, [0.0]
+    for row in sorted(eng['value'], key=lambda r: (by_mid[r[0]]['ko'], r[0])):
+        mid, key, price, p = row[:4]
+        edge = row[4] if len(row) > 4 else p * price - 1
         hs, as_ = res[mid]
         won = bool(settle(key, hs, as_))
         v = agg['value']
         v[0] += 1; v[1] += int(won); v[2] = round(v[2] + (price - 1 if won else -1), 3)
+        cl = (by_mid[mid]['mkt'] or {}).get('cl') or {}
+        clv = round(price * cl[key] - 1, 4) if cl.get(key) else None
+        vb_add(vb, won, price, clv)
+        vb_add(vbb.setdefault(vb_band(edge), new_vb()), won, price, clv)
+        curve.append(vb['u'])
+    agg['vb'], agg['vbb'] = vb, vbb
+    agg['vb_curve'] = thin_curve(curve)
     for d, sl in eng['slips'].items():
         for s_ in sl:
             if not s_['f'] or not s_['legs']:
@@ -4413,7 +4671,8 @@ def run_backtest(state):
             a = agg['slips'][s_['t']]
             a[0] += 1; a[1] += int(won); a[2] = round(a[2] + (s_['o'] - 1 if won else -1), 3); a[3] = round(a[3] + s_['p'], 4)
     out = {'app': 'Statpad', 'season': label, 'at': iso(NOW), 'games': len(ms), 'leagues': len({m['lk'] for m in ms}),
-           'skip_weeks': BT_SKIP_WEEKS, 'target': TRACK_TARGET, 'model': MODEL, 'wm': MODEL_W or W_DEFAULT, 'agg': agg,
+           'skip_weeks': BT_SKIP_WEEKS, 'target': TRACK_TARGET, 'model': MODEL, 'wm': MODEL_W or W_DEFAULT, 'agg': agg, 'ver': eng.get('ver'),
+           'vb_min': VB_MIN,
            'by_league': dict(sorted(by_lg.items(), key=lambda x: -x[1][0]))}
     log(f"backtest: {label}, {len(ms)} games in {out['leagues']} leagues (ratings {t1 - t0:.0f} s, total {time.time() - t0:.0f} s)")
     return out
@@ -4688,8 +4947,15 @@ def main():
         if bt:
             state['backtest'] = bt
             changed = True
+    if due(state, 'vhist', BT_EVERY_H if state.get('vhist') else 6):   # weekly; every 6 hours until the first one works
+        last['vhist'] = iso(NOW)
+        vh = safe(lambda: value_history(), None)
+        if vh:
+            state['vhist'] = vh
+            changed = True
     if state.get('backtest'):
-        (OUT_DIR / 'backtest.json').write_text(json.dumps(dict(state['backtest'], tune=public_tune(state)), ensure_ascii=False, separators=(',', ':')))
+        (OUT_DIR / 'backtest.json').write_text(json.dumps(dict(state['backtest'], tune=public_tune(state), vh=state.get('vhist')),
+                                                          ensure_ascii=False, separators=(',', ':')))
     # team pages and the season simulator read one small file per league
     if state.get('teamfiles'):
         (OUT_DIR / 'teams').mkdir(parents=True, exist_ok=True)
@@ -4713,7 +4979,8 @@ def main():
             changed = True
     if track:
         (OUT_DIR / 'track.json').write_text(json.dumps(track, ensure_ascii=False, separators=(',', ':')))
-        sig = json.dumps([track['agg'], len(track['picks']), len(track['slips']), track['open'], track['pending']])
+        publish_ledger()
+        sig = json.dumps([track['agg'], len(track['picks']), len(track['slips']), track['open'], track['pending'], track.get('vopen'), track.get('ledger')])
         if sig != state.get('track_sig'):
             state['track_sig'] = sig
             changed = True

@@ -13,6 +13,7 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 | `.github/workflows/update.yml` | Runs `update.py` every 5 minutes and redeploys the site whenever the data changes. |
 | `matches.json` | Starter data (5–9 Nov 2026). It is replaced on the first run. |
 | `track.json` | The track record. The workflow creates it and commits it; don't edit it by hand. |
+| `ledger/` | Every graded prediction and value bet, one CSV file per month. The workflow creates and commits it; rows are only ever added. GitHub shows each file as a table. |
 | `backtest.json`, `results.json`, `live.json`, `teams/` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores; one file per league for team pages and the season simulator). Nothing to upload. |
 | `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. `sw.js` also keeps crests and flags on the phone after the first download. |
 | `crests/` | Club crests and competition logos. The workflow makes them on each publish; nothing to upload. |
@@ -30,9 +31,15 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 
 On a computer you can unzip `statpad.zip` and drag every file, including the `.github` folder, onto the upload page in one go. Do step 3 first.
 
-## Track record
+## Performance lab (track record)
 
-Every run saves each match's top pick before kick-off, along with the 10-odds slips for each day. The slips are frozen once their first game starts. When results arrive, the picks are graded and the **Track** tab shows:
+Every run saves each match's top pick before kick-off, along with the 10-odds slips for each day, and every bet the Value board shows. The slips are frozen once their first game starts. When results arrive, everything is graded and the **Lab** tab shows it in three parts.
+
+**Value bets: do they pay?** Each value bet is taken once, 1 unit at the best price the moment the board first shows it. The Lab shows the return per unit with its 95% range (over a few hundred bets luck alone moves the return by several percent either way, so the range says whether a result means anything yet), profit, closing-line value (the price taken against the bookmakers' fair price at kick-off; beating it is the quickest sign of a real edge), the worst run from a peak, results by edge, the bets waiting or in play with their chance now, and the latest settled. Beside it is the same rule run on the last five full seasons of football-data.co.uk's main leagues (about 5,000 bets, recomputed weekly): **+5.0% a unit, 95% range +1.1% to +8.9%, closing price beaten 71% of the time, worst run −41 units**, positive in each of the five seasons. That uses the best price football-data lists; in practice the best price often comes from a bookmaker that limits winning accounts, so treat it as an upper bound.
+
+**Accuracy: is Statpad right?** Log loss and Brier score on home, draw and away, for Statpad, the bookmakers' consensus and Statpad's model on its own; a calibration chart; the same numbers for each engine version (every prediction is stamped with the engine that made it, so an upgrade is judged on games it actually predicted); the weekly replay of last season; the tuning; and links to the ledger.
+
+**Levels:**
 
 - a separate tracker for each entry level (**Nearly definite**, **Highly possible**, **Possible**). A pick counts at the level it had at the last update before kick-off. Each tracker shows how many of its picks landed against the chance Statpad stated, units won or lost at 1 unit a pick at the listed price, the current run, the last 20 results, the level's 10-odds slips, and its picks waiting or in play with live scores (landing or not as it stands). Tap a level to switch; the phone remembers your choice
 - the slips' record and profit for all three levels side by side, at 1 unit per slip
@@ -42,13 +49,15 @@ Every run saves each match's top pick before kick-off, along with the 10-odds sl
 
 The record uses the same engine as the page, run with Node from `index.html`.
 
+**The ledger.** Each graded prediction and value bet is also written as one row to `ledger/YYYY-MM.csv` (month of kick-off) when the track record is saved: engine version, the first prediction and the last before kick-off, chance and cautious chance, price and bookmaker, edge, the closing fair chance, the result, profit and closing-line value, and the 1X2 chances of Statpad, the market and the model. Rows are only ever added. The workflow commits the folder along with `track.json`, and the site publishes a copy so the Lab can link to each month. **This needs the updated `update.yml`**: upload it to `.github/workflows/` (replace the old one).
+
 **Results speed.** Finished games are graded on the first run after the final whistle (within about 5 minutes), from ESPN's public scoreboards (no key, no daily limit; see **Live scores and cash-out**). Postponed and abandoned games leave the queue straight away. For the few competitions ESPN doesn't carry (the Swiss, Romanian, Polish, Czech, Serbian and Finnish leagues), an API-Football key grades them within a couple of hours; without it, those results come from football-data.co.uk, which publishes them twice a week. The site also gets a `results.json` with the last three weeks' final scores, which **My bets** uses.
 
-**Self-tuning.** Once 150 top picks have been graded, every update compares the chances Statpad stated with what actually landed over the last 90 days, and fits a small correction. If Statpad has been over-confident, its stated chances, tiers and slips are trimmed; if under-confident, they're raised. The fit uses the chances as stated before any correction, so it never feeds on itself, and it stays close to "no change" until the evidence is strong. The Track tab shows its progress and the current correction. Results for UEFA, cup and Saudi games come from The Odds API and are only fetched on paid plans.
+**Self-tuning.** Once 150 top picks have been graded, every update compares the chances Statpad stated with what actually landed over the last 90 days, and fits a small correction. If Statpad has been over-confident, its stated chances, tiers and slips are trimmed; if under-confident, they're raised. The fit uses the chances as stated before any correction, so it never feeds on itself, and it stays close to "no change" until the evidence is strong. The Lab shows its progress and the current correction. Results for UEFA, cup and Saudi games come from The Odds API and are only fetched on paid plans.
 
-**Last season, replayed.** Once a week the workflow replays the last full season of the main European leagues that football-data.co.uk covers (with the season before it for ratings), through the same engine. Each week's team ratings are rebuilt from earlier games only, every game is priced from the bookmakers' average odds before kick-off, the first four weeks are skipped while ratings settle, and self-tuning is off. The **Track** tab shows the result as **Last season, replayed**: hit rate against the stated chance for each tier, 10-odds slips, value bets at the best price, and log loss against the market. It appears from the first run, so the Track tab is useful before the live record has grown. It takes a few seconds and uses no API credits.
+**Last season, replayed.** Once a week the workflow replays the last full season of the main European leagues that football-data.co.uk covers (with the season before it for ratings), through the same engine. Each week's team ratings are rebuilt from earlier games only, every game is priced from the bookmakers' average odds before kick-off, the first four weeks are skipped while ratings settle, and self-tuning is off. The **Lab** tab shows the result as **Last season, replayed**: hit rate against the stated chance for each tier, 10-odds slips, value bets at the best price, and log loss against the market. It appears from the first run, so the Lab is useful before the live record has grown. It takes a few seconds and uses no API credits.
 
-**Tuning.** Once a month (and on the first run) the workflow tunes the model's settings on football-data's main European leagues: how fast old games fade, how much last season counts, how hard teams are pulled towards average, how much shots on target count next to goals, and the bookmakers' share of the blend. It searches on two past seasons, then checks the result on the last full season, which the search never saw. New settings are switched on only if they beat the old ones there. Leagues without shot counts get their own goals-only settings. The run takes one to three minutes once a month and uses no API credits. The Track tab shows the settings before and after, and the error on the check season.
+**Tuning.** Once a month (and on the first run) the workflow tunes the model's settings on football-data's main European leagues: how fast old games fade, how much last season counts, how hard teams are pulled towards average, how much shots on target count next to goals, and the bookmakers' share of the blend. It searches on two past seasons, then checks the result on the last full season, which the search never saw. New settings are switched on only if they beat the old ones there. Leagues without shot counts get their own goals-only settings. The run takes one to three minutes once a month and uses no API credits. The Lab shows the settings before and after, and the error on the check season.
 
 **Shots on target.** Where football-data has shot counts, each side's goals are mixed with its shots on target (times the league's goals per shot on target) before the ratings are fitted. Shots are steadier than goals, so ratings react to how well a team plays, not just how lucky its finishing was.
 
@@ -77,7 +86,7 @@ It shows each leg's real chance, fair odds and whether its price is value or sho
 
 Live scores come from ESPN's public scoreboards, which need no key and have no daily limit. Two things read them:
 
-- **The workflow**, on every run (every 5 minutes): each game from three hours before kick-off to the end is paired with ESPN's game (same kick-off, same clubs), its score, minute, goals and red cards go into `live.json`, and finished games go straight into `results.json` and the **Track** record. It also takes confirmed line-ups from ESPN from about 75 minutes before kick-off. This uses one or two small requests per competition in play.
+- **The workflow**, on every run (every 5 minutes): each game from three hours before kick-off to the end is paired with ESPN's game (same kick-off, same clubs), its score, minute, goals and red cards go into `live.json`, and finished games go straight into `results.json` and the track record. It also takes confirmed line-ups from ESPN from about 75 minutes before kick-off. This uses one or two small requests per competition in play.
 - **Your phone**, while Statpad is open: every 30 seconds for a competition where you have a bet running, every minute for the other games in play. GitHub takes a minute or two to publish each update, so this is what keeps scores, the shock map and your bets current. A finished game settles your bets straight away; the site's results file confirms them later. Each check is about 7 KB per competition. **Display → Live scores** has **Data saver** (every 1 and 3 minutes) and **Off** (the site's updates only). If ESPN can't be reached from your phone, it backs off and uses the site's updates; **Method → Data status** shows which is in use.
 
 For the competitions ESPN doesn't carry, an API-Football key adds live scores the old way: one call covers every live game, at most 40 checks a day.
@@ -86,7 +95,7 @@ For each open bet in **My bets** with a game in play, Statpad shows each leg's c
 
 ## Live win probability
 
-While a game is being played, its card's bar shows the chances now, and the match page draws the whole game as a chart: home, draw and away chances minute by minute, with goals and red cards marked. Each point plays out the rest of the game from the score, the time left and both teams' expected goals; a team down to ten men scores less and its opponent more. Goal and card times are exact when the feed lists the events (ESPN does); otherwise a new goal is placed halfway between two score checks, and the chart says so. Finished games keep their chart for about half an hour after the final whistle. The cash-out adviser uses red cards too.
+While a game is being played, its card's bar shows the chances now, and the match page draws the whole game as a chart: home, draw and away chances minute by minute, with goals and red cards marked. Each point plays out the rest of the game from the score, the time left and both teams' expected goals; a team down to ten men scores less and its opponent more. Goal timing and the effect of the score were fitted on the half-time scores of 34,221 games (2021/22–2025/26, expected goals from each game's prices): 55% of the goals are still to come at half-time, a team a goal up scores about 6% less from there and a team a goal down about 11% more. Fitted on three seasons and checked on the next two, this read full-time results from half-time better than goal timing alone (log loss 0.8265 → 0.8237). The red-card effect is a typical published estimate; the data has no card times to test it on. The Lab uses the same model for the chance now of picks, value bets and slips in play. Goal and card times are exact when the feed lists the events (ESPN does); otherwise a new goal is placed halfway between two score checks, and the chart says so. Finished games keep their chart for about half an hour after the final whistle. The cash-out adviser uses red cards too.
 
 ## Scoreline explorer
 
@@ -95,6 +104,14 @@ Every match page has a scoreline grid you can play with. Tap scores to make your
 ## Why this pick
 
 Each match page opens with the story behind the top pick: the teams' attack and defence ranks on Statpad's ratings, recent form, expected goals, what the bookmakers and Statpad's own model each say, how the price has moved, team news, and any reason for caution (thin data, disagreement, old prices).
+
+## Value board
+
+**Value** lists real prices above the bookmakers' own fair price: edge = fair chance × best price − 1, where the fair chance is the consensus of all the bookmakers with their margin taken off (power method, Pinnacle counted three times). It's line-shopping: one bookmaker paying more than the market as a whole thinks the outcome is worth. Each row shows the best price and bookmaker, the average price, the fair odds and chance, a ¼-Kelly stake, how many bookmakers price the game, how old the prices are, which way the average price has moved, and how past bets with a similar edge did (from the five-season history in the Lab, with its 95% range). A row turns amber when the fair price rests on a single bookmaker or the prices are more than 12 hours old. Sort by edge, kick-off or number of bookmakers.
+
+Until this update, edges were measured against Statpad's own fitted chance. The Lab's replay showed that was a mistake: on 2025/26 those edges came mostly from small gaps between the two-number scoreline model and the market's own draw and goals prices, and the 1,909 bets they flagged lost 7.3%. Measured against the consensus, the same season flagged 284 bets that won 13.9% and beat the closing price 73% of the time. Even so, about 6 value bets in 10 lose; the edge only shows over hundreds of bets.
+
+**Coupon.** Picks from the same match are linked (over 2.5 goals and both teams to score tend to land together), so the coupon works out their chance together from that match's scoreline grid instead of multiplying them.
 
 ## Market movers
 
@@ -142,7 +159,7 @@ Once a month, alongside the other tuning, Statpad tests:
 - **Nothing to play for**: from the season simulation run week by week over past seasons, a side whose season chances barely move whatever the result.
 - **Open games**: games where neither side has anything left to play for.
 
-Each is fitted on two past seasons after blending with the market as the site does, then checked on the last full season, which the fit never saw. It goes on only if it lowers the error there too; the Track tab shows which are on, and a match page says when one applies. football-data.co.uk lists league games only, so cup and European games don't count towards rest. The first run after this update does the fit, so it takes a few minutes longer than usual.
+Each is fitted on two past seasons after blending with the market as the site does, then checked on the last full season, which the fit never saw. It goes on only if it lowers the error there too; the Lab shows which are on, and a match page says when one applies. football-data.co.uk lists league games only, so cup and European games don't count towards rest. The first run after this update does the fit, so it takes a few minutes longer than usual.
 
 ## Live shock map
 

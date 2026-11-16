@@ -774,6 +774,10 @@ details.xm .note { margin: 0 0 10px; }
 .vrow .edge .l { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
 .ebar { grid-column: 1 / -1; height: 4px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
 .ebar i { display: block; height: 100%; background: var(--pitch); }
+.vchips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.vchips .chip { font-size: 11.5px; padding: 3px 8px; }
+.vpast { grid-column: 1 / -1; font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+.vrow.vwarn .edge .v { color: var(--yellow); } .vrow.vwarn .ebar i { background: var(--yellow); }
 @media (min-width: 760px) { .vlist { grid-template-columns: 1fr 1fr; } }
 
 /* ---------- slips ---------- */
@@ -1202,6 +1206,22 @@ body { background: var(--paper); }
 .tk-card .wl { min-width: 66px; }
 .tk-cols { display: grid; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 980px) { .tk-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; } .tk-form { max-width: 420px; } }
+/* ---------- performance lab ---------- */
+.lab-seg { margin: 0 0 14px; }
+.lab-cols { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.lab-cols > .card { margin-top: 0; min-width: 0; }
+@media (min-width: 980px) { .lab-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+.lab-range { display: block; width: 100%; max-width: 420px; height: 48px; margin: 2px 0 2px; }
+.lab-range text { font: 500 10.5px var(--f-mono); fill: var(--ink-3); }
+.lab-range-l { font-size: 13px; color: var(--ink-2); } .lab-range-l b { font-size: 22px; font-weight: 700; margin-right: 2px; } .lab-range-l span { color: var(--ink-3); }
+.lab-verdict { margin: 4px 0 12px; font-size: 14px; line-height: 1.45; color: var(--ink); max-width: 62ch; }
+.lab-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 560px) { .lab-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.lab-curve { display: block; width: 100%; height: 70px; margin-top: 6px; }
+.tt td small { font-size: 11px; color: var(--ink-3); font-weight: 500; }
+.lab-ledger { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.lab-ledger .btn { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; text-decoration: none; }
+.lab-ledger .btn small { font-size: 11px; color: var(--ink-3); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -1284,7 +1304,8 @@ body { background: var(--paper); }
         <span class="lbl" id="minEdgeL">Min edge</span><div class="seg" id="minEdge"></div></div>
       </div>
       <div class="days" id="days-value" role="group" aria-label="Day"></div>
-      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="vscope"><option value="all">All competitions</option><option value="big">Big leagues</option><option value="cups">Europe &amp; cups</option><option value="intl">Internationals</option></select></label></div>
+      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="vscope"><option value="all">All competitions</option><option value="big">Big leagues</option><option value="cups">Europe &amp; cups</option><option value="intl">Internationals</option></select></label>
+        <label class="field" id="vsortL"><span class="sr">Sort</span><select id="vsort"><option value="edge">Biggest edge first</option><option value="ko">Kick-off order</option><option value="books">Most bookmakers first</option></select></label></div>
       <div class="vlist" id="valueList" style="margin-top:14px"></div>
       <div class="mvlist" id="moversList" style="margin-top:14px" hidden></div>
     </section>
@@ -1311,7 +1332,7 @@ body { background: var(--paper); }
 
     <section id="v-track" class="section" data-view="track" hidden>
       <div class="sec-head">
-        <div><h2>Track record</h2><p class="sub">Every prediction is saved before kick-off and graded after the final whistle. Nothing is edited afterwards.</p></div>
+        <div><h2>Performance lab</h2><p class="sub">Is Statpad right, and do its value bets pay? Every prediction and value bet is saved before kick-off, graded after the final whistle, and never edited.</p></div>
       </div>
       <div id="trackBox"></div>
     </section>
@@ -1331,7 +1352,7 @@ body { background: var(--paper); }
         <div class="step"><div class="n">01 · FETCH</div><h3>Results, fixtures, prices</h3><p>Results and fixtures from football-data.co.uk and ESPN; bookmaker prices from The Odds API and, through ESPN, DraftKings. Women's football and more of the world are covered too.</p></div>
         <div class="step"><div class="n">02 · RATE</div><h3>Attack &amp; defence</h3><p>A Poisson model with home advantage gives every team an attack and defence rating from goals and shots on target. Recent games count more, and small samples are pulled towards average.</p></div>
         <div class="step"><div class="n">03 · BLEND</div><h3>Model meets market</h3><p>The bookmakers' consensus is stripped of margin by the power method, with Pinnacle weighted up. Expected goals are fitted to it and blended with the model, the market taking the larger share.</p></div>
-        <div class="step"><div class="n">04 · PRICE</div><h3>Every market</h3><p>A Dixon–Coles scoreline grid gives every market. Edge is measured against the best real price, and slips are optimised for hit chance.</p></div>
+        <div class="step"><div class="n">04 · PRICE</div><h3>Every market</h3><p>A Dixon–Coles scoreline grid gives every market. Value is the best real price against the bookmakers' own fair price, and slips are optimised for hit chance.</p></div>
       </div>
       <div class="prose" id="methodProse"></div>
     </section>
@@ -1363,6 +1384,8 @@ body { background: var(--paper); }
 <script>
 /* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
 const ENGINE = (() => {
+  // the engine's version, stamped on every prediction the track record keeps, so versions can be compared later
+  const VERSION = '2026-11-17';
   const N = 11, RHO = -0.07, W_MKT = 0.8, W_EXT = 0.5, HAIR = 0.03;
   const M_DC = 0.05, M_EST = 0.06, M_DER = 0.065, STALE_H = 36;
   const TIERS = {
@@ -1554,12 +1577,17 @@ const ENGINE = (() => {
     const pc = CORNERS.map(([u, v]) => markets(matrix(lh * Math.exp(u * sh), la * Math.exp(v * sa))));
 
     let best = null, bi = -1;
+    // value is measured against the bookmakers' own consensus with the margin taken off (Pinnacle weighted three
+    // times), not Statpad's fitted chance: on the replayed 2025/26 season, edges against the fitted chance came
+    // mostly from the small gaps between a two-number scoreline model and the market's own draw and goals prices,
+    // and those 1,909 bets lost 7.3%; edges against the consensus gained on five past seasons and beat the close
     const sels = LABELS.map(([key, lab, group]) => {
-      const prob = p[key]; let price, real = false, bk = null;
+      const prob = p[key]; let price, real = false, bk = null, pm = null;
       const i = { H: 0, D: 1, A: 2 }[key];
-      if (i != null && mk && mk.best && mk.best[i] > 1) { price = mk.best[i]; real = true; bk = mk.bk ? mk.bk[i] : null; }
+      if (i != null && mk && mk.best && mk.best[i] > 1) { price = mk.best[i]; real = true; bk = mk.bk ? mk.bk[i] : null; pm = mk.p[i]; }
       else if ((key === 'O25' || key === 'U25') && mk && mk.ou && (mk.ou.line == null || mk.ou.line === 2.5) && mk.ou.best && mk.ou.best[key === 'O25' ? 0 : 1] > 1) {
         price = mk.ou.best[key === 'O25' ? 0 : 1]; real = true;
+        if (mk.ou.pO > 0 && mk.ou.pO < 1) pm = key === 'O25' ? mk.ou.pO : 1 - mk.ou.pO;
       } else if (key === '1X' || key === 'X2') {
         const base = mk ? (key === '1X' ? mk.p[0] + mk.p[1] : mk.p[2] + mk.p[1]) : prob;
         price = 1 / (base * (1 + M_DC));
@@ -1569,7 +1597,8 @@ const ENGINE = (() => {
       const pRaw = Math.max(0, mcal(prob, key) - hair), pAdj = calib(pRaw);
       const sd = Math.sqrt(pc.reduce((acc, c) => acc + (c[key] - prob) ** 2, 0) / 4);
       const pLo = Math.max(0, pAdj - care - Z_LO * sd);
-      const s = { key, label: lab(m), group, p: prob, pRaw, pAdj, sd, pLo, tier: tierOf(pLo), fair: 1 / prob, price, real, bk, edge: real ? prob * price - 1 : null };
+      const s = { key, label: lab(m), group, p: prob, pRaw, pAdj, sd, pLo, tier: tierOf(pLo), fair: real && pm ? 1 / pm : 1 / prob, price, real, bk, pm,
+        edge: real ? (pm || prob) * price - 1 : null };
       return s;
     });
     // the top pick is the safest one: the highest cautious chance
@@ -1632,13 +1661,13 @@ const ENGINE = (() => {
   function value(list, minEdge) {
     const out = [];
     for (const { m, a } of list) for (const s of a.sels) {
-      if (!s.real || s.edge == null || s.edge < (minEdge || 0.02) || s.p < 0.18) continue;
+      if (!s.real || s.edge == null || s.edge < (minEdge || 0.02) || (s.pm || s.p) < 0.18) continue;
       out.push({ m, a, s, kelly: s.edge / (s.price - 1) });
     }
     return out.sort((x, y) => y.s.edge - x.s.edge);
   }
 
-  return { analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP };
+  return { VERSION, analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP };
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 
@@ -1662,14 +1691,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const longFmt = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   const ord = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
   const GROUPS = [['big', 'Big leagues'], ['cups', 'Europe & cups'], ['women', 'Women’s football'], ['intl', 'Internationals'], ['second', 'Second tiers'], ['more', 'More leagues']];
-  const TABS = [['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['slips', 'Slips', 'i-ticket'], ['coupon', 'Bets', 'i-cart'], ['track', 'Track', 'i-track'], ['tables', 'Tables', 'i-table'], ['method', 'Method', 'i-info']];
+  const TABS = [['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['slips', 'Slips', 'i-ticket'], ['coupon', 'Bets', 'i-cart'], ['track', 'Lab', 'i-track'], ['tables', 'Tables', 'i-table'], ['method', 'Method', 'i-info']];
   const TARGETS = [2, 5, 10, 20];
   const EDGES = [0.02, 0.04, 0.07];
 
   const S = {
     data: null, rows: [], byId: new Map(), cache: new Map(), now: Date.now(),
     tab: store.get('tab', 'matches'), day: null, league: store.get('league', 'all'), q: '', sort: store.get('sort', 'ko'),
-    target: store.get('target', 10), scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), vseg: store.get('vseg', 'value'), minEdge: store.get('minEdge', 0.02),
+    target: store.get('target', 10), scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), vsort: store.get('vsort', 'edge'), vseg: store.get('vseg', 'value'), minEdge: store.get('minEdge', 0.02),
     coupon: store.get('coupon', []), bank: store.get('bank', 100), stakeMode: store.get('stakeMode', 'qk'), tleague: store.get('tleague', null),
     open: null, shown: 60, lastFetch: null, lastOk: null, live: false, legacy: false, err: null,
     ready: false, token: 0, ver: 0, slipCache: new Map(), bad: 0, progress: null, scMem: new Map(),
@@ -2206,30 +2235,50 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     for (const b of document.querySelectorAll('[data-vseg]')) b.setAttribute('aria-pressed', String(b.dataset.vseg === (mv ? 'movers' : 'value')));
     $('#valTitle').textContent = mv ? 'Market movers' : 'Value board';
     $('#valSub').textContent = mv ? 'The biggest moves in the bookmakers’ average prices since Statpad first saw them. A shortening price usually means money is coming in, often from sharp bettors; a drifting price means the opposite. Statpad’s chances follow the market, so these are the games where its numbers moved most.'
-      : 'Real prices that beat Statpad\'s probability. Edge = probability × best price − 1. Estimated prices never appear here.';
-    $('#minEdge').hidden = mv; $('#minEdgeL').hidden = mv; $('#valueList').hidden = mv; $('#moversList').hidden = !mv;
+      : 'Real prices above the bookmakers\' own fair price. Edge = fair chance × best price − 1, where the fair chance is the bookmakers\' consensus with their margin taken off (Pinnacle counted three times). Estimated prices never appear here.';
+    $('#minEdge').hidden = mv; $('#minEdgeL').hidden = mv; $('#valueList').hidden = mv; $('#moversList').hidden = !mv; $('#vsortL').hidden = mv;
     $('#vscope').value = S.vscope;
     if (mv) { renderMovers(); return; }
     $('#minEdge').innerHTML = EDGES.map((e) => `<button type="button" data-edge="${e}" aria-pressed="${S.minEdge === e}"><span class="mono">${Math.round(e * 100)}%</span></button>`).join('');
     $('#vscope').value = S.vscope;
+    if (!S.bt && !S.btBusy) loadBt();
+    $('#vsort').value = S.vsort;
     const list = S.rows.filter((r) => !r.started && r.a && (S.day === 'all' || r.day === S.day) && inScope(r, S.vscope)).map((r) => ({ m: r.m, a: r.a }));
-    const v = ENGINE.value(list, S.minEdge).slice(0, 80);
+    const v = ENGINE.value(list, S.minEdge);
+    if (S.vsort === 'ko') v.sort((x, y) => (x.m.ko < y.m.ko ? -1 : x.m.ko > y.m.ko ? 1 : y.s.edge - x.s.edge));
+    else if (S.vsort === 'books') v.sort((x, y) => ((y.a.mkt && y.a.mkt.n) || 0) - ((x.a.mkt && x.a.mkt.n) || 0) || y.s.edge - x.s.edge);
+    v.splice(80);
     const box = $('#valueList');
     if (!v.length) {
       const anyReal = list.some((x) => realMkt(x.m));
       box.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>${anyReal ? 'No edges at this threshold' : 'No live prices for this selection'}</b>${anyReal ? 'Lower the minimum edge or pick another day.' : 'Value needs real bookmaker prices. They arrive once the price feed covers these games.'}</div>`;
       return;
     }
-    const emax = Math.max(...v.map((x) => x.s.edge));
-    box.innerHTML = v.map(({ m, s, kelly }) => {
-      const ko = Date.parse(m.ko);
-      return `<div class="vrow" data-open="${esc(m.id)}" tabindex="0">
+    const emax = Math.max(...v.map((x) => x.s.edge)), H = S.bt && S.bt.vh;
+    box.innerHTML = v.map(({ m, a, s, kelly }) => {
+      const ko = Date.parse(m.ko), mk = a.mkt || {}, i = { H: 0, D: 1, A: 2 }[s.key];
+      // the market behind the price: how many bookmakers, how fresh, the average price, and which way it has moved
+      const avg = i != null ? (mk.avg || [])[i] : mk.ou && mk.ou.avg ? mk.ou.avg[s.key === 'O25' ? 0 : 1] : null;
+      const nB = mk.n || null, age = a.ageH, thin = mk.src === 'espn' || (nB != null && nB <= 2), old = age != null && age > 12;
+      const chips = [];
+      chips.push(nB ? `${nB} bookmaker${nB === 1 ? '' : 's'}` : mk.src === 'football-data' ? 'football-data.co.uk prices' : 'bookmaker prices');
+      if (age != null) chips.push(`priced ${age < 1 ? Math.max(1, Math.round(age * 60)) + ' min' : age < 48 ? Math.round(age) + ' h' : Math.round(age / 24) + ' days'} ago`);
+      let mv = '';
+      if (i != null && m.hist && m.hist.length > 1) {
+        const o0 = m.hist[0][i + 1], o1 = m.hist[m.hist.length - 1][i + 1];
+        if (o0 > 1 && o1 > 1 && Math.abs(o1 / o0 - 1) >= 0.02) mv = `<span class="chip ${o1 < o0 ? 'good' : ''}" title="Average price since Statpad first saw it">average ${odds(o0)} → ${odds(o1)} ${o1 < o0 ? '(shortening)' : '(drifting)'}</span>`;
+      }
+      const warn = thin ? 'One bookmaker only: the fair price rests on its own margin' : old ? 'Old prices: the best price may have gone' : '';
+      const band = s.edge >= 0.07 ? '7' : s.edge >= 0.04 ? '4' : '2', bh = H && H.bands ? vbStat(H.bands[band]) : null;
+      return `<div class="vrow${warn ? ' vwarn' : ''}" data-open="${esc(m.id)}" tabindex="0">
         <div><div class="fxl">${esc(lgName(m.lk))} · ${esc(dayLabel(dayKey(ko)))} ${tFmt.format(ko)}</div><div class="sel">${esc(s.label)}</div><div class="fxl">${pair(m)}${esc(m.h)} v ${esc(m.a)}</div></div>
         <div class="edge"><div class="v">${sgn(s.edge)}</div><div class="l">edge</div><button type="button" class="add" style="margin-top:8px" data-add="${esc(m.id)}|${s.key}" aria-pressed="${inCoupon(m.id, s.key)}" aria-label="Add to coupon">${inCoupon(m.id, s.key) ? '✓' : '+'}</button></div>
         <div class="ebar"><i style="width:${(s.edge / emax) * 100}%"></i></div>
-        <div class="nums"><span>Price <b>${odds(s.price)}</b>${s.bk ? ' at ' + esc(s.bk) : ''}</span><span>Fair <b>${odds(s.fair)}</b></span><span>Chance <b>${pct(s.p)}</b></span><span>¼ Kelly <b>${(Math.max(0, kelly) * 25).toFixed(1)}%</b> of bank</span></div>
+        <div class="nums"><span>Best <b>${odds(s.price)}</b>${s.bk ? ' at ' + esc(s.bk) : ''}</span>${avg > 1 && Math.abs(s.price / avg - 1) >= 0.005 ? `<span>Average <b>${odds(avg)}</b> (best is ${sgn(s.price / avg - 1, 0)})</span>` : ''}<span>Fair <b>${odds(s.fair)}</b></span><span>Fair chance <b>${pct(s.pm || s.p)}</b></span><span>¼ Kelly <b>${(Math.max(0, kelly) * 25).toFixed(1)}%</b> of bank</span></div>
+        <div class="vchips">${chips.map((c) => `<span class="chip">${esc(c)}</span>`).join('')}${mv}${warn ? `<span class="chip warn">${esc(warn)}</span>` : ''}</div>
+        ${bh && bh.n >= 30 ? `<div class="vpast">Past bets like this (${esc(BAND_NAME[band].toLowerCase())}): <b class="${bh.roi >= 0 ? 'pl-pos' : 'pl-neg'}">${sgn(bh.roi)}</b> a unit over ${bh.n.toLocaleString('en-US')} bets, 95% range ${rPct(bh.lo)} to ${rPct(bh.hi)}; ${pct(bh.hr, 0)} won.</div>` : ''}
       </div>`;
-    }).join('');
+    }).join('') + (H && H.all ? `<p class="note" style="grid-column:1/-1">“Past bets like this” are the same rule on ${(H.seasons || []).length} past seasons of the main leagues, at the best listed price (see Lab → Value bets). They are a guide to the long run, not a promise for any one bet: about 6 in 10 value bets lose.</p>` : '');
   }
 
   // ---------------- slips ----------------
@@ -2306,7 +2355,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const rows = couponRows();
     const box = $('#coupon');
     if (!rows.length) { box.innerHTML = `<div class="empty-state"><b>Your coupon is empty</b>Tap a price on any match, or add a whole slip from the Slips tab.</div>`; return; }
-    const tOdds = rows.reduce((a, x) => a * x.price, 1), tP = rows.reduce((a, x) => a * x.s.p, 1);
+    const tOdds = rows.reduce((a, x) => a * x.price, 1), tP = couponChance(rows);
     const ev = tP * tOdds - 1, b = tOdds - 1, kelly = b > 0 ? Math.max(0, (b * tP - (1 - tP)) / b) : 0;
     const frac = { flat: 0.01, qk: Math.min(0.05, kelly * 0.25), hk: Math.min(0.05, kelly * 0.5) }[S.stakeMode];
     const stake = S.bank * frac;
@@ -2319,7 +2368,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="sum-row big"><span>Total odds</span><b>${odds(tOdds)}</b></div>
         <div class="sum-row"><span>Chance to land (Statpad)</span><b>${pct(tP, 1)}</b></div>
         <div class="sum-row"><span>Expected value</span><b class="${ev > 0 ? 'edge-pos' : ''}">${sgn(ev)}</b></div>
-        ${dup ? '<div class="warnline">Two picks from the same match are correlated. The real chance differs from the product shown.</div>' : ''}
+        ${dup ? `<div class="note" style="margin:0">Picks from the same match are linked, so their chance is worked out together from that match's scoreline grid (${pct(rows.reduce((a, x) => a * x.s.p, 1), 1)} if they were independent).</div>` : ''}
         ${started ? '<div class="warnline">A pick on this coupon has already kicked off.</div>' : ''}
         <label class="lbl" for="bank">Bankroll</label><div class="inp"><input id="bank" type="text" inputmode="decimal" value="${esc(S.bank)}"></div>
         <span class="lbl">Staking</span><div class="seg" id="stakeMode">${[['flat', 'Flat 1%'], ['qk', '¼ Kelly'], ['hk', '½ Kelly']].map(([k, l]) => `<button type="button" data-stake="${k}" aria-pressed="${S.stakeMode === k}">${l}</button>`).join('')}</div>
@@ -2328,6 +2377,24 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         ${S.stakeMode !== 'flat' && kelly <= 0 ? '<div class="warnline">Kelly says no stake: these prices are below Statpad\'s fair odds.</div>' : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn pri" id="saveToBets">Save to My bets</button><button type="button" class="btn" id="copyCoupon">Copy coupon</button><button type="button" class="btn" id="clearCoupon">Clear</button></div>
       </div></div></div>`;
+  }
+  // the coupon's chance: picks from different matches multiply; picks from the same match are linked (over 2.5 and
+  // both teams to score land together more often than apart), so they're added up together on that match's grid
+  function couponChance(rows) {
+    const byM = new Map();
+    for (const x of rows) { const k = x.r.m.id; if (!byM.has(k)) byM.set(k, []); byM.get(k).push(x); }
+    let p = 1;
+    for (const list of byM.values()) {
+      const fns = list.map((x) => settleFn(x.s.key)), M = list[0].r.a && list[0].r.a.M;
+      if (list.length === 1 || !M || fns.some((f) => !f)) { p *= list.reduce((a, x) => a * x.s.p, 1); continue; }
+      let w = 0, v = 0;   // v: cells where a draw-no-bet pick is refunded and the rest land
+      for (let i = 0; i < M.length; i++) for (let j = 0; j < M.length; j++) {
+        const o = fns.map((f) => f(i, j));
+        if (o.every((r) => r === true)) w += M[i][j]; else if (o.every((r) => r !== false) && o.some((r) => r === null)) v += M[i][j];
+      }
+      p *= w / Math.max(1e-9, 1 - v);
+    }
+    return p;
   }
   function saveCoupon() { store.set('coupon', S.coupon); renderNav(); }
   function toggleCoupon(id, key) {
@@ -2388,6 +2455,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     S.trackBusy = false; S.trackAt = Date.now();
     if (S.tab === 'track') renderTrack();
   }
+  async function loadBt() {   // the weekly replay and the value-bet history, for the Value board's "past bets like this"
+    S.btBusy = true;
+    try { const b = await fetch('backtest.json?t=' + Math.floor(Date.now() / 600e3), { cache: 'no-store' }); if (b.ok) S.bt = await b.json(); } catch (e) { /* none yet */ }
+    if (S.tab === 'value' && S.bt) renderValue();
+  }
   const rate = (w, n) => (n ? w / n : null);
   // one tracker per entry level: graded top picks (all-time counts, detail from the last 90 days), the
   // level's daily slips, and its picks still waiting, with live scores while they're being played
@@ -2410,6 +2482,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const ko = Date.parse(w[2]);
     return { st: ko > Date.now() ? 'pre' : Date.now() < ko + 115 * 60e3 ? 'play' : 'wait' };
   }
+  // a pick's chance now, while its game is being played: the rest of the game played out from the score and minute
+  function chanceNow(id, key, x) {
+    const r = S.byId.get(id), L = x && x.L; if (!r || !r.a || !L || L.ft) return null;
+    const rh = L.reds.filter((q) => q[1] === 'h').length, ra = L.reds.filter((q) => q[1] === 'a').length;
+    const q = liveLeg(key, r.a.lh, r.a.la, L.h, L.a, L.min, L.st, rh, ra);
+    return q ? q.w / Math.max(1e-9, 1 - q.v) : null;
+  }
   function tkWaitRow(w, x) {
     x = x || tkWaitState(w); const ko = Date.parse(w[2]), today = new Date(ko).toDateString() === new Date().toDateString();
     const when = today ? tFmt.format(ko) : wdFmt.format(ko) + ' ' + tFmt.format(ko);
@@ -2417,7 +2496,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       : x.st === 'live' ? `<span class="wl lv ${x.ok ? 'w' : 'l'}">${x.L.st === 'HT' ? 'HT' : Math.round(x.L.min) + '’'}</span>`
       : `<span class="wl o">${x.st === 'pre' ? esc(today ? tFmt.format(ko) : wdFmt.format(ko)) : x.st === 'play' ? 'In play' : 'Result due'}</span>`;
     const sc = x.sc ? `${esc(w[3])} ${x.sc[0]}–${x.sc[1]} ${esc(w[4])}` : `${esc(w[3])} v ${esc(w[4])}`;
-    const note = x.st === 'done' ? ' · final, being confirmed' : x.st === 'live' ? (x.ok ? ' · landing as it stands' : ' · not landing as it stands')
+    const cn0 = x.st === 'live' ? chanceNow(w[0], w[5], x) : null, cn = cn0 != null && cn0 > 0.005 && cn0 < 0.995 ? cn0 : null;
+    const note = x.st === 'done' ? ' · final, being confirmed' : x.st === 'live' ? (x.ok ? ' · landing as it stands' : ' · not landing as it stands') + (cn != null ? ` · chance now ${pct(cn)}` : '')
       : x.st === 'play' ? (esSlug(w[1]) ? ' · waiting for the score' : ' · no live score for this competition') : x.st === 'wait' ? ` · kicked off ${esc(when)}` : ` · ${esc(when)}`;
     return `<div class="res">${badge}<span class="sel">${esc(keyLabel(w[5], w[3], w[4]))}</span>
       <span class="pr">${odds(w[7])}${w[8] ? '' : ' est'}<small>${pct(w[6])}</small></span>
@@ -2472,27 +2552,134 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       ${x.est ? `<p class="note">${x.est} of the ${x.un} prices are estimates (markets without a bookmaker price, marked est).</p>` : ''}
     </div>`;
   }
-  function renderTrack() {
-    const box = $('#trackBox');
-    if (!S.trackAt) { box.innerHTML = '<div class="empty-state"><b>Loading the track record…</b></div>'; loadTrack(); return; }
-    loadTrack();
-    const T = S.track;
-    if (!T) { box.innerHTML = `<div class="empty-state"><b>No track record here yet</b>Your GitHub site keeps the track record. It appears after the site's next update.</div>${btCard()}`; return; }
+  // ---------------- performance lab ----------------
+  // value-bet stats from the pipeline's running sums: return per unit with its 95% range, closing-line value, worst run
+  function vbStat(a) {
+    if (!a || !a.n) return null;
+    const n = a.n, m = a.u / n, v = Math.max(0, a.u2 / n - m * m), se = Math.sqrt(v / n);
+    return { n, w: a.w, hr: a.w / n, roi: m, lo: m - 1.96 * se, hi: m + 1.96 * se, u: a.u, sd: Math.sqrt(v), clv: a.nc ? a.c / a.nc : null, beat: a.nc ? a.b / a.nc : null, nc: a.nc, dd: a.dd };
+  }
+  const vbNeed = (sd, edge) => Math.ceil((1.96 * (sd || 1.4) / edge) ** 2);   // bets for an edge this size to stand clear of luck
+  const rPct = (x) => (Math.abs(x) < 0.0005 ? '0%' : sgn(x, Math.abs(x) < 0.1 ? 1 : 0));
+  const units = (u) => `${u >= 0 ? '+' : '−'}${Math.abs(u).toFixed(1)} u`;
+  // the 95% range of the return per unit, drawn against zero
+  function rangeStrip(st, label) {
+    const lo = Math.min(-0.06, st.lo), hi = Math.max(0.06, st.hi), W = 320, H = 46, P = 8;
+    const x = (v) => P + ((v - lo) / (hi - lo)) * (W - 2 * P), good = st.lo > 0, bad = st.hi < 0;
+    const col = good ? 'var(--pitch)' : bad ? 'var(--red)' : 'var(--cobalt)';
+    const anc = (v) => (x(v) < 40 ? 'start' : x(v) > W - 40 ? 'end' : 'middle');
+    return `<svg class="lab-range" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMid meet" role="img" aria-label="${esc(label)}: ${sgn(st.roi)} a unit, 95% range ${rPct(st.lo)} to ${rPct(st.hi)}">
+      <line x1="${P}" x2="${W - P}" y1="24" y2="24" stroke="var(--rule)" stroke-width="2"/>
+      <line x1="${x(0)}" x2="${x(0)}" y1="16" y2="34" stroke="var(--ink-3)" stroke-dasharray="3 3"/>
+      <text x="${x(0)}" y="45" text-anchor="middle">break-even</text>
+      <rect x="${x(st.lo).toFixed(1)}" y="19" width="${Math.max(2, x(st.hi) - x(st.lo)).toFixed(1)}" height="10" rx="5" fill="${col}" opacity=".35"/>
+      <circle cx="${x(st.roi).toFixed(1)}" cy="24" r="6" fill="${col}"/>
+      <text x="${x(st.lo).toFixed(1)}" y="11" text-anchor="${anc(st.lo)}">${rPct(st.lo)}</text>
+      <text x="${x(st.hi).toFixed(1)}" y="11" text-anchor="${anc(st.hi)}">${rPct(st.hi)}</text></svg>
+      <div class="lab-range-l"><b class="mono ${good ? 'pl-pos' : bad ? 'pl-neg' : ''}">${sgn(st.roi)}</b> a unit staked <span>· 95% range ${rPct(st.lo)} to ${rPct(st.hi)}</span></div>`;
+  }
+  function labCurve(c, label) {   // running total in units; dashed line: break-even
+    if (!c || c.length < 4) return '';
+    const W = 320, H = 70, P = 5, lo = Math.min(0, ...c), hi = Math.max(0, ...c), span = hi - lo || 1, end = c[c.length - 1];
+    const x = (i) => (i / (c.length - 1)) * W, y = (v) => P + (1 - (v - lo) / span) * (H - 2 * P);
+    return `<svg class="lab-curve" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(label)}: ${units(end)}">
+      <line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink-3)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+      <polyline points="${c.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${end >= 0 ? 'var(--pitch)' : 'var(--red)'}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  function labStats(st) {
+    return `<div class="tk-stats lab-stats">
+      <div><b class="mono">${st.n.toLocaleString('en-US')}</b><span>bets, ${pct(st.hr, 0)} won</span></div>
+      <div><b class="mono ${st.u >= 0 ? 'pl-pos' : 'pl-neg'}">${units(st.u)}</b><span>profit, 1 unit each</span></div>
+      <div><b class="mono">${st.clv == null ? '–' : sgn(st.clv)}</b><span>${st.clv == null ? 'closing-line value' : `closing-line value · ${pct(st.beat, 0)} beat the close`}</span></div>
+      <div><b class="mono">${st.dd ? '−' + st.dd.toFixed(1) + ' u' : '–'}</b><span>worst run, peak to low</span></div></div>`;
+  }
+  // ref: the five past seasons, whose spread of results and return say how many bets an edge that size needs
+  function labVerdict(st, live, ref) {
+    const r = `${sgn(st.roi)} a unit over ${st.n.toLocaleString('en-US')} bets`, rng = `${rPct(st.lo)} to ${rPct(st.hi)}`;
+    const e = ref && ref.roi > 0.01 ? ref.roi : 0.05, need = vbNeed(ref ? ref.sd : st.sd, e).toLocaleString('en-US');
+    if (live && st.n < 30) return `Too few to judge: ${st.n} value bet${st.n === 1 ? '' : 's'} settled. Over a handful of bets luck swamps any edge: a real ${pct(e, 0)} edge, like the past seasons', needs about ${need} bets to stand clear of it. Until then the past seasons and the closing-line value are the better guides.`;
+    if (st.lo > 0) return `Ahead by more than luck explains: ${r}, and the 95% range (${rng}) stays above zero.`;
+    if (st.hi < 0) return `Behind by more than luck explains: ${r}, and the 95% range (${rng}) stays below zero.`;
+    return `Not proven either way: ${r}, but anything from ${rng} fits these results. About ${need} bets are needed to tell a ${pct(e, 0)} edge from luck.`;
+  }
+  const BAND_NAME = { 2: 'Edge 2–4%', 4: 'Edge 4–7%', 7: 'Edge 7% and up' };
+  function bandRows(bands) {
+    return ['2', '4', '7'].filter((k) => bands && bands[k] && bands[k].n).map((k) => { const s = vbStat(bands[k]);
+      return `<tr><td>${BAND_NAME[k]}</td><td>${s.n.toLocaleString('en-US')}</td><td>${pct(s.hr, 0)}</td><td class="${s.roi >= 0 ? 'edge-pos' : ''}">${sgn(s.roi)}</td><td class="hide-sm">${s.n >= 30 ? `${rPct(s.lo)} to ${rPct(s.hi)}` : 'too few'}</td><td>${s.clv == null ? '–' : sgn(s.clv)}</td></tr>`; }).join('');
+  }
+  const bandHead = (first) => `<thead><tr><th>${first}</th><th>Bets</th><th>Won</th><th>Return</th><th class="hide-sm">95% range</th><th>CLV</th></tr></thead>`;
+  function vbetRows(rows) {   // [id, lk, ko, home, away, hg, ag, key, price, bookmaker, edge, chance, won, clv, first seen, engine]
+    return rows.map((v) => `<div class="res"><span class="wl ${v[12] ? 'w' : 'l'}">${v[12] ? 'Won' : 'Lost'}</span><span class="sel">${esc(keyLabel(v[7], v[3], v[4]))}</span>
+      <span class="pr">${odds(v[8])}<small>${sgn(v[10], 0)} edge</small></span>
+      <span class="fxl">${esc(dFmt.format(Date.parse(v[2])))} · ${esc(v[3])} ${v[5]}–${v[6]} ${esc(v[4])}${v[9] ? ' · ' + esc(v[9]) : ''}${v[13] != null ? ` · CLV ${sgn(v[13])}` : ''}</span></div>`).join('');
+  }
+  function vwaitRows(rows) {   // [id, lk, ko, home, away, key, price, edge, bookmaker, first seen, chance]
+    return rows.map((v) => {
+      const x = tkWaitState(v), ko = Date.parse(v[2]), today = new Date(ko).toDateString() === new Date().toDateString();
+      const badge = x.st === 'done' ? `<span class="wl ${x.ok ? 'w' : 'l'}">${x.ok ? 'Won' : 'Lost'}</span>` : x.st === 'live' ? `<span class="wl lv ${x.ok ? 'w' : 'l'}">${x.L.st === 'HT' ? 'HT' : Math.round(x.L.min) + '’'}</span>`
+        : `<span class="wl o">${x.st === 'pre' ? esc(today ? tFmt.format(ko) : wdFmt.format(ko)) : x.st === 'play' ? 'In play' : 'Result due'}</span>`;
+      const cn0 = x.st === 'live' ? chanceNow(v[0], v[5], x) : null, cn = cn0 != null && cn0 > 0.005 && cn0 < 0.995 ? cn0 : null;
+      return `<div class="res">${badge}<span class="sel">${esc(keyLabel(v[5], v[3], v[4]))}</span><span class="pr">${odds(v[6])}<small>${sgn(v[7], 0)} edge</small></span>
+        <span class="fxl">${x.sc ? `${esc(v[3])} ${x.sc[0]}–${x.sc[1]} ${esc(v[4])}` : `${esc(v[3])} v ${esc(v[4])}`} · ${esc(lgName(v[1]))}${v[8] ? ' · ' + esc(v[8]) : ''}${cn != null ? ` · chance now ${pct(cn)}` : ''}</span></div>`;
+    }).join('');
+  }
+  function labValue(T) {
+    const g = (T && T.agg) || {}, live = vbStat(g.vb), H = S.bt && S.bt.vh, hist = H ? vbStat(H.all) : null, minE = (T && T.vb_min) || 0.02;
+    const rows = ((T && T.vbets) || []).slice().sort((a, b) => (a[2] < b[2] ? -1 : a[2] > b[2] ? 1 : 0));
+    const curve = [0]; for (const v of rows) curve.push(curve[curve.length - 1] + (v[12] ? v[8] - 1 : -1));
+    const wait = (T && T.vwait) || [], recent = rows.slice().reverse().slice(0, S.vbMore ? 200 : 10);
+    const liveCard = `<div class="card lab-card"><h4>Value bets, live <span>since ${T && T.since ? esc(dFmt.format(Date.parse(T.since))) : '–'}</span></h4>
+      ${live ? `${live.n >= 30 ? rangeStrip(live, 'Live value bets') : ''}<p class="lab-verdict">${esc(labVerdict(live, true, hist))}</p>${labStats(live)}
+        ${curve.length >= 4 ? `<div class="tk-row"><span>Units won or lost, bet by bet${rows.length < live.n ? ' (last 90 days)' : ''}</span></div>${labCurve(curve, 'Live value bets')}` : ''}`
+        : `<p class="lab-verdict">No value bet has been settled yet. ${T && T.vopen ? `${T.vopen} are waiting for their games.` : 'They appear here once a game the Value board flagged is over.'}</p>`}
+      ${g.vbb && Object.keys(g.vbb).length ? `<div class="tt-wrap" style="margin-top:12px"><table class="tt">${bandHead('Live, by edge')}<tbody>${bandRows(g.vbb)}</tbody></table></div>` : ''}
+      <div class="tk-cols"><div class="tk-sec"><h5>Waiting and in play <span>${wait.length || ''}</span></h5>${vwaitRows(wait.slice(0, 14)) || '<p class="note">No value bets on games in the next day and a half.</p>'}${wait.length > 14 ? `<p class="note">and ${wait.length - 14} more later.</p>` : ''}</div>
+      <div class="tk-sec"><h5>Latest settled <span>${rows.length || ''}</span></h5>${vbetRows(recent) || '<p class="note">None settled yet.</p>'}${rows.length > 10 && !S.vbMore ? `<button type="button" class="btn tk-more" data-vbmore="1">Show all ${rows.length}</button>` : ''}</div></div>
+      <p class="note">Every bet the Value board shows (edge ${pct(minE, 0)} or more) is taken once, at the best price the moment it first appears, 1 unit each. Closing-line value compares that price with the bookmakers' fair price at kick-off (margin taken off): beating it is the quickest sign that the prices taken were good, long before profit can show it.</p></div>`;
+    let histCard = '';
+    if (hist) {
+      const seasons = Object.entries(H.by_season || {}).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+      const sRows = seasons.map(([k, a]) => { const s = vbStat(a); return `<tr><td>${esc(k)}</td><td>${s.n.toLocaleString('en-US')}</td><td>${pct(s.hr, 0)}</td><td class="${s.roi >= 0 ? 'edge-pos' : ''}">${sgn(s.roi)}</td><td class="hide-sm">${rPct(s.lo)} to ${rPct(s.hi)}</td><td>${s.clv == null ? '–' : sgn(s.clv)}</td></tr>`; }).join('');
+      const kRows = Object.entries(H.by_kind || {}).map(([k, a]) => { const s = vbStat(a); return `<tr><td>${k === '1X2' ? 'Home, draw, away' : 'Over/under 2.5'}</td><td>${s.n.toLocaleString('en-US')}</td><td>${pct(s.hr, 0)}</td><td class="${s.roi >= 0 ? 'edge-pos' : ''}">${sgn(s.roi)}</td><td class="hide-sm">${rPct(s.lo)} to ${rPct(s.hi)}</td><td>${s.clv == null ? '–' : sgn(s.clv)}</td></tr>`; }).join('');
+      histCard = `<div class="card lab-card"><h4>The same rule on ${(H.seasons || []).length} past seasons <span>${esc((H.seasons || [])[0] || '')}–${esc((H.seasons || []).slice(-1)[0] || '')} · ${H.leagues || ''} leagues</span></h4>
+        ${rangeStrip(hist, 'Value bets on past seasons')}<p class="lab-verdict">${esc(labVerdict(hist, false, hist))}</p>${labStats(hist)}
+        <div class="tk-row"><span>Units won or lost, bet by bet, oldest first</span></div>${labCurve(H.curve, 'Value bets on past seasons')}
+        <div class="tt-wrap" style="margin-top:12px"><table class="tt">${bandHead('By edge')}<tbody>${bandRows(H.bands)}</tbody></table></div>
+        <div class="tt-wrap" style="margin-top:12px"><table class="tt">${bandHead('By season')}<tbody>${sRows}</tbody></table></div>
+        <div class="tt-wrap" style="margin-top:12px"><table class="tt">${bandHead('By market')}<tbody>${kRows}</tbody></table></div>
+        <p class="note">Every game of football-data.co.uk's main leagues: the best price it lists against the consensus with the margin taken off (Pinnacle counted three times), the same rule as the live board, with closing-line value against its closing prices. It needs no model, so nothing here was fitted to these seasons. Treat it as an upper bound: the best price often comes from a bookmaker that limits or closes winning accounts, some best prices last only minutes, and fewer games qualify each season as prices get sharper.</p></div>`;
+    }
+    return `<div class="lab-cols">${liveCard}${histCard || '<div class="card lab-card"><h4>Past seasons</h4><p class="note">The five-season history appears after the site’s weekly replay has run.</p></div>'}</div>`;
+  }
+  const verName = (v) => (v === 'pre' ? 'Before versions were kept' : /^\d{4}-\d{2}-\d{2}$/.test(v) ? 'Engine of ' + new Date(v + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : v);
+  function labAccuracy(T) {
+    const g = (T && T.agg) || {}, ll = g.ll || [0, 0, 0, 0], br = g.br || [0, 0, 0, 0];
+    let acc = '<p class="note">Needs at least 30 graded games with market prices.</p>';
+    if (ll[0] >= 30) {
+      const rows = [['Statpad', ll[1] / ll[0], br[0] ? br[1] / br[0] : null], ['Bookmakers’ consensus', ll[2] / ll[0], br[0] ? br[2] / br[0] : null], ['Statpad’s model on its own', ll[3] / ll[0], br[0] ? br[3] / br[0] : null]];
+      const bl = Math.min(...rows.map((r) => r[1])), bb = br[0] ? Math.min(...rows.map((r) => r[2])) : null;
+      acc = `<div class="tt-wrap"><table class="tt"><thead><tr><th>Home, draw, away</th><th>Log loss</th><th>Brier</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r[0]}</td><td class="${r[1] === bl ? 'edge-pos' : ''}">${r[1].toFixed(4)}</td><td class="${r[2] != null && r[2] === bb ? 'edge-pos' : ''}">${r[2] == null ? '–' : r[2].toFixed(4)}</td></tr>`).join('')}</tbody></table></div>
+        <p class="note">${ll[0].toLocaleString('en-US')} graded games with prices; lower is better on both. Log loss punishes confident misses hardest; the Brier score is the average squared gap between the chances and what happened. ${rows[0][1] <= rows[1][1] ? 'Statpad has been at least as sharp as the bookmakers’ consensus.' : 'The consensus has been a little sharper: Statpad leans on it for games with prices for that reason.'}</p>`;
+    }
+    const V = Object.entries(g.ver || {}).sort((a, b) => (a[0] < b[0] ? 1 : -1));
+    const vRows = V.map(([v, x]) => { const A = x.t && x.t.A || [0, 0, 0], s = vbStat(x.vb);
+      return `<tr><td>${esc(verName(v))}</td><td>${x.n.toLocaleString('en-US')}</td><td>${x.ll && x.ll[0] ? `${(x.ll[1] / x.ll[0]).toFixed(3)} <small>v ${(x.ll[2] / x.ll[0]).toFixed(3)}</small>` : '–'}</td><td class="hide-sm">${x.br && x.br[0] ? `${(x.br[1] / x.br[0]).toFixed(3)} <small>v ${(x.br[2] / x.br[0]).toFixed(3)}</small>` : '–'}</td><td>${A[0] ? `${pct(A[1] / A[0], 0)} <small>said ${pct(A[2] / A[0], 0)}</small>` : '–'}</td><td>${s ? `${sgn(s.roi, 0)} <small>${s.n}</small>` : '–'}</td></tr>`; }).join('');
+    const months = (T && T.ledger) || [];
+    const ledger = `<div class="card"><h4>The ledger <span>never edited</span></h4>
+      <p class="note" style="margin-top:0">Every graded prediction and value bet is a row in a spreadsheet file, one per month, kept in the site's GitHub repository. Rows are only ever added: each one carries the engine version, the first prediction and the last before kick-off, the price, the closing fair chance and the result, so any change to the engine can be checked against what came before.</p>
+      ${months.length ? `<div class="lab-ledger">${months.map(([m, n]) => `<a class="btn" href="ledger/${esc(m)}.csv" download>${esc(new Date(m + '-15T12:00:00Z').toLocaleDateString(undefined, { month: 'long', year: 'numeric' }))}<small>${n.toLocaleString('en-US')} rows</small></a>`).join('')}</div>` : '<p class="note">The first month appears after the next save of the track record (every few hours).</p>'}</div>`;
+    return `<div class="trk-grid">
+      <div class="card"><h4>Statpad vs the market</h4>${acc}</div>
+      <div class="card"><h4>Calibration <span>tap a dot</span></h4>${calChart(g.cal || [])}</div>
+      <div class="card wide"><h4>By engine version <span>${T && T.ver ? 'now: ' + esc(verName(T.ver)) : ''}</span></h4>${vRows ? `<div class="tt-wrap"><table class="tt"><thead><tr><th>Version</th><th>Games</th><th>Log loss <small>v market</small></th><th class="hide-sm">Brier <small>v market</small></th><th>Nearly definite</th><th>Value bets</th></tr></thead><tbody>${vRows}</tbody></table></div>
+        <p class="note">Each prediction is stamped with the engine that made it, so an upgrade can be judged on games it actually predicted rather than on the one before it.</p>` : '<p class="note">Versions appear as games are graded.</p>'}</div>
+      ${ledger}
+      ${tuneCard()}
+      ${btCard()}
+    </div>`;
+  }
+  function labLevels(T, X) {
     const g = T.agg || {}, sl = g.slips || {};
-    const since = T.since ? new Date(T.since).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-    if (!['A', 'B', 'C'].includes(S.tkT)) S.tkT = 'A';
-    const X = { A: tierStats(T, 'A'), B: tierStats(T, 'B'), C: tierStats(T, 'C') };
-    let tn = 0, tw = 0, tp = 0;
-    for (const t of ['A', 'B', 'C']) { tn += X[t].n; tw += X[t].w; tp += X[t].said != null ? X[t].said * X[t].n : 0; }
-    let sn = 0, sw = 0, su = 0;
-    for (const t of ['A', 'B', 'C']) { const r = sl[t] || [0, 0, 0, 0]; sn += r[0]; sw += r[1]; su += r[2]; }
-    const clv = g.clv || [0, 0, 0];
-    const kpi = [
-      [g.n || 0, g.n ? 'matches graded' : `matches graded · ${T.pending || 0} waiting`],
-      [tn ? pct(tw / tn, 0) : '–', tn ? `level picks landed (said ${pct(tp / tn, 0)})` : 'level picks landed'],
-      [sn ? `${sw}/${sn}` : '–', sn ? `slips landed · ${su >= 0 ? '+' : ''}${su.toFixed(1)} units` : 'slips landed'],
-      [clv[0] ? sgn(clv[1] / clv[0]) : '–', clv[0] ? `closing-line value (${clv[0]} picks)` : 'closing-line value'],
-    ];
     const tiles = ['A', 'B', 'C'].map((t) => {
       const x = X[t], wn = x.wait.length;
       return `<button type="button" class="tk-tile tk-${t}" data-tk="${t}" aria-pressed="${S.tkT === t}">
@@ -2506,28 +2693,44 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const r = sl[t] || [0, 0, 0, 0];
       return `<tr><td><span class="tier tier-${t}">${t}</span>${TIER_NAME[t]}</td><td>${r[0]}</td><td>${r[1]}</td><td>${r[0] ? pct(r[1] / r[0], 0) : '–'}</td><td class="hide-sm">${r[0] ? pct(r[3] / r[0], 1) : '–'}</td><td class="${r[2] > 0 ? 'edge-pos' : ''}">${r[0] ? (r[2] >= 0 ? '+' : '') + r[2].toFixed(2) : '–'}</td></tr>`;
     }).join('');
-    const ll = g.ll || [0, 0, 0, 0];
-    let llHtml = '<p class="note">Needs at least 30 graded games with market prices.</p>';
-    if (ll[0] >= 30) {
-      const v = [['Statpad', ll[1] / ll[0]], ['Market', ll[2] / ll[0]], ['Model only', ll[3] / ll[0]]];
-      const best = Math.min(...v.map((x) => x[1]));
-      const verdict = v[0][1] <= v[1][1] ? 'Statpad has been sharper than the bookmakers’ consensus.' : 'The bookmakers’ consensus has been sharper than Statpad so far.';
-      llHtml = `<div class="ll">${v.map(([n, x]) => `<div class="${x === best ? 'best' : ''}"><div class="v">${x.toFixed(3)}</div><div class="l">${n}</div></div>`).join('')}</div><p class="note">Log loss on 1X2 over ${ll[0]} games (lower is better). ${verdict}</p>`;
-    }
-    box.innerHTML = `
-      <div class="kpis" style="max-width:none;margin:0 0 14px">${kpi.map(([v, l]) => `<div class="kpi"><div class="kpi-v mono">${v}</div><div class="kpi-l">${esc(l)}</div></div>`).join('')}</div>
-      <div class="tk-tiles" role="group" aria-label="Entry level">${tiles}</div>
+    return `<div class="tk-tiles" role="group" aria-label="Entry level">${tiles}</div>
       ${tkCard(T, X[S.tkT])}
       <div class="trk-grid">
-        ${btCard()}
         <div class="card"><h4>Slips at ${T.target || 10} odds <span>1 unit on each</span></h4>
           <div class="tt-wrap"><table class="tt"><thead><tr><th>Level</th><th>Played</th><th>Won</th><th>Hit</th><th class="hide-sm">Said</th><th>Units</th></tr></thead><tbody>${slipRows}</tbody></table></div>
           ${g.void ? `<p class="note">${g.void} slips voided after a postponed game.</p>` : ''}</div>
-        <div class="card"><h4>Calibration <span>tap a dot</span></h4>${calChart(g.cal || [])}</div>
-        ${tuneCard()}
-        <div class="card"><h4>Statpad vs the market</h4>${llHtml}</div>
-      </div>
-      <p class="note">Recording since ${esc(since)}. Each match's top pick is graded at the level it had at the last update before kick-off, so every level keeps its own record; picks below the three levels count only in the match total. Slips are the ${T.target || 10}-odds slips as they stood before their first game, with days counted in ${esc(T.tz || 'UTC')}. Results come from ESPN a few minutes after the final whistle (football-data.co.uk and API-Football fill in the competitions ESPN doesn't carry). Detail covers the last 90 days; the counts are all-time.</p>`;
+      </div>`;
+  }
+  function renderTrack() {
+    const box = $('#trackBox');
+    if (!S.trackAt) { box.innerHTML = '<div class="empty-state"><b>Loading the track record…</b></div>'; loadTrack(); return; }
+    loadTrack();
+    const T = S.track;
+    const seg = ['levels', 'value', 'accuracy'].includes(S.labSeg) ? S.labSeg : 'levels';
+    const segHtml = `<div class="seg lab-seg" role="group" aria-label="Lab section">${[['levels', 'Levels'], ['value', 'Value bets'], ['accuracy', 'Accuracy']].map(([k, l]) => `<button type="button" data-labseg="${k}" aria-pressed="${seg === k}">${l}</button>`).join('')}</div>`;
+    if (!T) {
+      box.innerHTML = `${segHtml}${seg === 'value' ? labValue(null) : `<div class="empty-state"><b>No track record here yet</b>Your GitHub site keeps the track record. It appears after the site's next update.</div>${btCard()}`}`;
+      return;
+    }
+    const g = T.agg || {};
+    const since = T.since ? new Date(T.since).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    if (!['A', 'B', 'C'].includes(S.tkT)) S.tkT = 'A';
+    const X = { A: tierStats(T, 'A'), B: tierStats(T, 'B'), C: tierStats(T, 'C') };
+    let tn = 0, tw = 0, tp = 0;
+    for (const t of ['A', 'B', 'C']) { tn += X[t].n; tw += X[t].w; tp += X[t].said != null ? X[t].said * X[t].n : 0; }
+    const lv = vbStat(g.vb), hv = S.bt && S.bt.vh ? vbStat(S.bt.vh.all) : null, vs = lv && lv.n >= 30 ? lv : hv || lv;
+    const kpi = [
+      [g.n || 0, g.n ? `matches graded · ${T.pending || 0} waiting` : `matches graded · ${T.pending || 0} waiting`],
+      [tn ? pct(tw / tn, 0) : '–', tn ? `level picks landed (said ${pct(tp / tn, 0)})` : 'level picks landed'],
+      [vs ? sgn(vs.roi) : '–', vs ? (vs === lv ? `return on ${lv.n} live value bets` : `value bets' return, ${vs.n.toLocaleString('en-US')} on past seasons`) : 'value bets’ return'],
+      [vs && vs.clv != null ? sgn(vs.clv) : '–', vs && vs.clv != null ? `beat the closing price (${pct(vs.beat, 0)} of bets)` : 'closing-line value'],
+    ];
+    const body = seg === 'value' ? labValue(T) : seg === 'accuracy' ? labAccuracy(T) : labLevels(T, X);
+    box.innerHTML = `
+      <div class="kpis" style="max-width:none;margin:0 0 14px">${kpi.map(([v, l]) => `<div class="kpi"><div class="kpi-v mono">${v}</div><div class="kpi-l">${esc(l)}</div></div>`).join('')}</div>
+      ${segHtml}
+      ${body}
+      <p class="note">Recording since ${esc(since)}. Each match's top pick is graded at the level it had at the last update before kick-off, and every value bet at the price when it first appeared. Results come from ESPN a few minutes after the final whistle (football-data.co.uk and API-Football fill in the competitions ESPN doesn't carry). Detail covers the last 90 days; the counts are all-time, and the ledger keeps every row.</p>`;
   }
   function btCard() {
     const B = S.bt; if (!B || !B.agg) return '';
@@ -2590,11 +2793,28 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="tune">${pts.map(([p, q]) => `<div><span class="mono">${pct(p, 0)}</span><i>→</i><b class="mono">${pct(q, 0)}</b></div>`).join('')}</div>
       <p class="note">${dir} The correction is refitted on every update from the last 90 days of graded top picks, and held close to “no change” until the evidence is strong. It changes the stated chances, tiers and slips, not the value edges, which come from real prices.</p></div>`;
   }
+  // a slip in play: the chance it still lands, from legs settled, legs being played (score and minute) and legs to come
+  function slipNow(s) {
+    let p = 1, live = false;
+    for (const l of s.legs) {   // [id, key, home, away, kick-off, price, result]
+      if (l[6] === 1) continue;
+      if (l[6] === 0) return { p: 0, live: true };
+      const x = tkWaitState([l[0], null, l[4], l[2], l[3], l[1]]);
+      if (x.st === 'done') { if (!x.ok) return { p: 0, live: true }; live = true; continue; }
+      let q = null;
+      if (x.st === 'live') { q = chanceNow(l[0], l[1], x); live = true; }
+      if (q == null) { const r = S.byId.get(l[0]), sel = r && r.a ? r.a.sels.find((z) => z.key === l[1]) : null; q = sel ? sel.p : null; }
+      if (q == null) return null;
+      p *= q;
+    }
+    return { p, live };
+  }
   function slipList(list) {
     return list.map((s) => {
       const res = s.res || 'open';
       const lab = { won: 'Won', lost: 'Lost', void: 'Void', open: 'In play' }[res];
-      return `<div class="sliprow"><div class="hd"><span class="wl ${res === 'won' ? 'w' : res === 'lost' ? 'l' : 'o'}">${lab}</span><span class="tier tier-${s.t}">${s.t}</span>${esc(TIER_NAME[s.t])}<span class="mono">${odds(s.o)} · ${pct(s.p)}</span></div>
+      const now = res === 'open' ? slipNow(s) : null;
+      return `<div class="sliprow"><div class="hd"><span class="wl ${res === 'won' ? 'w' : res === 'lost' ? 'l' : 'o'}">${lab}</span><span class="tier tier-${s.t}">${s.t}</span>${esc(TIER_NAME[s.t])}<span class="mono">${odds(s.o)} · ${pct(s.p)}${now && now.live ? ` → now ${pct(now.p, now.p < 0.095 && now.p > 0 ? 1 : 0)}` : ''}</span></div>
         <div class="legdots">${s.legs.map((l) => `<span class="${l[6] === 1 ? 'w' : l[6] === 0 ? 'l' : ''}" data-tip="${esc(keyLabel(l[1], l[2], l[3]))} · ${esc(l[2])} v ${esc(l[3])} · ${odds(l[5])}${l[6] === 1 ? ' · won' : l[6] === 0 ? ' · lost' : ' · waiting'}">${l[6] === 1 ? '✓' : l[6] === 0 ? '✕' : '•'} ${esc(String(l[2]).slice(0, 12))}</span>`).join('')}</div>
         <div class="fxl" style="font-size:11.5px;color:var(--ink-3);margin-top:6px">${esc(s.d)} · ${s.legs.length} legs</div></div>`;
     }).join('');
@@ -2661,9 +2881,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Self-tuning</h3>
       <p>${d.calib && d.calib.on ? `On, from ${d.calib.n} graded top picks.` : `Learning: ${(d.calib && d.calib.n) || 0} of ${(d.calib && d.calib.need) || 150} graded top picks.`} Every update compares the chances Statpad stated (before any correction) with what landed over the last 90 days, and fits a small correction on the log-odds scale. A prior centred on “no change” keeps the correction modest until there is plenty of evidence. The correction applies to stated chances, tiers and slips.</p>
       <h3>Tuning</h3>
-      <p>Once a month Statpad tunes its settings on the main European leagues: how fast old games fade, how much last season counts, how hard teams are pulled towards average, how much shots on target count, and the bookmakers' share of the blend. It searches on two past seasons, then checks on the last full season, which the search never saw, after blending with the market as the site does. New settings are switched on only if they beat the old ones there. Leagues without shot counts get their own goals-only settings. The Track tab shows the settings and the before-and-after error.</p>
+      <p>Once a month Statpad tunes its settings on the main European leagues: how fast old games fade, how much last season counts, how hard teams are pulled towards average, how much shots on target count, and the bookmakers' share of the blend. It searches on two past seasons, then checks on the last full season, which the search never saw, after blending with the market as the site does. New settings are switched on only if they beat the old ones there. Leagues without shot counts get their own goals-only settings. The Lab shows the settings and the before-and-after error.</p>
       <h3>Last season, replayed</h3>
-      <p>Once a week Statpad replays the last full season of the main European leagues that football-data.co.uk covers. Each week's ratings are rebuilt from earlier games only, every game is priced from the bookmakers' average odds before kick-off, the first four weeks are skipped while ratings settle, and self-tuning is switched off. The Track tab shows how the tiers, slips and value bets would have done. It is a check on the method, not a promise: the live record above it is the one that counts.</p>
+      <p>Once a week Statpad replays the last full season of the main European leagues that football-data.co.uk covers. Each week's ratings are rebuilt from earlier games only, every game is priced from the bookmakers' average odds before kick-off, the first four weeks are skipped while ratings settle, and self-tuning is switched off. The Lab shows how the tiers, slips and value bets would have done. It is a check on the method, not a promise: the live record is the one that counts.</p>
+      <h3>Performance lab</h3>
+      <p>The Lab answers three questions. <b>Is Statpad right?</b> Under Accuracy: log loss and Brier score on home, draw and away against the bookmakers' consensus and against Statpad's model on its own, a calibration chart, and the same numbers for each engine version, because every prediction is stamped with the engine that made it. <b>Do the levels hold up?</b> Under Levels: each entry level's picks, landed against stated, with its slips. <b>Do the value bets pay?</b> Under Value bets: every bet the Value board shows is taken once, 1 unit at the best price the moment it first appears, and graded after the game. Each result comes with its 95% range, because over a few hundred bets luck alone moves the return by several percent either way; with closing-line value (the price taken against the fair price at kick-off, a faster and steadier test than profit); and with the worst run from a peak, so you can see the swings a bankroll has to survive.</p>
+      <p>Next to the live record sits the same value rule run on the last five full seasons of football-data.co.uk's main leagues (about 5,000 bets): best listed price against the consensus before kick-off, closing-line value against its closing prices. It needs no model, so nothing was fitted to those seasons. Read it as an upper bound: best prices often come from bookmakers that limit winning accounts, and some last only minutes.</p>
+      <p>Every graded prediction and value bet is also written to a ledger: one spreadsheet file (CSV) a month in the site's GitHub repository, with the engine version, the first prediction and the last before kick-off, the price, the closing fair chance and the result. Rows are only ever added, never changed, and the Lab links to each month.</p>
       <h3>Combos, draw no bet &amp; handicaps</h3>
       <p>Each match page also prices same-game combos (win and over 1.5, win and both teams score, win to nil, double chance and under 3.5, and more), draw no bet and ±1.5 handicaps, straight from the scoreline grid, so the link between the two parts of a combo is priced in. Their prices are estimates with a typical bet-builder margin; compare them with your bookmaker's price. They can be added to a coupon and saved to My bets, which settles them, but they are kept out of the top picks, the slips and the Value board.</p>
       <h3>Team news</h3>
@@ -2673,9 +2897,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Check a slip</h3>
       <p>Add a screenshot or photo of a slip, or paste its text, under <b>Bets → Check slip</b>. Pictures are read on your phone by Tesseract, an open-source text reader (a one-time download of about 4.5 MB), so the picture itself is never uploaded. Before reading, Statpad turns it grey, flips dark-mode screenshots, evens out the light in photos and sizes it for the reader; the text it reads appears in the box, where anything misread can be fixed. Statpad finds each game among its fixtures (team nicknames like Man Utd, Barca or Spurs work), reads the pick (1, X, 2, double chance, over/under, GG/NG, draw no bet, ±1.5 handicaps and same-game combos) and the odds, then prices each leg from the scoreline grid. You see the real chance of the whole slip, its fair odds, the odds needed to break even after tax, the weakest leg and what dropping it would do. Picks it can't read, or markets it doesn't price (half-time, corners, cards, scorers), are left for you to choose, and a price far from the fair odds is flagged in case it was misread.</p>
       <h3>Live scores and cash-out</h3>
-      <p>With an API-Football key, Statpad checks the scores of its games in play, spreading at most 40 checks a day over the hours games are being played (about every 10–20 minutes) and keeping calls in hand for line-ups and results. For each open bet in My bets it then shows the chance of each leg now and what the whole bet is worth on average: the rest of each game is played out from the score, the minute and both sides' expected goals, with goals coming a little faster late on. Type your bookmaker's cash-out offer and it says whether the offer is above or below that value. With no live score (no key, or between checks) you can type the score and minute yourself. It counts red cards when the live feed lists them; injuries aren't known to it, so treat it as a guide.</p>
+      <p>With an API-Football key, Statpad checks the scores of its games in play, spreading at most 40 checks a day over the hours games are being played (about every 10–20 minutes) and keeping calls in hand for line-ups and results. For each open bet in My bets it then shows the chance of each leg now and what the whole bet is worth on average: the rest of each game is played out from the score, the minute and both sides' expected goals, with goals coming a little faster late on and the score changing how both sides play. Type your bookmaker's cash-out offer and it says whether the offer is above or below that value. With no live score (no key, or between checks) you can type the score and minute yourself. It counts red cards when the live feed lists them; injuries aren't known to it, so treat it as a guide.</p>
       <h3>Live win probability</h3>
-      <p>During a game, its card's bar shows the chances now, and the match page draws the whole game: home, draw and away chances minute by minute, with each goal and red card marked. Each point plays out the rest of the game from the score at that minute, the time left and both sides' expected goals, with a side down to ten men scoring less and its opponent more. When the live feed lists events, goal and card minutes are exact; otherwise each new goal is placed halfway between two score checks, and the page says so.</p>
+      <p>During a game, its card's bar shows the chances now, and the match page draws the whole game: home, draw and away chances minute by minute, with each goal and red card marked. Each point plays out the rest of the game from the score at that minute, the time left and both sides' expected goals, with a side down to ten men scoring less and its opponent more. The timing and the effect of the score are fitted on the half-time scores of 34,221 games (2021/22 to 2025/26): 55% of the goals are still to come at half-time, a side a goal up scores about 6% less from there and a side a goal down about 11% more. Fitted on three seasons and checked on the next two, this read full-time results from half-time better than goal timing alone. The red-card effect (a side down to ten scores about 28% less, its opponent 22% more) is a typical published estimate: the data has no card times to test it on. The Lab's waiting picks, value bets and slips in play show their chance now the same way.</p>
+      <p>On a coupon, picks from the same match are linked (over 2.5 goals and both teams to score tend to land together), so their chance is worked out together from that match's scoreline grid instead of being multiplied. When the live feed lists events, goal and card minutes are exact; otherwise each new goal is placed halfway between two score checks, and the page says so.</p>
       <h3>Scoreline explorer</h3>
       <p>On every match page, tap scores on the grid to make your own set, or pick conditions (result, total goals, both teams to score, winning margin, each team's goals). Statpad adds up the matching scorelines from the whole grid, so the links between the parts are priced in, and shows the chance, the fair odds and a typical bet-builder price. Your bet can go on the coupon and into My bets, where it settles like any other pick.</p>
       <h3>Why this pick</h3>
@@ -2691,7 +2916,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>What's at stake</h3>
       <p>Every hour the workflow plays the rest of each league season 10,000 times, the way the season simulator does, and measures how far each coming game moves both teams' chances of the title, the top places or the bottom places, after a win, a draw or a defeat. The stakes number adds up both teams' swings between winning and losing, in percentage points: 45 or more is <b>Huge</b>, 25 or more <b>High</b>, 10 or more <b>Some</b>. Match cards show High and Huge games, the Matches tab lists the games with most at stake and can sort by it, and each match page draws the swing for both teams. It covers leagues where every team plays every other home and away.</p>
       <h3>Fatigue and motivation</h3>
-      <p>Statpad tests two more things each month, on two past seasons, then on a third the test never saw, after blending with the market as the site does: <b>rest</b> (a side with only two or three days since its last league game, against one with more) and <b>motivation</b> (from the season simulation run week by week: a side whose season chances barely move whatever the result, and games where neither side has anything left to play for). Each goes on only if it lowers the error on the unseen season too, and the Track tab shows which are on. Football-data.co.uk lists league games only, so cup and European games don't count towards rest. When one applies to a game, its match page says so.</p>
+      <p>Statpad tests two more things each month, on two past seasons, then on a third the test never saw, after blending with the market as the site does: <b>rest</b> (a side with only two or three days since its last league game, against one with more) and <b>motivation</b> (from the season simulation run week by week: a side whose season chances barely move whatever the result, and games where neither side has anything left to play for). Each goes on only if it lowers the error on the unseen season too, and the Lab shows which are on. Football-data.co.uk lists league games only, so cup and European games don't count towards rest. When one applies to a game, its match page says so.</p>
       <h3>Live shock map</h3>
       <p>While games are in play, the Matches tab opens with a map of them (also under <b>Shock map</b>). It's a globe that turns on its own (drag it to spin; it slows down while a shock passes the middle), so games anywhere in the world have a place. Each game sits in its country with a beam of light that rises higher for a bigger shock, and pulses faster and wider the further the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes: red for a shock, amber for a wobble, blue when it's going to plan, grey for games kicking off soon. The shock number is that fall in percentage points (a small favourite collapsing counts more). Chances in play come from the score, the minute, red cards and each side's expected goals before kick-off. Tap a dot for the match.</p>
       <h3>Goal seek</h3>
@@ -2705,7 +2930,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Slips</h3>
       <p>For each tier and day, a dynamic-programming search finds the combination with the highest chance of landing whose total odds sit between 95% and 110% of your target. Legs are weighed by their cautious chance, so a leg that only looks sure on thin or disputed evidence loses out to one nearly as likely and better founded; on three replayed seasons of daily slips this won a few more of them. It takes one leg per match, skips games that have kicked off, and uses at most 25 legs. Chasing a target with short-priced legs usually lowers the hit chance, so compare tiers before you stake.</p>
       <h3>Value</h3>
-      <p>Edge compares Statpad's probability with the best real price on offer. Much of it is line-shopping: the best price beats the sharp-weighted consensus. Only real prices count, and estimates never appear on the Value board.</p>
+      <p>A value bet is a real price above the bookmakers' own fair price: edge = fair chance × best price − 1, where the fair chance is the consensus of all the bookmakers with their margin taken off (power method, Pinnacle counted three times). It is line-shopping: one bookmaker paying more than the market as a whole thinks the outcome is worth. Statpad's fitted chance is not used for this: on the replayed 2025/26 season, edges measured against it came mostly from the small gaps between a two-number scoreline model and the market's own draw and goals prices, and those 1,909 bets lost 7.3%. Measured against the consensus, the same season gave 284 bets that won 13.9%, and five seasons gave about 5,000 bets that won 5% a unit (95% range +1% to +9%) and beat the closing price 71% of the time. Each row shows how many bookmakers price the game, how old the prices are, the average price and which way it has moved, and how past bets with a similar edge did. A row turns amber when the fair price rests on one bookmaker or the prices are over 12 hours old. About 6 value bets in 10 still lose: the edge only shows over hundreds of bets. Only real prices count, and estimates never appear on the Value board.</p>
       <h3>Responsible play</h3>
       <p>These are probabilities, not guarantees. Even an 85% leg loses about one time in seven, and accumulators multiply that risk. Set a budget, keep stakes small (¼ Kelly or a flat 1% is plenty), and stop if it stops being fun. For support, contact a local gambling help service.</p>`;
     $('#footData').textContent = d.generated ? 'Data ' + new Date(d.generated).toLocaleString() : '';
@@ -4314,7 +4539,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // open bet is worth on average.
   S.live = null; S.liveAt = 0; S.manual = {}; S.coOffer = {};
   const T_END = 96;                                    // 90 minutes plus typical stoppage time
-  const goalClock = (x) => x + 0.2 * x * x / T_END;    // goals come a little faster as a game goes on
+  // goals come a little faster as a game goes on, and the score changes how both sides play: fitted on the half-time
+  // scores of 34,221 games (football-data's main leagues, 2021/22-2025/26), with each game's expected goals from its
+  // pre-match prices. 55% of the goals still to come at half-time; a side a goal up scores 6.5% less after the break,
+  // a side a goal down 11% more. Fitted on three seasons and checked on the next two, this read full-time results
+  // from half-time better than the old timing alone (log loss 0.8265 -> 0.8237)
+  const goalClock = (x) => x + 0.084 * x * x / T_END;
+  const SSM = { 2: 0.968, 1: 0.935, 0: 1, '-1': 1.113, '-2': 1.099 };
+  const ssm = (d) => SSM[Math.max(-2, Math.min(2, d))];   // scoring rate from here, by a side's own goal difference
   function remFrac(min, st) {
     if (/^(ET|BT|P|AET|PEN|FT)$/.test(st || '')) return 0;   // bets settle on the 90-minute score
     const t = Math.max(0, Math.min(T_END, st === 'HT' ? 45 : min || 0));
@@ -4323,7 +4555,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function liveLeg(key, lh, la, h0, a0, min, st, rh, ra) {
     const fn = settleFn(key); if (!fn || !(lh > 0) || !(la > 0)) return null;
     const r = remFrac(min, st), N = 10;
-    const kh = lh * r * Math.pow(RED_OWN, rh || 0) * Math.pow(RED_OPP, ra || 0), ka = la * r * Math.pow(RED_OWN, ra || 0) * Math.pow(RED_OPP, rh || 0);
+    const kh = lh * r * ssm(h0 - a0) * Math.pow(RED_OWN, rh || 0) * Math.pow(RED_OPP, ra || 0), ka = la * r * ssm(a0 - h0) * Math.pow(RED_OWN, ra || 0) * Math.pow(RED_OPP, rh || 0);
     const ph = [Math.exp(-kh)], pa = [Math.exp(-ka)];
     for (let k = 1; k <= N; k++) { ph.push(ph[k - 1] * kh / k); pa.push(pa[k - 1] * ka / k); }
     let w = 0, v = 0;
@@ -4772,7 +5004,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const RED_OWN = 0.72, RED_OPP = 1.22;   // scoring rates after a red card: the side down to ten scores less, the other side more
   function livePH(lh, la, h0, a0, minute, st, rh, ra) {
     const r = remFrac(minute, st);
-    const kh = lh * r * Math.pow(RED_OWN, rh || 0) * Math.pow(RED_OPP, ra || 0), ka = la * r * Math.pow(RED_OWN, ra || 0) * Math.pow(RED_OPP, rh || 0);
+    const kh = lh * r * ssm(h0 - a0) * Math.pow(RED_OWN, rh || 0) * Math.pow(RED_OPP, ra || 0), ka = la * r * ssm(a0 - h0) * Math.pow(RED_OWN, ra || 0) * Math.pow(RED_OPP, rh || 0);
     const N = 10, ph = [Math.exp(-kh)], pa = [Math.exp(-ka)];
     for (let k = 1; k <= N; k++) { ph.push(ph[k - 1] * kh / k); pa.push(pa[k - 1] * ka / k); }
     const p = { H: 0, D: 0, A: 0, O25: 0, BTTS: 0 };
@@ -5403,8 +5635,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const v = ENGINE.value(rows.map((r) => ({ m: r.m, a: r.a })), 0.03).slice(0, 3);
     if (!v.length) return { lead: T('No real price beats Statpad\'s chance by 3% or more right now.', 'Kwa sasa hakuna bei inayozidi nafasi ya Statpad kwa asilimia 3 au zaidi.') };
     return { lead: T('The best value right now:', 'Thamani bora kwa sasa:'),
-      items: v.map((x) => T(`${x.s.label}, ${x.m.h} v ${x.m.a}, at ${odds(x.s.price)}${x.s.bk ? ' with ' + x.s.bk : ''}: Statpad ${pct(x.s.p)}, about ${Math.round(x.s.edge * 100)}% better than fair.`,
-        `${x.s.label}, ${x.m.h} dhidi ya ${x.m.a}, odds ${odds(x.s.price)}: Statpad ${pct(x.s.p)}, karibu ${Math.round(x.s.edge * 100)}% juu ya bei ya haki.`)),
+      items: v.map((x) => T(`${x.s.label}, ${x.m.h} v ${x.m.a}, at ${odds(x.s.price)}${x.s.bk ? ' with ' + x.s.bk : ''}: fair chance ${pct(x.s.pm || x.s.p)}, about ${Math.round(x.s.edge * 100)}% better than fair.`,
+        `${x.s.label}, ${x.m.h} dhidi ya ${x.m.a}, odds ${odds(x.s.price)}: nafasi ya haki ${pct(x.s.pm || x.s.p)}, karibu ${Math.round(x.s.edge * 100)}% juu ya bei ya haki.`)),
       tail: T('Value means a good price, not a likely win.', 'Thamani ni bei nzuri, si uhakika wa kushinda.'), acts: v.map((x) => [`${x.m.h} ${vsW()} ${x.m.a}`, `data-open="${esc(x.m.id)}"`]) };
   }
   function aStakes(d) {
@@ -6525,6 +6757,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   $('#sort').addEventListener('change', (e) => { S.sort = e.target.value; store.set('sort', S.sort); renderMatches(); });
   $('#scope').addEventListener('change', (e) => { S.scope = e.target.value; store.set('scope', S.scope); renderSlips(); });
   $('#vscope').addEventListener('change', (e) => { S.vscope = e.target.value; store.set('vscope', S.vscope); renderValue(); });
+  $('#vsort').addEventListener('change', (e) => { S.vsort = e.target.value; store.set('vsort', S.vsort); renderValue(); });
   $('#tleague').addEventListener('change', (e) => { S.tleague = e.target.value; store.set('tleague', S.tleague); renderTables(); });
   document.addEventListener('change', (e) => {
     if (e.target.dataset.price != null) { const i = +e.target.dataset.price, v = parseFloat(String(e.target.value).replace(',', '.')); if (S.coupon[i]) { S.coupon[i].price = v > 1 ? v : null; saveCoupon(); renderCoupon(); } }
@@ -6614,9 +6847,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   connectLegacy();
   setInterval(() => { load(false); if (Date.now() - S.resultsAt > 10 * 60e3) loadResults(true); if (document.visibilityState === 'visible') { loadLive(false); if (S.tab === 'track') loadTrack(false); } }, 60e3);
   S.tkT = store.get('trkT', 'A');
+  S.labSeg = store.get('labSeg', 'levels');
   document.addEventListener('click', (e) => {
-    const b = e.target.closest && e.target.closest('[data-tk],[data-tkmore]'); if (!b) return;
+    const b = e.target.closest && e.target.closest('[data-tk],[data-tkmore],[data-labseg],[data-vbmore]'); if (!b) return;
     if (b.dataset.tk) { if (S.tkT === b.dataset.tk) return; S.tkT = b.dataset.tk; S.tkMore = false; store.set('trkT', S.tkT); buzz(8); }
+    else if (b.dataset.labseg) { if (S.labSeg === b.dataset.labseg) return; S.labSeg = b.dataset.labseg; store.set('labSeg', S.labSeg); buzz(8); }
+    else if (b.dataset.vbmore) S.vbMore = true;
     else S.tkMore = true;
     renderTrack();
   });
