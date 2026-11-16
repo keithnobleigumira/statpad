@@ -1295,7 +1295,7 @@ body { background: var(--paper); }
         <div class="ctl"><div class="seg" id="slipSeg" role="group" aria-label="Slips or goal seek"><button type="button" data-sseg="slips">Target odds</button><button type="button" data-sseg="goal">Goal seek</button></div><span class="lbl sl-only">Target odds</span><div class="seg sl-only" id="target"></div><button type="button" class="btn listen-b sl-only" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
       </div>
       <div class="days" id="days-slips" role="group" aria-label="Day"></div>
-      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="priced">Matches with live prices</option></select></label></div>
+      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="men">Men’s football</option><option value="women">Women’s football</option><option value="priced">Matches with live prices</option></select></label></div>
       <div class="slips" id="slips"></div>
       <div id="goalBox" hidden></div>
       <div class="callout"><b>Read this before you stake.</b> A slip's hit chance is the product of its legs, and every leg can lose. The tiers only describe how likely each leg is; none of them is safe. Estimated prices (marked “est”) are what a fair book would offer. Check the real price before betting.</div>
@@ -1328,9 +1328,9 @@ body { background: var(--paper); }
     <section id="v-method" class="section" data-view="method" hidden>
       <div class="sec-head"><div><h2>How Statpad works</h2><p class="sub">Every number on the site comes from the four steps below.</p></div></div>
       <div class="flow">
-        <div class="step"><div class="n">01 · FETCH</div><h3>Results, fixtures, prices</h3><p>Results and fixtures from football-data.co.uk; fixtures and bookmaker prices for leagues, European competitions and cups from The Odds API.</p></div>
+        <div class="step"><div class="n">01 · FETCH</div><h3>Results, fixtures, prices</h3><p>Results and fixtures from football-data.co.uk and ESPN; bookmaker prices from The Odds API and, through ESPN, DraftKings. Women's football and more of the world are covered too.</p></div>
         <div class="step"><div class="n">02 · RATE</div><h3>Attack &amp; defence</h3><p>A Poisson model with home advantage gives every team an attack and defence rating from goals and shots on target. Recent games count more, and small samples are pulled towards average.</p></div>
-        <div class="step"><div class="n">03 · BLEND</div><h3>Model meets market</h3><p>The bookmakers' consensus is stripped of margin, with sharp books weighted up. Expected goals are fitted to it and blended with the model, the market taking the larger share.</p></div>
+        <div class="step"><div class="n">03 · BLEND</div><h3>Model meets market</h3><p>The bookmakers' consensus is stripped of margin by the power method, with Pinnacle weighted up. Expected goals are fitted to it and blended with the model, the market taking the larger share.</p></div>
         <div class="step"><div class="n">04 · PRICE</div><h3>Every market</h3><p>A Dixon–Coles scoreline grid gives every market. Edge is measured against the best real price, and slips are optimised for hit chance.</p></div>
       </div>
       <div class="prose" id="methodProse"></div>
@@ -1381,6 +1381,18 @@ const ENGINE = (() => {
     return s;
   }
   const CORNERS = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+  // per-market correction, fitted by the site's weekly replay of past seasons and kept only for the kinds of
+  // market where it predicted a season it never saw better: log-odds(true) = a + b * log-odds(model)
+  let MCAL = null;
+  const MGROUP = (k) => (k === 'H' || k === 'A' ? 'HA' : k === 'D' ? 'D' : k === '1X' || k === 'X2' ? 'DC' : k === 'O15' || k === 'O25' || k === 'U25' || k === 'U35' ? 'OU'
+    : k === 'BTTS' || k === 'BTTS_N' ? 'BTTS' : /^[HA]_O\d5$/.test(k) ? 'TG' : 'CB');
+  function setMcal(c) { MCAL = c && typeof c === 'object' ? c : null; }
+  function mcal(p, key) {
+    const c = MCAL && MCAL[MGROUP(key)];
+    if (!c || !(p > 0) || !(p < 1)) return p;
+    const q = Math.min(0.995, Math.max(0.005, p)), z = c[0] + c[1] * Math.log(q / (1 - q));
+    return 1 / (1 + Math.exp(-z));
+  }
   // self-tuning: a correction fitted on the track record, log-odds(true) = a + b * log-odds(stated)
   let CAL = null;
   function setCalib(c) { CAL = c && isFinite(c.a) && isFinite(c.b) ? { a: +c.a, b: +c.b } : null; }
@@ -1411,7 +1423,7 @@ const ENGINE = (() => {
       if (i > 0) p.H_O05 += v; if (j > 0) p.A_O05 += v; if (i > 1) p.H_O15 += v; if (j > 1) p.A_O15 += v;
     }
     p['1X'] = p.H + p.D; p.X2 = p.A + p.D; p['12'] = p.H + p.A;
-    p.O15 = over[1]; p.O25 = over[2]; p.O35 = over[3]; p.U25 = 1 - over[2]; p.U35 = 1 - over[3]; p.BTTS_N = 1 - p.BTTS;
+    p.O15 = over[1]; p.O25 = over[2]; p.O35 = over[3]; p.O45 = over[4]; p.U25 = 1 - over[2]; p.U35 = 1 - over[3]; p.BTTS_N = 1 - p.BTTS;
     p.tot = Array.from(tot);
     return p;
   }
@@ -1433,11 +1445,13 @@ const ENGINE = (() => {
     }
     return S[0];
   }
-  // fit expected goals to target probabilities {H, A, O (over 2.5, optional)}
+  // fit expected goals to target probabilities {H, A, O (over the goals line L, 2.5 unless given; optional)}
   function fit(t, start) {
+    const L = t.L === 1.5 || t.L === 3.5 || t.L === 4.5 ? t.L : 2.5;
     const f = (x) => {
       const m = markets(matrix(Math.exp(x[0]), Math.exp(x[1])));
-      return (m.H - t.H) ** 2 + (m.A - t.A) ** 2 + (t.O != null ? 0.5 * (m.O25 - t.O) ** 2 : 0);
+      const o = L === 1.5 ? m.O15 : L === 3.5 ? m.O35 : L === 4.5 ? m.O45 : m.O25;
+      return (m.H - t.H) ** 2 + (m.A - t.A) ** 2 + (t.O != null ? 0.5 * (o - t.O) ** 2 : 0);
     };
     const x = nelder(f, [Math.log(start[0]), Math.log(start[1])]);
     return [Math.exp(x[0]), Math.exp(x[1])];
@@ -1503,7 +1517,7 @@ const ENGINE = (() => {
     let lh, la, src;
     const wm = m.wm > 0 && m.wm <= 1 ? m.wm : W_MKT;   // the market's share, tuned on past seasons when available
     if (mk) {
-      const t = { H: mk.p[0], A: mk.p[2], O: mk.ou && mk.ou.pO ? mk.ou.pO : null };
+      const t = { H: mk.p[0], A: mk.p[2], O: mk.ou && mk.ou.pO ? mk.ou.pO : null, L: mk.ou && mk.ou.line };
       const [fh, fa] = fit(t, lm || [1.4, 1.1]);
       if (lm) { lh = blend(fh, lm[0], wm); la = blend(fa, lm[1], wm); src = 'blend'; } else { lh = fh; la = fa; src = 'market'; }
     } else if (m.ext && m.ext.length === 3) {
@@ -1519,11 +1533,16 @@ const ENGINE = (() => {
     const M = matrix(lh, la), p = markets(M);
     const diverge = pMod && mk ? Math.abs(pMod.H - mk.p[0]) : null;
     const ageH = mk && mk.upd ? (now - Date.parse(mk.upd)) / 3600e3 : null;
-    let hair = src === 'model' || src === 'external' ? HAIR : 0;
-    if (diverge != null && diverge > 0.12) hair += HAIR;
-    if (ageH != null && ageH > STALE_H) hair += 0.01;
+    // safety haircuts. Those about the estimate itself (no market to lean on, a cross-league model, a friendly)
+    // come off the stated chance; those that are only reasons for caution (model and market disagree, old prices)
+    // come off the cautious chance alone, so the stated chance stays the best estimate: on three replayed
+    // seasons, picks cut for disagreement landed 85% of the time when they had been stated at 81%
+    let hair = src === 'model' || src === 'external' ? HAIR : 0, care = 0;
+    if (diverge != null && diverge > 0.12) care += HAIR;
+    if (ageH != null && ageH > STALE_H) care += 0.01;
     if (m.xl && src === 'model') hair += 0.02;
     if (m.fr) hair += 0.03;   // friendlies: rotated line-ups and uneven effort
+    if (m.thin) hair += 0.02;  // a competition with few games in the ratings yet
 
     // spread of the log expected goals: the ratings' standard errors, the market's, mixed by their shares
     const ls = m.ls && m.ls[0] > 0 && m.ls[1] > 0 ? m.ls.map((x) => Math.hypot(x, m.xl ? 0.15 : 0, m.fr ? 0.10 : 0)) : [SIG_MOD, SIG_MOD];
@@ -1539,7 +1558,7 @@ const ENGINE = (() => {
       const prob = p[key]; let price, real = false, bk = null;
       const i = { H: 0, D: 1, A: 2 }[key];
       if (i != null && mk && mk.best && mk.best[i] > 1) { price = mk.best[i]; real = true; bk = mk.bk ? mk.bk[i] : null; }
-      else if ((key === 'O25' || key === 'U25') && mk && mk.ou && mk.ou.best && mk.ou.best[key === 'O25' ? 0 : 1] > 1) {
+      else if ((key === 'O25' || key === 'U25') && mk && mk.ou && (mk.ou.line == null || mk.ou.line === 2.5) && mk.ou.best && mk.ou.best[key === 'O25' ? 0 : 1] > 1) {
         price = mk.ou.best[key === 'O25' ? 0 : 1]; real = true;
       } else if (key === '1X' || key === 'X2') {
         const base = mk ? (key === '1X' ? mk.p[0] + mk.p[1] : mk.p[2] + mk.p[1]) : prob;
@@ -1547,9 +1566,9 @@ const ENGINE = (() => {
       } else if (i != null) price = 1 / (prob * (1 + M_EST));
       else price = 1 / (prob * (1 + M_DER));
       price = real ? price : r2(price);
-      const pRaw = Math.max(0, prob - hair), pAdj = calib(pRaw);
+      const pRaw = Math.max(0, mcal(prob, key) - hair), pAdj = calib(pRaw);
       const sd = Math.sqrt(pc.reduce((acc, c) => acc + (c[key] - prob) ** 2, 0) / 4);
-      const pLo = Math.max(0, pAdj - Z_LO * sd);
+      const pLo = Math.max(0, pAdj - care - Z_LO * sd);
       const s = { key, label: lab(m), group, p: prob, pRaw, pAdj, sd, pLo, tier: tierOf(pLo), fair: 1 / prob, price, real, bk, edge: real ? prob * price - 1 : null };
       return s;
     });
@@ -1577,15 +1596,17 @@ const ENGINE = (() => {
     let opts = list.map(({ m, a }) => ({
       m, a,
       legs: a.sels.filter((s) => !s.x && s.key !== 'D' && s.pLo >= cfg.lo && s.pLo < cfg.hi && s.price >= 1.05 && !((m.clash || m.fr) && (t === 'A' || t === 'B')))
-        .sort((x, y) => y.pAdj - x.pAdj).slice(0, 3),
+        .sort((x, y) => y.pLo - x.pLo).slice(0, 3),
     })).filter((o) => o.legs.length);
-    opts.sort((x, y) => y.legs[0].pAdj - x.legs[0].pAdj);
+    opts.sort((x, y) => y.legs[0].pLo - x.legs[0].pLo);
     opts = opts.slice(0, 40);
     // dynamic programme over (odds bucket, legs used); each state points at its parent instead of copying legs
     let states = new Map([[0, { sc: 0, b: 0, n: 0, leg: null, up: null }]]);
     const maxB = Math.floor(WIN_HI / STEP) + 1;
     for (const o of opts) {
-      const steps = o.legs.map((s) => ({ s, db: Math.round(Math.log(s.price) / STEP), lp: Math.log(s.pAdj), leg: { m: o.m, a: o.a, s } }));
+      // legs are weighed by their cautious chance, so a sure-looking leg built on thin or disputed evidence loses
+      // out to one that's nearly as likely and better founded (on three replayed seasons this won a few more slips)
+      const steps = o.legs.map((s) => ({ s, db: Math.round(Math.log(s.price) / STEP), lp: Math.log(Math.max(1e-4, s.pLo)), leg: { m: o.m, a: o.a, s } }));
       const next = new Map(states);
       for (const st of states.values()) {
         if (st.n >= cfg.max) continue;
@@ -1617,7 +1638,7 @@ const ENGINE = (() => {
     return out.sort((x, y) => y.s.edge - x.s.edge);
   }
 
-  return { analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL };
+  return { analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP };
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 
@@ -1640,7 +1661,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const dFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
   const longFmt = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   const ord = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
-  const GROUPS = [['big', 'Big leagues'], ['cups', 'Europe & cups'], ['intl', 'Internationals'], ['second', 'Second tiers'], ['more', 'More leagues']];
+  const GROUPS = [['big', 'Big leagues'], ['cups', 'Europe & cups'], ['women', 'Women’s football'], ['intl', 'Internationals'], ['second', 'Second tiers'], ['more', 'More leagues']];
   const TABS = [['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['slips', 'Slips', 'i-ticket'], ['coupon', 'Bets', 'i-cart'], ['track', 'Track', 'i-track'], ['tables', 'Tables', 'i-table'], ['method', 'Method', 'i-info']];
   const TARGETS = [2, 5, 10, 20];
   const EDGES = [0.02, 0.04, 0.07];
@@ -1744,6 +1765,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (iso) return [flagUrl(iso, big ? 160 : 80)];
     const id = S.data && S.data.crests && S.data.crests[name];
     if (!id) return [];
+    if (typeof id === 'string' && id[0] === 'E') { const u = `https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/${id.slice(1)}.png&w=${big ? 160 : 80}&h=${big ? 160 : 80}`; return [u, `https://a.espncdn.com/i/teamlogos/soccer/500/${id.slice(1)}.png`]; }   // ESPN's logo
     if (typeof id === 'string') return big ? [`crests/b/${id}.png`, `crests/${id}.png`] : [`crests/${id}.png`];   // from the open football-logos collection
     const remote = CR_API + 'teams/' + Math.abs(id) + '.png';
     return id > 0 ? (big ? [`crests/b/${id}.png`, `crests/${id}.png`, remote] : [`crests/${id}.png`, remote]) : [remote];
@@ -1863,6 +1885,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (scope === 'big') return lgInfo(r.m.lk).group === 'big';
     if (scope === 'cups') return lgInfo(r.m.lk).group === 'cups';
     if (scope === 'intl') return lgInfo(r.m.lk).group === 'intl';
+    if (scope === 'women') return lgInfo(r.m.lk).group === 'women';
+    if (scope === 'men') return lgInfo(r.m.lk).group !== 'women';
     if (scope === 'priced') return realMkt(r.m);
     return true;
   }
@@ -2618,7 +2642,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Data status</h3>
       <div class="status">
         <div><span>Data generated</span><b>${new Date(d.generated).toLocaleString()}</b></div>
-        ${st('results', 'Results &amp; tables')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('live', 'Live scores &amp; fast results')}${st('team_news', 'Team news &amp; injuries')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
+        ${st('results', 'Results &amp; tables')}${st('espn_data', 'More competitions (ESPN)')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('live', 'Live scores &amp; fast results')}${st('team_news', 'Team news &amp; injuries')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
         <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.interval_min ? ' · refresh every ' + (o.interval_min >= 120 ? Math.round(o.interval_min / 60) + ' h' : Math.round(o.interval_min) + ' min') : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
         <div><span>Live scores on this phone</span><b>${esc(esStatus())}</b></div>
         <div><span>Matches loaded</span><b>${d.matches.length} · ${Object.keys(d.leagues || {}).length} competitions</b></div>
@@ -2628,10 +2652,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>Each league's results feed a Poisson model: home goals = μ × home advantage × home attack × away defence, and the same for the away side without the home bonus. Older games count less, last season counts less again, and every team is pulled towards average by a few phantom games so a hot fortnight doesn't swing the ratings. Newly promoted sides start slightly below average.</p>
       <p>Where football-data.co.uk has shot counts (the main European leagues), shots on target count next to goals: each side's goals are mixed with its shots on target times the league's goals per shot on target. Shots are steadier than goals, so a team that creates chances but finishes badly is rated on what it creates. Each rating also carries a standard error, from how much evidence is behind it.</p>
       <p>National teams in the Nations League and friendlies are rated the same way, from every international result of the last six years. Neutral venues get no home bonus, and friendlies count 60% because line-ups are rotated. Friendly picks lose an extra 3 points and are kept out of the two safest slip tiers.</p>
-      <p>When a match has prices, the bookmakers' margin is removed and the consensus is formed with Pinnacle and the exchanges weighted up. Statpad fits the two expected-goals numbers that reproduce that consensus, including the over/under 2.5 line where available, and blends them with the model in log space: 80/20 by default, or the share tuned on past seasons (see Tuning). The market is sharper than any table-based model, so it gets the larger share. Every market comes from a Dixon–Coles scoreline grid, which corrects the 0-0, 1-0, 0-1 and 1-1 cells that a plain Poisson model gets wrong.</p>
+      <p>When a match has prices, each bookmaker's margin is removed by the <b>power method</b> (each 1/price raised to one power so they add to 1), which leaves favourites more of their chance than dividing the margin out evenly: bookmakers load more margin onto long shots. On five seasons of the main leagues (30,000 games) this read results better, and lifting Pinnacle to three times the weight of any other bookmaker helped again; exchanges, whose prices before kick-off were the least reliable, count like any bookmaker. Where The Odds API's prices are more than six hours old, DraftKings' prices from ESPN (fresher, and free) are averaged in, because prices closer to kick-off predict better. Statpad fits the two expected-goals numbers that reproduce the consensus, including the goals line where available (2.5, or the line DraftKings offers), and blends them with the model in log space: 80/20 by default, or the share tuned on past seasons (see Tuning). The market is sharper than any table-based model, so it gets the larger share. Every market comes from a Dixon–Coles scoreline grid, which corrects the 0-0, 1-0, 0-1 and 1-1 cells that a plain Poisson model gets wrong.</p>
+      <p><b>Per-market correction.</b> Every week the site replays two past seasons through the engine and checks, for each kind of market (home or away win, draw, double chance, goals lines, both teams to score, team goals), whether the stated chances came true as often as stated. A correction fitted on the older season is kept only for the kinds where it predicts the newer season, which it never saw, better. On the last replay this lifted chances above about 75% slightly (they had been coming true a little more often than stated) and nudged draws up.</p>
+      <p><b>More of the world.</b> Women's football (the Women's Super League, Liga F, Première Ligue, Frauen-Bundesliga, NWSL and the Women's Champions League), the A-League, K League 1, Brazil's Série B, Chile, Colombia, South Africa, the Libertadores and the Sudamericana. Where ESPN has them, the last two seasons of results build the ratings, and fixtures come with DraftKings' prices. Women's sides carry "Women" in their names and are only ever matched with other women's sides. Competitions with fewer than 150 games behind their ratings, or a game priced by one bookmaker alone, take a 2-point safety haircut.</p>
       <h3>Confidence tiers</h3>
       <p>Tiers use the <b>cautious chance</b>: the stated chance minus one standard deviation of it. The spread comes from the ratings' standard errors and the market's (fewer bookmakers or older prices mean more), mixed by their shares in the blend, so a pick resting on thin data or a thin market drops a tier. The top pick is the one with the highest cautious chance. On the match page, chances of 50% or more show their cautious value underneath.</p>
-      <p><b>Nearly definite</b> picks have a cautious chance of 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. Picks lose a 3-point safety haircut when they rest on the model alone, another 3 when model and market disagree by more than 12 points, and 1 more when prices are over a day and a half old. Big games between two top-six sides are kept out of the two safest tiers.</p>
+      <p><b>Nearly definite</b> picks have a cautious chance of 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. Picks lose a 3-point safety haircut when they rest on the model alone. When model and market disagree by more than 12 points the cautious chance loses another 3, and 1 more when prices are over a day and a half old; those two only make Statpad more careful about the tier, so the stated chance stays its best estimate (on three replayed seasons, picks that used to be cut for disagreement landed 85% of the time against a stated 81%). Big games between two top-six sides are kept out of the two safest tiers.</p>
       <h3>Self-tuning</h3>
       <p>${d.calib && d.calib.on ? `On, from ${d.calib.n} graded top picks.` : `Learning: ${(d.calib && d.calib.n) || 0} of ${(d.calib && d.calib.need) || 150} graded top picks.`} Every update compares the chances Statpad stated (before any correction) with what landed over the last 90 days, and fits a small correction on the log-odds scale. A prior centred on “no change” keeps the correction modest until there is plenty of evidence. The correction applies to stated chances, tiers and slips.</p>
       <h3>Tuning</h3>
@@ -2677,7 +2703,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>My bets</h3>
       <p>Save a coupon with your stake and your bookmaker's odds, and Statpad shows the chance of it landing, the odds you need to break even after the tax on winnings (15% in Uganda by default; change it in My bets), and what it's worth on average. Bets settle themselves from the same results, using the 90-minute score; a postponed leg counts at odds 1. Everything is stored on your device: use Back up to keep a copy or move to a new phone.</p>
       <h3>Slips</h3>
-      <p>For each tier and day, a dynamic-programming search finds the combination with the highest chance of landing whose total odds sit between 95% and 110% of your target. It takes one leg per match, skips games that have kicked off, and uses at most 25 legs. Chasing a target with short-priced legs usually lowers the hit chance, so compare tiers before you stake.</p>
+      <p>For each tier and day, a dynamic-programming search finds the combination with the highest chance of landing whose total odds sit between 95% and 110% of your target. Legs are weighed by their cautious chance, so a leg that only looks sure on thin or disputed evidence loses out to one nearly as likely and better founded; on three replayed seasons of daily slips this won a few more of them. It takes one leg per match, skips games that have kicked off, and uses at most 25 legs. Chasing a target with short-priced legs usually lowers the hit chance, so compare tiers before you stake.</p>
       <h3>Value</h3>
       <p>Edge compares Statpad's probability with the best real price on offer. Much of it is line-shopping: the best price beats the sharp-weighted consensus. Only real prices count, and estimates never appear on the Value board.</p>
       <h3>Responsible play</h3>
@@ -4514,6 +4540,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         const r = S.byId && S.byId.get(l.id); add(l.id, l.lk, ko, l.h, l.a, l.ev || (r && r.m.ev), true);
       }
     }
+    for (const t of out.values()) { t.h = String(t.h).replace(/ Women$/, ''); t.a = String(t.a).replace(/ Women$/, ''); }   // ESPN names women's sides without it
     return [...out.values()];
   }
   function esBoards(T) {   // one scoreboard per competition and day (ESPN files games by US Eastern day, so try both)
@@ -4715,7 +4742,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const mk = m.mkt.p[side], md = [a.pMod.H, a.pMod.D, a.pMod.A][side];
       out.push(`The bookmakers give ${esc(nmS)} ${pct(mk)}${side === 1 ? '' : ' to win'}; Statpad's own model says ${pct(md)}${Math.abs(mk - md) < 0.04 ? ', so they agree.' : md > mk ? ', a little higher than the market.' : ', a little lower than the market, which takes most of the weight.'}`);
     } else if (m.mkt && m.mkt.ou && m.mkt.ou.pO && /^(O|U|BTTS)/.test(t.key) && a.pMod) {
-      out.push(`On goals, the bookmakers make over 2.5 ${pct(m.mkt.ou.pO)}; Statpad's own model ${pct(a.pMod.O25)}${Math.abs(m.mkt.ou.pO - a.pMod.O25) < 0.04 ? ', so they agree.' : '.'}`);
+      const L = m.mkt.ou.line || 2.5, mo = L === 1.5 ? a.pMod.O15 : L === 3.5 ? a.pMod.O35 : L === 4.5 ? a.pMod.O45 : a.pMod.O25;
+      out.push(`On goals, the bookmakers make over ${L} ${pct(m.mkt.ou.pO)}; Statpad's own model ${pct(mo)}${Math.abs(m.mkt.ou.pO - mo) < 0.04 ? ', so they agree.' : '.'}`);
     } else if (!m.mkt) out.push('There are no bookmaker prices yet, so this rests on Statpad\'s model alone.');
     const h = m.hist;
     if (h && h.length > 1 && side != null) {
@@ -5833,14 +5861,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     GEO = { W, H, bits }; return GEO;
   }
   const isLand = (lon, lat) => { const g = geoMask(), i = Math.floor((lon + 180) * 2), j = Math.floor((90 - lat) * 2); return i >= 0 && i < g.W && j >= 0 && j < g.H && g.bits[j * g.W + i] === 1; };
-  const GEO_CC = { England: [52.6, -1.6], Scotland: [56.5, -4.2], Spain: [40.2, -3.7], Italy: [42.9, 12.6], Germany: [51.1, 10.3], France: [46.7, 2.4], Netherlands: [52.2, 5.4], Portugal: [39.7, -8.1],
+  const GEO_CC = { 'South America': [-15, -60], Australia: [-31.5, 145.5], 'South Korea': [36.4, 127.9], Chile: [-33.5, -70.8], Colombia: [4.6, -74.1], 'South Africa': [-28.5, 25.5], England: [52.6, -1.6], Scotland: [56.5, -4.2], Spain: [40.2, -3.7], Italy: [42.9, 12.6], Germany: [51.1, 10.3], France: [46.7, 2.4], Netherlands: [52.2, 5.4], Portugal: [39.7, -8.1],
     Belgium: [50.6, 4.6], 'Saudi Arabia': [24.3, 45.1], Turkey: [39.1, 34.8], Greece: [39.3, 22.0], Austria: [47.5, 14.5], Switzerland: [46.8, 8.2], Denmark: [56.0, 9.4], Norway: [61.0, 9.5],
     Sweden: [62.0, 15.5], Poland: [52.1, 19.4], Romania: [45.9, 24.9], Czechia: [49.8, 15.4], Serbia: [44.0, 20.9], Ireland: [53.2, -8.0], Finland: [62.5, 26.0], Brazil: [-14.2, -51.9],
     Argentina: [-34.6, -64.0], Mexico: [23.6, -102.5], USA: [39.5, -98.4], Japan: [36.2, 138.2], China: [34.5, 104.0], Europe: [49.0, 9.0], World: [20.0, 10.0] };
   const GEO_NAT = Object.fromEntries(('Albania:41.1,20.1|Algeria:28,2.6|Andorra:42.5,1.5|Armenia:40.1,45|Australia:-25.3,133.8|Azerbaijan:40.1,47.6|Belarus:53.7,28|Bosnia and Herzegovina:44.2,17.7|Bosnia:44.2,17.7|Bulgaria:42.7,25.5|Cameroon:5.7,12.4|Canada:56.1,-106.3|Chile:-35.7,-71.5|Colombia:4.6,-74.3|Costa Rica:9.7,-83.8|Croatia:45.1,15.2|Cyprus:35.1,33.4|Ecuador:-1.8,-78.2|Egypt:26.8,30.8|Estonia:58.6,25|Faroe Islands:61.9,-6.9|Georgia:42.3,43.4|Ghana:7.9,-1|Gibraltar:36.1,-5.3|Hungary:47.2,19.5|Iceland:64.9,-19|Iran:32.4,53.7|Israel:31,34.9|Ivory Coast:7.5,-5.5|Jamaica:18.1,-77.3|Kazakhstan:48,66.9|Kenya:0,37.9|Kosovo:42.6,20.9|Latvia:56.9,24.6|Liechtenstein:47.2,9.6|Lithuania:55.2,23.9|Luxembourg:49.8,6.1|Malta:35.9,14.4|Moldova:47.4,28.4|Montenegro:42.7,19.4|Morocco:31.8,-7.1|Nigeria:9.1,8.7|North Macedonia:41.6,21.7|Northern Ireland:54.8,-6.5|Panama:8.5,-80.8|Paraguay:-23.4,-58.4|Peru:-9.2,-75|Qatar:25.4,51.2|San Marino:43.9,12.5|Senegal:14.5,-14.5|Slovakia:48.7,19.7|Slovenia:46.2,15|South Africa:-30.6,22.9|South Korea:35.9,127.8|Korea Republic:35.9,127.8|Tunisia:33.9,9.5|Uganda:1.4,32.3|Ukraine:48.4,31.2|Uruguay:-32.5,-55.8|Wales:52.1,-3.8|Venezuela:6.4,-66.6|United States:39.5,-98.4|Mexico:23.6,-102.5|New Zealand:-40.9,174.9|Russia:56,38|DR Congo:-4,21.8|Mali:17.6,-4|Zambia:-13.1,27.8|Tanzania:-6.4,34.9|Rwanda:-1.9,29.9|Ethiopia:9.1,40.5').split('|').map((x) => { const [n, c] = x.split(':'); return [n, c.split(',').map(Number)]; }));
   function geoOf(m) {
     const info = lgInfo(m.lk), c = info.country;
-    if (c && GEO_CC[c] && c !== 'Europe' && c !== 'World') return GEO_CC[c];
+    if (c && GEO_CC[c] && c !== 'Europe' && c !== 'World' && c !== 'South America') return GEO_CC[c];
     const nat = GEO_NAT[m.h] || GEO_CC[m.h]; if (nat) return nat;
     const tm = askTeams().teams.get(m.h);   // a club in a European cup: its own league's country
     if (tm) for (const lk of tm.lks) { const cc = lgInfo(lk).country; if (cc && GEO_CC[cc] && cc !== 'Europe' && cc !== 'World') return GEO_CC[cc]; }
@@ -6117,7 +6145,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const mk = r.m.mkt || null, i = { H: 0, D: 1, A: 2 }[s.key], ou = mk && mk.ou, o = s.key === 'O25' ? 0 : 1;
     let price = null, fair = null, est = false;
     if (i != null && mk && mk.p) { price = mk.avg && mk.avg[i] > 1 ? mk.avg[i] : s.real ? s.price : null; fair = mk.p[i]; }
-    else if ((s.key === 'O25' || s.key === 'U25') && ou && ou.pO > 0) { price = ou.avg && ou.avg[o] > 1 ? ou.avg[o] : s.real ? s.price : null; fair = o ? 1 - ou.pO : ou.pO; }
+    else if ((s.key === 'O25' || s.key === 'U25') && ou && ou.pO > 0 && (ou.line == null || ou.line === 2.5)) { price = ou.avg && ou.avg[o] > 1 ? ou.avg[o] : s.real ? s.price : null; fair = o ? 1 - ou.pO : ou.pO; }
     else if ((s.key === '1X' || s.key === 'X2') && mk && mk.p) { price = s.price; fair = s.key === '1X' ? mk.p[0] + mk.p[1] : mk.p[2] + mk.p[1]; est = true; }
     if (!(price > 1) || fair == null) return null;
     return { price, pc: Math.max(0, Math.min(s.pLo, s.pAdj, fair)), pa: s.pAdj, est };
@@ -6520,8 +6548,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     try {
       if (!doc || !Array.isArray(doc.matches)) throw new Error('matches.json has no match list');
       S.data = doc; S.err = null; S.now = Date.now();
-      const cal = doc.calib && doc.calib.on ? { a: doc.calib.a, b: doc.calib.b } : null, cs = JSON.stringify(cal);
-      if (cs !== S.calSig) { S.calSig = cs; ENGINE.setCalib(cal); S.cache.clear(); }
+      const cal = doc.calib && doc.calib.on ? { a: doc.calib.a, b: doc.calib.b } : null, mc = doc.mcal || null, cs = JSON.stringify([cal, mc]);
+      if (cs !== S.calSig) { S.calSig = cs; ENGINE.setCalib(cal); if (ENGINE.setMcal) ENGINE.setMcal(mc); S.cache.clear(); }
       if (!(await analyseAll(token))) return;
       if (!S.day || (S.day !== 'all' && !days().some((d) => d.key === S.day))) S.day = pickDefaultDay();
       const first = !S.introDone; S.introDone = true;
@@ -6551,7 +6579,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
   }
   // Optional live price feed when this page runs as a claude.ai artifact (database document market/current)
-  function demargin(o) { const inv = o.map((x) => 1 / x), s = inv[0] + inv[1] + inv[2]; return inv.map((x) => x / s); }
+  function demargin(o) {   // the power method, as the site's update uses: each 1/price raised to one power k so they add to 1
+    const q = o.map((x) => 1 / x); if (q[0] + q[1] + q[2] <= 1) { const s = q[0] + q[1] + q[2]; return q.map((x) => x / s); }
+    let lo = 1, hi = 4; for (let i = 0; i < 50; i++) { const k = (lo + hi) / 2; if (q.reduce((a, x) => a + x ** k, 0) > 1) lo = k; else hi = k; }
+    const k = (lo + hi) / 2, p = q.map((x) => x ** k), s = p[0] + p[1] + p[2]; return p.map((x) => x / s);
+  }
   function overlayLegacy(doc, legacy) {
     const by = new Map(doc.matches.map((m) => [m.id, m])); let n = 0;
     for (const [id, v] of Object.entries(legacy.matches || {})) {

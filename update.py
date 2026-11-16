@@ -99,8 +99,10 @@ OA = 'https://api.the-odds-api.com/v4'
 L = {}
 
 
-def comp(lk, name, country, group, strength, fd=None, x=None, oa=()):
-    L[lk] = dict(name=name, country=country, group=group, strength=strength, fd=fd, x=x, oa=list(oa))
+def comp(lk, name, country, group, strength, fd=None, x=None, oa=(), es=None, hist=False, w=False, cup=False):
+    """es: ESPN's scoreboard, for fixtures and DraftKings prices; hist: ratings built from ESPN's results;
+    w: women's football (its teams are matched only with other women's teams); cup: teams from several leagues."""
+    L[lk] = dict(name=name, country=country, group=group, strength=strength, fd=fd, x=x, oa=list(oa), es=es, hist=hist, w=w, cup=cup)
 
 
 comp('EPL', 'Premier League', 'England', 'big', 0.00, fd='E0', oa=['soccer_epl'])
@@ -111,17 +113,17 @@ comp('L1', 'Ligue 1', 'France', 'big', -0.20, fd='F1', oa=['soccer_france_ligue_
 comp('POR', 'Primeira Liga', 'Portugal', 'big', -0.30, fd='P1', oa=['soccer_portugal_primeira_liga'])
 comp('ERE', 'Eredivisie', 'Netherlands', 'big', -0.32, fd='N1', oa=['soccer_netherlands_eredivisie'])
 comp('BEL', 'Belgian Pro League', 'Belgium', 'big', -0.38, fd='B1', oa=['soccer_belgium_first_div'])
-comp('KSA', 'Saudi Pro League', 'Saudi Arabia', 'big', -0.45, oa=['soccer_saudi_arabia_pro_league'])
+comp('KSA', 'Saudi Pro League', 'Saudi Arabia', 'big', -0.45, oa=['soccer_saudi_arabia_pro_league'], es='ksa.1', hist=True)
 comp('ENG2', 'Championship', 'England', 'second', -0.45, fd='E1', oa=['soccer_efl_champ'])
 comp('GER2', '2. Bundesliga', 'Germany', 'second', -0.50, fd='D2', oa=['soccer_germany_bundesliga2'])
 comp('ITA2', 'Serie B', 'Italy', 'second', -0.55, fd='I2', oa=['soccer_italy_serie_b'])
 comp('ESP2', 'LaLiga 2', 'Spain', 'second', -0.52, fd='SP2', oa=['soccer_spain_segunda_division'])
 comp('FRA2', 'Ligue 2', 'France', 'second', -0.60, fd='F2', oa=['soccer_france_ligue_two'])
-comp('NED2', 'Eerste Divisie', 'Netherlands', 'second', -0.80)
+comp('NED2', 'Eerste Divisie', 'Netherlands', 'second', -0.80, es='ned.2', hist=True)
 comp('ENG3', 'League One', 'England', 'second', -0.75, fd='E2', oa=['soccer_england_league1'])
 comp('ENG4', 'League Two', 'England', 'second', -0.95, fd='E3', oa=['soccer_england_league2'])
 comp('SCO1', 'Scottish Premiership', 'Scotland', 'more', -0.50, fd='SC0', oa=['soccer_spl'])
-comp('SCO2', 'Scottish Championship', 'Scotland', 'second', -0.95, fd='SC1')
+comp('SCO2', 'Scottish Championship', 'Scotland', 'second', -0.95, fd='SC1', es='sco.2')
 comp('TUR1', 'Süper Lig', 'Turkey', 'more', -0.42, fd='T1', oa=['soccer_turkey_super_league'])
 comp('GRE1', 'Greek Super League', 'Greece', 'more', -0.48, fd='G1', oa=['soccer_greece_super_league'])
 comp('AUT1', 'Austrian Bundesliga', 'Austria', 'more', -0.45, x='AUT', oa=['soccer_austria_bundesliga'])
@@ -152,6 +154,35 @@ comp('CI', 'Coppa Italia', 'Italy', 'cups', 0, oa=['soccer_italy_coppa_italia'])
 comp('CDF', 'Coupe de France', 'France', 'cups', 0, oa=['soccer_france_coupe_de_france'])
 comp('UNL', 'UEFA Nations League', 'Europe', 'intl', 0, oa=['soccer_uefa_nations_league'])
 comp('INTF', 'International friendlies', 'World', 'intl', 0)
+# more of the world, from ESPN's scoreboards (fixtures, results for the ratings, DraftKings prices) and The Odds API where it has them
+comp('AUS1', 'A-League Men', 'Australia', 'more', -0.70, oa=['soccer_australia_aleague'], es='aus.1', hist=True)
+comp('KOR1', 'K League 1', 'South Korea', 'more', -0.60, oa=['soccer_korea_kleague1'])
+comp('BRA2', 'Brasileirão Série B', 'Brazil', 'second', -0.70, oa=['soccer_brazil_serie_b'], es='bra.2', hist=True)
+comp('CHI1', 'Primera División', 'Chile', 'more', -0.75, oa=['soccer_chile_campeonato'], es='chi.1', hist=True)
+comp('COL1', 'Primera A', 'Colombia', 'more', -0.65, es='col.1', hist=True)
+comp('RSA1', 'Premiership', 'South Africa', 'more', -0.85, es='rsa.1', hist=True)
+comp('LIB', 'Copa Libertadores', 'South America', 'cups', 0, oa=['soccer_conmebol_copa_libertadores'], es='conmebol.libertadores')
+comp('SUD', 'Copa Sudamericana', 'South America', 'cups', 0, oa=['soccer_conmebol_copa_sudamericana'], es='conmebol.sudamericana')
+# women's football: its own pool of teams, so Chelsea's women's side is never mistaken for the men's
+comp('WSL', "Women's Super League", 'England', 'women', 0.0, es='eng.w.1', hist=True, w=True)
+comp('LIGAF', 'Liga F', 'Spain', 'women', -0.08, es='esp.w.1', hist=True, w=True)
+comp('D1F', 'Première Ligue', 'France', 'women', -0.15, es='fra.w.1', hist=True, w=True)
+comp('FBL', 'Frauen-Bundesliga', 'Germany', 'women', -0.05, oa=['soccer_germany_bundesliga_women'], w=True)
+comp('NWSL', 'NWSL', 'USA', 'women', -0.05, es='usa.nwsl', hist=True, w=True)
+comp('UWCL', "Women's Champions League", 'Europe', 'women', 0, oa=['soccer_uefa_champs_league_women'], es='uefa.wchampions', w=True, cup=True)
+
+
+def is_cup(lk):
+    c = L.get(lk) or {}
+    return c.get('group') == 'cups' or bool(c.get('cup'))
+
+
+def knockout(lk):   # cups and national teams: no league table of their own
+    return is_cup(lk) or (L.get(lk) or {}).get('group') == 'intl'
+
+
+def pool(lk):
+    return 'w' if (L.get(lk) or {}).get('w') else 'm'
 
 FD_DIV = {v['fd']: k for k, v in L.items() if v['fd']}
 X_COUNTRY = {'Austria': 'AUT1', 'Switzerland': 'SUI1', 'Denmark': 'DEN1', 'Norway': 'NOR1', 'Sweden': 'SWE1',
@@ -177,7 +208,30 @@ def auto_competition(key):
     return any(w in k for w in CUP_WORDS) and k.split('_')[0] in CUP_COUNTRIES
 
 
-SHARP = {'pinnacle': 3.0, 'betfair_ex_eu': 2.0, 'betfair_ex_uk': 2.0, 'matchbook': 2.0, 'smarkets': 2.0}
+SHARP = {'pinnacle': 3.0, 'betfair_ex_eu': 1.0, 'betfair_ex_uk': 1.0, 'matchbook': 1.0, 'smarkets': 1.0}
+# exchanges count like any bookmaker: on 30,000 past games their pre-match prices predicted worse than Pinnacle's
+# or the average (thin markets before kick-off), so they no longer get extra weight
+
+
+def demargin(odds):
+    """A bookmaker's prices -> chances, taking the margin off by the power method: each 1/price is raised to the
+    same power k so they add up to 1. Bookmakers load more margin onto long shots, and on five seasons of the main
+    leagues this read the results better than dividing the margin out evenly (log loss 0.9966 against 0.9971 on
+    average prices), mainly by giving favourites back the chance an even split takes off them."""
+    q = [1 / x for x in odds]
+    if sum(q) <= 1:
+        s = sum(q)
+        return [x / s for x in q]
+    lo, hi = 1.0, 4.0
+    for _ in range(50):
+        k = (lo + hi) / 2
+        if sum(x ** k for x in q) > 1:
+            lo = k
+        else:
+            hi = k
+    p = [x ** ((lo + hi) / 2) for x in q]
+    s = sum(p)
+    return [x / s for x in p]
 EXCHANGES = {'betfair_ex_eu', 'betfair_ex_uk', 'betfair_ex_au', 'matchbook', 'smarkets'}
 
 # ----------------------------------------------------------------------------------------------
@@ -259,12 +313,17 @@ class Teams:
 
     def __init__(self):
         self.by_league = {}   # lk -> {normkey: canonical}
-        self.global_ = {}     # normkey -> (lk, canonical)
+        self.globals = {}     # pool ('m' or 'w') -> {normkey: (lk, canonical)}
+
+    @property
+    def global_(self):
+        return self.globals.setdefault('m', {})
 
     def add(self, lk, name):
         k = norm(name)
         self.by_league.setdefault(lk, {})[k] = name
-        self.global_.setdefault(k, (lk, name))
+        if not is_cup(lk):
+            self.globals.setdefault(pool(lk), {}).setdefault(k, (lk, name))
 
     def resolve(self, lk, raw, cutoff=0.80):
         k = norm(raw)
@@ -274,13 +333,14 @@ class Teams:
         hit = self._fuzzy(k, table, cutoff)
         return hit
 
-    def resolve_global(self, raw, cutoff=0.86):
+    def resolve_global(self, raw, cutoff=0.86, pool_='m'):
+        g = self.globals.get(pool_) or {}
         k = norm(raw)
-        if k in self.global_:
-            return self.global_[k]
-        keys = {kk: kk for kk in self.global_}
+        if k in g:
+            return g[k]
+        keys = {kk: kk for kk in g}
         hit = self._fuzzy(k, keys, cutoff)
-        return self.global_[hit] if hit else None
+        return g[hit] if hit else None
 
     @staticmethod
     def _fuzzy(k, table, cutoff):
@@ -300,6 +360,18 @@ class Teams:
 # ----------------------------------------------------------------------------------------------
 # I/O
 # ----------------------------------------------------------------------------------------------
+
+def disp(lk, name):
+    """The name shown on the site: women's sides carry "Women" so they're never confused with the men's club."""
+    n = pretty(name)
+    if (L.get(lk) or {}).get('w') and not re.search(r'\b(women|woman|femen\w*|f[eé]minin\w*|frauen|ladies|lionesses|wfc)\b', n, re.I):
+        n += ' Women'
+    return n
+
+
+def base_name(n):
+    return re.sub(r'\s+Women$', '', n or '')
+
 def log(*a):
     print('[statpad]', *a, flush=True)
 
@@ -697,16 +769,16 @@ def team_file(lk, games, season):
         hs, as_ = (g[6], g[7]) if len(g) > 7 else (None, None)
         hs, as_ = (None if hs is None else int(hs)), (None if as_ is None else int(as_))
         ds = d.strftime('%Y-%m-%d')
-        rows[h].append([ds, pretty(a), 1, hg, ag, r3(pH), r3(pD), r3(pA), hs, as_])
-        rows[a].append([ds, pretty(h), 0, ag, hg, r3(pA), r3(pD), r3(pH), as_, hs])
+        rows[h].append([ds, disp(lk, a), 1, hg, ag, r3(pH), r3(pD), r3(pA), hs, as_])
+        rows[a].append([ds, disp(lk, h), 0, ag, hg, r3(pA), r3(pD), r3(pH), as_, hs])
     out = {'app': 'Statpad', 'lk': lk, 'season': season, 'gen': iso(NOW), 'sh': 1 if P is MODEL and shots else 0,
-           't': {pretty(t): {'s': series[t], 'r': rows[t]} for t in teams}}
+           't': {disp(lk, t): {'s': series[t], 'r': rows[t]} for t in teams}}
     if lk in SIM_LEAGUES:
         played = {(g[1], g[2]) for g in cur}
         n = len(teams)
         if len(played) == len(cur) and len(cur) <= n * (n - 1):   # no pair has met twice at the same ground
             idx = {t: i for i, t in enumerate(teams)}
-            out['teams'] = [pretty(t) for t in teams]
+            out['teams'] = [disp(lk, t) for t in teams]
             out['rem'] = [[idx[h], idx[a]] for h in teams for a in teams if h != a and (h, a) not in played]
     return out
 
@@ -714,7 +786,7 @@ def team_file(lk, games, season):
 def team_files(res):
     t0, out = time.time(), {}
     for lk, (games, season) in res.items():
-        if L[lk]['group'] in ('cups', 'intl'):
+        if knockout(lk):
             continue
         if time.time() - t0 > TEAMS_BUDGET_S:
             log('team pages: out of time, the rest next time')
@@ -734,13 +806,13 @@ def last_played(res):
     """The date of each team's latest league game this season (for rest days)."""
     out = {}
     for lk, (games, _season) in res.items():
-        if L[lk]['group'] in ('cups', 'intl'):
+        if knockout(lk):
             continue
         d = out.setdefault(lk, {})
         for g in games:
             if g[5]:
                 for t in (g[1], g[2]):
-                    k = pretty(t)
+                    k = disp(lk, t)
                     ds = g[0].strftime('%Y-%m-%d')
                     if ds > d.get(k, ''):
                         d[k] = ds
@@ -931,7 +1003,7 @@ def apply_fx(state, doc):
     """Fatigue and motivation for the coming league games, when the tuning switched them on."""
     lp = state.get('last_played') or {}
     for m in doc['matches']:   # games that have kicked off count as played, before football-data lists them
-        if L.get(m['lk'], {}).get('group') in ('cups', 'intl') or parse_iso(m['ko']) > NOW:
+        if knockout(m['lk']) or parse_iso(m['ko']) > NOW:
             continue
         d, ds = lp.setdefault(m['lk'], {}), m['ko'][:10]
         for t in (m['h'], m['a']):
@@ -942,7 +1014,7 @@ def apply_fx(state, doc):
         return 0
     stakes, tfs, n = state.get('stakes') or {}, state.get('teamfiles') or {}, 0
     for m in doc['matches']:
-        if L.get(m['lk'], {}).get('group') in ('cups', 'intl') or parse_iso(m['ko']) <= NOW:
+        if knockout(m['lk']) or parse_iso(m['ko']) <= NOW:
             continue
         ko, d = datetime.strptime(m['ko'][:10], '%Y-%m-%d'), lp.get(m['lk']) or {}
 
@@ -982,14 +1054,17 @@ def fd_market(row, upd):
         return None
     mx = [fnum(col(row, 'MaxH', 'MaxCH', 'BbMxH')), fnum(col(row, 'MaxD', 'MaxCD', 'BbMxD')), fnum(col(row, 'MaxA', 'MaxCA', 'BbMxA'))]
     best = [round(max(m or 0, a), 3) for m, a in zip(mx, avg)]
-    inv = [1 / x for x in avg]
-    s = sum(inv)
-    m = {'p': [round(x / s, 4) for x in inv], 'avg': avg, 'best': best, 'bk': None, 'n': None,
+    ps = [fnum(col(row, 'PSH')), fnum(col(row, 'PSD')), fnum(col(row, 'PSA'))]
+    p = demargin(avg)
+    if all(x and x > 1 for x in ps):   # Pinnacle's prices, when listed, count three times (as in the live consensus)
+        pp = demargin(ps)
+        p = [(3 * a + b) / 4 for a, b in zip(pp, p)]
+    m = {'p': [round(x, 4) for x in p], 'avg': avg, 'best': best, 'bk': None, 'n': None,
          'ou': None, 'src': 'football-data', 'upd': upd}
     o, u = fnum(col(row, 'Avg>2.5', 'AvgC>2.5', 'BbAv>2.5', 'B365>2.5')), fnum(col(row, 'Avg<2.5', 'AvgC<2.5', 'BbAv<2.5', 'B365<2.5'))
     if o and u and o > 1 and u > 1:
         mo, mu_ = fnum(col(row, 'Max>2.5', 'MaxC>2.5', 'BbMx>2.5')), fnum(col(row, 'Max<2.5', 'MaxC<2.5', 'BbMx<2.5'))
-        m['ou'] = {'line': 2.5, 'pO': round((1 / o) / (1 / o + 1 / u), 4), 'avg': [o, u],
+        m['ou'] = {'line': 2.5, 'pO': round(demargin([o, u])[0], 4), 'avg': [o, u],
                    'best': [round(max(mo or 0, o), 3), round(max(mu_ or 0, u), 3)]}
     return m
 
@@ -1154,11 +1229,10 @@ def api_market(e):
     best = [0.0, 0.0, 0.0]
     bk = ['', '', '']
     for name, pr in books.items():
-        inv = [1 / x for x in pr]
-        s = sum(inv)
+        q = demargin(pr)
         w = SHARP.get(name, 1.0)
         for i in range(3):
-            acc[i] += w * inv[i] / s
+            acc[i] += w * q[i]
             if name not in EXCHANGES and pr[i] > best[i]:
                 best[i], bk[i] = pr[i], name
         wsum += w
@@ -1177,7 +1251,7 @@ def api_market(e):
         bo = [0.0, 0.0]
         for name, (o, u) in ous.items():
             w = SHARP.get(name, 1.0)
-            po += w * (1 / o) / (1 / o + 1 / u)
+            po += w * demargin([o, u])[0]
             ws += w
             if name not in EXCHANGES:
                 bo = [max(bo[0], o), max(bo[1], u)]
@@ -1320,6 +1394,7 @@ ESPN_SLUG = {'EPL': 'eng.1', 'ENG2': 'eng.2', 'ENG3': 'eng.3', 'ENG4': 'eng.4', 
              'UEL': 'uefa.europa', 'UECL': 'uefa.europa.conf', 'FAC': 'eng.fa', 'EFLC': 'eng.league_cup',
              'DFB': 'ger.dfb_pokal', 'CDR': 'esp.copa_del_rey', 'CI': 'ita.coppa_italia', 'CDF': 'fra.coupe_de_france',
              'UNL': 'uefa.nations', 'INTF': 'fifa.friendly'}
+ESPN_SLUG.update({lk: c['es'] for lk, c in L.items() if c.get('es')})
 ESPN_OFF = {'STATUS_POSTPONED', 'STATUS_CANCELED', 'STATUS_CANCELLED', 'STATUS_ABANDONED', 'STATUS_FORFEIT'}
 ESPN_BEFORE = 180       # minutes before kick-off from which a match is paired with ESPN's game
 ESPN_AFTER = 135        # minutes after kick-off it's followed live
@@ -1357,7 +1432,8 @@ def espn_row(e):
                 'h': names(h.get('team') or {}), 'a': names(a.get('team') or {}),
                 'hs': int(h.get('score') or 0), 'as': int(a.get('score') or 0),
                 'st': typ.get('name') or '', 'state': typ.get('state') or '', 'done': bool(typ.get('completed')),
-                'period': int(st.get('period') or 0), 'clock': st.get('displayClock') or '', 'goals': goals, 'reds': reds}
+                'period': int(st.get('period') or 0), 'clock': st.get('displayClock') or '', 'goals': goals, 'reds': reds,
+                'mkt': espn_market(c) if typ.get('state') == 'pre' else None}
     except Exception:
         return None
 
@@ -1412,7 +1488,7 @@ def espn_pair(lk, ko, h, a, rows):
     for g in rows or []:
         dt = abs((g['ko'] - ko).total_seconds()) / 60
         if dt <= 180:
-            near.append((g, dt, max((team_sim(h, n) for n in g['h']), default=0), max((team_sim(a, n) for n in g['a']), default=0)))
+            near.append((g, dt, max((team_sim(base_name(h), n) for n in g['h']), default=0), max((team_sim(base_name(a), n) for n in g['a']), default=0)))
     best, best_s = None, 0.0
     for g, dt, sh, sa in near:
         ok = (sh >= 0.8 and sa >= 0.8) or (dt <= 15 and ((sh == 1 and sa >= 0.5) or (sa == 1 and sh >= 0.5)))
@@ -1538,6 +1614,207 @@ def espn_lineup(slug, eid):
         if t.get('homeAway') in ('home', 'away') and len(xi) >= 7:
             side['h' if t['homeAway'] == 'home' else 'a'] = {'fm': t.get('formation'), 'xi': xi, 'co': None}
     return side if 'h' in side and 'a' in side else None
+
+
+# ----------------------------------------------------------------------------------------------
+# Competitions read from ESPN: fixtures with DraftKings prices, and (for those rated from them) every result
+# of the last two seasons, a month per request. Past months are read once; the current ones every few hours.
+# ----------------------------------------------------------------------------------------------
+ES_FIX_EVERY_H = 2        # hours between fixture reads
+ES_HIST_EVERY_H = 6       # hours between re-reads of this month's and last month's results
+ES_HIST_DAYS = 600        # results kept for the ratings
+ES_BUDGET_S = float(ENV('STATPAD_ES_BUDGET') or 40)   # seconds of these reads per run, at most
+
+
+def american(x):
+    """'+550' -> 6.5, '-300' -> 1.333, 'EVEN' -> 2.0"""
+    try:
+        t = str(x).strip().upper()
+        if t in ('EVEN', 'EV', 'PK'):
+            return 2.0
+        v = float(t.replace('+', ''))
+        return round(1 + v / 100, 4) if v > 0 else round(1 + 100 / -v, 4) if v < 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def espn_market(c):
+    """DraftKings' prices from an ESPN game: 1X2 and the goals line, with the margin taken off; or None."""
+    for o in c.get('odds') or []:
+        if not o:
+            continue
+        ml = o.get('moneyline') or {}
+        pick = lambda side: american(((side or {}).get('close') or (side or {}).get('open') or {}).get('odds'))
+        pr = [pick(ml.get('home')), pick(ml.get('draw')), pick(ml.get('away'))]
+        if not all(x and x > 1 for x in pr):
+            hm, aw, dr = (o.get('homeTeamOdds') or {}).get('moneyLine'), (o.get('awayTeamOdds') or {}).get('moneyLine'), (o.get('drawOdds') or {}).get('moneyLine')
+            pr = [american(hm), american(dr), american(aw)]
+        if not all(x and x > 1 for x in pr) or sum(1 / x for x in pr) < 0.98 or sum(1 / x for x in pr) > 1.25:
+            continue
+        name = ((o.get('provider') or {}).get('name')) or 'ESPN BET'
+        m = {'p': [round(x, 4) for x in demargin(pr)], 'avg': pr, 'best': pr, 'bk': [name] * 3, 'n': 1, 'ou': None,
+             'src': 'espn', 'upd': iso(NOW)}
+        tot = o.get('total') or {}
+        ov, un = (tot.get('over') or {}).get('close') or (tot.get('over') or {}).get('open') or {}, (tot.get('under') or {}).get('close') or (tot.get('under') or {}).get('open') or {}
+        po, pu_ = american(ov.get('odds')), american(un.get('odds'))
+        try:
+            line = float(re.sub(r'[^0-9.]', '', ov.get('line') or '') or o.get('overUnder') or 0)
+        except ValueError:
+            line = 0
+        if po and pu_ and line in (1.5, 2.5, 3.5, 4.5):
+            m['ou'] = {'line': line, 'pO': round(demargin([po, pu_])[0], 4), 'avg': [po, pu_], 'best': [po, pu_]}
+        return m
+    return None
+
+
+def espn_month(slug, ym):
+    """Every game of one competition in one month (YYYYMM) -> (events, ok)."""
+    r = fetch(ESPN_SB.format(slug), {'dates': ym, 'limit': 500}, tries=2, timeout=20, headers={'Accept-Encoding': 'gzip'})
+    if r.status != 200 or not r.body:
+        return [], False
+    try:
+        body = gzip.decompress(r.body) if r.body[:2] == b'\x1f\x8b' else r.body
+        return json.loads(text_of(body)).get('events') or [], True
+    except Exception:
+        return [], False
+
+
+def months_between(a, b):
+    y, m, out = a.year, a.month, []
+    while (y, m) <= (b.year, b.month):
+        out.append(f'{y}{m:02d}')
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return out
+
+
+def refresh_espn_data(state):
+    """Fixtures (with prices) for the ESPN-read competitions, and results for the ones rated from ESPN."""
+    t0, calls = time.time(), 0
+    fixl = state.get('es_fixtures') or []
+    hist = state.setdefault('es_hist', {})
+    logos = state.setdefault('es_logo', {})
+    last = state.setdefault('last', {})
+    comps = [(lk, c) for lk, c in L.items() if c.get('es')]
+    new_hist = False
+    fix_due = due(state, 'es_fix', ES_FIX_EVERY_H) or 'es_fixtures' not in state
+
+    def read(lk, slug, ym):
+        nonlocal calls, new_hist
+        evs, ok = espn_month(slug, ym)
+        calls += 1
+        if not ok:
+            return None
+        rows = []
+        for e in evs:
+            g = espn_row(e)
+            if not g:
+                continue
+            c = (e.get('competitions') or [{}])[0]
+            side = {x.get('homeAway'): x for x in c.get('competitors') or []}
+            th, ta = (side.get('home') or {}).get('team') or {}, (side.get('away') or {}).get('team') or {}
+            h, a = th.get('displayName') or g['h'][0], ta.get('displayName') or g['a'][0]
+            for t in (th, ta):
+                if t.get('id') and t.get('displayName'):
+                    logos[t['displayName']] = logos[pretty(t['displayName'])] = str(t['id'])
+            rows.append((g, h, a, c, (e.get('season') or {}).get('year')))
+        if L[lk].get('hist'):
+            hs = hist.setdefault(lk, {'m': {}, 'g': {}})
+            for g, h, a, c, yr in rows:
+                if g['done'] and g['st'] not in ESPN_OFF and g['state'] == 'post':
+                    rec = [g['ko'].strftime('%Y-%m-%d'), h, a, g['hs'], g['as'], yr]
+                    if hs['g'].get(g['id']) != rec:
+                        hs['g'][g['id']] = rec
+                        new_hist = True
+            hs['m'][ym] = iso(NOW)
+        return rows
+
+    # 1) fixtures: this month and the next, for every ESPN-read competition
+    if fix_due:
+        lo, hi = NOW - timedelta(hours=3), NOW + timedelta(days=DAYS)
+        out, ok_any = [], False
+        for lk, c in comps:
+            if time.time() - t0 > ES_BUDGET_S:
+                break
+            for ym in months_between(lo, hi):
+                rows = read(lk, c['es'], ym)
+                if rows is None:
+                    continue
+                ok_any = True
+                for g, h, a, cc, _yr in rows:
+                    if g['st'] in ESPN_OFF or g['done'] or not (lo <= g['ko'] <= hi):
+                        continue
+                    out.append({'lk': lk, 'ko': iso(g['ko']), 'h': h, 'a': a, 'eid': g['id'], 'mkt': espn_market(cc)})
+        if ok_any:
+            keep = [f for f in fixl if f['lk'] not in {f2['lk'] for f2 in out} and parse_iso(f['ko']) >= lo]
+            state['es_fixtures'] = sorted(out + keep, key=lambda f: f['ko'])
+            last['es_fix'] = iso(NOW)
+    # 2) results history: past months once, recent months every few hours
+    oldest = NOW - timedelta(days=ES_HIST_DAYS)
+    for lk, c in comps:
+        if not c.get('hist'):
+            continue
+        hs = hist.setdefault(lk, {'m': {}, 'g': {}})
+        for ym in reversed(months_between(oldest, NOW)):
+            if time.time() - t0 > ES_BUDGET_S:
+                break
+            at = hs['m'].get(ym)
+            y, m = int(ym[:4]), int(ym[4:])
+            month_end = datetime(y + (m == 12), m % 12 + 1, 1, tzinfo=UTC)
+            if at and (parse_iso(at) > month_end + timedelta(days=2) or NOW - parse_iso(at) < timedelta(hours=ES_HIST_EVERY_H)):
+                continue
+            read(lk, c['es'], ym)
+        for gid in [k for k, v in hs['g'].items() if v[0] < oldest.strftime('%Y-%m-%d')]:
+            del hs['g'][gid]
+    if new_hist:
+        state['es_hist_new'] = True
+    n_fix = len(state.get('es_fixtures') or [])
+    n_res = sum(len(v['g']) for v in hist.values())
+    todo = sum(1 for lk, c in comps if c.get('hist') for ym in months_between(oldest, NOW) if ym not in hist.get(lk, {}).get('m', {}))
+    return f"{n_fix} fixtures, {n_res} results{f' ({todo} months still to read)' if todo else ''}, {calls} reads this run"
+
+
+ES_PX_HOURS = 36         # games this close to kick-off get DraftKings' prices from ESPN, every two hours
+ES_PX_BUDGET_S = 25
+
+
+def refresh_espn_prices(state, matches):
+    """Fresh prices for the games in the next day and a half in competitions The Odds API prices: DraftKings' prices
+    via ESPN cost nothing, and prices closer to kick-off predict better (on five past seasons, closing prices beat
+    earlier ones by more than any change of method), so they freshen a consensus that's hours old."""
+    if not due(state, 'es_px', ES_FIX_EVERY_H):
+        return None
+    state.setdefault('last', {})['es_px'] = iso(NOW)
+    t0, cache, out = time.time(), {}, {}
+    want = {}
+    for m in matches:
+        lk, ko = m.get('lk'), parse_iso(m['ko'])
+        if lk in ESPN_SLUG and not (L.get(lk) or {}).get('es') and NOW < ko < NOW + timedelta(hours=ES_PX_HOURS):
+            want.setdefault(ESPN_SLUG[lk], []).append((m['id'], lk, ko, base_name(m['h']), base_name(m['a'])))
+    for slug, items in sorted(want.items(), key=lambda x: min(i[2] for i in x[1])):
+        if time.time() - t0 > ES_PX_BUDGET_S:
+            break
+        rows = espn_board(slug, [i[2] for i in items], cache)
+        for mid, lk, ko, h, a in items:
+            g = espn_pair(lk, ko, h, a, rows) if rows else None
+            if g and g.get('mkt'):
+                out[mid] = g['mkt']
+    keep = {k: v for k, v in (state.get('es_prices') or {}).items() if k not in out and NOW - parse_iso(v.get('upd') or iso(NOW)) < timedelta(hours=12)}
+    state['es_prices'] = dict(keep, **out)
+    return len(out)
+
+
+def espn_results(state):
+    """The ESPN-rated competitions' results in the ratings' form: lk -> (games, season label)."""
+    out = {}
+    for lk, hs in (state.get('es_hist') or {}).items():
+        if lk not in L or not L[lk].get('hist') or not hs.get('g'):
+            continue
+        rows = sorted(hs['g'].values())
+        latest = max((r[5] or 0) for r in rows)
+        games = [(parse_date(r[0]), r[1], r[2], int(r[3]), int(r[4]), (r[5] or 0) == latest, None, None) for r in rows]
+        if len(games) >= 20:
+            out[lk] = (games, f'{latest}/{str(latest + 1)[2:]}' if L[lk]['country'] in ('England', 'Spain', 'France', 'Saudi Arabia', 'Netherlands', 'Australia', 'South Africa') else str(latest))
+    return out
 
 
 ESPN_LU_FROM = 75       # minutes before kick-off to start asking ESPN for line-ups
@@ -2148,8 +2425,8 @@ def expected_goals(lk, h, a, leagues, teams):
         aa, da = lg['ratings'][a]
         return [round(math.exp(lg['mu'] + lg['home'] + ah + da), 4), round(math.exp(lg['mu'] + aa + dh), 4)], False
     # cross-league: each side's own league ratings plus a league-strength offset
-    rh = teams.resolve_global(h)
-    ra = teams.resolve_global(a)
+    rh = teams.resolve_global(h, pool_=pool(lk))
+    ra = teams.resolve_global(a, pool_=pool(lk))
     if not rh or not ra:
         return None, False
     lh_, th = rh
@@ -2161,7 +2438,7 @@ def expected_goals(lk, h, a, leagues, teams):
     ah, dh = gh['ratings'][th]
     aa, da = ga['ratings'][ta]
     mu = (gh['mu'] + ga['mu']) / 2
-    home = 0.22 if L[lk]['group'] == 'cups' else (gh['home'] + ga['home']) / 2
+    home = 0.22 if is_cup(lk) else (gh['home'] + ga['home']) / 2
     lam_h = math.exp(mu + home + ah + sh / 2 + da - sa / 2)
     lam_a = math.exp(mu + aa + sa / 2 + dh - sh / 2)
     return [round(lam_h, 4), round(lam_a, 4)], True
@@ -2174,7 +2451,7 @@ def lam_sd(lk, h, a, leagues, teams, cross):
         if h in se and a in se:
             return [round(math.hypot(se[h][0], se[a][1]), 3), round(math.hypot(se[a][0], se[h][1]), 3)]
         return None
-    rh, ra = teams.resolve_global(h), teams.resolve_global(a)
+    rh, ra = teams.resolve_global(h, pool_=pool(lk)), teams.resolve_global(a, pool_=pool(lk))
     if not rh or not ra:
         return None
     sh_ = ((leagues.get(rh[0]) or {}).get('se') or {}).get(rh[1])
@@ -2226,7 +2503,9 @@ CREST_SEED = {
     'Estudiantes L.P.': 450, 'Gimnasia L.P.': 434, 'Toronto FC': 1601, 'Vancouver Whitecaps': 1603, 'CF Montreal': 1614,
     'St. Louis City': 20787, 'Urawa Reds': 287, 'Cerezo Osaka': 291}
 # API-Football's competition ids for Statpad's leagues (checked against their logos)
-AF_LEAGUE = {'EPL': 39, 'LaLiga': 140, 'BUN': 78, 'SA': 135, 'L1': 61, 'POR': 94, 'ERE': 88, 'BEL': 144, 'KSA': 307, 'ENG2': 40, 'GER2': 79, 'ITA2': 136, 'ESP2': 141, 'FRA2': 62, 'NED2': 89, 'ENG3': 41, 'ENG4': 42, 'SCO1': 179, 'SCO2': 180, 'TUR1': 203, 'GRE1': 197, 'AUT1': 218, 'SUI1': 207, 'DEN1': 119, 'NOR1': 103, 'SWE1': 113, 'POL1': 106, 'ROU1': 283, 'CZE1': 345, 'SRB1': 286, 'IRL1': 357, 'FIN1': 244, 'BRA1': 71, 'ARG1': 128, 'MEX1': 262, 'USA1': 253, 'JPN1': 98, 'CHN1': 169, 'UCL': 2, 'UEL': 3, 'UECL': 848, 'FAC': 45, 'EFLC': 48, 'DFB': 81, 'CDR': 143, 'CI': 137, 'CDF': 66, 'UNL': 5, 'INTF': 10}
+AF_LEAGUE = {'EPL': 39, 'LaLiga': 140, 'BUN': 78, 'SA': 135, 'L1': 61, 'POR': 94, 'ERE': 88, 'BEL': 144, 'KSA': 307, 'ENG2': 40, 'GER2': 79, 'ITA2': 136, 'ESP2': 141, 'FRA2': 62, 'NED2': 89, 'ENG3': 41, 'ENG4': 42, 'SCO1': 179, 'SCO2': 180, 'TUR1': 203, 'GRE1': 197, 'AUT1': 218, 'SUI1': 207, 'DEN1': 119, 'NOR1': 103, 'SWE1': 113, 'POL1': 106, 'ROU1': 283, 'CZE1': 345, 'SRB1': 286, 'IRL1': 357, 'FIN1': 244, 'BRA1': 71, 'ARG1': 128, 'MEX1': 262, 'USA1': 253, 'JPN1': 98, 'CHN1': 169, 'UCL': 2, 'UEL': 3, 'UECL': 848, 'FAC': 45, 'EFLC': 48, 'DFB': 81, 'CDR': 143, 'CI': 137, 'CDF': 66, 'UNL': 5, 'INTF': 10,
+             'WSL': 44, 'LIGAF': 142, 'D1F': 64, 'FBL': 82, 'NWSL': 254, 'UWCL': 525, 'AUS1': 188, 'KOR1': 292, 'BRA2': 72, 'CHI1': 265,
+             'COL1': 239, 'RSA1': 288, 'LIB': 13, 'SUD': 11}
 CREST_BUDGET_S = 30
 AF_TEAMS_EVERY_D = 30   # days between refreshes of a country's club list
 AF_TEAMS_PER_RUN = 4    # club-list calls per run, at most
@@ -2513,7 +2792,7 @@ CREST_NEIGHBOURS = {'england': ['wales'], 'switzerland': ['liechtenstein'], 'spa
 
 def team_country(lk):
     c = (L.get(lk) or {}).get('country') or ''
-    return cnorm(c) if (L.get(lk) or {}).get('group') not in ('cups', 'intl') and c not in ('Europe', 'World') else None
+    return cnorm(c) if not knockout(lk) and c not in ('Europe', 'World', 'South America') else None
 
 
 def af_country_teams(state, doc):
@@ -2718,11 +2997,14 @@ def publish_crests(state, doc):
     cr, fx, lc = state.get('crest') or {}, state.get('crest_fl') or {}, state.get('lgcrest') or {}
     sign = lambda i, f: i if (d / f).exists() else -i
     crests = {}
-    for n, _ in sorted(crest_names(doc)):
+    for n0, _ in sorted(crest_names(doc)):
+        n = n0 if (n0 in cr or n0 in fx or n0 in (state.get('es_logo') or {})) else base_name(n0)
         if n in cr and not (n in fx and not (d / f'{cr[n]}.png').exists() and (d / (crest_key(fx[n]) + '.png')).exists()):
-            crests[n] = sign(cr[n], f'{cr[n]}.png')
+            crests[n0] = sign(cr[n], f'{cr[n]}.png')
         elif n in fx and (d / (crest_key(fx[n]) + '.png')).exists():
-            crests[n] = crest_key(fx[n])
+            crests[n0] = crest_key(fx[n])
+        elif n in (state.get('es_logo') or {}):
+            crests[n0] = 'E' + state['es_logo'][n]   # ESPN's logo, loaded from ESPN by the page
     doc['crests'] = crests
     doc['lgcrests'] = {k: sign(lc[k], f'l{lc[k]}.png') for k in sorted(doc['leagues']) if k in lc}
     return len(doc['crests'])
@@ -2758,6 +3040,23 @@ def table_pos(leagues):
 
 def same_team(x, y):
     return norm(x) == norm(y) or norm(pretty(x)) == norm(y) or norm(x) == norm(pretty(y))
+
+
+def pick_market(main, es, old):
+    """The prices to use: the bookmakers' consensus, with DraftKings' (via ESPN) as a fresher voice when the consensus
+    is more than six hours old, or alone when nothing else prices the game."""
+    if main and es:
+        try:
+            age = (NOW - parse_iso(main['upd'])).total_seconds() / 3600 if main.get('upd') else None
+        except Exception:
+            age = None
+        if age is not None and age > 6:
+            m = dict(main, p=[round((a + b) / 2, 4) for a, b in zip(main['p'], es['p'])], upd=es.get('upd'), fresh='espn')
+            if main.get('ou') and es.get('ou') and es['ou'].get('line') == main['ou'].get('line', 2.5):
+                m['ou'] = dict(main['ou'], pO=round((main['ou']['pO'] + es['ou']['pO']) / 2, 4))
+            return m
+        return main
+    return main or es or old
 
 
 def build(state, prev, seed=None):
@@ -2800,6 +3099,29 @@ def build(state, prev, seed=None):
         if not find(f['lk'], h, a, f['ko'], f.get('tbc')):
             fx.append({'lk': f['lk'], 'ko': f['ko'], 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'of'})
 
+    def cup_names(lk, h, a):
+        rh, ra = teams.resolve_global(h, pool_=pool(lk)), teams.resolve_global(a, pool_=pool(lk))
+        return (rh[1] if rh else h), (ra[1] if ra else a)
+
+    for f in state.get('es_fixtures') or []:   # ESPN: competitions no other source lists, and DraftKings prices
+        if f['lk'] not in L:
+            continue
+        ko = parse_iso(f['ko'])
+        if not (lo <= ko <= hi):
+            continue
+        if is_cup(f['lk']):
+            h, a = cup_names(f['lk'], f['h'], f['a'])
+        else:
+            h = teams.resolve(f['lk'], f['h']) or f['h']
+            a = teams.resolve(f['lk'], f['a']) or f['a']
+        g = find(f['lk'], h, a, f['ko'])
+        if g:
+            g['es_mkt'] = f.get('mkt')
+            if g.get('ks') in ('of', 'fd'):
+                g['ko'], g['ks'], g['tbc'] = iso(ko), 'es', False   # ESPN's kick-off time is exact
+        else:
+            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'es_mkt': f.get('mkt'), 'ks': 'es'})
+
     plan = sport_plan(state, quiet=True) if state.get('api') else {}
     for key, blob in (state.get('api') or {}).items():
         lk = plan.get(key) or OA_KEY.get(key)
@@ -2811,10 +3133,8 @@ def build(state, prev, seed=None):
             ko = parse_iso(e['ko'])
             if not (lo <= ko <= hi):
                 continue
-            if L[lk]['group'] == 'cups':
-                rh, ra = teams.resolve_global(e['h']), teams.resolve_global(e['a'])
-                h = rh[1] if rh else e['h']
-                a = ra[1] if ra else e['a']
+            if is_cup(lk):
+                h, a = cup_names(lk, e['h'], e['a'])
             elif L[lk]['group'] == 'intl':
                 h = it.resolve(e['h']) or e['h']
                 a = it.resolve(e['a']) or e['a']
@@ -2865,7 +3185,7 @@ def build(state, prev, seed=None):
         if mid in seen:
             continue
         seen.add(mid)
-        mkt = f['api_mkt'] or f['fd_mkt'] or old.get('mkt')
+        mkt = pick_market(f['api_mkt'] or f['fd_mkt'], f.get('es_mkt') or (state.get('es_prices') or {}).get(mid), old.get('mkt'))
         om = old.get('mkt') or {}
         if mkt and mkt.get('src') == 'football-data' and om.get('src') == 'football-data' and om.get('avg') == mkt.get('avg') and om.get('best') == mkt.get('best'):
             mkt = dict(mkt, upd=om.get('upd'))   # same prices re-read: keep when they were first seen
@@ -2874,13 +3194,13 @@ def build(state, prev, seed=None):
         ph = pos.get((f['lk'], f['h']))
         pa = pos.get((f['lk'], f['a']))
         dom_h = dom_a = None
-        if L[f['lk']]['group'] == 'cups':
-            gh, ga = teams.resolve_global(f['h']), teams.resolve_global(f['a'])
+        if is_cup(f['lk']):
+            gh, ga = teams.resolve_global(f['h'], pool_=pool(f['lk'])), teams.resolve_global(f['a'], pool_=pool(f['lk']))
             dom_h, dom_a = (gh[0] if gh else None), (ga[0] if ga else None)
             ph = pos.get((dom_h, f['h'])) if dom_h else None
             pa = pos.get((dom_a, f['a'])) if dom_a else None
         clash = bool(ph and pa and ph[0] <= 6 and pa[0] <= 6 and ph[1] >= 10 and pa[1] >= 10)
-        if clash and L[f['lk']]['group'] == 'cups':
+        if clash and is_cup(f['lk']):
             clash = all(d and L[d]['strength'] >= -0.40 for d in (dom_h, dom_a))
         fr = False
         if L[f['lk']]['group'] == 'intl':
@@ -2901,7 +3221,7 @@ def build(state, prev, seed=None):
             ls = None
         news = team_news_for(state, mid, f['lk'], ko, f['h'], f['a'])
         matches.append({
-            'id': mid, 'lk': f['lk'], 'ko': iso(ko), 'h': pretty(f['h']), 'a': pretty(f['a']),
+            'id': mid, 'lk': f['lk'], 'ko': iso(ko), 'h': disp(f['lk'], f['h']), 'a': disp(f['lk'], f['a']),
             'ph': ph[0] if ph else None, 'pa': pa[0] if pa else None,
             'fh': ph[2] if ph else None, 'fa': pa[2] if pa else None,
             'dh': dom_h, 'da': dom_a,
@@ -2911,8 +3231,11 @@ def build(state, prev, seed=None):
             matches[-1]['tn'] = news
         if ls:
             matches[-1]['ls'] = ls
-        if MODEL_W and L[f['lk']]['group'] not in ('cups', 'intl') and not cross:
-            matches[-1]['wm'] = MODEL_W
+        if MODEL_W and not knockout(f['lk']) and not cross and not (mkt and (mkt.get('n') or 0) == 1):
+            matches[-1]['wm'] = MODEL_W   # tuned where many bookmakers price the games; one bookmaker alone keeps the default blend
+        lgr = leagues.get(f['lk']) or {}
+        if (L[f['lk']].get('hist') and (lgr.get('games') or 0) < 150) or (not lam and (not mkt or mkt.get('src') == 'espn')):
+            matches[-1]['thin'] = 1   # few games behind the ratings, or one bookmaker's prices alone
 
     # competitions no source covered this run keep their previous (or starter) fixtures until kick-off
     covered = {m['lk'] for m in matches}
@@ -2940,7 +3263,7 @@ def build(state, prev, seed=None):
             rec.update({'season': old_lg.get('season'), 'mu': None, 'home': None, 'table': old_lg['table']})
         if lg:
             rec.update({'season': lg.get('season'), 'mu': lg.get('mu'), 'home': lg.get('home'),
-                        'table': [[pretty(r[0])] + r[1:] for r in lg.get('table') or []]})
+                        'table': [[disp(lk, r[0])] + r[1:] for r in lg.get('table') or []]})
             if lg.get('shots'):
                 rec['sh'] = 1   # ratings use shots on target as well as goals
         out_leagues[lk] = rec
@@ -3118,6 +3441,7 @@ new Function('module', html.slice(s, e) + 'module.exports = ENGINE;')(mod);
 const E = mod.exports;
 const inp = JSON.parse(fs.readFileSync(inPath, 'utf8'));
 if (E.setCalib) E.setCalib(inp.calib && inp.calib.on ? inp.calib : null);
+if (E.setMcal) E.setMcal(inp.mcal || null);
 const now = Date.parse(inp.now);
 let fmt;
 try { fmt = new Intl.DateTimeFormat('en-CA', { timeZone: inp.tz, year: 'numeric', month: '2-digit', day: '2-digit' }); }
@@ -3158,7 +3482,7 @@ def run_engine(doc):
         js, inp = Path(td) / 'engine_run.js', Path(td) / 'in.json'
         js.write_text(NODE_ENGINE)
         inp.write_text(json.dumps({'now': iso(NOW), 'tz': TRACK_TZ, 'target': TRACK_TARGET, 'matches': doc['matches'],
-                                   'calib': doc.get('calib')}))
+                                   'calib': doc.get('calib'), 'mcal': doc.get('mcal')}))
         r = subprocess.run([node, str(js), str(INDEX_FILE), str(inp)], capture_output=True, text=True, timeout=300)
         if r.returncode != 0:
             log('track: engine failed', (r.stderr or '')[-300:])
@@ -3236,7 +3560,7 @@ def find_result(rec, state):
                    (state.get('api_scores') or {}).get(rec['lk']) or []):
         for dd, h, a, hg, ag in source:
             dt = datetime.strptime(dd[:10], '%Y-%m-%d').date()
-            if abs((dt - d0).days) <= 1 and same_team(h, rec['h']) and same_team(a, rec['a']):
+            if abs((dt - d0).days) <= 1 and same_team(h, base_name(rec['h'])) and same_team(a, base_name(rec['a'])):
                 return int(hg), int(ag)
     return None
 
@@ -3448,7 +3772,8 @@ const inp = JSON.parse(fs.readFileSync(inPath, 'utf8'));
 """
 
 NODE_BT = ENGINE_LOAD + r"""
-if (E.setCalib) E.setCalib(null);   // the replay shows the engine's own, uncorrected chances
+if (E.setCalib) E.setCalib(null);   // the replay shows the engine's own chances, without the track record's correction
+if (E.setMcal) E.setMcal(inp.mcal || null);
 const out = { picks: {}, slips: {}, value: [] }, byDay = {};
 for (const m of inp.matches) {
   let a = null;
@@ -3717,10 +4042,11 @@ def run_past_stakes(jobs, keys):
 # only if they beat the defaults there, after blending with the market as the site does.
 # ----------------------------------------------------------------------------------------------
 TUNE_EVERY_D = 30
+TUNE_V = 2          # 2: prices read by the power method, market share up to 100%
 TUNE_BUDGET_S = float(ENV('STATPAD_TUNE_BUDGET') or 420)
 TUNE_GRID = {'sw': [0.0, 0.15, 0.3, 0.45, 0.6, 0.75], 'hl': [120.0, 180.0, 270.0, 365.0, 540.0],
              'pw': [0.4, 0.6, 0.8, 1.0], 'k': [1.5, 2.5, 3.5, 5.0, 6.0, 8.0]}
-W_GRID = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
+W_GRID = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.97, 1.0]
 W_DEFAULT = 0.8
 _TUNE_JOBS = []   # (this season's rows, last season's rows); read by forked worker processes
 _TUNE_LKS = []    # the league of each
@@ -3882,7 +4208,7 @@ def run_tuning(state):
     w_live = w_best if w_on else W_DEFAULT
     fx = safe_fx(tr_rows, lam_tr, tr_jobs, tr_keys, rows_on, lam_ck, (cn_jobs, cn_keys) if p_on else (cd_jobs, cd_keys), w_live, t0)
     r5 = lambda x: round(x, 5)
-    out = {'at': iso(NOW), 'train': [season_name(c3), season_name(c2)], 'check': season_name(c1), 'check_code': c1,
+    out = {'at': iso(NOW), 'v': TUNE_V, 'train': [season_name(c3), season_name(c2)], 'check': season_name(c1), 'check_code': c1,
            'leagues': len(check), 'games': len(ck_new), 'evals': evals, 'secs': round(time.time() - t0),
            'search_secs': round(t_search), 'finished': finished,
            'default': DEFAULT_MODEL, 'params': best, 'on': p_on, 'w': w_best, 'w_on': w_on,
@@ -3974,7 +4300,8 @@ def tune_due(state):
     if not t:
         return due(state, 'tune', 6)   # first time: retry every 6 hours if the downloads fail
     return due(state, 'tune', TUNE_EVERY_D * 24) or t.get('check_code') != season_code(NOW, 1) or not t.get('finished', True) \
-        or ('fx' not in t and due(state, 'tune', 6))   # fatigue and motivation came later: fit them once
+        or ('fx' not in t and due(state, 'tune', 6)) \
+        or (t.get('v', 1) < TUNE_V and due(state, 'tune', 6))   # the way prices are read changed: tune again once
 
 
 def public_tune(state):
@@ -4040,7 +4367,7 @@ def run_backtest(state):
     if len(ms) < 200:
         log('backtest: not enough games with prices', len(ms))
         return None
-    eng = run_node(NODE_BT, {'target': TRACK_TARGET, 'matches': ms})
+    eng = run_node(NODE_BT, {'target': TRACK_TARGET, 'matches': ms, 'mcal': public_mcal(state)})
     if not eng:
         return None
     agg = new_agg()
@@ -4090,6 +4417,113 @@ def run_backtest(state):
            'by_league': dict(sorted(by_lg.items(), key=lambda x: -x[1][0]))}
     log(f"backtest: {label}, {len(ms)} games in {out['leagues']} leagues (ratings {t1 - t0:.0f} s, total {time.time() - t0:.0f} s)")
     return out
+
+# ----------------------------------------------------------------------------------------------
+# Per-market correction. The replay keeps every market's chance for two past seasons; for each kind of market
+# (home/away win, draw, double chance, goals lines, both teams to score, team goals) a correction
+# log-odds(landed) = a + b * log-odds(stated) is fitted on the older season and kept only if it predicts the
+# newer one, which it never saw, better. The page and the track record use the kept ones.
+# ----------------------------------------------------------------------------------------------
+NODE_SELS = ENGINE_LOAD + r"""
+if (E.setCalib) E.setCalib(null);
+if (E.setMcal) E.setMcal(null);
+const out = [];
+for (const m of inp.matches) {
+  let a = null; try { a = E.analyse(m, Date.parse(m.ko) - 3600e3); } catch (err) { a = null; }
+  if (!a) continue;
+  out.push([m.id, a.sels.filter((s) => !s.x).map((s) => [s.key, +s.p.toFixed(4)])]);
+}
+process.stdout.write(JSON.stringify(out));
+"""
+MCAL_MIN_GAIN = 2e-5     # log loss per selection on the unseen season
+
+
+def mcal_group(k):
+    return ('HA' if k in ('H', 'A') else 'D' if k == 'D' else 'DC' if k in ('1X', 'X2') else 'OU' if k in ('O15', 'O25', 'U25', 'U35')
+            else 'BTTS' if k in ('BTTS', 'BTTS_N') else 'TG' if re.match(r'^[HA]_O\d5$', k) else 'CB')
+
+
+def fit_logit(xs):
+    """Maximum-likelihood a, b in P(landed) = 1 / (1 + exp(-(a + b x))), held a little towards (0, 1)."""
+    a, b = 0.0, 1.0
+    for _ in range(40):
+        ga, gb, haa, hab, hbb = -a / 4, -(b - 1) / 1, -1 / 4, 0.0, -1.0
+        for x, y in xs:
+            p = 1 / (1 + math.exp(-(a + b * x)))
+            w = p * (1 - p)
+            ga += y - p
+            gb += (y - p) * x
+            haa -= w
+            hab -= w * x
+            hbb -= w * x * x
+        det = haa * hbb - hab * hab
+        if abs(det) < 1e-12:
+            break
+        da, db = (hbb * ga - hab * gb) / det, (haa * gb - hab * ga) / det
+        a, b = a - da, b - db
+        if abs(da) + abs(db) < 1e-10:
+            break
+    return a, b
+
+
+def logit_ll(xs, a=0.0, b=1.0):
+    t = 0.0
+    for x, y in xs:
+        p = 1 / (1 + math.exp(-(a + b * x)))
+        t -= math.log(max(1e-12, p if y else 1 - p))
+    return t / max(1, len(xs))
+
+
+def fit_mcal(state):
+    t0 = time.time()
+    data = {}
+    labels = []
+    for back, tag in ((2, 'fit'), (1, 'check')):
+        code, prev = season_code(NOW, back), season_code(NOW, back + 1)
+        seasons = {}
+        for lk, c in L.items():
+            if c['fd']:
+                cur = fd_season(lk, code)
+                if cur:
+                    seasons[lk] = (cur, fd_season(lk, prev))
+        ms, res = bt_matches(seasons)
+        if len(ms) < 500:
+            log('market correction: not enough replayed games for', season_name(code))
+            return None
+        out = run_node(NODE_SELS, {'matches': ms})
+        if not out:
+            return None
+        for mid, sels in out:
+            hs, as_ = res[mid]
+            for k, p in sels:
+                w = settle(k, hs, as_)
+                if w is None:
+                    continue
+                q = min(0.995, max(0.005, p))
+                data.setdefault(mcal_group(k), {}).setdefault(tag, []).append((math.log(q / (1 - q)), 1 if w else 0))
+        labels.append(season_name(code))
+    groups = {}
+    for g, d in sorted(data.items()):
+        fit_rows, ck = d.get('fit') or [], d.get('check') or []
+        if len(fit_rows) < 2000 or len(ck) < 1000:
+            continue
+        a, b = fit_logit(fit_rows)
+        l0, l1 = logit_ll(ck), logit_ll(ck, a, b)
+        on = l1 < l0 - MCAL_MIN_GAIN
+        if on:   # it helps on the unseen season: refit on both for the live correction
+            a, b = fit_logit(fit_rows + ck)
+        a, b = max(-0.3, min(0.3, a)), max(0.85, min(1.25, b))
+        groups[g] = {'on': on, 'a': round(a, 4), 'b': round(b, 4), 'n': len(fit_rows) + len(ck), 'll': [round(l0, 5), round(l1, 5)]}
+    log(f"market correction: fitted on {labels[0]}, checked on {labels[1]} in {time.time() - t0:.0f} s: "
+        + ', '.join(f"{g} {'on' if v['on'] else 'off'} ({v['ll'][0]:.4f} -> {v['ll'][1]:.4f})" for g, v in groups.items()))
+    return {'at': iso(NOW), 'fit': labels[0], 'check': labels[1], 'groups': groups}
+
+
+def public_mcal(state):
+    g = ((state.get('mcal') or {}).get('groups')) or {}
+    out = {k: [v['a'], v['b']] for k, v in g.items() if v.get('on')}
+    return out or None
+
 
 # ----------------------------------------------------------------------------------------------
 def load_json(p):
@@ -4146,6 +4580,13 @@ def main():
         state['model_sig'] = model_sig
         retuned = True
 
+    es_note = safe(lambda: refresh_espn_data(state), 'error')
+    n_px = safe(lambda: refresh_espn_prices(state, (prev or {}).get('matches') or []), None)
+    if n_px is not None:
+        es_note += f', fresh DraftKings prices for {n_px} games'
+        log('ESPN prices:', n_px, 'games')
+    src['espn_data'] = {'ok': es_note != 'error', 'at': iso(NOW), 'note': es_note}
+    log('ESPN competitions:', es_note)
     if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or 'teamfiles' not in state or 'last_played' not in state or retuned:
         res = safe(load_results, {})
         if res:
@@ -4168,6 +4609,17 @@ def main():
         else:
             src['results'] = {'ok': False, 'at': iso(NOW)}
         log('results:', len(res), 'leagues')
+        state['es_hist_new'] = True
+    if state.pop('es_hist_new', False) or retuned:   # the competitions rated from ESPN's results
+        eres = safe(lambda: espn_results(state), {})
+        if eres:
+            state.setdefault('leagues', {}).update(safe(lambda: compute_leagues(eres, Teams()), {}))
+            state.setdefault('recent_results', {}).update(safe(lambda: recent_results(eres), {}))
+            tf = safe(lambda: team_files(eres), None)
+            if tf:
+                state['teamfiles'] = dict(state.get('teamfiles') or {}, **tf)
+                state['teams_changed'] = True
+            log('ESPN ratings:', ', '.join(f"{lk} {len(g)} games" for lk, (g, _) in sorted(eres.items())))
 
     if due(state, 'intl', RESULTS_EVERY):
         last['intl'] = iso(NOW)   # on its own timer, so a failed download can't trigger reloads every run
@@ -4212,6 +4664,8 @@ def main():
     if n_fx:
         log(f'fatigue and motivation: {n_fx} games adjusted')
     doc['calib'] = safe(lambda: fit_calib(load_track(state)[0]['picks']), {'on': False, 'n': 0, 'need': CAL_MIN})
+    if public_mcal(state):
+        doc['mcal'] = public_mcal(state)
     if doc['calib'].get('on'):
         log(f"self-tuning: on from {doc['calib']['n']} graded picks (a={doc['calib']['a']}, b={doc['calib']['b']})")
     changed = prev is None or stable(doc) != stable(prev) or FORCE
@@ -4222,8 +4676,14 @@ def main():
     if n_sc:
         log('results from The Odds API for', n_sc, 'competitions')
     track = safe(lambda: track_update(doc, state), None)
-    if due(state, 'backtest', BT_EVERY_H) or not state.get('backtest') or retuned:
+    if due(state, 'backtest', BT_EVERY_H) or not state.get('backtest') or retuned or 'mcal' not in state:
         last['backtest'] = iso(NOW)
+        mc = safe(lambda: fit_mcal(state), None)
+        if mc:
+            state['mcal'] = mc
+            changed = True
+        else:
+            state.setdefault('mcal', {})
         bt = safe(lambda: run_backtest(state), None)
         if bt:
             state['backtest'] = bt
