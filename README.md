@@ -34,15 +34,15 @@ On a computer you can unzip `statpad.zip` and drag every file, including the `.g
 
 Every run saves each match's top pick before kick-off, along with the 10-odds slips for each day. The slips are frozen once their first game starts. When results arrive, the picks are graded and the **Track** tab shows:
 
-- hit rates for each tier against the chance Statpad stated
-- the slips' record and profit, at 1 unit per slip
+- a separate tracker for each entry level (**Nearly definite**, **Highly possible**, **Possible**). A pick counts at the level it had at the last update before kick-off. Each tracker shows how many of its picks landed against the chance Statpad stated, units won or lost at 1 unit a pick at the listed price, the current run, the last 20 results, the level's 10-odds slips, and its picks waiting or in play with live scores (landing or not as it stands). Tap a level to switch; the phone remembers your choice
+- the slips' record and profit for all three levels side by side, at 1 unit per slip
 - a calibration chart
 - closing-line value
 - whether Statpad's 1X2 probabilities beat the bookmakers' consensus
 
 The record uses the same engine as the page, run with Node from `index.html`.
 
-**Results speed.** Finished games are graded within minutes of the final whistle, from ESPN's public scoreboards (no key, no daily limit; see **Live scores and cash-out**). Postponed and abandoned games leave the queue straight away. For the few competitions ESPN doesn't carry (the Swiss, Romanian, Polish, Czech, Serbian and Finnish leagues), an API-Football key grades them within a couple of hours; without it, those results come from football-data.co.uk, which publishes them twice a week. The site also gets a `results.json` with the last three weeks' final scores, which **My bets** uses.
+**Results speed.** Finished games are graded on the first run after the final whistle (within about 5 minutes), from ESPN's public scoreboards (no key, no daily limit; see **Live scores and cash-out**). Postponed and abandoned games leave the queue straight away. For the few competitions ESPN doesn't carry (the Swiss, Romanian, Polish, Czech, Serbian and Finnish leagues), an API-Football key grades them within a couple of hours; without it, those results come from football-data.co.uk, which publishes them twice a week. The site also gets a `results.json` with the last three weeks' final scores, which **My bets** uses.
 
 **Self-tuning.** Once 150 top picks have been graded, every update compares the chances Statpad stated with what actually landed over the last 90 days, and fits a small correction. If Statpad has been over-confident, its stated chances, tiers and slips are trimmed; if under-confident, they're raised. The fit uses the chances as stated before any correction, so it never feeds on itself, and it stays close to "no change" until the evidence is strong. The Track tab shows its progress and the current correction. Results for UEFA, cup and Saudi games come from The Odds API and are only fetched on paid plans.
 

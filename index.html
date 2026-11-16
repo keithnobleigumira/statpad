@@ -1160,6 +1160,41 @@ body { background: var(--paper); }
 /* reduced motion: still, instant */
 .calm *, .calm *::before, .calm *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 .calm .tape-in { animation: none !important; }
+/* ---------- track: one tracker per entry level ---------- */
+.tk-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+.tk-tile { --tc: var(--cobalt); text-align: left; background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 11px 11px 10px; color: var(--ink); font: inherit; cursor: pointer; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 3px; min-width: 0; transition: border-color .15s, transform .2s var(--spring); }
+.tk-A { --tc: var(--pitch); } .tk-B { --tc: var(--cobalt); } .tk-C { --tc: var(--yellow); }
+.tk-tile[aria-pressed="true"] { border-color: var(--tc); box-shadow: inset 0 0 0 1px var(--tc), var(--shadow); }
+.tk-tile:active { transform: scale(.98); }
+.tk-tile:focus-visible { outline: 2px solid var(--tc); outline-offset: 2px; }
+.tk-name { font: 700 12.5px/1.15 var(--f-body); color: var(--ink-2); display: flex; gap: 6px; align-items: flex-start; }
+.tk-name i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--tc); margin-top: 3px; }
+.tk-big { font: 700 26px/1 var(--f-display); font-stretch: 110%; letter-spacing: -.02em; margin-top: 4px; }
+.tk-big small { font: 500 11px var(--f-body); color: var(--ink-3); letter-spacing: 0; margin-left: 3px; }
+.tk-sm { font-size: 11.5px; color: var(--ink-3); line-height: 1.3; }
+.tk-tile .hit { margin-top: 5px; min-width: 0; height: 6px; } .tk-tile .hit i, .tk-card .hit i { background: var(--tc); }
+.tk-card { margin: 0 0 14px; border-top: 3px solid var(--tc); }
+.tk-h { display: flex; align-items: center; font-weight: inherit; } .tk-h .tier { margin-right: 7px; font-style: normal; }
+.tk-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 11px; overflow: hidden; }
+.tk-stats > div { background: var(--card); padding: 10px 11px; min-width: 0; }
+.tk-stats b { display: block; font: 700 18px/1.1 var(--f-display); font-stretch: 108%; letter-spacing: -.01em; }
+.tk-stats span { display: block; font-size: 11.5px; color: var(--ink-3); margin-top: 4px; line-height: 1.3; }
+@media (max-width: 560px) { .tk-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tk-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: 12.5px; color: var(--ink-2); }
+.tk-form { display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); gap: 3px; width: 100%; max-width: 380px; }
+.tk-form span { aspect-ratio: 1; border-radius: 3px; background: var(--red-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 45%, transparent); }
+.tk-form span.w { background: var(--pitch); box-shadow: none; }
+.tk-spark { display: block; width: 100%; height: 54px; margin-top: 6px; }
+.tk-spark text { font: 500 10px var(--f-mono); fill: var(--ink-3); }
+.tk-sec { margin-top: 16px; }
+.tk-sec h5 { margin: 0 0 4px; font: 700 12px/1.2 var(--f-body); color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px; }
+.tk-sec h5 span { font-weight: 500; color: var(--ink-3); }
+.wl.lv { background: var(--cobalt-soft); color: var(--cobalt); }
+.wl.lv.w { background: var(--pitch-soft); color: var(--pitch); } .wl.lv.l { background: var(--red-soft); color: var(--red); }
+.tk-more { margin-top: 8px; }
+.tk-card .wl { min-width: 66px; }
+.tk-cols { display: grid; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) { .tk-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; } .tk-form { max-width: 420px; } }
 </style>
 </head>
 <body>
@@ -2323,33 +2358,118 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (S.tab === 'track') renderTrack();
   }
   const rate = (w, n) => (n ? w / n : null);
+  // one tracker per entry level: graded top picks (all-time counts, detail from the last 90 days), the
+  // level's daily slips, and its picks still waiting, with live scores while they're being played
+  function tierStats(T, t) {
+    const g = T.agg || {}, r = (g.tiers || {})[t] || [0, 0, 0], sl = (g.slips || {})[t] || [0, 0, 0, 0];
+    const rows = (T.picks || []).filter((p) => p[12] === t).sort((x, y) => (x[2] < y[2] ? -1 : x[2] > y[2] ? 1 : 0));
+    let u = 0, un = 0, est = 0; const curve = [0];
+    for (const p of rows) if (p[10] > 1) { un++; if (!p[11]) est++; u += p[13] ? p[10] - 1 : -1; curve.push(u); }
+    const last = rows.length ? rows[rows.length - 1][13] : null; let streak = 0;
+    for (let i = rows.length - 1; i >= 0 && rows[i][13] === last; i--) streak++;
+    const wait = (T.waiting || []).filter((w) => w[9] === t);
+    return { t, n: r[0], w: r[1], said: r[0] ? r[2] / r[0] : null, hr: r[0] ? r[1] / r[0] : null, rows, u, un, est, curve, last, streak, sl, wait,
+      slips: (T.slips || []).filter((x) => x.t === t), open: (T.open || []).filter((x) => x.t === t), pend: (T.pend_t || {})[t] };
+  }
+  const TIER_RANGE = (t) => { const c = ENGINE.TIERS[t]; return c.hi > 1 ? `cautious chance ${pct(c.lo, 0)} or more` : `cautious chance ${pct(c.lo, 0)}–${pct(c.hi, 0)}`; };
+  function tkWaitState(w) {   // [id, lk, ko, home, away, key, chance, price, real, tier]
+    const fn = settleFn(w[5]), R = resultsNow().scores[w[0]], L = liveNow(w[0]);
+    if (R && fn) return { st: 'done', ok: !!fn(R[0], R[1]), sc: R };
+    if (L && fn) return { st: L.ft ? 'done' : 'live', ok: !!fn(L.h, L.a), sc: [L.h, L.a], L };
+    const ko = Date.parse(w[2]);
+    return { st: ko > Date.now() ? 'pre' : Date.now() < ko + 115 * 60e3 ? 'play' : 'wait' };
+  }
+  function tkWaitRow(w, x) {
+    x = x || tkWaitState(w); const ko = Date.parse(w[2]), today = new Date(ko).toDateString() === new Date().toDateString();
+    const when = today ? tFmt.format(ko) : wdFmt.format(ko) + ' ' + tFmt.format(ko);
+    const badge = x.st === 'done' ? `<span class="wl ${x.ok ? 'w' : 'l'}">${x.ok ? 'Landed' : 'Missed'}</span>`
+      : x.st === 'live' ? `<span class="wl lv ${x.ok ? 'w' : 'l'}">${x.L.st === 'HT' ? 'HT' : Math.round(x.L.min) + '’'}</span>`
+      : `<span class="wl o">${x.st === 'pre' ? esc(today ? tFmt.format(ko) : wdFmt.format(ko)) : x.st === 'play' ? 'In play' : 'Result due'}</span>`;
+    const sc = x.sc ? `${esc(w[3])} ${x.sc[0]}–${x.sc[1]} ${esc(w[4])}` : `${esc(w[3])} v ${esc(w[4])}`;
+    const note = x.st === 'done' ? ' · final, being confirmed' : x.st === 'live' ? (x.ok ? ' · landing as it stands' : ' · not landing as it stands')
+      : x.st === 'play' ? (esSlug(w[1]) ? ' · waiting for the score' : ' · no live score for this competition') : x.st === 'wait' ? ` · kicked off ${esc(when)}` : ` · ${esc(when)}`;
+    return `<div class="res">${badge}<span class="sel">${esc(keyLabel(w[5], w[3], w[4]))}</span>
+      <span class="pr">${odds(w[7])}${w[8] ? '' : ' est'}<small>${pct(w[6])}</small></span>
+      <span class="fxl">${sc} · ${esc(lgName(w[1]))}${note}</span></div>`;
+  }
+  function tkWaitHtml(t) {
+    const T = S.track; if (!T) return '';
+    const W = (T.waiting || []).filter((w) => w[9] === t);
+    if (!W.length) return `<p class="note">No ${esc(TIER_NAME[t])} picks waiting in the next day and a half.</p>`;
+    const RANK = { live: 0, play: 0, done: 1, wait: 2, pre: 3 }, X = W.map((w) => [w, tkWaitState(w)]);
+    X.sort((a, b) => RANK[a[1].st] - RANK[b[1].st] || (a[0][2] < b[0][2] ? -1 : a[0][2] > b[0][2] ? 1 : 0));
+    const now = X.filter((x) => x[1].st !== 'pre'), next = X.filter((x) => x[1].st === 'pre');
+    return now.concat(next.slice(0, 12)).map(([w, x]) => tkWaitRow(w, x)).join('') + (next.length > 12 ? `<p class="note">and ${next.length - 12} more later.</p>` : '');
+  }
+  function tkSpark(c) {   // cumulative units, pick by pick; the dashed line is break-even
+    if (c.length < 4) return '';
+    const W = 320, H = 54, P = 4, lo = Math.min(0, ...c), hi = Math.max(0, ...c), span = hi - lo || 1, end = c[c.length - 1];
+    const x = (i) => (i / (c.length - 1)) * W, y = (v) => P + (1 - (v - lo) / span) * (H - 2 * P);
+    return `<svg class="tk-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Units won or lost, pick by pick: ${end >= 0 ? '+' : ''}${end.toFixed(1)}">
+      <line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink-3)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+      <polyline points="${c.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--tc)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  function tkPickRows(rows) {
+    return rows.map((p) => {
+      const ko = Date.parse(p[2]);
+      return `<div class="res"><span class="wl ${p[13] ? 'w' : 'l'}">${p[13] ? 'Landed' : 'Missed'}</span><span class="sel">${esc(keyLabel(p[8], p[3], p[4]))}</span>
+        <span class="pr">${odds(p[10])}${p[11] ? '' : ' est'}<small>${pct(p[9])}</small></span>
+        <span class="fxl">${esc(dFmt.format(ko))} · ${esc(p[3])} ${p[5]}–${p[6]} ${esc(p[4])} · ${esc(lgName(p[1]))}</span></div>`;
+    }).join('');
+  }
+  function tkCard(T, x) {
+    const t = x.t, name = TIER_NAME[t], diff = x.hr != null ? x.hr - x.said : null, sl = x.sl;
+    const streak = x.last == null ? '–' : `${x.streak} ${x.last ? 'landed' : 'missed'}`;
+    const recent = x.rows.slice().reverse(), shown = S.tkMore ? recent : recent.slice(0, 12);
+    const days = T.since ? Math.round((Date.now() - Date.parse(T.since)) / 86400e3) : 0, span = days > 90 ? 'last 90 days' : 'so far';
+    return `<div class="card tk-card tk-${t}" id="tkCard">
+      <h4><b class="tk-h"><i class="tier tier-${t}">${t}</i>${esc(name)}</b><span>${esc(TIER_RANGE(t))}</span></h4>
+      <div class="tk-stats">
+        <div><b class="mono">${x.n ? `${x.w}/${x.n}` : '–'}</b><span>${x.n ? `top picks landed (${pct(x.hr, 0)})` : 'no top picks graded yet'}</span></div>
+        <div><b class="mono">${x.said != null ? pct(x.said, 0) : '–'}</b><span>${diff == null ? 'Statpad said' : `Statpad said · ${diff >= 0 ? 'landed' : 'fell'} ${Math.abs(Math.round(diff * 100))} pts ${diff >= 0 ? 'above' : 'below'}`}</span></div>
+        <div><b class="mono ${x.un ? (x.u >= 0 ? 'pl-pos' : 'pl-neg') : ''}">${x.un ? `${x.u >= 0 ? '+' : ''}${x.u.toFixed(1)} u` : '–'}</b><span>1 unit on each at its price${x.un ? `, ${x.un} pick${x.un === 1 ? '' : 's'} ${span}` : ''}</span></div>
+        <div><b class="mono">${esc(streak)}</b><span>${x.last == null ? 'current run' : 'in a row, current run'}</span></div>
+      </div>
+      ${x.n ? `<span class="hit" data-tip="Landed ${pct(x.hr, 1)} · Statpad said ${pct(x.said, 1)}"><i style="width:${x.hr * 100}%"></i><b style="left:calc(${x.said * 100}% - 1px)"></b></span>` : ''}
+      ${x.rows.length ? `<div class="tk-row"><span>${x.rows.length > 1 ? `Last ${Math.min(20, x.rows.length)}, oldest first` : 'Last pick'}</span><div class="tk-form">${x.rows.slice(-20).map((p) => `<span class="${p[13] ? 'w' : ''}" data-tip="${esc(keyLabel(p[8], p[3], p[4]))} · ${esc(p[3])} ${p[5]}–${p[6]} ${esc(p[4])} · ${p[13] ? 'landed' : 'missed'}"></span>`).join('')}</div></div>` : ''}
+      ${x.curve.length >= 4 ? `<div class="tk-row"><span>Units won or lost, pick by pick (dashed line: break-even)</span><b class="mono ${x.u >= 0 ? 'pl-pos' : 'pl-neg'}" style="margin-left:auto">${x.u >= 0 ? '+' : ''}${x.u.toFixed(1)} u</b></div>${tkSpark(x.curve)}` : ''}
+      <div class="tk-row"><span>${T.target || 10}-odds ${esc(name)} slips: <b>${sl[0] ? `${sl[1]} of ${sl[0]} won` : 'none settled yet'}</b>${sl[0] ? ` · <b class="${sl[2] >= 0 ? 'pl-pos' : 'pl-neg'}">${sl[2] >= 0 ? '+' : ''}${sl[2].toFixed(1)} u</b> · Statpad said ${pct(sl[3] / sl[0], 1)} a slip` : ''}${x.open.length ? ` · ${x.open.length} in play` : ''}</span></div>
+      <div class="tk-cols"><div class="tk-sec"><h5>Waiting and in play <span>${x.wait.length || ''}</span></h5><div id="tkWait">${tkWaitHtml(t)}</div></div>
+      <div class="tk-sec"><h5>Latest results <span>${x.rows.length ? `${x.rows.length} ${span}` : ''}</span></h5>${tkPickRows(shown) || `<p class="note">No ${esc(name)} picks graded yet.</p>`}
+        ${recent.length > 12 && !S.tkMore ? `<button type="button" class="btn tk-more" data-tkmore="1">Show all ${recent.length}</button>` : ''}</div></div>
+      <div class="tk-sec"><h5>${esc(name)} slips</h5>${slipList(x.open.slice(-4).reverse().concat(x.slips.slice(-8).reverse())) || '<p class="note">No slips at this level yet.</p>'}</div>
+      ${x.est ? `<p class="note">${x.est} of the ${x.un} prices are estimates (markets without a bookmaker price, marked est).</p>` : ''}
+    </div>`;
+  }
   function renderTrack() {
     const box = $('#trackBox');
     if (!S.trackAt) { box.innerHTML = '<div class="empty-state"><b>Loading the track record…</b></div>'; loadTrack(); return; }
     loadTrack();
     const T = S.track;
     if (!T) { box.innerHTML = `<div class="empty-state"><b>No track record here yet</b>Your GitHub site keeps the track record. It appears after the site's next update.</div>${btCard()}`; return; }
-    const g = T.agg || {}, tiers = g.tiers || {}, sl = g.slips || {};
+    const g = T.agg || {}, sl = g.slips || {};
     const since = T.since ? new Date(T.since).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-    if (!g.n && !(T.slips || []).length) {
-      box.innerHTML = `<div class="empty-state"><b>The track record has started</b>${T.pending || 0} predictions are saved and waiting for results. The first grades appear a few minutes after each final whistle.${(T.open || []).length ? `<br><br>${T.open.length} slips are in play.` : ''}</div>${openSlipsCard(T)}${btCard()}`;
-      return;
-    }
+    if (!['A', 'B', 'C'].includes(S.tkT)) S.tkT = 'A';
+    const X = { A: tierStats(T, 'A'), B: tierStats(T, 'B'), C: tierStats(T, 'C') };
     let tn = 0, tw = 0, tp = 0;
-    for (const t of ['A', 'B', 'C']) { const r = tiers[t] || [0, 0, 0]; tn += r[0]; tw += r[1]; tp += r[2]; }
+    for (const t of ['A', 'B', 'C']) { tn += X[t].n; tw += X[t].w; tp += X[t].said != null ? X[t].said * X[t].n : 0; }
     let sn = 0, sw = 0, su = 0;
     for (const t of ['A', 'B', 'C']) { const r = sl[t] || [0, 0, 0, 0]; sn += r[0]; sw += r[1]; su += r[2]; }
     const clv = g.clv || [0, 0, 0];
     const kpi = [
-      [g.n || 0, 'matches graded'],
-      [tn ? pct(tw / tn, 0) : '–', tn ? `tier picks landed (said ${pct(tp / tn, 0)})` : 'tier picks landed'],
+      [g.n || 0, g.n ? 'matches graded' : `matches graded · ${T.pending || 0} waiting`],
+      [tn ? pct(tw / tn, 0) : '–', tn ? `level picks landed (said ${pct(tp / tn, 0)})` : 'level picks landed'],
       [sn ? `${sw}/${sn}` : '–', sn ? `slips landed · ${su >= 0 ? '+' : ''}${su.toFixed(1)} units` : 'slips landed'],
       [clv[0] ? sgn(clv[1] / clv[0]) : '–', clv[0] ? `closing-line value (${clv[0]} picks)` : 'closing-line value'],
     ];
-    const tierRows = ['A', 'B', 'C'].map((t) => {
-      const r = tiers[t] || [0, 0, 0]; const hr = rate(r[1], r[0]), ex = r[0] ? r[2] / r[0] : null;
-      return `<tr><td><span class="tier tier-${t}">${t}</span>${TIER_NAME[t]}<span class="hit" data-tip="${r[0]} picks · landed ${hr == null ? '–' : pct(hr, 1)} · Statpad said ${ex == null ? '–' : pct(ex, 1)}"><i style="width:${(hr || 0) * 100}%"></i>${ex != null ? `<b style="left:calc(${ex * 100}% - 1px)"></b>` : ''}</span></td>
-        <td>${r[0]}</td><td>${hr == null ? '–' : pct(hr, 0)}</td><td>${ex == null ? '–' : pct(ex, 0)}</td><td class="${hr != null && hr - ex >= 0 ? 'edge-pos' : ''}">${hr == null ? '–' : sgn(hr - ex, 0).replace('%', ' pts')}</td></tr>`;
+    const tiles = ['A', 'B', 'C'].map((t) => {
+      const x = X[t], wn = x.wait.length;
+      return `<button type="button" class="tk-tile tk-${t}" data-tk="${t}" aria-pressed="${S.tkT === t}">
+        <span class="tk-name"><i></i>${esc(TIER_NAME[t])}</span>
+        <span class="tk-big mono">${!x.n ? '–' : x.n < 10 ? `${x.w}/${x.n}` : pct(x.hr, 0)}</span>
+        <span class="tk-sm">${x.n ? `${x.w} of ${x.n} landed · said ${pct(x.said, 0)}` : 'none graded yet'}</span>
+        <span class="tk-sm">${wn ? `${wn} waiting` : '&nbsp;'}</span>
+        ${x.n ? `<span class="hit"><i style="width:${x.hr * 100}%"></i><b style="left:calc(${x.said * 100}% - 1px)"></b></span>` : ''}</button>`;
     }).join('');
     const slipRows = ['A', 'B', 'C'].map((t) => {
       const r = sl[t] || [0, 0, 0, 0];
@@ -2363,30 +2483,20 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const verdict = v[0][1] <= v[1][1] ? 'Statpad has been sharper than the bookmakers’ consensus.' : 'The bookmakers’ consensus has been sharper than Statpad so far.';
       llHtml = `<div class="ll">${v.map(([n, x]) => `<div class="${x === best ? 'best' : ''}"><div class="v">${x.toFixed(3)}</div><div class="l">${n}</div></div>`).join('')}</div><p class="note">Log loss on 1X2 over ${ll[0]} games (lower is better). ${verdict}</p>`;
     }
-    const picks = (T.picks || []).slice(-40).reverse();
-    const pickRows = picks.map((p) => {
-      const ko = Date.parse(p[2]);
-      return `<div class="res"><span class="wl ${p[13] ? 'w' : 'l'}">${p[13] ? 'Won' : 'Lost'}</span><span class="sel">${esc(keyLabel(p[8], p[3], p[4]))}</span>
-        <span class="pr">${odds(p[10])}${p[11] ? '' : ' est'}<small>${pct(p[9])}${p[12] !== '-' ? ' · ' + p[12] : ''}</small></span>
-        <span class="fxl">${esc(dFmt.format(ko))} · ${esc(p[3])} ${p[5]}–${p[6]} ${esc(p[4])} · ${esc(lgName(p[1]))}</span></div>`;
-    }).join('');
     box.innerHTML = `
       <div class="kpis" style="max-width:none;margin:0 0 14px">${kpi.map(([v, l]) => `<div class="kpi"><div class="kpi-v mono">${v}</div><div class="kpi-l">${esc(l)}</div></div>`).join('')}</div>
+      <div class="tk-tiles" role="group" aria-label="Entry level">${tiles}</div>
+      ${tkCard(T, X[S.tkT])}
       <div class="trk-grid">
         ${btCard()}
-        <div class="card"><h4>Top picks by tier <span>bar = landed · mark = Statpad's chance</span></h4>
-          <div class="tt-wrap"><table class="tt"><thead><tr><th>Tier</th><th>Picks</th><th>Landed</th><th>Said</th><th>Diff</th></tr></thead><tbody>${tierRows}</tbody></table></div></div>
         <div class="card"><h4>Slips at ${T.target || 10} odds <span>1 unit on each</span></h4>
-          <div class="tt-wrap"><table class="tt"><thead><tr><th>Tier</th><th>Played</th><th>Won</th><th>Hit</th><th class="hide-sm">Said</th><th>Units</th></tr></thead><tbody>${slipRows}</tbody></table></div>
+          <div class="tt-wrap"><table class="tt"><thead><tr><th>Level</th><th>Played</th><th>Won</th><th>Hit</th><th class="hide-sm">Said</th><th>Units</th></tr></thead><tbody>${slipRows}</tbody></table></div>
           ${g.void ? `<p class="note">${g.void} slips voided after a postponed game.</p>` : ''}</div>
         <div class="card"><h4>Calibration <span>tap a dot</span></h4>${calChart(g.cal || [])}</div>
         ${tuneCard()}
         <div class="card"><h4>Statpad vs the market</h4>${llHtml}</div>
-        ${openSlipsCard(T)}
-        <div class="card"><h4>Latest results <span>top pick on each card</span></h4>${pickRows || '<p class="note">No graded picks yet.</p>'}</div>
-        <div class="card"><h4>Recent slips</h4>${slipList((T.slips || []).slice(-12).reverse()) || '<p class="note">No settled slips yet.</p>'}</div>
       </div>
-      <p class="note">Recording since ${esc(since)}. A match's top pick is the one on its card at the last update before kick-off. Slips are the ${T.target || 10}-odds slips as they stood before their first game, with days counted in ${esc(T.tz || 'UTC')}. Results come from API-Football within a couple of hours when its key is set, otherwise from football-data.co.uk within 2–4 days. Detail covers the last 90 days; the totals are all-time.</p>`;
+      <p class="note">Recording since ${esc(since)}. Each match's top pick is graded at the level it had at the last update before kick-off, so every level keeps its own record; picks below the three levels count only in the match total. Slips are the ${T.target || 10}-odds slips as they stood before their first game, with days counted in ${esc(T.tz || 'UTC')}. Results come from ESPN a few minutes after the final whistle (football-data.co.uk and API-Football fill in the competitions ESPN doesn't carry). Detail covers the last 90 days; the counts are all-time.</p>`;
   }
   function btCard() {
     const B = S.bt; if (!B || !B.agg) return '';
@@ -3536,7 +3646,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       [won + lost ? `${won}/${won + lost}` : '–', open.length ? `won · ${open.length} open (${money(open.reduce((a, b) => a + b.stake, 0))})` : 'won', ''],
     ];
     const size = (b) => (b.legs.length === 1 ? 'Singles' : b.legs.length <= 4 ? '2–4 legs' : '5+ legs');
-    const src = (b) => (String(b.src || '').startsWith('slip-') ? 'Statpad slips' : 'Own picks');
+    const src = (b) => { const t = /^slip-([ABC])$/.exec(String(b.src || '')); return t ? TIER_NAME[t[1]] + ' slips' : String(b.src || '').startsWith('slip-') ? 'Statpad slips' : 'Own picks'; };
     const cfg = S.bcfg;
     if (!all.length) {
       box.innerHTML = `<div class="empty-state"><b>No saved bets yet</b>Build a coupon, then tap <b>Save to My bets</b>. Enter your stake and your bookmaker's odds; Statpad checks the price, settles the bet when results come in and keeps your profit and loss. Everything stays on this device.</div>${settingsCard(cfg)}`;
@@ -3554,7 +3664,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           <p class="note">The expected figure is what these bets were worth on average at your odds, after tax. Over many bets your result drifts towards it; the gap is luck. ${avgGap != null && avgGap < -0.03 ? 'Your odds have been below fair on average, so better prices would help most.' : ''}</p></div>
         ${done.length ? `<div class="card"><h4>By slip size</h4><div class="tt-wrap"><table class="tt"><thead><tr><th>Type</th><th>Bets</th><th>Won</th><th class="hide-sm">Staked</th><th>P/L</th><th>Return</th></tr></thead><tbody>${statRows(groupStats(done, size))}</tbody></table></div></div>
         <div class="card"><h4>By bookmaker</h4><div class="tt-wrap"><table class="tt"><thead><tr><th>Bookmaker</th><th>Bets</th><th>Won</th><th class="hide-sm">Staked</th><th>P/L</th><th>Return</th></tr></thead><tbody>${statRows(groupStats(done, (b) => b.bk || 'Not set'))}</tbody></table></div></div>
-        <div class="card"><h4>Statpad slips vs own picks</h4><div class="tt-wrap"><table class="tt"><thead><tr><th>Source</th><th>Bets</th><th>Won</th><th class="hide-sm">Staked</th><th>P/L</th><th>Return</th></tr></thead><tbody>${statRows(groupStats(done, src))}</tbody></table></div></div>` : ''}
+        <div class="card"><h4>By entry level <span>Statpad slips by level, and your own picks</span></h4><div class="tt-wrap"><table class="tt"><thead><tr><th>Source</th><th>Bets</th><th>Won</th><th class="hide-sm">Staked</th><th>P/L</th><th>Return</th></tr></thead><tbody>${statRows(groupStats(done, src))}</tbody></table></div></div>` : ''}
       </div>
       ${open.length ? `<h3 class="bets-h">Open bets <span>${open.length}</span></h3><div class="bets">${open.map(betCard).join('')}</div>` : ''}
       ${done.length ? `<h3 class="bets-h">Settled <span>${done.length}</span></h3><div class="bets">${done.slice(0, S.betsShown || 20).map(betCard).join('')}</div>${done.length > (S.betsShown || 20) ? '<button type="button" class="btn" data-bact="more|x" style="margin-top:12px">Show more</button>' : ''}` : ''}
@@ -4276,6 +4386,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     shockRefresh(); S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
     if (S.tab === 'matches' && !!was !== !!S.shk.liveN) renderMatches();
     if (S.tab === 'matches' && S.ready) renderSpot();
+    if (S.tab === 'track') { const w = $('#tkWait'); if (w) w.innerHTML = tkWaitHtml(S.tkT); }
   }
   function liveTxt(id) {
     const g = S.live && S.live.games && S.live.games[id]; if (!g) return '';
@@ -6344,7 +6455,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   renderNav();
   load(true);
   connectLegacy();
-  setInterval(() => { load(false); if (Date.now() - S.resultsAt > 10 * 60e3) loadResults(true); if (document.visibilityState === 'visible') loadLive(false); }, 60e3);
+  setInterval(() => { load(false); if (Date.now() - S.resultsAt > 10 * 60e3) loadResults(true); if (document.visibilityState === 'visible') { loadLive(false); if (S.tab === 'track') loadTrack(false); } }, 60e3);
+  S.tkT = store.get('trkT', 'A');
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest && e.target.closest('[data-tk],[data-tkmore]'); if (!b) return;
+    if (b.dataset.tk) { if (S.tkT === b.dataset.tk) return; S.tkT = b.dataset.tk; S.tkMore = false; store.set('trkT', S.tkT); buzz(8); }
+    else S.tkMore = true;
+    renderTrack();
+  });
   setTimeout(() => { loadLive(true); esTick(); }, 3000);
   setTimeout(() => loadResults(true), 2500);
   setInterval(async () => { if (!S.data || !S.ready) return; S.now = Date.now(); const tk = ++S.token; try { if (await analyseAll(tk)) render(); } catch (e) { showFatal(e); } }, 5 * 60e3);

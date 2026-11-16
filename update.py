@@ -3315,10 +3315,11 @@ def track_update(doc, state):
     # 3) grade finished matches
     changed = False
     af_void = (state.get('af') or {}).get('void') or {}
+    fast = (state.get('af') or {}).get('scores') or {}     # ESPN's finals: grade at once, no 2-hour wait
     scores = state.setdefault('scores', {})
     for mid, rec in list(pend.items()):
         ko = parse_iso(rec['ko'])
-        if ko > NOW - timedelta(hours=2):
+        if ko > NOW - timedelta(hours=2) and mid not in fast:
             continue
         res = find_result(rec, state)
         if res is None:
@@ -3391,9 +3392,18 @@ def track_update(doc, state):
         tr['updated'] = iso(NOW)
         tr['new'] = tr.get('new', 0) + 1
 
+    # each entry level's picks waiting for a result: from 4 hours ago (in play) to a day and a half ahead
+    pend_t, waiting = {'A': 0, 'B': 0, 'C': 0, '-': 0}, []
+    w_lo, w_hi = NOW - timedelta(hours=4), NOW + timedelta(hours=36)
+    for rec in pend.values():
+        t = (rec['t'] if 't' in rec else tier_of(rec['pp'])) or '-'
+        pend_t[t] = pend_t.get(t, 0) + 1
+        if t != '-' and w_lo <= parse_iso(rec['ko']) <= w_hi:
+            waiting.append([rec['id'], rec['lk'], rec['ko'], rec['h'], rec['a'], rec['k'], rec['pp'], rec['pr'], int(bool(rec['r'])), t])
+    waiting.sort(key=lambda w: (w[2], w[0]))
     pub = {'app': 'Statpad', 'schema': 1, 'since': tr['since'], 'updated': tr['updated'], 'saved_at': tr.get('saved_at'),
            'tz': TRACK_TZ, 'target': TRACK_TARGET, 'agg': agg, 'picks': tr['picks'], 'slips': tr['slips'],
-           'open': open_, 'pending': len(pend)}
+           'open': open_, 'pending': len(pend), 'pend_t': pend_t, 'waiting': waiting[:150]}
     # commit to the repo: new grades at most every few hours, and a keep-alive commit regardless
     saved = parse_iso(tr['saved_at']) if tr.get('saved_at') else None
     keepalive = repo is None or saved is None or NOW - saved >= timedelta(days=KEEPALIVE_DAYS)
