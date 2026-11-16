@@ -33,6 +33,8 @@ Environment (all optional):
 """
 import csv
 import difflib
+import gzip
+import hashlib
 import io
 import json
 import math
@@ -47,7 +49,7 @@ import zlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 UTC = timezone.utc
@@ -1301,6 +1303,307 @@ def refresh_odds_api(state):
 
 
 # ----------------------------------------------------------------------------------------------
+# Live scores and fast results from ESPN's public scoreboards: free, no key, no daily allowance, and
+# updated within a minute, with the minute of every goal and red card. One request per competition that
+# has a game in play or awaiting its result. The page reads the same scoreboards itself every 30 s while
+# games are on; this copy keeps live.json, results.json and the record going when nobody has it open, and
+# pairs each match with ESPN's game id so the page needn't guess.
+# ----------------------------------------------------------------------------------------------
+ESPN_SB = 'https://site.api.espn.com/apis/site/v2/sports/soccer/{}/scoreboard'
+ESPN_SUM = 'https://site.api.espn.com/apis/site/v2/sports/soccer/{}/summary'
+ESPN_SLUG = {'EPL': 'eng.1', 'ENG2': 'eng.2', 'ENG3': 'eng.3', 'ENG4': 'eng.4', 'LaLiga': 'esp.1', 'ESP2': 'esp.2',
+             'BUN': 'ger.1', 'GER2': 'ger.2', 'SA': 'ita.1', 'ITA2': 'ita.2', 'L1': 'fra.1', 'FRA2': 'fra.2',
+             'ERE': 'ned.1', 'NED2': 'ned.2', 'POR': 'por.1', 'BEL': 'bel.1', 'SCO1': 'sco.1', 'SCO2': 'sco.2',
+             'TUR1': 'tur.1', 'GRE1': 'gre.1', 'AUT1': 'aut.1', 'DEN1': 'den.1', 'NOR1': 'nor.1',
+             'SWE1': 'swe.1', 'IRL1': 'irl.1', 'BRA1': 'bra.1', 'ARG1': 'arg.1', 'MEX1': 'mex.1',
+             'USA1': 'usa.1', 'JPN1': 'jpn.1', 'CHN1': 'chn.1', 'KSA': 'ksa.1', 'UCL': 'uefa.champions',
+             'UEL': 'uefa.europa', 'UECL': 'uefa.europa.conf', 'FAC': 'eng.fa', 'EFLC': 'eng.league_cup',
+             'DFB': 'ger.dfb_pokal', 'CDR': 'esp.copa_del_rey', 'CI': 'ita.coppa_italia', 'CDF': 'fra.coupe_de_france',
+             'UNL': 'uefa.nations', 'INTF': 'fifa.friendly'}
+ESPN_OFF = {'STATUS_POSTPONED', 'STATUS_CANCELED', 'STATUS_CANCELLED', 'STATUS_ABANDONED', 'STATUS_FORFEIT'}
+ESPN_BEFORE = 180       # minutes before kick-off from which a match is paired with ESPN's game
+ESPN_AFTER = 135        # minutes after kick-off it's followed live
+ESPN_BUDGET_S = 45      # seconds of ESPN requests per run, at most
+
+
+def espn_minute(s):
+    """"67'" -> 67, "45'+2'" -> 47, "90'+5'" -> 95."""
+    m = re.match(r"\s*(\d+)'?(?:\s*\+\s*(\d+))?", s or '')
+    return int(m.group(1)) + int(m.group(2) or 0) if m else 0
+
+
+def espn_row(e):
+    """One ESPN game in a compact form, or None."""
+    try:
+        c = (e.get('competitions') or [{}])[0]
+        side = {x.get('homeAway'): x for x in c.get('competitors') or []}
+        h, a = side['home'], side['away']
+        names = lambda t: sorted({v for n in (t.get('displayName'), t.get('shortDisplayName'), t.get('name'), t.get('location')) if n
+                                  for v in (n, n.replace('.', ''))})   # "D.C. United" is our "DC United"
+        st = (c.get('status') or e.get('status') or {})
+        typ = st.get('type') or {}
+        hid = (h.get('team') or {}).get('id')
+        goals, reds = [], []
+        for d in c.get('details') or []:
+            if d.get('shootout'):
+                continue
+            mn = espn_minute((d.get('clock') or {}).get('displayValue'))
+            s = 'h' if (d.get('team') or {}).get('id') == hid else 'a'
+            if d.get('scoringPlay'):
+                goals.append([mn, s, bool(d.get('ownGoal')), (d.get('clock') or {}).get('displayValue') or ''])
+            elif d.get('redCard'):
+                reds.append([mn, s])
+        return {'id': str(e.get('id')), 'ko': parse_iso((e.get('date') or c.get('date') or '').replace('Z', ':00Z') if re.search(r'T\d\d:\d\dZ$', e.get('date') or '') else (e.get('date') or c.get('date'))),
+                'h': names(h.get('team') or {}), 'a': names(a.get('team') or {}),
+                'hs': int(h.get('score') or 0), 'as': int(a.get('score') or 0),
+                'st': typ.get('name') or '', 'state': typ.get('state') or '', 'done': bool(typ.get('completed')),
+                'period': int(st.get('period') or 0), 'clock': st.get('displayClock') or '', 'goals': goals, 'reds': reds}
+    except Exception:
+        return None
+
+
+def espn_goals(g):
+    """Goals and red cards with minutes, trusted only when the goals add up to the score (feeds differ on
+    which side an own goal is listed under, so both readings are tried). Also the score after 90 minutes."""
+    for flip in (False, True):
+        gs = sorted(([m, ('a' if s == 'h' else 'h') if (o and flip) else s, lab] for m, s, o, lab in g['goals']), key=lambda x: x[0])   # feed order within a minute
+        if sum(1 for x in gs if x[1] == 'h') == g['hs'] and sum(1 for x in gs if x[1] == 'a') == g['as']:
+            reg = [[m, s] for m, s, lab in gs if int((re.match(r'\s*(\d+)', lab or '0') or [0, '0'])[1]) <= 90]   # 90'+3' is still normal time
+            return [[m, s] for m, s, _ in gs], sorted(g['reds']), 1, reg
+    return None, sorted(g['reds']), 0, None
+
+
+def espn_days(kos):
+    """ESPN files games by US Eastern day: ask for that day, and the UTC day too when it differs."""
+    out = set()
+    for ko in kos:
+        out.add((ko - timedelta(hours=5)).strftime('%Y%m%d'))
+        out.add(ko.strftime('%Y%m%d'))
+    return sorted(out)
+
+
+def espn_board(slug, kos, cache):
+    """Every game of one competition on the days of these kick-offs (one request per day; None if none came)."""
+    rows, got = {}, False
+    for day in espn_days(kos):
+        key = f'{slug}:{day}'
+        if key not in cache:
+            r = fetch(ESPN_SB.format(slug), {'dates': day, 'limit': 300}, tries=2, timeout=20, headers={'Accept-Encoding': 'gzip'})
+            got_rows = None
+            if r.status == 200 and r.body:
+                try:
+                    body = gzip.decompress(r.body) if r.body[:2] == b'\x1f\x8b' else r.body
+                    got_rows = [x for x in (espn_row(e) for e in json.loads(text_of(body)).get('events') or []) if x and x['ko']]
+                except Exception as e:
+                    log('ESPN', slug, 'unreadable:', repr(e)[:80])
+            cache[key] = got_rows
+        if cache[key] is not None:
+            got = True
+            for x in cache[key]:
+                rows[x['id']] = x
+    return list(rows.values()) if got else None
+
+
+def espn_pair(lk, ko, h, a, rows):
+    """ESPN's game for one of our matches: same kick-off (within 3 h) and both names close, or the same
+    kick-off and one side plainly the same club that no other game on the board could be (a club can't
+    play twice at once, and feeds name reserve and renamed sides differently)."""
+    near = []
+    for g in rows or []:
+        dt = abs((g['ko'] - ko).total_seconds()) / 60
+        if dt <= 180:
+            near.append((g, dt, max((team_sim(h, n) for n in g['h']), default=0), max((team_sim(a, n) for n in g['a']), default=0)))
+    best, best_s = None, 0.0
+    for g, dt, sh, sa in near:
+        ok = (sh >= 0.8 and sa >= 0.8) or (dt <= 15 and ((sh == 1 and sa >= 0.5) or (sa == 1 and sh >= 0.5)))
+        if not ok and dt <= 15 and max(sh, sa) >= 0.9:
+            i = 2 if sh >= sa else 3
+            ok = not any(x[0] is not g and (x[i] >= 0.6 or x[5 - i] >= 0.9) for x in near)
+        if ok and sh + sa - dt / 600 > best_s:
+            best, best_s = g, sh + sa - dt / 600
+    return best
+
+
+def espn_tuple(g, prev=None):
+    """The live-file entry for a game: [home, away, minute, stage, checked, goals, reds, exact]. Once extra
+    time starts the score shown is the 90-minute one, since that's what bets are settled on."""
+    goals, reds, exact, reg = espn_goals(g)   # reg: the goals of normal time
+    if goals is None and prev and len(prev) > 5:
+        goals = [list(x) for x in prev[5]]   # the feed's goal list doesn't add up yet: keep the last good one
+    if g['state'] == 'post':
+        stage, minute = 'FT', 90
+    elif g['st'] == 'STATUS_HALFTIME':
+        stage, minute = 'HT', 45
+    elif g['period'] >= 5:
+        stage, minute = 'P', 120
+    elif g['period'] >= 3 or g['st'] == 'STATUS_END_OF_REGULATION':
+        stage, minute = 'ET', 90 + max(0, espn_minute(g['clock']) - 90)
+    else:
+        stage, minute = ('2H' if g['period'] == 2 else '1H'), espn_minute(g['clock'])
+    hs, as_ = g['hs'], g['as']
+    if stage in ('ET', 'P') or (stage == 'FT' and g['st'] in ('STATUS_FINAL_AET', 'STATUS_FINAL_PEN')):
+        if reg is None:
+            return None
+        hs, as_ = sum(1 for x in reg if x[1] == 'h'), sum(1 for x in reg if x[1] == 'a')
+        goals = reg
+    return [hs, as_, minute, stage, iso(NOW), goals or [], reds, exact]
+
+
+def refresh_espn(state, matches):
+    """Follow every match in play (and grade those awaiting a result) from ESPN's scoreboards."""
+    af = state.setdefault('af', {})
+    lv = af.setdefault('live', {})
+    games = lv.setdefault('games', {})
+    done = af.setdefault('scores', {})
+    off = af.setdefault('void', {})
+    ev = state.setdefault('espn_ev', {})      # our match id -> [competition, ESPN game id, kick-off]
+    miss = state.setdefault('espn_miss', {})  # our match id -> kick-off (ESPN has no such game)
+    for blob in (ev, miss):
+        for k in [k for k, v in blob.items() if parse_iso(v[-1] if isinstance(v, list) else v) < NOW - timedelta(days=4)]:
+            del blob[k]
+    want = {}
+    for m in list(matches) + list((state.get('track_pending') or {}).values()):
+        if m['lk'] not in ESPN_SLUG or m['id'] in done or m['id'] in off or m['id'] in miss:
+            continue
+        ko = parse_iso(m['ko'])
+        mins = (NOW - ko).total_seconds() / 60
+        if -ESPN_BEFORE <= mins <= ESPN_AFTER or (ESPN_AFTER < mins <= 3 * 1440 and m['id'] in (state.get('track_pending') or {})):
+            want[m['id']] = (m['lk'], ko, m['h'], m['a'])
+    if not want:
+        return {'live': 0, 'results': 0, 'calls': 0, 'boards': 0}
+    by_lk = {}
+    for mid, w in want.items():
+        by_lk.setdefault(w[0], []).append((mid, w))
+    cache, t0, calls, n_live, n_res, boards = {}, time.time(), 0, 0, 0, 0
+    for lk, items in sorted(by_lk.items(), key=lambda kv: min((abs((NOW - w[1]).total_seconds()) for _, w in kv[1]))):
+        if time.time() - t0 > ESPN_BUDGET_S:
+            break
+        rows = espn_board(ESPN_SLUG[lk], [w[1] for _, w in items], cache)
+        calls = len(cache)
+        if rows is None:
+            continue
+        boards += 1
+        for mid, (lk_, ko, h, a) in items:
+            known = ev.get(mid)
+            g = next((x for x in rows if known and x['id'] == known[1]), None) or espn_pair(lk_, ko, h, a, rows)
+            if not g:
+                if NOW - ko > timedelta(minutes=ESPN_AFTER):
+                    miss[mid] = iso(ko)   # a board from after the game doesn't list it: stop asking ESPN for it
+                continue
+            ev[mid] = [ESPN_SLUG[lk_], g['id'], iso(ko)]
+            if g['st'] in ESPN_OFF:
+                off[mid] = [g['st'].replace('STATUS_', '')[:4], iso(ko)]
+                games.pop(mid, None)
+                continue
+            if g['state'] == 'pre':
+                continue
+            t = espn_tuple(g, games.get(mid))
+            if g['state'] == 'post' and g['done']:
+                if t:
+                    done[mid] = [t[0], t[1], iso(ko)]
+                    n_res += 1
+                    if mid in games or NOW - ko < timedelta(hours=4):
+                        games[mid] = t
+                continue
+            if t:
+                games[mid] = t
+                n_live += 1
+    for mid in [k for k, v in games.items() if NOW - parse_iso(v[4]) > timedelta(hours=4)]:
+        del games[mid]
+    if calls:
+        lv['at'] = iso(NOW)
+        lv['src'] = 'ESPN'
+    return {'live': n_live, 'results': n_res, 'calls': calls, 'boards': boards}
+
+
+def espn_lineup(slug, eid):
+    """Confirmed starting XIs and formations from ESPN's game summary, in the shape team news uses."""
+    r = fetch(ESPN_SUM.format(slug), {'event': eid}, tries=1, timeout=20, headers={'Accept-Encoding': 'gzip'})
+    if r.status != 200 or not r.body:
+        return None
+    try:
+        body = gzip.decompress(r.body) if r.body[:2] == b'\x1f\x8b' else r.body
+        d = json.loads(text_of(body))
+    except Exception:
+        return None
+    def pos(p):   # "Center Left Defender" -> D, as API-Football writes it
+        n = ((p.get('position') or {}).get('name') or '').lower()
+        return 'G' if 'goal' in n else 'D' if 'defend' in n or 'back' in n else 'M' if 'midfield' in n else 'F' if re.search(r'forward|striker|wing', n) else None
+
+    side = {}
+    for t in d.get('rosters') or []:
+        starters = sorted((p for p in t.get('roster') or [] if p.get('starter')),   # keeper, defence, midfield, attack
+                          key=lambda p: ('GDMF'.find(pos(p) or 'F') % 4, int(fnum(p.get('formationPlace')) or 99)))
+        xi = [[p.get('jersey'), (p.get('athlete') or {}).get('displayName'), pos(p)] for p in starters]
+        if t.get('homeAway') in ('home', 'away') and len(xi) >= 7:
+            side['h' if t['homeAway'] == 'home' else 'a'] = {'fm': t.get('formation'), 'xi': xi, 'co': None}
+    return side if 'h' in side and 'a' in side else None
+
+
+ESPN_LU_FROM = 75       # minutes before kick-off to start asking ESPN for line-ups
+ESPN_LU_EVERY = 8       # minutes between line-up checks for a game
+ESPN_LU_PER_RUN = 16    # line-up checks per run, at most
+
+
+def espn_lineups(state):
+    """Confirmed line-ups from ESPN for the games it follows, from 75 minutes before kick-off."""
+    elu = state.setdefault('elu', {})
+    for k in [k for k, v in elu.items() if parse_iso(v['ko']) < NOW - timedelta(hours=6)]:
+        del elu[k]
+    due = []
+    for mid, (slug, eid, kos) in (state.get('espn_ev') or {}).items():
+        r = elu.setdefault(mid, {'ko': kos})
+        mins = (parse_iso(kos) - NOW).total_seconds() / 60
+        if r.get('lu') or not (-20 <= mins <= ESPN_LU_FROM):
+            continue
+        if r.get('try') and (NOW - parse_iso(r['try'])).total_seconds() / 60 < ESPN_LU_EVERY - 1 and not FORCE:
+            continue
+        due.append((kos, mid, slug, eid))
+    found = 0
+    for kos, mid, slug, eid in sorted(due)[:ESPN_LU_PER_RUN]:
+        r = elu[mid]
+        r['try'] = iso(NOW)
+        lu = espn_lineup(slug, eid)
+        if lu:
+            r['lu'], r['at'] = lu, iso(NOW)
+            lk = next((k for k, v in ESPN_SLUG.items() if v == slug), None)
+            if lk:
+                state.setdefault('lineup_lk', {})[lk] = iso(NOW)
+            found += 1
+    for k in [k for k, v in elu.items() if not v.get('lu') and not v.get('try')]:
+        del elu[k]
+    return found
+
+
+def espn_publish(state, doc):
+    """Tell the site which ESPN scoreboard carries each competition, and each match's ESPN game, so phones
+    can follow the games in play straight from ESPN between the site's updates."""
+    ev = state.get('espn_ev') or {}
+    doc['espn'] = {k: ESPN_SLUG[k] for k in sorted(doc.get('leagues') or {}) if k in ESPN_SLUG}
+    for m in doc['matches']:
+        if m['id'] in ev:
+            m['ev'] = ev[m['id']][1]
+        else:
+            m.pop('ev', None)
+
+
+def refresh_live(state, matches):
+    """Live scores, fast results and line-ups from ESPN's public scoreboards (no key, no daily limit)."""
+    r = refresh_espn(state, matches)
+    n_lu = espn_lineups(state)
+    lv = (state.get('af') or {}).get('live') or {}
+    n_play = sum(1 for v in (lv.get('games') or {}).values() if v[3] != 'FT')
+    today = NOW.strftime('%Y-%m-%d')
+    n_res = sum(1 for v in ((state.get('af') or {}).get('scores') or {}).values() if v[2][:10] == today)
+    ok = not r['calls'] or r['boards'] > 0
+    note = (f"ESPN · {n_play} in play · {n_res} results today{f' · {n_lu} new line-ups' if n_lu else ''} · "
+            f"{r['calls']} scoreboard{'s' if r['calls'] != 1 else ''} read" if r['calls'] else f"ESPN · no games in play{f' · {n_res} results today' if n_res else ''}")
+    if r['calls'] and not r['boards']:
+        note = 'ESPN did not answer this run'
+    return ok, note
+
+
+# ----------------------------------------------------------------------------------------------
 # Team news (optional): injuries, suspensions and confirmed line-ups from API-Football.
 # The free plan allows 100 calls a day, so they are rationed: the fixture list for today and
 # tomorrow every 6 h, injuries for each day every 4 h, and line-ups from about an hour before
@@ -1329,6 +1632,11 @@ def af_blocked(state):
     return bool(b and parse_iso(b) > NOW)
 
 
+def af_kind(path, params):
+    """A kind of request, by endpoint and parameter names: '/fixtures?ids', '/injuries?date'."""
+    return path + '?' + ','.join(sorted(k for k in params if k != 'timezone'))
+
+
 def af_get(path, params, state, reserve=2):
     """One API-Football call -> (response list or None, error text or None). Keeps to the daily allowance,
     leaving `reserve` calls unused (line-ups keep a bigger reserve so results always get through)."""
@@ -1338,6 +1646,9 @@ def af_get(path, params, state, reserve=2):
         af.update({'day': day, 'used': 0, 'left': None})
     if af_blocked(state):
         return None, 'paused'
+    nope = (af.get('nope') or {}).get(af_kind(path, params))
+    if nope and parse_iso(nope[0]) > NOW:
+        return None, 'not on your plan'
     if af['used'] >= AF_DAILY - reserve or (af.get('left') is not None and af['left'] <= reserve):
         return None, 'daily allowance used'
     if af['used'] and not OFFLINE:
@@ -1366,8 +1677,10 @@ def af_get(path, params, state, reserve=2):
             af['block_until'], af['note'] = iso(tomorrow), "today's allowance is used up"
         elif 'plan' in keys and re.search(r'this date|from \d{4}-\d{2}-\d{2} to', msg):
             pass   # the free plan only serves yesterday, today and tomorrow: just this date is out of reach
-        elif 'plan' in keys:
-            af['block_until'], af['note'] = iso(NOW + timedelta(hours=24)), 'your plan does not cover this: ' + msg[:160]
+        elif 'plan' in keys or re.search(r'parameter|season', msg, re.I):
+            # one kind of request the plan doesn't serve (a parameter, a season): only that kind waits a week,
+            # everything else carries on
+            af.setdefault('nope', {})[af_kind(path, params)] = [iso(NOW + timedelta(days=7)), msg[:160]]
         return None, msg
     return data.get('response') or [], None
 
@@ -1421,20 +1734,7 @@ def af_injuries(state, days):
             continue
         if at.get(ds) and NOW - parse_iso(at[ds]) < timedelta(hours=AF_INJ_EVERY) and not FORCE:
             continue
-        rows = None
-        if af.get('inj_mode', 'date') == 'date':
-            rows, err = af_get('/injuries', {'date': ds}, state)
-            if rows is None and err and not af_blocked(state) and 'allowance' not in err and 'status' not in err:
-                af['inj_mode'] = 'ids'   # this plan or API version wants fixture ids instead of a date
-        if af.get('inj_mode') == 'ids':
-            fids = sorted({r['fid'] for r in tn.values() if r.get('fid') and r['ko'][:10] == ds})
-            rows = []
-            for i in range(0, len(fids), AF_BATCH):
-                got, err = af_get('/injuries', {'ids': '-'.join(map(str, fids[i:i + AF_BATCH]))}, state)
-                if got is None:
-                    rows = None
-                    break
-                rows.extend(got)
+        rows, err = af_get('/injuries', {'date': ds}, state)
         if rows is None:
             continue
         at[ds] = iso(NOW)
@@ -1453,39 +1753,38 @@ def af_injuries(state, days):
 
 
 def af_lineups(state):
-    tn = state.setdefault('tn', {})
+    """Confirmed line-ups from API-Football, one fixture per call (the free plan refuses lists of ids), for the
+    games ESPN doesn't carry or hasn't given line-ups for 15 minutes before kick-off. Two tries a game at most."""
+    tn, elu, ev = state.setdefault('tn', {}), state.get('elu') or {}, state.get('espn_ev') or {}
     due = []
-    for r in tn.values():
-        if not r.get('fid') or r.get('lu'):
+    for mid, r in tn.items():
+        if not r.get('fid') or r.get('lu') or (elu.get(mid) or {}).get('lu') or r.get('lu_n', 0) >= 2:
             continue
         mins = (parse_iso(r['ko']) - NOW).total_seconds() / 60
-        if not (-20 <= mins <= AF_LU_FROM):
+        if not (-20 <= mins <= (15 if mid in ev else AF_LU_FROM)):
             continue
         if r.get('lu_try') and (NOW - parse_iso(r['lu_try'])).total_seconds() / 60 < AF_LU_EVERY - 1 and not FORCE:
             continue
         due.append(r)
     due.sort(key=lambda r: r['ko'])
     found = 0
-    for i in range(0, len(due), AF_BATCH):
-        chunk = due[i:i + AF_BATCH]
-        resp, err = af_get('/fixtures', {'ids': '-'.join(str(r['fid']) for r in chunk)}, state, reserve=AF_RESERVE)
+    for r in due[:6]:
+        resp, err = af_get('/fixtures/lineups', {'fixture': r['fid']}, state, reserve=AF_RESERVE)
         if resp is None:
             break
-        by = {(f.get('fixture') or {}).get('id'): f for f in resp}
-        for r in chunk:
-            r['lu_try'] = iso(NOW)
-            side = {}
-            for x in (by.get(r['fid']) or {}).get('lineups') or []:
-                tid = (x.get('team') or {}).get('id')
-                key = 'h' if tid == r['hid'] else 'a' if tid == r['aid'] else None
-                xi = [[(p.get('player') or {}).get('number'), (p.get('player') or {}).get('name'), (p.get('player') or {}).get('pos')]
-                      for p in x.get('startXI') or []]
-                if key and len(xi) >= 7:
-                    side[key] = {'fm': x.get('formation'), 'xi': xi, 'co': (x.get('coach') or {}).get('name')}
-            if 'h' in side and 'a' in side:
-                r['lu'], r['lu_at'] = side, iso(NOW)
-                state.setdefault('lineup_lk', {})[r['lk']] = iso(NOW)
-                found += 1
+        r['lu_try'], r['lu_n'] = iso(NOW), r.get('lu_n', 0) + 1
+        side = {}
+        for x in resp:
+            tid = (x.get('team') or {}).get('id')
+            key = 'h' if tid == r['hid'] else 'a' if tid == r['aid'] else None
+            xi = [[(p.get('player') or {}).get('number'), (p.get('player') or {}).get('name'), (p.get('player') or {}).get('pos')]
+                  for p in x.get('startXI') or []]
+            if key and len(xi) >= 7:
+                side[key] = {'fm': x.get('formation'), 'xi': xi, 'co': (x.get('coach') or {}).get('name')}
+        if 'h' in side and 'a' in side:
+            r['lu'], r['lu_at'] = side, iso(NOW)
+            state.setdefault('lineup_lk', {})[r['lk']] = iso(NOW)
+            found += 1
     return found
 
 
@@ -1559,7 +1858,9 @@ def af_results(state):
     done = af.setdefault('scores', {})      # our match id -> [home, away, kick-off]
     off = af.setdefault('void', {})         # our match id -> [status, kick-off]
     miss = af.setdefault('nomatch', {})     # our match id -> kick-off (not in API-Football's lists)
-    pend = state.get('track_pending') or {}
+    ev = state.get('espn_ev') or {}
+    pend = {k: r for k, r in (state.get('track_pending') or {}).items()
+            if r['id'] not in ev or parse_iso(r['ko']) < NOW - timedelta(hours=4)}   # ESPN grades the games it follows
     lo, hi = NOW - timedelta(days=3), NOW - timedelta(minutes=110)
 
     def waiting():
@@ -1604,10 +1905,11 @@ def af_results(state):
 
 
 def af_live(state):
-    """Live scores for Statpad's matches that are in play, from one call that lists every live game. The day's
-    live checks are spread over the time games are still in play, so a busy Saturday gets fewer per hour."""
+    """Live scores for the games in play that ESPN doesn't follow, from one call that lists every live game. The
+    day's live checks are spread over the time games are still in play, so a busy Saturday gets fewer per hour."""
     af = state['af']
-    tn = state.get('tn') or {}
+    ev = state.get('espn_ev') or {}
+    tn = {mid: r for mid, r in (state.get('tn') or {}).items() if mid not in ev}
     lv = af.setdefault('live', {})
     day = NOW.strftime('%Y-%m-%d')
     if lv.get('day') != day:
@@ -1637,13 +1939,13 @@ def af_live(state):
     if left <= 0:
         return 0
     gap = max(AF_LIVE_MIN, mins / left)
-    if lv.get('at') and (NOW - parse_iso(lv['at'])).total_seconds() / 60 < gap - 1 and not FORCE:
+    if lv.get('af_at') and (NOW - parse_iso(lv['af_at'])).total_seconds() / 60 < gap - 1 and not FORCE:
         return 0
     resp, err = af_get('/fixtures', {'live': 'all'}, state, reserve=AF_LIVE_RESERVE)
     if resp is None:
         return 0
     lv['used'] = lv.get('used', 0) + 1
-    lv['at'] = iso(NOW)
+    lv['af_at'] = lv['at'] = iso(NOW)
     by_fid = {(f.get('fixture') or {}).get('id'): f for f in resp}
     n = 0
     for mid, r in inplay.items():
@@ -1714,9 +2016,15 @@ def refresh_team_news(state, matches):
     if not AF_KEY:
         return 'no key'
     af = state.setdefault('af', {})
-    if 'this date' in (af.get('note') or ''):   # an older version paused on the free plan's date limit: undo that
+    note0 = af.get('note') or ''
+    if 'this date' in note0 or note0.startswith('your plan does not cover this'):
+        # older versions paused every API-Football call for a day when the plan refused one kind of request
+        # (a date, or lists of fixture ids): undo that; now only the refused kind waits
         af.pop('block_until', None)
         af.pop('note', None)
+    af.pop('inj_mode', None)
+    for k in [k for k, v in (af.get('nope') or {}).items() if parse_iso(v[0]) < NOW]:
+        del af['nope'][k]
     if af_blocked(state):
         return 'paused: ' + (af.get('note') or '')
     fx = af.setdefault('fx', {})
@@ -1741,6 +2049,11 @@ def refresh_team_news(state, matches):
     n_lu = sum(1 for r in tn.values() if r.get('lu'))
     note = (f"{linked} matches linked, {n_lu} line-ups in{f' ({got} new)' if got else ''}, "
             f"{graded} new results{f', {n_live} live scores' if n_live else ''}, {af.get('used', 0)} calls today")
+    words = {'/fixtures?live': 'live scores', '/fixtures/lineups?fixture': 'line-ups', '/injuries?date': 'injuries',
+             '/fixtures?date': 'fixture lists', '/teams?country': 'club lists for crests'}
+    nope = sorted(words.get(k, k) for k, v in (af.get('nope') or {}).items() if parse_iso(v[0]) > NOW)
+    if nope:
+        note += ' · your plan refuses ' + ', '.join(nope) + ' (asked again weekly)'
     if af.get('note') and af_blocked(state):
         note += ' · paused: ' + af['note']
     return note
@@ -1755,15 +2068,17 @@ def team_news_for(state, mid, lk, ko, h, a):
             if x.get('lk') == lk and abs((parse_iso(x['ko']) - ko).total_seconds()) < 3 * 3600 and same_team(x['h'], h) and same_team(x['a'], a):
                 r = x
                 break
-    if not r or not r.get('fid'):
+    elu = ((state.get('elu') or {}).get(mid) or {}).get('lu')
+    if (not r or not r.get('fid')) and not elu:
         return None
-    inj = (((state.get('af') or {}).get('inj') or {}).get(r['ko'][:10]) or {}).get(str(r['fid'])) or []
+    r = r if r and r.get('fid') else {}
+    inj = (((state.get('af') or {}).get('inj') or {}).get(r['ko'][:10]) or {}).get(str(r['fid'])) or [] if r else []
     out = {'h': [], 'a': []}
     for tid, name, typ, why in inj:
         side = 'h' if tid == r['hid'] else 'a' if tid == r['aid'] else None
         if side and len(out[side]) < 14 and [name, why, typ] not in out[side]:
             out[side].append([name, why, typ])
-    lu = r.get('lu') or {}
+    lu = r.get('lu') or elu or {}
     if not (out['h'] or out['a'] or lu):
         return None
     news = {'h': {'out': out['h']}, 'a': {'out': out['a']}, 'lu': bool(lu)}
@@ -1880,7 +2195,7 @@ def lam_sd(lk, h, a, leagues, teams, cross):
 CREST_TEAM = 'https://media.api-sports.io/football/teams/{}.png'
 CREST_LEAGUE = 'https://media.api-sports.io/football/leagues/{}.png'
 CREST_SMALL, CREST_BIG = 60, 120      # px: list rows / match pages
-CREST_PER_RUN = 40
+CREST_PER_RUN = 60
 # Crests for well-known clubs, so they show from the first run (each id checked against its picture);
 # ids learnt from API-Football's fixtures take precedence.
 CREST_SEED = {
@@ -1902,10 +2217,23 @@ CREST_SEED = {
     'PSV Eindhoven': 197, 'Feyenoord': 209, 'AZ Alkmaar': 201, 'Twente': 415, 'Benfica': 211, 'Porto': 212,
     'Sporting CP': 228, 'Braga': 217, 'Galatasaray': 645, 'Fenerbahce': 611, 'Besiktas': 549, 'Trabzonspor': 998,
     'Celtic': 247, 'Rangers': 257, 'Aberdeen': 252, 'Hearts': 254, 'Hibernian': 249, 'Club Brugge': 569,
-    'Anderlecht': 554, 'Boca Juniors': 451, 'Inter Miami': 9568, 'Los Angeles FC': 1616}
+    'Anderlecht': 554, 'Boca Juniors': 451, 'Inter Miami': 9568, 'Los Angeles FC': 1616,
+    'Salzburg': 571, 'Olympiakos': 553, 'Union Saint-Gilloise': 1393, 'CFR Cluj': 2246,
+    'Swansea': 76, 'Cardiff': 43, 'West Brom': 60, 'Preston': 59, 'Wrexham': 1837, 'Lincoln': 1379, 'Port Vale': 1351,
+    'Peterboro': 1350, 'Gillingham': 1347, 'Swindon': 1353, 'Tranmere': 1381, 'Eibar': 545, 'Oviedo': 718, 'Santander': 4665,
+    'Burgos': 9580, 'Almería': 723, 'Nijmegen': 413, 'Waregem': 600, 'AEK': 575, 'Shamrock Rovers': 652,
+    'Flamengo RJ': 127, 'Atletico-MG': 1062, 'Botafogo RJ': 120, 'Athletico-PR': 134, 'Chapecoense-SC': 132,
+    'Estudiantes L.P.': 450, 'Gimnasia L.P.': 434, 'Toronto FC': 1601, 'Vancouver Whitecaps': 1603, 'CF Montreal': 1614,
+    'St. Louis City': 20787, 'Urawa Reds': 287, 'Cerezo Osaka': 291}
 # API-Football's competition ids for Statpad's leagues (checked against their logos)
 AF_LEAGUE = {'EPL': 39, 'LaLiga': 140, 'BUN': 78, 'SA': 135, 'L1': 61, 'POR': 94, 'ERE': 88, 'BEL': 144, 'KSA': 307, 'ENG2': 40, 'GER2': 79, 'ITA2': 136, 'ESP2': 141, 'FRA2': 62, 'NED2': 89, 'ENG3': 41, 'ENG4': 42, 'SCO1': 179, 'SCO2': 180, 'TUR1': 203, 'GRE1': 197, 'AUT1': 218, 'SUI1': 207, 'DEN1': 119, 'NOR1': 103, 'SWE1': 113, 'POL1': 106, 'ROU1': 283, 'CZE1': 345, 'SRB1': 286, 'IRL1': 357, 'FIN1': 244, 'BRA1': 71, 'ARG1': 128, 'MEX1': 262, 'USA1': 253, 'JPN1': 98, 'CHN1': 169, 'UCL': 2, 'UEL': 3, 'UECL': 848, 'FAC': 45, 'EFLC': 48, 'DFB': 81, 'CDR': 143, 'CI': 137, 'CDF': 66, 'UNL': 5, 'INTF': 10}
-CREST_BUDGET_S = 25
+CREST_BUDGET_S = 30
+AF_TEAMS_EVERY_D = 30   # days between refreshes of a country's club list
+AF_TEAMS_PER_RUN = 4    # club-list calls per run, at most
+AF_TEAMS_RESERVE = 35   # club lists wait while fewer than this many of the day's calls are left (team news and scores first)
+FL_TREE = 'https://data.jsdelivr.com/v1/package/gh/luukhopman/football-logos@master'
+FL_RAW = 'https://raw.githubusercontent.com/luukhopman/football-logos/master/'
+FL_EVERY_D = 7
 
 PNG_SIG = b'\x89PNG\r\n\x1a\n'
 
@@ -2107,38 +2435,220 @@ def small_png(data, box):
     return png_encode(*png_shrink(w, h, px, box))
 
 
-def learn_crests(state, matches):
-    """Remember API-Football's team (and competition) id for our names, from fixtures paired with theirs."""
+def crest_names(doc):
+    """(name, competition) for every team this board shows: match teams by kick-off first, then league tables."""
+    seen, out = set(), []
+    for m in sorted(doc['matches'], key=lambda m: m['ko']):
+        for n in (m['h'], m['a']):
+            if n not in seen:
+                seen.add(n)
+                out.append((n, m['lk']))
+    for lk, lg in doc['leagues'].items():
+        for r in lg.get('table') or []:
+            if r[0] not in seen:
+                seen.add(r[0])
+                out.append((r[0], lk))
+    return out
+
+
+CREST_GENERIC = {'if', 'ik', 'bk', 'ff', 'aif', 'gif', 'boldklub', 'fotball', 'elite', 'bois', 'jk', 'fotbal', 'futebol',
+                 'clube', 'sad'}
+
+
+def crest_words(s):
+    n = norm(s)
+    return n, {t for t in n.split() if t not in CREST_GENERIC} or set(n.split())
+
+
+def crest_sim(ours, theirs):
+    """How surely another provider's club name is ours: 1 = same name, 0.9 = theirs is ours plus more words
+    ('Salzburg' / 'Red Bull Salzburg', 'Djurgarden' / 'Djurgardens IF'), else a close spelling whose every word
+    matches ('Goztep' / 'Göztepe'). Never the other way round ('Dundee United' is not 'Dundee')."""
+    if same_team(ours, theirs):
+        return 1.0
+    (na, ta), (nb, tb) = crest_words(ours), crest_words(theirs)
+    if not na or not nb or (set(na.split()) ^ set(nb.split())) & SIDE_MARKS:
+        return 0.0
+    if ta == tb:
+        return 1.0
+    abbr = {norm(w) for w in re.findall(r'([^\W\d_]+)\.', ours)}   # 'Univ.', 'Atl.', 'U.': shortened words
+    def has(x, ys, pre):
+        return any(x == y or (pre and min(len(x), len(y)) >= 4 and abs(len(x) - len(y)) <= 2 and (x.startswith(y) or y.startswith(x)))
+                   or (pre and x in abbr and y.startswith(x))
+                   or (not pre and difflib.SequenceMatcher(None, x, y).ratio() >= 0.8) for y in ys)
+    if all(has(x, tb, True) for x in ta):
+        return 0.9 if len(tb) > len(ta) or not all(has(y, ta, True) for y in tb) else 0.95
+    r = difflib.SequenceMatcher(None, ' '.join(sorted(ta)), ' '.join(sorted(tb))).ratio()
+    if r >= 0.86 and all(has(x, tb, True) or has(x, tb, False) for x in ta) and all(has(y, ta, True) or has(y, ta, False) for y in tb):
+        return r
+    return 0.0
+
+
+def best_team(name, cands):
+    """The one candidate [their name, value] that is surely this team, or None. Several seasons or spellings of
+    the same club count once; two different clubs that fit equally well mean no match."""
+    sc = sorted(((crest_sim(name, c[0]), i) for i, c in enumerate(cands)), key=lambda x: (-x[0], x[1]))   # ties: the first listed (newest)
+    if not sc or sc[0][0] < 0.86:
+        return None
+    top, ti = sc[0]
+    tn, tv = cands[ti]
+    def same(i):
+        n, v = cands[i]
+        return v == tv or norm(n) == norm(tn) or max(crest_sim(n, tn), crest_sim(tn, n)) >= 0.86
+    second = next((x for x, i in sc[1:] if x >= 0.86 and not same(i)), 0.0)
+    if top >= 0.999 or (top >= 0.9 and second < 0.9) or second < top - 0.06:
+        return tv
+    return None
+
+
+def cnorm(c):
+    k = re.sub(r'[^a-z ]', ' ', unicodedata.normalize('NFKD', c or '').encode('ascii', 'ignore').decode().lower().replace('-', ' '))
+    k = ' '.join(k.split())
+    return {'turkiye': 'turkey', 'czech republic': 'czechia', 'united states': 'usa', 'korea republic': 'south korea'}.get(k, k)
+
+
+# clubs that play in a neighbour's league (Welsh clubs in England's, Vaduz in Switzerland's, Canadian clubs in MLS...)
+CREST_NEIGHBOURS = {'england': ['wales'], 'switzerland': ['liechtenstein'], 'spain': ['andorra'], 'france': ['monaco'], 'usa': ['canada']}
+
+
+def team_country(lk):
+    c = (L.get(lk) or {}).get('country') or ''
+    return cnorm(c) if (L.get(lk) or {}).get('group') not in ('cups', 'intl') and c not in ('Europe', 'World') else None
+
+
+def af_country_teams(state, doc):
+    """Every club in each country Statpad covers, with its API-Football id: one call per country (about 30),
+    refreshed every few weeks, so a team's crest shows without waiting for it to play."""
+    af = state.setdefault('af', {})
+    ct = af.setdefault('ct', {})               # country -> {'at', 'ok', 'teams': [[name, id], ...]}
+    need = {}
+    have = state.get('crest') or {}
+    for n, lk in crest_names(doc):
+        c = team_country(lk)
+        for cc in ([c] + CREST_NEIGHBOURS.get(c, [])) if c else []:
+            need[cc] = need.get(cc, 0) + (n not in have)
+    # the API's own spelling of each country, from its country list (fetched rarely)
+    cl = af.get('countries')
+    if not cl or NOW - parse_iso(cl['at']) > timedelta(days=60):
+        rows, err = af_get('/teams/countries', {}, state, reserve=AF_TEAMS_RESERVE)
+        if rows:
+            af['countries'] = cl = {'at': iso(NOW), 'names': {cnorm(r.get('name')): r.get('name') for r in rows if r.get('name')}}
+        elif err not in ('paused', 'daily allowance used'):
+            af['countries'] = cl = {'at': iso(NOW - timedelta(days=59)), 'names': {}}   # try again tomorrow; use our spellings meanwhile
+    spell = (cl or {}).get('names') or {}
+    calls = 0
+    for c in sorted(need, key=lambda c: -need[c]):
+        rec = ct.get(c)
+        if rec and NOW - parse_iso(rec['at']) < timedelta(days=AF_TEAMS_EVERY_D if rec.get('ok') else 2) and not FORCE:
+            continue
+        if calls >= AF_TEAMS_PER_RUN:
+            break
+        api = spell.get(c) or {'czechia': 'Czech-Republic', 'saudi arabia': 'Saudi-Arabia', 'usa': 'USA'}.get(c) or c.title().replace(' ', '-')
+        rows, err = af_get('/teams', {'country': api}, state, reserve=AF_TEAMS_RESERVE)
+        calls += 1
+        if rows is None:
+            if err in ('paused', 'daily allowance used'):
+                break
+            ct[c] = {'at': iso(NOW), 'ok': False, 'err': (err or '')[:120]}
+            continue
+        teams = [[(r.get('team') or {}).get('name'), (r.get('team') or {}).get('id')] for r in rows if not (r.get('team') or {}).get('national')]
+        ct[c] = {'at': iso(NOW), 'ok': bool(teams), 'teams': [t for t in teams if t[0] and isinstance(t[1], int)]}
+        log(f'API-Football: {len(ct[c]["teams"])} clubs listed for {api}')
+    return calls
+
+
+def fl_refresh(state):
+    """The list of crests in the open football-logos collection (European top flights, this season and four
+    before), as a fallback for clubs API-Football hasn't given an id for. Refreshed weekly; one small request."""
+    fl = state.get('fl') or {}
+    if fl.get('at') and NOW - parse_iso(fl['at']) < timedelta(days=FL_EVERY_D) and not FORCE:
+        return False
+    r = fetch(FL_TREE, tries=1, timeout=20)
+    try:
+        tree = json.loads(text_of(r.body)) if r.status == 200 else None
+    except ValueError:
+        tree = None
+    if not tree:
+        state['fl'] = dict(fl, at=iso(NOW - timedelta(days=FL_EVERY_D - 1)))   # try again tomorrow
+        return False
+    state['fl'] = fl = dict(fl, at=iso(NOW))
+    out = {}
+    def walk(node, path, cur):
+        for f in node.get('files') or []:
+            p = path + [f['name']]
+            if f.get('type') == 'directory':
+                walk(f, p, cur)
+            elif f['name'].lower().endswith('.png') and len(p) >= 2 and ' - ' in p[-2]:
+                country = cnorm(p[-2].split(' - ')[0])
+                out.setdefault(country, []).append([f['name'][:-4], '/'.join(p), cur])
+    for top in tree.get('files') or []:
+        if top.get('name') in ('logos', 'history'):
+            walk(top, [top['name']], 1 if top['name'] == 'logos' else 0)
+    for c in out:   # this season's picture first, then newest history
+        out[c].sort(key=lambda x: (-x[2], [-ord(ch) for ch in x[1]]))
+    fl['c'] = out
+    return True
+
+
+def learn_crests(state, doc):
+    """Work out each team's crest: API-Football ids from paired fixtures and the country club lists; the
+    football-logos collection for anything still missing."""
     cr = state.setdefault('crest', {})
     lc = state.setdefault('lgcrest', {})
+    fx = state.setdefault('crest_fl', {})
     for lk, lid in AF_LEAGUE.items():
         lc.setdefault(lk, lid)
     for name, tid in CREST_SEED.items():
         cr.setdefault(name, tid)
-    fxs = af_rows(state)
-    if not fxs:
-        return 0
-    lo, hi = fxs[0][0] - timedelta(hours=3), fxs[-1][0] + timedelta(hours=3)
     n = 0
-    for m in matches:
-        if (L.get(m['lk']) or {}).get('group') == 'intl':
-            continue   # national teams show their flag
-        if m['h'] in cr and m['a'] in cr and m['lk'] in lc:
+    fxs = af_rows(state)
+    if fxs:
+        lo, hi = fxs[0][0] - timedelta(hours=3), fxs[-1][0] + timedelta(hours=3)
+        for m in doc['matches']:
+            if (L.get(m['lk']) or {}).get('group') == 'intl':
+                continue   # national teams show their flag
+            if m['h'] in cr and m['a'] in cr and m['lk'] in lc:
+                continue
+            ko = parse_iso(m['ko'])
+            if not (lo <= ko <= hi):
+                continue
+            f = af_match(m['lk'], ko, m['h'], m['a'], fxs)
+            if not f:
+                continue
+            for name, tid in ((m['h'], f[6]), (m['a'], f[7])):
+                if isinstance(tid, int) and tid > 0 and cr.get(name) != tid:
+                    cr[name] = tid
+                    n += 1
+            lid = f[11] if len(f) > 11 else None
+            if m['lk'] not in AF_LEAGUE and isinstance(lid, int) and lid > 0 and lc.get(m['lk']) != lid:
+                lc[m['lk']] = lid
+    ct = (state.get('af') or {}).get('ct') or {}
+    flc = (state.get('fl') or {}).get('c') or {}
+    every = [t for c in ct.values() for t in c.get('teams') or []]
+    bad = state.get('crest_bad') or {}
+    for name in [n for n, p in fx.items() if crest_key(p) in bad]:
+        del fx[name]   # that picture didn't download: try the club's picture from another season instead
+    for name, lk in crest_names(doc):
+        if name in cr or (L.get(lk) or {}).get('group') == 'intl':
             continue
-        ko = parse_iso(m['ko'])
-        if not (lo <= ko <= hi):
+        c = team_country(lk)
+        cands = [t for cc in [c] + CREST_NEIGHBOURS.get(c, []) for t in (ct.get(cc) or {}).get('teams') or []] if c else every
+        tid = best_team(name, cands) if cands else None
+        if tid:
+            cr[name] = tid
+            n += 1
             continue
-        f = af_match(m['lk'], ko, m['h'], m['a'], fxs)
-        if not f:
-            continue
-        for name, tid in ((m['h'], f[6]), (m['a'], f[7])):
-            if isinstance(tid, int) and tid > 0 and cr.get(name) != tid:
-                cr[name] = tid
+        if name not in fx:   # cup games: any country's list, but only a clear, unique match counts
+            pool = [c] + CREST_NEIGHBOURS.get(c, []) if c else list(flc)
+            path = best_team(name, [[x[0], x[1]] for cc in pool for x in flc.get(cc) or [] if crest_key(x[1]) not in bad])
+            if path:
+                fx[name] = path
                 n += 1
-        lid = f[11] if len(f) > 11 else None
-        if m['lk'] not in AF_LEAGUE and isinstance(lid, int) and lid > 0 and lc.get(m['lk']) != lid:
-            lc[m['lk']] = lid
     return n
+
+
+def crest_key(path):
+    return 'f' + hashlib.sha1(path.encode()).hexdigest()[:10]
 
 
 def crest_dir():
@@ -2147,30 +2657,43 @@ def crest_dir():
     return d
 
 
-def fetch_crests(state):
-    """Download and shrink crests not on file yet, a few per run, giving up early if the server is unhappy."""
+def fetch_crests(state, doc):
+    """Download and shrink crests not on file yet, the board's next games first, giving up early if a server is unhappy."""
     d = crest_dir()
     bad = state.setdefault('crest_bad', {})
-    want = [('t', i) for i in sorted(set((state.get('crest') or {}).values()))] + [('l', i) for i in sorted(set((state.get('lgcrest') or {}).values()))]
-    t0, got, fails = time.time(), 0, 0
+    cr, fx, lc = state.get('crest') or {}, state.get('crest_fl') or {}, state.get('lgcrest') or {}
+    want, seen = [], set()
+    for k in sorted(lc, key=lambda k: k not in doc['leagues']):
+        want.append(('l', lc[k]))
+    for name, lk in crest_names(doc):
+        if name in cr:
+            want.append(('t', cr[name]))
+        elif name in fx:
+            want.append(('f', fx[name]))
+    want += [('t', i) for i in sorted(set(cr.values()))]
+    t0, got, fails = time.time(), 0, {'api': 0, 'fl': 0}
     for kind, i in want:
-        name = f'{i}.png' if kind == 't' else f'l{i}.png'
-        if (d / name).exists():
+        name = f'{i}.png' if kind == 't' else f'l{i}.png' if kind == 'l' else crest_key(i) + '.png'
+        if name in seen or (d / name).exists():
             continue
-        key = name[:-4]
+        seen.add(name)
+        key, src = name[:-4], 'fl' if kind == 'f' else 'api'
         if bad.get(key) and NOW - parse_iso(bad[key]) < timedelta(days=2) and not FORCE:
             continue
-        if got >= CREST_PER_RUN or fails >= 3 or time.time() - t0 > CREST_BUDGET_S:
+        if got >= CREST_PER_RUN or time.time() - t0 > CREST_BUDGET_S:
             break
-        r = fetch((CREST_TEAM if kind == 't' else CREST_LEAGUE).format(i), tries=1, timeout=12)
+        if fails[src] >= 3:
+            continue   # that server is unhappy this run; the other may still answer
+        url = CREST_TEAM.format(i) if kind == 't' else CREST_LEAGUE.format(i) if kind == 'l' else FL_RAW + quote(i)
+        r = fetch(url, tries=1, timeout=12)
         try:
             if r.status != 200 or not r.body:
                 raise ValueError(f'HTTP {r.status}')
-            big = small_png(r.body, CREST_BIG) if kind == 't' else None
+            big = small_png(r.body, CREST_BIG) if kind != 'l' else None
             small = small_png(r.body, CREST_SMALL)
         except Exception as e:
             bad[key] = iso(NOW)
-            fails += 1
+            fails[src] += 1
             log('crest', name, 'not saved:', repr(e)[:80])
             continue
         if big:
@@ -2178,12 +2701,13 @@ def fetch_crests(state):
         (d / name).write_bytes(small)
         bad.pop(key, None)
         got += 1
-        time.sleep(0.15)
+        time.sleep(0.1)
     return got
 
 
 def publish_crests(state, doc):
-    """Copy every crest on file to the site and list the ones this page needs: name -> id (negative = not on file yet)."""
+    """Copy every crest on file to the site and list the ones this page needs: name -> API-Football id (negative =
+    not on file yet, so the page loads it from the image server), or a file key for a football-logos crest."""
     d = crest_dir()
     out = OUT_DIR / 'crests'
     (out / 'b').mkdir(parents=True, exist_ok=True)
@@ -2191,24 +2715,35 @@ def publish_crests(state, doc):
         q = out / p.relative_to(d)
         if not q.exists() or q.stat().st_size != p.stat().st_size:
             shutil.copyfile(p, q)
-    cr, lc = state.get('crest') or {}, state.get('lgcrest') or {}
-    names = set()
-    for m in doc['matches']:
-        names.update((m['h'], m['a']))
-    for lg in doc['leagues'].values():
-        names.update(r[0] for r in lg.get('table') or [])
+    cr, fx, lc = state.get('crest') or {}, state.get('crest_fl') or {}, state.get('lgcrest') or {}
     sign = lambda i, f: i if (d / f).exists() else -i
-    doc['crests'] = {n: sign(cr[n], f'{cr[n]}.png') for n in sorted(names) if n in cr}
+    crests = {}
+    for n, _ in sorted(crest_names(doc)):
+        if n in cr and not (n in fx and not (d / f'{cr[n]}.png').exists() and (d / (crest_key(fx[n]) + '.png')).exists()):
+            crests[n] = sign(cr[n], f'{cr[n]}.png')
+        elif n in fx and (d / (crest_key(fx[n]) + '.png')).exists():
+            crests[n] = crest_key(fx[n])
+    doc['crests'] = crests
     doc['lgcrests'] = {k: sign(lc[k], f'l{lc[k]}.png') for k in sorted(doc['leagues']) if k in lc}
     return len(doc['crests'])
 
 
 def refresh_crests(state, doc):
-    n_new = learn_crests(state, doc['matches'])
-    got = fetch_crests(state)
+    def step(fn, default):
+        try:
+            return fn()
+        except Exception as e:   # one source failing must not cost the crests already on file
+            log('crests:', fn.__name__ if hasattr(fn, '__name__') else 'step', 'failed ->', repr(e)[:160])
+            return default
+    if AF_KEY:
+        step(lambda: af_country_teams(state, doc), 0)
+    step(lambda: fl_refresh(state), False)
+    n_new = step(lambda: learn_crests(state, doc), 0)
+    got = step(lambda: fetch_crests(state, doc), 0)
     n = publish_crests(state, doc)
+    total = len(crest_names(doc))
     if n_new or got:
-        log(f'crests: {n_new} new team ids, {got} downloaded, {n} on this board')
+        log(f'crests: {n_new} teams matched, {got} downloaded, {n} of {total} teams on this board have one')
     return n
 
 
@@ -3644,8 +4179,11 @@ def main():
         src['fixtures'] = {'ok': ok or ok2, 'at': iso(NOW), 'count': len(fx) + len(ofx)}
         log('football-data fixtures:', len(fx), '| openfootball schedule fixtures:', len(ofx))
 
+    prev_matches = (prev or {}).get('matches') or []
+    lv_ok, lv_note = safe(lambda: refresh_live(state, prev_matches), (False, 'error'))
+    src['live'] = {'ok': lv_ok, 'at': iso(NOW), 'note': lv_note}
+    log('live:', lv_note)
     if AF_KEY:
-        prev_matches = (prev or {}).get('matches') or []
         note = safe(lambda: refresh_team_news(state, prev_matches), 'error')
         src['team_news'] = {'ok': note != 'error' and not af_blocked(state), 'at': iso(NOW), 'note': note}
         log('team news:', note)
@@ -3657,6 +4195,7 @@ def main():
     log('odds:', msg, '| credits left:', (state.get('quota') or {}).get('remaining'))
 
     doc = build(state, prev, seed)
+    safe(lambda: espn_publish(state, doc), None)
     safe(lambda: refresh_crests(state, doc), 0)
     safe(lambda: refresh_stakes(state, doc), None)
     n_fx = safe(lambda: apply_fx(state, doc), 0)

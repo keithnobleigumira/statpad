@@ -1661,7 +1661,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // isn't on the site yet, so it loads from API-Football's image server meanwhile.
   // National teams and competitions' countries show their flag (flagcdn.com). Anything unknown gets a
   // monogram shield in a colour of its own, which is also what shows while a crest is loading.
-  const UI = { theme: store.get('theme', null) || 'dark', crests: store.get('crests', true), haptics: store.get('haptics', true), motion: store.get('motion', 'auto') };
+  const UI = { theme: store.get('theme', null) || 'dark', crests: store.get('crests', true), haptics: store.get('haptics', true), motion: store.get('motion', 'auto'), live: store.get('live', 'fast') };
   const RM = matchMedia('(prefers-reduced-motion: reduce)');
   const motionOK = () => UI.motion === 'full' || (UI.motion === 'auto' && !RM.matches);
   function applyUI() {
@@ -2332,7 +2332,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const g = T.agg || {}, tiers = g.tiers || {}, sl = g.slips || {};
     const since = T.since ? new Date(T.since).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
     if (!g.n && !(T.slips || []).length) {
-      box.innerHTML = `<div class="empty-state"><b>The track record has started</b>${T.pending || 0} predictions are saved and waiting for results. The first grades appear once results come in. football-data.co.uk publishes them twice a week, so allow 2–4 days.${(T.open || []).length ? `<br><br>${T.open.length} slips are in play.` : ''}</div>${openSlipsCard(T)}${btCard()}`;
+      box.innerHTML = `<div class="empty-state"><b>The track record has started</b>${T.pending || 0} predictions are saved and waiting for results. The first grades appear a few minutes after each final whistle.${(T.open || []).length ? `<br><br>${T.open.length} slips are in play.` : ''}</div>${openSlipsCard(T)}${btCard()}`;
       return;
     }
     let tn = 0, tw = 0, tp = 0;
@@ -2501,8 +2501,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Data status</h3>
       <div class="status">
         <div><span>Data generated</span><b>${new Date(d.generated).toLocaleString()}</b></div>
-        ${st('results', 'Results &amp; tables')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('team_news', 'Team news, live scores &amp; fast results')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
+        ${st('results', 'Results &amp; tables')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('live', 'Live scores &amp; fast results')}${st('team_news', 'Team news &amp; injuries')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
         <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.interval_min ? ' · refresh every ' + (o.interval_min >= 120 ? Math.round(o.interval_min / 60) + ' h' : Math.round(o.interval_min) + ' min') : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
+        <div><span>Live scores on this phone</span><b>${esc(esStatus())}</b></div>
         <div><span>Matches loaded</span><b>${d.matches.length} · ${Object.keys(d.leagues || {}).length} competitions</b></div>
         ${(() => { const T = new Map(); for (const m of d.matches) { T.set(m.h, m.lk); T.set(m.a, m.lk); } let n = 0; for (const [t, lk] of T) if ((d.crests || {})[t] || (lgInfo(lk).group === 'intl' && isoOf(t))) n++; return `<div><span>Club crests</span><b>${n} of ${T.size} teams on the board${UI.crests ? '' : ' · pictures off (Save data)'}</b></div>`; })()}
       </div>
@@ -3372,7 +3373,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const src = tiers.size === 1 && [...tiers][0] ? 'slip-' + [...tiers][0] : 'own';
     return {
       odds: rows.reduce((a, x) => a * x.price, 1), stake: null, bk: S.bcfg.bk || '', code: '', bonus: null, src,
-      legs: rows.map((x) => ({ id: x.c.id, key: x.c.key, label: x.s.label, h: x.r.m.h, a: x.r.m.a, ko: x.r.m.ko, lk: x.r.m.lk,
+      legs: rows.map((x) => ({ id: x.c.id, key: x.c.key, label: x.s.label, h: x.r.m.h, a: x.r.m.a, ko: x.r.m.ko, lk: x.r.m.lk, ev: x.r.m.ev || null,
         p: x.s.p, price: x.price, res: null, lh: x.r.a ? +x.r.a.lh.toFixed(3) : null, la: x.r.a ? +x.r.a.la.toFixed(3) : null })),
     };
   }
@@ -3454,8 +3455,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const cut = L.filter((l) => l.res === 'v').reduce((a, l) => a * (l.price > 1 ? l.price : 1), 1);   // postponed legs count at odds 1
     return { status: 'won', ret: collectFor(b.stake, Math.max(1, b.odds / cut), b.bonus, b.tax != null ? b.tax : S.bcfg.tax).net, approx: cut > 1 };
   }
+  // the site's results file, with ESPN's finals seen on this phone on top (they arrive minutes earlier)
+  function resultsNow() {
+    const R = S.results || {}, E = S.es || { res: {}, void: {} };
+    const scores = Object.assign({}, E.res, R.scores || {}), vd = Object.assign({}, R.void || {});
+    for (const [id, v] of Object.entries(E.void)) if (!scores[id] && !vd[id]) vd[id] = v;
+    return { scores, void: vd };
+  }
   function settleBets() {
-    const R = S.results; if (!R) return false;
+    if (!S.results && !(S.es && (Object.keys(S.es.res).length || Object.keys(S.es.void).length))) return false;
+    const R = resultsNow();
     let changed = false;
     for (const b of S.bets) {
       if (b.status !== 'open') continue;
@@ -4156,9 +4165,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   });
 
   // ---------------- live scores and the cash-out adviser ----------------
-  // Scores of games in play come from live.json (when the site has an API-Football key). From the score,
-  // the minute and each side's expected goals, the rest of the game is a Poisson draw: that gives each
-  // leg's chance now, and with it what an open bet is worth on average.
+  // Scores of games in play come from ESPN, read by the site every 5 minutes (live.json) and by this phone
+  // every 30 s to a minute while a game is on (below). From the score, the minute and each side's expected
+  // goals, the rest of the game is a Poisson draw: that gives each leg's chance now, and with it what an
+  // open bet is worth on average.
   S.live = null; S.liveAt = 0; S.manual = {}; S.coOffer = {};
   const T_END = 96;                                    // 90 minutes plus typical stoppage time
   const goalClock = (x) => x + 0.2 * x * x / T_END;    // goals come a little faster as a game goes on
@@ -4234,8 +4244,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         `<span class="lb-sc">${n.min} ${n.sc[0]}–${n.sc[1]}</span>${n.man ? ' <small>(typed)</small>' : ''} · <b>${n.w != null ? pct(n.w, 0) : '–'}</b>`;
       return `<li><span>${esc(l.label)}</span><span class="lb-now">${now}</span></li>`;
     }).join('');
-    const upd = S.live && S.live.checked ? Math.max(0, Math.round((Date.now() - Date.parse(S.live.checked)) / 60e3)) : null;
-    return `<div class="lb-h"><span class="live-dot"></span>In play${upd != null ? ` · scores checked ${upd ? upd + ' min ago' : 'just now'}` : ''}</div><ul class="lb-legs">${legs}</ul>
+    const upd = S.live && S.live.checked ? Math.max(0, (Date.now() - Date.parse(S.live.checked)) / 1e3) : null;
+    return `<div class="lb-h"><span class="live-dot"></span>In play${upd != null ? ` · scores checked ${upd < 45 ? 'just now' : upd < 90 ? 'a minute ago' : Math.round(upd / 60) + ' min ago'}` : ''}</div><ul class="lb-legs">${legs}</ul>
       ${L.known ? `<div class="sum-row"><span>Chance it lands now</span><b>${pct(L.pAll, L.pAll < 0.1 ? 1 : 0)}<small>was ${pct(L.pre, L.pre < 0.1 ? 1 : 0)} before kick-off</small></b></div>
       <div class="sum-row"><span>Worth now, on average</span><b>${money(L.worth)}</b></div>` : L.legs.some((x) => x.n.st === 'noscore')
       ? '<p class="note">Add the score of each game in play to see what the bet is worth now.</p>' : '<p class="note">A game has finished: the bet updates when its result comes in, or type the final score below.</p>'}`;
@@ -4281,10 +4291,190 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     try {
       const r = await fetch('live.json?t=' + Math.floor(Date.now() / 30e3), { cache: 'no-store' });
       if (!r.ok) return;
-      S.live = await r.json();
+      S.liveFile = await r.json();
+      esMerge();
       paintLive();
     } catch (e) { /* no live file: typed scores still work */ }
   }
+
+  // ---------------- live scores straight from ESPN ----------------
+  // live.json comes from the site's 5-minute update, and GitHub takes a minute or two more to publish it. So while
+  // a game that matters is in play, the phone also reads ESPN's public scoreboards itself (about 7 KB a competition
+  // a check): every 30 s for a competition where you have a bet running and every minute for the other games in play
+  // (Data saver: 1 and 3 minutes). ESPN's finals settle bets at once; the site's results file confirms them later.
+  const ES_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/';
+  const ES_GAP = { fast: [30e3, 60e3], saver: [60e3, 180e3] }, ES_WAIT = 5 * 60e3, ES_OFF = /POSTPONED|CANCEL|ABANDON|FORFEIT/;
+  const ES = S.es = { at: {}, games: {}, res: {}, void: {}, ev: store.get('esev', {}) || {}, n: 0, last: 0, fail: 0, pause: 0, busy: false, checks: 0 };
+  for (const [k, v] of Object.entries(ES.ev)) if (!Array.isArray(v) || !(Date.now() - v[3] < 4 * 86400e3)) delete ES.ev[k];
+  const esSlug = (lk) => ((S.data && S.data.espn) || {})[lk] || null;
+  const esDay = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, '');
+  const esMin = (s) => { const m = /(\d+)'?(?:\s*\+\s*(\d+))?/.exec(s || ''); return m ? +m[1] + (+m[2] || 0) : 0; };   // "45'+2'" -> 47
+  const ES_STOP = new Set(['fc', 'cf', 'sc', 'afc', 'ac', 'cd', 'ud', 'sd', 'club', 'de', 'del', 'la', 'the', 'and', 'calcio', 'fk', 'sk', 'if', 'bk', 'sv', 'vfl', 'vfb', 'rc', 'rcd', 'ca', 'ssc', 'clube', 'futebol']);
+  const ES_SIDE = new Set(['w', 'women', 'femenino', 'feminin', 'frauen', 'u17', 'u18', 'u19', 'u20', 'u21', 'u23', 'ii', 'b', 'reserves', 'youth', 'jong']);
+  const ES_CH = { 'ø': 'o', 'æ': 'ae', 'ß': 'ss', 'ł': 'l', 'đ': 'd', 'ı': 'i', 'œ': 'oe', 'þ': 'th', 'ð': 'd' };
+  const esToks = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[øæßłđıœþð]/g, (c) => ES_CH[c]).replace(/[.'’]/g, '').split(/[^a-z0-9]+/)
+    .filter((w) => w && !ES_STOP.has(w) && !/^(19|20)\d\d$|^\d{1,2}$/.test(w));
+  function esSim(a, b) {   // 1 the same name, 0.9 one name inside the other, else how many letter pairs they share
+    const A = esToks(a), B = esToks(b); if (!A.length || !B.length) return 0;
+    if (A.filter((w) => ES_SIDE.has(w)).sort().join() !== B.filter((w) => ES_SIDE.has(w)).sort().join()) return 0;   // never a club's women's, youth or reserve side
+    const ja = A.join(''), jb = B.join(''); if (ja === jb) return 1;
+    const [sh, lg] = A.length <= B.length ? [A, B] : [B, A];
+    if (sh.every((w) => lg.some((x) => x === w || (w.length >= 3 && x.startsWith(w)) || (x.length >= 3 && w.startsWith(x))))) return 0.9;
+    const pairs = (t) => { const o = []; for (let i = 0; i < t.length - 1; i++) o.push(t.slice(i, i + 2)); return o; };
+    const x = pairs(ja), pool = pairs(jb), n = x.length + pool.length; let hit = 0;
+    for (const t of x) { const i = pool.indexOf(t); if (i >= 0) { hit++; pool.splice(i, 1); } }
+    return n ? 2 * hit / n : 0;
+  }
+  function esRow(e) {
+    try {
+      const c = (e.competitions || [])[0] || {}, side = {};
+      for (const x of c.competitors || []) side[x.homeAway] = x;
+      const h = side.home, a = side.away; if (!h || !a) return null;
+      const nm = (t) => [...new Set([t.displayName, t.shortDisplayName, t.name, t.location].filter(Boolean))];
+      const st = c.status || e.status || {}, ty = st.type || {}, hid = (h.team || {}).id, goals = [], reds = [];
+      for (const d of c.details || []) {
+        if (d.shootout) continue;
+        const lab = (d.clock || {}).displayValue || '', s = (d.team || {}).id === hid ? 'h' : 'a';
+        if (d.scoringPlay) goals.push([esMin(lab), s, !!d.ownGoal, lab]); else if (d.redCard) reds.push([esMin(lab), s]);
+      }
+      return { id: String(e.id), ko: Date.parse(e.date || c.date), h: nm(h.team || {}), a: nm(a.team || {}), hs: +h.score || 0, as: +a.score || 0,
+        st: ty.name || '', state: ty.state || '', done: !!ty.completed, period: +st.period || 0, clock: st.displayClock || '', goals, reds };
+    } catch (err) { return null; }
+  }
+  function esGoals(g) {   // goal times, trusted only when they add up to the score (feeds differ on own goals)
+    for (const flip of [false, true]) {
+      const gs = g.goals.map(([m, s, o, lab]) => [m, o && flip ? (s === 'h' ? 'a' : 'h') : s, lab]).sort((x, y) => x[0] - y[0]);
+      if (gs.filter((x) => x[1] === 'h').length === g.hs && gs.filter((x) => x[1] === 'a').length === g.as)
+        return { goals: gs.map((x) => [x[0], x[1]]), reg: gs.filter((x) => (parseInt(x[2], 10) || 0) <= 90).map((x) => [x[0], x[1]]), exact: 1 };
+    }
+    return { goals: null, reg: null, exact: 0 };
+  }
+  function esTuple(g, prev) {   // the live.json entry: [home, away, minute, stage, checked, goals, reds, exact]
+    let { goals, reg, exact } = esGoals(g), stage, min;
+    if (!goals && prev) goals = prev[5];
+    if (g.state === 'post') { stage = 'FT'; min = 90; }
+    else if (g.st === 'STATUS_HALFTIME') { stage = 'HT'; min = 45; }
+    else if (g.period >= 5) { stage = 'P'; min = 120; }
+    else if (g.period >= 3 || g.st === 'STATUS_END_OF_REGULATION') { stage = 'ET'; min = 90 + Math.max(0, esMin(g.clock) - 90); }
+    else { stage = g.period === 2 ? '2H' : '1H'; min = esMin(g.clock); }
+    let hs = g.hs, as = g.as;
+    if (stage === 'ET' || stage === 'P' || (stage === 'FT' && /AET|PEN/.test(g.st))) {   // bets settle on the 90-minute score
+      if (!reg) return null;
+      hs = reg.filter((x) => x[1] === 'h').length; as = reg.filter((x) => x[1] === 'a').length; goals = reg;
+    }
+    return [hs, as, min, stage, new Date().toISOString(), goals || [], g.reds.slice().sort((x, y) => x[0] - y[0]), exact];
+  }
+  function esPair(t, rows) {   // ESPN's game for one of ours: its game id, or the same kick-off and the same clubs
+    if (t.ev) { const g = rows.find((x) => x.id === String(t.ev)); if (g) return g; }
+    const near = [];
+    for (const g of rows) {
+      const dt = Math.abs(g.ko - t.ko) / 60e3;
+      if (dt <= 180) near.push([g, dt, Math.max(0, ...g.h.map((n) => esSim(t.h, n))), Math.max(0, ...g.a.map((n) => esSim(t.a, n)))]);
+    }
+    let best = null, bs = 0;
+    for (const [g, dt, sh, sa] of near) {
+      let ok = (sh >= 0.8 && sa >= 0.8) || (dt <= 15 && ((sh === 1 && sa >= 0.5) || (sa === 1 && sh >= 0.5)));
+      if (!ok && dt <= 15 && Math.max(sh, sa) >= 0.9) {   // one club plainly the same, and no other game it could be
+        const i = sh >= sa ? 2 : 3; ok = !near.some((x) => x[0] !== g && (x[i] >= 0.6 || x[5 - i] >= 0.9));
+      }
+      if (ok && sh + sa - dt / 600 > bs) { best = g; bs = sh + sa - dt / 600; }
+    }
+    return best;
+  }
+  function esTargets() {   // games in play or about to start, and bet legs still waiting for a result
+    const now = Date.now(), out = new Map(), R = S.results || {};
+    const add = (id, lk, ko, h, a, ev, bet) => {
+      const slug = esSlug(lk); if (!slug || !ko || ES.res[id] || ES.void[id] || (R.scores || {})[id] || (R.void || {})[id]) return;
+      const t = out.get(id); if (t) { t.bet = t.bet || bet; return; }
+      out.set(id, { id, slug, ko, h, a, ev: ev || (ES.ev[id] || [])[1], bet });
+    };
+    for (const r of S.rows || []) if (now >= r.ko - 5 * 60e3 && now < r.ko + 135 * 60e3) add(r.m.id, r.m.lk, r.ko, r.m.h, r.m.a, r.m.ev, false);
+    for (const b of S.bets || []) {
+      if (b.status !== 'open') continue;
+      for (const l of b.legs) {
+        const ko = Date.parse(l.ko); if (l.res || !(now >= ko - 5 * 60e3 && now < ko + 36 * 3600e3)) continue;
+        const r = S.byId && S.byId.get(l.id); add(l.id, l.lk, ko, l.h, l.a, l.ev || (r && r.m.ev), true);
+      }
+    }
+    return [...out.values()];
+  }
+  function esBoards(T) {   // one scoreboard per competition and day (ESPN files games by US Eastern day, so try both)
+    const B = new Map();
+    for (const t of T) {
+      const k0 = ES.ev[t.id], days = k0 && k0[0] === t.slug ? [k0[2]] : [...new Set([esDay(t.ko - 5 * 3600e3), esDay(t.ko)])];
+      for (const day of days) {
+        const k = t.slug + '|' + day, b = B.get(k) || { slug: t.slug, day, ts: [], bet: false, live: false };
+        b.ts.push(t); b.bet = b.bet || (t.bet && Date.now() < t.ko + 135 * 60e3); b.live = b.live || Date.now() < t.ko + 135 * 60e3; B.set(k, b);
+      }
+    }
+    return [...B.values()];
+  }
+  const esGap = (b) => !b.live ? ES_WAIT : (ES_GAP[UI.live] || ES_GAP.fast)[b.bet ? 0 : 1];
+  async function esBoard(b) {
+    ES.at[b.slug + '|' + b.day] = Date.now();
+    const ctl = typeof AbortController === 'function' ? new AbortController() : null, tm = ctl && setTimeout(() => ctl.abort(), 12e3);
+    try {
+      const r = await fetch(ES_URL + b.slug + '/scoreboard?dates=' + b.day + '&limit=200', { cache: 'no-store', credentials: 'omit', signal: ctl ? ctl.signal : undefined });
+      if (!r.ok) throw new Error('status ' + r.status);
+      const d = await r.json(); ES.fail = 0; ES.checks++;
+      return (d.events || []).map(esRow).filter(Boolean);
+    } catch (e) { ES.fail++; return null; } finally { if (tm) clearTimeout(tm); }
+  }
+  function esMerge() {   // live.json and ESPN on this phone: the newer entry for each game wins
+    const F = S.liveFile || {}, G = Object.assign({}, F.games || {});
+    for (const [id, g] of Object.entries(ES.games)) { const f = G[id]; if (!f || Date.parse(g[4]) >= Date.parse(f[4]) || f[3] !== 'FT' && g[3] === 'FT') G[id] = g; }
+    const at = Math.max(F.checked ? Date.parse(F.checked) : 0, ES.last);
+    S.live = Object.assign({}, F, { games: G, checked: at ? new Date(at).toISOString() : null });
+  }
+  async function esTick() {
+    if (UI.live === 'off' || ES.busy || document.hidden || !S.data || !S.ready || Date.now() < ES.pause) return;
+    const T = esTargets(), now = Date.now();
+    ES.n = T.filter((t) => now >= t.ko && now < t.ko + 135 * 60e3).length;
+    if (!T.length) return;
+    const due = esBoards(T).filter((b) => now - (ES.at[b.slug + '|' + b.day] || 0) >= esGap(b)).sort((x, y) => y.bet - x.bet || y.live - x.live);
+    if (!due.length) return;
+    ES.busy = true;
+    let changed = false;
+    try {
+      const got = await Promise.all(due.slice(0, 10).map((b) => esBoard(b).then((rows) => [b, rows])));
+      for (const [b, rows] of got) {
+        if (!rows) continue;
+        ES.last = Date.now();
+        for (const t of b.ts) {
+          if (ES.res[t.id] || ES.void[t.id]) continue;
+          const g = esPair(t, rows); if (!g) continue;
+          ES.ev[t.id] = [b.slug, g.id, b.day, t.ko];
+          if (ES_OFF.test(g.st)) { ES.void[t.id] = g.st.replace('STATUS_', '').slice(0, 4); delete ES.games[t.id]; changed = true; continue; }
+          if (g.state === 'pre') continue;
+          const tu = esTuple(g, ES.games[t.id] || ((S.liveFile || {}).games || {})[t.id]); if (!tu) continue;
+          const old = ES.games[t.id]; ES.games[t.id] = tu;
+          if (!old || JSON.stringify(old.slice(0, 4).concat(old.slice(5))) !== JSON.stringify(tu.slice(0, 4).concat(tu.slice(5)))) changed = true;
+          if (g.state === 'post' && g.done) { ES.res[t.id] = [tu[0], tu[1]]; changed = true; }
+        }
+      }
+    } finally { ES.busy = false; }
+    if (ES.fail >= 3) ES.pause = Date.now() + 2 * 60e3;   // ESPN can't be reached from here: back off; the site's own file still works
+    store.set('esev', ES.ev);
+    esMerge();
+    if (changed) {
+      paintLive();
+      const was = new Map(S.bets.map((b) => [b.id, b.status]));
+      if (settleBets()) {
+        const done = S.bets.filter((b) => was.get(b.id) === 'open' && b.status !== 'open');
+        if (done.length) { const b = done[0], w = { won: 'Bet won', lost: 'Bet lost', void: 'Bet void' }[b.status] || 'Bet settled'; toast(done.length > 1 ? `${done.length} bets settled` : `${w}: ${b.legs.length > 1 ? b.legs.length + '-leg slip' : b.legs[0].label}`); buzz(20); }
+        if (S.tab === 'coupon') renderCoupon();
+      }
+    } else for (const el of document.querySelectorAll('[data-livebet]')) { const b = S.bets.find((x) => x.id === el.dataset.livebet), c = b && $('#lbc-' + b.id); if (c) c.innerHTML = liveCalc(b, liveBet(b)); }
+  }
+  function esStatus() {
+    if (UI.live === 'off') return 'Off: scores from the site’s own updates, every few minutes';
+    if (Date.now() < ES.pause || (ES.fail && !ES.last)) return 'ESPN can’t be reached from this phone right now: using the site’s updates';
+    const g = ES_GAP[UI.live] || ES_GAP.fast, ago = ES.last ? Math.round((Date.now() - ES.last) / 1e3) : null;
+    return `From ESPN every ${g[0] / 1e3} s for your bets, every ${g[1] >= 120e3 ? g[1] / 60e3 + ' min' : g[1] / 1e3 + ' s'} for other games in play · ${ES.n ? ES.n + ' in play now' : 'none in play now'}${ago != null ? ` · last check ${ago < 60 ? ago + ' s' : Math.round(ago / 60) + ' min'} ago` : ''}`;
+  }
+  setInterval(esTick, 10e3);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) esTick(); });
+  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, esStatus, esTick, esRow, esTuple, esPair, esSim };   // for the test scripts
   document.addEventListener('input', (e) => {
     const d = e.target.dataset || {};
     if (d.man) {
@@ -5705,7 +5895,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     $('#sheetBody').innerHTML = `<canvas class="shk-cv big" data-shkcv="sheet" role="img" aria-label="Map of the games in play"></canvas>
       <div class="shk-key"><span><i style="background:${SHK_COL.shock}"></i>Shock: the favourite's chance has collapsed</span><span><i style="background:${SHK_COL.wobble}"></i>Wobble</span><span><i style="background:${SHK_COL.calm}"></i>Going to plan</span><span><i style="background:${SHK_COL.soon}"></i>Kicks off soon</span></div>
       <div class="shk-list" data-shklist="40">${shockList(40)}</div>
-      <p class="note">Each dot is a game, placed in its country. It pulses faster and wider the more the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes. The shock number is that fall, in percentage points. Tap a dot or a row for the match. Live scores are checked every few minutes.</p>`;
+      <p class="note">Each dot is a game, placed in its country. It pulses faster and wider the more the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes. The shock number is that fall, in percentage points. Tap a dot or a row for the match. Scores come from ESPN every 30 seconds to a minute while this page is open.</p>`;
     requestAnimationFrame(shkAttach);
   }
   document.addEventListener('click', (e) => {
@@ -5966,6 +6156,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="disp-row"><h5>Theme</h5><p>Dark is easy on the eyes at night and saves battery on most phones; light reads better in bright sun.</p>${seg('theme', [['dark', 'Dark'], ['light', 'Light'], ['auto', 'Match phone']])}</div>
       <div class="disp-row"><h5>Club crests and flags</h5><p>Each crest downloads once and is kept on your phone. Choose “Save data” to load no pictures at all: teams show a coloured monogram instead.</p>${seg('crests', [[true, 'Show'], [false, 'Save data']])}
         ${ex ? `<div class="disp-prev">${crest(ex.m.h, ex.m.lk, 'md')}${crest(ex.m.a, ex.m.lk, 'md')}<span>${esc(ex.m.h)} v ${esc(ex.m.a)}</span></div>` : ''}</div>
+      <div class="disp-row"><h5>Live scores</h5><p>While a game is on, scores come straight from ESPN: every 30 seconds for games you have a bet on, every minute for the rest. Each check is about 7 KB per competition. Data saver checks every 1 and 3 minutes; Off waits for the site’s own updates, every few minutes.</p>${seg('live', [['fast', 'Fast'], ['saver', 'Data saver'], ['off', 'Off']])}</div>
       <div class="disp-row"><h5>Vibrate on tap</h5><p>A short buzz when you add a pick, switch sections or swipe a page away, on phones that can.</p>${seg('haptics', [[true, 'On'], [false, 'Off']])}</div>
       <div class="disp-row"><h5>Motion</h5><p>Sliding pages, prices flying to your coupon, bars that sweep in. “Match phone” follows your phone’s reduce-motion setting.</p>${seg('motion', [['auto', 'Match phone'], ['full', 'Full'], ['reduced', 'Reduced']])}</div>
       <p class="note">Crests from API-Football and the open football-logos collection; flags from flagcdn.com.</p>
@@ -5983,7 +6174,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       return;
     }
     const [k, raw] = t.dataset.ui.split(':'), v = raw === 'true' ? true : raw === 'false' ? false : raw;
-    UI[k] = v; store.set(k, v); applyUI(); if (k === 'haptics' && v) buzz(12);
+    UI[k] = v; store.set(k, v); applyUI(); if (k === 'haptics' && v) buzz(12); if (k === 'live') esTick();
     renderDisplaySheet();
     if (k === 'crests' || k === 'theme') { const o = S.open; S.open = null; render(); S.open = o; }
   });
@@ -6154,7 +6345,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   load(true);
   connectLegacy();
   setInterval(() => { load(false); if (Date.now() - S.resultsAt > 10 * 60e3) loadResults(true); if (document.visibilityState === 'visible') loadLive(false); }, 60e3);
-  setTimeout(() => loadLive(true), 3000);
+  setTimeout(() => { loadLive(true); esTick(); }, 3000);
   setTimeout(() => loadResults(true), 2500);
   setInterval(async () => { if (!S.data || !S.ready) return; S.now = Date.now(); const tk = ++S.token; try { if (await analyseAll(tk)) render(); } catch (e) { showFatal(e); } }, 5 * 60e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - (S.lastFetch || 0) > 20e3) load(false); });
