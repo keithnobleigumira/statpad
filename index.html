@@ -3140,7 +3140,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Goal seek</h3>
       <p>Under <b>Slips → Goal seek</b>, say what you want to turn your stake into. Statpad works out the odds needed after tax on winnings, then searches every combination of one pick per match, at real bookmaker prices and up to 12 legs, for the slip most likely to land in full while paying that much. Every leg is weighed before it can be used: its price is what a typical bookmaker pays (the market average, not the single best price somewhere), its chance is the cautious one and never above the bookmakers' own consensus, and it must clear the minimum chance you set for every leg (40% unless you change it), so long shots can't be used to buy odds. A table weighs the same goal with every minimum, from any chance to 70%+: long shots need fewer legs but each rarely lands, safer legs need more of them. It shows the chance honestly, what such a slip returns on average, a value-only version if you want every leg to beat the bookmaker's price, and the price of ambition: the best chance for every amount you could aim for. You can also ask by voice: "turn 10,000 into 500,000".</p>
       <h3>WhatsApp Status pack</h3>
-      <p>On the Matches and Slips tabs, <b>Status pack</b> makes 11-second videos for the day, sized for WhatsApp Status, each built around its own animated data graphic. There are twelve kinds: the safest pick on a confidence dial, an upset alert on a radar that locks onto the underdog, the game with most at stake as three futures, the slip at your target odds climbing leg by leg, a goal rush (the game with most goals expected, as an equalizer of total goals), the most likely exact score on a lit grid of scorelines, the match of the day in the two teams' own colours (who wins as a tug of war, their last five results, expected goals and Statpad's pick), the best value bet as two needles on an odds dial, the last day's results flipping pick by pick to landed or missed, a price that has dropped hard, a team in form, and the whole day in numbers. Each day the pack picks four from what the day's games make interesting, steers away from the kinds made on this phone in the last few days, and turns a little by the date, so it keeps changing; <b>4 more clips</b> makes the next ones on the day's list. Titles, closing lines and camera moves change by day too. Each clip opens with the camera swooping over a floodlit pitch drawn as a hologram and ends on Statpad's address, with the recent record of “Nearly definite” picks when there are enough of them. The sound is made the same way: machine hum, beeps, servo whirs, clunks and radar pings timed to the pictures, with no voices or music. Everything is drawn and encoded on your phone (H.264 video with AAC sound, or Opus where the phone has no AAC encoder), at 4K (2160 × 3840) when the phone's video encoder allows, otherwise 1440p or 1080p; <b>1080p · faster</b> is about three times quicker, and sound can be turned off. Phones that can't make video get the same graphics as 4K pictures. WhatsApp shrinks Status videos when it posts them; the full files stay sharp on TikTok, Instagram and YouTube Shorts. Sharing adds the site's link to the caption. Results clips show misses as well as wins.</p>
+      <p>On the Matches and Slips tabs, <b>Status pack</b> makes 11-second videos for the day, sized for WhatsApp Status, each built around its own animated data graphic. There are twelve kinds: the safest pick on a confidence dial, an upset alert on a radar that locks onto the underdog, the game with most at stake as three futures, the slip at your target odds climbing leg by leg, a goal rush (the game with most goals expected, as an equalizer of total goals), the most likely exact score on a lit grid of scorelines, the match of the day in the two teams' own colours (who wins as a tug of war, their last five results, expected goals and Statpad's pick), the best value bet as two needles on an odds dial, the last day's results flipping pick by pick to landed or missed, a price that has dropped hard, a team in form, and the whole day in numbers. Each day the pack picks four from what the day's games make interesting, steers away from the kinds made on this phone in the last few days, and turns a little by the date, so it keeps changing; <b>4 more clips</b> makes the next ones on the day's list. Titles, closing lines and camera moves change by day too. Each clip opens with the camera swooping over a floodlit pitch drawn as a hologram and ends on Statpad's address, with the recent record of “Nearly definite” picks when there are enough of them. The sound is made the same way: machine hum, beeps, servo whirs, clunks and radar pings timed to the pictures, with no voices or music. Everything is drawn and encoded on your phone as ordinary MP4 video (H.264 with AAC sound; if the phone's browser has no AAC encoder, one loads with the video packer the first time), stored the way phone cameras store portrait video, so WhatsApp and other apps take it like any video from your gallery. <b>1080p · WhatsApp</b> is the default, as that's what WhatsApp Status shows; <b>4K</b> (2160 × 3840) is for TikTok, Instagram and YouTube Shorts and takes about three times as long. Each finished clip is played back on your phone before it's offered, and a size the phone can't play is made smaller by itself. Sound can be turned off. Phones that can't make video get the same graphics as 4K pictures. Sharing adds the site's link to the caption. Results clips show misses as well as wins.</p>
       <h3>Ask Statpad</h3>
       <p>Tap the microphone at the top, or <b>Ask Statpad</b> on the Matches tab, and speak straight away, or type, in English or Kiswahili. It listens until you've finished, sending your question once you've been quiet for 3 seconds (5, or only when you tap ✓, if you prefer): who wins a game, how a team is doing, the safest picks, a slip at any odds, the best value, what's at stake, title and relegation races, live scores, or how your bets are doing. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so it needs the internet and the microphone allowed for the site; the answers come from the same numbers as the rest of the page and are read aloud. Follow-ups such as "and tomorrow?" work, and so do names a little off. Some browsers don't offer voice input: type instead.</p>
       <h3>My bets</h3>
@@ -5369,70 +5369,110 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
 
   // ---- encoding: WebCodecs H.264 and AAC (Opus if the phone has no AAC encoder) into an MP4 ----
-  let MUXP = null;
-  function loadMuxer() {
-    if (window.Mp4Muxer) return Promise.resolve(window.Mp4Muxer);
-    if (MUXP) return MUXP;
-    const urls = ['https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.min.js', 'https://unpkg.com/mp4-muxer@5.2.2/build/mp4-muxer.js'];
-    MUXP = (async () => {
-      for (const u of urls) {
-        try { await new Promise((res, rej) => { const s = document.createElement('script'); s.src = u; s.async = true; s.crossOrigin = 'anonymous'; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); if (window.Mp4Muxer) return window.Mp4Muxer; } catch (e) { /* try the next copy */ }
+  // The packer is Mediabunny (MPL-2.0), loaded the first time a pack is made. On a phone whose browser can't
+  // encode AAC, its AAC encoder extension (FFmpeg's, built for WebAssembly, about 1 MB) comes too, so the clips
+  // always carry sound that every app plays.
+  const MB_V = '1.65.0';
+  let MBP = null, AACP = null;
+  function loadMedia() {
+    if (MBP) return MBP;
+    MBP = (async () => {
+      for (const u of [`https://cdn.jsdelivr.net/npm/mediabunny@${MB_V}/dist/bundles/mediabunny.min.mjs`, `https://unpkg.com/mediabunny@${MB_V}/dist/bundles/mediabunny.min.mjs`]) {
+        try { const M = await import(u); if (M && M.Output) { window.Mediabunny = M; return M; } } catch (e) { /* try the next copy */ }
       }
-      MUXP = null; const e = new Error('mux'); e.mux = true; throw e;
+      MBP = null; const e = new Error('mux'); e.mux = true; throw e;
     })();
-    return MUXP;
+    return MBP;
   }
-  const MV_RES = { '4k': [[2160, 3840, 'avc1.640033', 12e6], [1440, 2560, 'avc1.640032', 8e6], [1080, 1920, 'avc1.640028', 6e6]], hd: [[1080, 1920, 'avc1.640028', 6e6]] };
+  function loadAac(M) {
+    if (AACP) return AACP;
+    AACP = (async () => {
+      try { if (await M.canEncodeAudio('aac', { numberOfChannels: 2, sampleRate: 48000, bitrate: 160000 })) return 'native'; } catch (e) { /* check the extension */ }
+      for (const u of [`https://cdn.jsdelivr.net/npm/@mediabunny/aac-encoder@${MB_V}/dist/bundles/mediabunny-aac-encoder.min.js`, `https://unpkg.com/@mediabunny/aac-encoder@${MB_V}/dist/bundles/mediabunny-aac-encoder.min.js`]) {
+        try {
+          await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = u; sc.async = true; sc.crossOrigin = 'anonymous'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+          if (window.MediabunnyAacEncoder) { window.MediabunnyAacEncoder.registerAacEncoder(); if (await M.canEncodeAudio('aac', { numberOfChannels: 2, sampleRate: 48000, bitrate: 160000 })) return 'wasm'; }
+        } catch (e) { /* try the next copy */ }
+      }
+      AACP = null; return null;
+    })();
+    return AACP;
+  }
+  // The clips are stored the way a phone camera stores portrait video: landscape frames (1920 × 1080, or
+  // 3840 × 2160 for 4K) with a "turn 90°" flag, H.264 with AAC sound. Phones decode that shape for every camera
+  // video; an upright 2160 × 3840 file is one many phones' decoders refuse, and WhatsApp then can't use it.
+  // Each size is also checked against this phone's own video decoder, and each finished clip is played back
+  // here before it's offered, so a file the phone can't play is never shared.
+  const MV_RES = {
+    hd: [[1080, 1920, 'avc1.640028', 6e6], [1080, 1920, 'avc1.4d0028', 6e6], [720, 1280, 'avc1.4d001f', 4e6]],
+    '4k': [[2160, 3840, 'avc1.640033', 12e6], [1440, 2560, 'avc1.640032', 8e6], [1080, 1920, 'avc1.640028', 6e6], [1080, 1920, 'avc1.4d0028', 6e6], [720, 1280, 'avc1.4d001f', 4e6]],
+  };
   async function mvVideoRes(q, below) {
     if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return null;
-    for (const [w, h, codec, br] of MV_RES[q] || MV_RES['4k']) {
-      if (below && w >= below) continue;
-      try { if ((await VideoEncoder.isConfigSupported({ codec, width: w, height: h, bitrate: br, framerate: MV.FPS, avc: { format: 'avc' } })).supported) return { w, h, codec, br }; } catch (e) { /* not this one */ }
+    const list = MV_RES[q] || MV_RES.hd;
+    let skip = below ? list.findIndex((o) => o[0] === below.w && o[2] === below.codec) + 1 : 0;   // after a failure, start below it
+    for (const [w, h, codec, br] of list.slice(Math.max(0, skip))) {
+      const cw = h, ch = w;   // coded landscape
+      try {
+        const e = await VideoEncoder.isConfigSupported({ codec, width: cw, height: ch, bitrate: br, framerate: MV.FPS, avc: { format: 'avc' } });
+        if (!e.supported) continue;
+        if (typeof VideoDecoder !== 'undefined') { const d = await VideoDecoder.isConfigSupported({ codec, codedWidth: cw, codedHeight: ch }); if (!d.supported) continue; }
+        return { w, h, cw, ch, codec, br, rot: 90 };
+      } catch (e) { /* not this one */ }
     }
     return null;
   }
+  // sound only as AAC, the format every phone and app plays in an MP4: the browser's own encoder, or the extension
   async function mvAudioCodec() {
-    if (typeof AudioEncoder === 'undefined' || typeof AudioData === 'undefined' || typeof OfflineAudioContext === 'undefined') return null;
-    for (const [c, m] of [['mp4a.40.2', 'aac'], ['opus', 'opus']]) {
-      try { if ((await AudioEncoder.isConfigSupported({ codec: c, sampleRate: 48000, numberOfChannels: 2, bitrate: 160000 })).supported) return { c, m }; } catch (e) { /* not this one */ }
-    }
-    return null;
+    if (typeof OfflineAudioContext === 'undefined') return null;
+    try { const how = await loadAac(await loadMedia()); return how ? { m: 'aac', how } : null; } catch (e) { return null; }
   }
-  async function mvOpus() { try { return (await AudioEncoder.isConfigSupported({ codec: 'opus', sampleRate: 48000, numberOfChannels: 2, bitrate: 160000 })).supported; } catch (e) { return false; } }
+  // play the finished clip on this phone: if its decoder can't show a frame, the clip isn't offered
+  function mvPlayable(blob) {
+    return new Promise((res) => {
+      const v = document.createElement('video'), u = URL.createObjectURL(blob); let done = false;
+      const end = (ok) => { if (done) return; done = true; try { v.removeAttribute('src'); v.load(); } catch (e) { /* gone */ } URL.revokeObjectURL(u); res(ok); };
+      v.muted = true; v.playsInline = true; v.preload = 'auto';
+      v.onloadeddata = () => end(true);
+      v.onerror = () => end(!(v.error && (v.error.code === 3 || v.error.code === 4)));   // 3: can't decode, 4: format not supported
+      setTimeout(() => end(true), 8000);
+      v.src = u;
+    });
+  }
   const mvSleep = (ms) => new Promise((r) => setTimeout(r, ms));
   async function mvEncode(sc, D, R, AC, onProg, alive) {
-    const Mx = await loadMuxer(), F = mvSetup(sc, D, R.w, R.h), N = Math.round(MV.DUR * MV.FPS);
-    const target = new Mx.ArrayBufferTarget();
-    const mux = new Mx.Muxer({ target, fastStart: 'in-memory', firstTimestampBehavior: 'offset', video: { codec: 'avc', width: R.w, height: R.h, frameRate: MV.FPS }, audio: AC ? { codec: AC.m, numberOfChannels: 2, sampleRate: 48000 } : undefined });
-    let err = null;
-    if (AC) {
-      const buf = await mvAudio(sc, D), SR = 48000, L0 = buf.getChannelData(0), L1 = buf.getChannelData(1);
-      const ae = new AudioEncoder({ output: (c, m) => mux.addAudioChunk(c, m), error: (e) => { err = e; } });
-      ae.configure({ codec: AC.c, sampleRate: SR, numberOfChannels: 2, bitrate: 160000 });
-      for (let i = 0; i < buf.length; i += 4800) {
-        const n = Math.min(4800, buf.length - i), data = new Float32Array(n * 2);
-        data.set(L0.subarray(i, i + n), 0); data.set(L1.subarray(i, i + n), n);
-        const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(i / SR * 1e6), data });
-        ae.encode(ad); ad.close();
+    const M = await loadMedia(), F = mvSetup(sc, D, R.w, R.h), N = Math.round(MV.DUR * MV.FPS);
+    // the landscape frame the encoder gets: the portrait picture turned a quarter left; the file's flag turns it back
+    const mk = (w, h) => (typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h }));
+    const L = mk(R.cw, R.ch), lx = L.getContext('2d', { alpha: false });
+    const out = new M.Output({ format: new M.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new M.BufferTarget() });
+    const vs = new M.CanvasSource(L, { codec: 'avc', bitrate: R.br, keyFrameInterval: 2, fullCodecString: R.codec, latencyMode: 'quality' });
+    out.addVideoTrack(vs, { frameRate: MV.FPS, rotation: R.rot });
+    let as = null;
+    if (AC) { as = new M.AudioBufferSource({ codec: 'aac', bitrate: 160000 }); out.addAudioTrack(as); }
+    const buf = AC ? await mvAudio(sc, D) : null;
+    let ok = false;
+    try {
+      await out.start();
+      if (as) {   // the sound first: it's quick, and if it fails the clip is remade silent
+        try { await as.add(buf); as.close(); } catch (e) { e.stage = 'audio'; throw e; }
       }
-      try { await ae.flush(); ae.close(); } catch (e) { err = err || e; }
-      if (err) { err.stage = 'audio'; throw err; }
+      for (let i = 0; i < N; i++) {
+        if (!alive()) throw new Error('stopped');
+        mvFrame(F, i / MV.FPS, i);
+        lx.setTransform(0, -1, 1, 0, 0, R.w); lx.drawImage(F.c, 0, 0);
+        await vs.add(i / MV.FPS, 1 / MV.FPS);
+        if (i % 2 === 1) { onProg((i + 1) / N); await mvSleep(0); }
+      }
+      vs.close();
+      await out.finalize(); ok = true;
+    } finally {
+      if (!ok) { try { await out.cancel(); } catch (e) { /* already gone */ } }
+      F.c.width = F.c.height = 1; L.width = L.height = 1;
     }
-    const ve = new VideoEncoder({ output: (c, m) => mux.addVideoChunk(c, m), error: (e) => { err = e; } });
-    ve.configure({ codec: R.codec, width: R.w, height: R.h, bitrate: R.br, framerate: MV.FPS, avc: { format: 'avc' } });
-    for (let i = 0; i < N; i++) {
-      if (err) throw err;
-      if (!alive()) { try { ve.close(); } catch (e) { /* closed */ } throw new Error('stopped'); }
-      mvFrame(F, i / MV.FPS, i);
-      const vf = new VideoFrame(F.c, { timestamp: Math.round(i * 1e6 / MV.FPS), duration: Math.round(1e6 / MV.FPS) });
-      ve.encode(vf, { keyFrame: i % 60 === 0 }); vf.close();
-      while (ve.encodeQueueSize > 2 && !err) await mvSleep(3);
-      if (i % 2 === 1) { onProg((i + 1) / N); await mvSleep(0); }
-    }
-    await ve.flush(); ve.close(); if (err) throw err;
-    mux.finalize();
-    F.c.width = F.c.height = 1;
-    return new Blob([target.buffer], { type: 'video/mp4' });
+    const blob = new Blob([out.target.buffer], { type: 'video/mp4' });
+    if (!(await mvPlayable(blob))) { const e = new Error('This phone could not play the clip back'); e.stage = 'video'; throw e; }
+    return blob;
   }
   // a still from the clip, once everything has built: for the previews, and pictures for phones that can't make video
   function mvStill(sc, D, w, h, type, q) {
@@ -5474,7 +5514,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const sh = $('#sheet');
     renderSheet();
     sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; $('#sheetBody').scrollTop = 0;
-    const q = store.get('stq', '4k'), snd = store.get('stsnd', true), key = [S.ver, (briefingDay() || {}).key || '', S.target, q, snd].join('|');
+    const q = store.get('stq2', 'hd'), snd = store.get('stsnd', true), key = [S.ver, (briefingDay() || {}).key || '', S.target, q, snd].join('|');
     if (!S.stPack || S.stPack.key !== key) {
       if (S.stPack) mvDrop(S.stPack);
       S.stPack = { key, q, snd, posters: [], vids: [], prog: null };
@@ -5513,7 +5553,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const alive = () => S.open === 'status:' && S.stPack === P && !P.dead;
     try {
       if (!P.R) { P.R = await mvVideoRes(P.q); P.AC = P.snd ? await mvAudioCodec() : null; if (!P.R) { P.novideo = 'This browser can’t make videos. Pictures are ready instead.'; return; } }
-      await loadMuxer();
+      await loadMedia();
       for (let i = 0; i < P.D.scenes.length; i++) {
         if (P.vids[i]) continue;
         if (!alive()) return;
@@ -5523,8 +5563,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           try { blob = await mvEncode(P.D.scenes[i], P.D, P.R, P.AC, (u) => { P.prog.u = u; mvPaintProg(); }, alive); break; }
           catch (e) {
             if (!alive()) return;
-            if (e && e.stage === 'audio' && P.AC) { P.AC = P.AC.m === 'aac' && await mvOpus() ? { c: 'opus', m: 'opus' } : null; continue; }   // sound failed: try Opus, then go silent
-            const lower = await mvVideoRes(P.q === 'hd' ? 'hd' : '4k', P.R.w);   // the encoder refused this size: try the next one down
+            if (e && e.stage === 'audio' && P.AC) { P.AC = null; continue; }   // sound failed: make it silent
+            const lower = await mvVideoRes(P.q, P.R);   // this size failed: try the next one down
             if (!lower) throw e;
             P.R = lower;
           }
@@ -5561,12 +5601,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (P.none || P.err || !P.posters.length) { $('#sheetBody').innerHTML = `<div class="empty-state"><b>${P.err ? 'Couldn’t make the pack' : 'No games to post yet'}</b>${P.err ? 'Try again in a moment.' : 'The pack is made from the next day with predictions.'}</div>`; return; }
     const when = P.when.toLowerCase() === 'today' || P.when.toLowerCase() === 'tomorrow' ? P.when.toLowerCase() : P.when;
     const ready = P.vids.filter(Boolean).length, all = ready === P.posters.length, vid = !P.novideo;
-    const res = P.R ? (P.R.w >= 2160 ? '4K' : P.R.w >= 1440 ? '1440p' : '1080p') : P.q === 'hd' ? '1080p' : '4K';
-    const snd = !P.snd ? 'without sound' : P.AC ? 'with sound' : P.R ? 'silent (this phone can’t make sound for video)' : 'with sound';
+    const res = P.R ? (P.R.w >= 2160 ? '4K' : P.R.w >= 1440 ? '1440p' : P.R.w >= 1080 ? '1080p' : '720p') : P.q === 'hd' ? '1080p' : '4K';
+    const snd = !P.snd ? 'without sound' : P.AC ? 'with sound' : P.R ? 'silent (the sound encoder didn’t load: try again with a connection)' : 'with sound';
     const label = (sc) => (sc.title ? sc.title.charAt(0) + sc.title.slice(1).toLowerCase() : ST_NAMES[sc.kind]);
     const n = P.posters.length, nw = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'][n] || String(n), left = P.D.plan.length - P.D.scenes.length;
     const html = `<p class="note st-intro">${vid ? `${nw} 11-second ${n === 1 ? 'video' : 'videos'} for ${esc(when)}, ${res} ${snd}, sized for WhatsApp Status. They're made on your phone, one after another: keep this open until they're done.` : esc(P.novideo)}</p>
-      ${vid ? `<div class="st-q"><span class="st-opt"><span class="lbl">Quality</span><span class="seg" id="stQ" role="group" aria-label="Video quality"><button type="button" data-stq="4k" aria-pressed="${P.q !== 'hd'}">4K</button><button type="button" data-stq="hd" aria-pressed="${P.q === 'hd'}">1080p · faster</button></span></span><span class="st-opt"><span class="lbl">Sound</span><span class="seg" id="stS" role="group" aria-label="Sound"><button type="button" data-stsnd="1" aria-pressed="${!!P.snd}">On</button><button type="button" data-stsnd="0" aria-pressed="${!P.snd}">Off</button></span></span></div>` : ''}
+      ${vid ? `<div class="st-q"><span class="st-opt"><span class="lbl">Quality</span><span class="seg" id="stQ" role="group" aria-label="Video quality"><button type="button" data-stq="hd" aria-pressed="${P.q !== '4k'}">1080p · WhatsApp</button><button type="button" data-stq="4k" aria-pressed="${P.q === '4k'}">4K</button></span></span><span class="st-opt"><span class="lbl">Sound</span><span class="seg" id="stS" role="group" aria-label="Sound"><button type="button" data-stsnd="1" aria-pressed="${!!P.snd}">On</button><button type="button" data-stsnd="0" aria-pressed="${!P.snd}">Off</button></span></span></div>` : ''}
       <div class="st-acts">${vid ? `<button type="button" class="btn pri" data-stshare="all"${all ? '' : ' disabled'}><span data-stall>${all ? `Share all ${n}` : `Making video ${Math.min(n, ready + 1)} of ${n}…`}</span></button><button type="button" class="btn" data-stsave="all"${all ? '' : ' disabled'}>Save all</button>` : `<button type="button" class="btn pri" data-stpics="share">Share all ${n}</button><button type="button" class="btn" data-stpics="save">Save all</button>`}</div>
       <div class="st-grid">${P.posters.map((po, i) => {
         const v = P.vids[i], sc = P.D.scenes[i];
@@ -5574,7 +5614,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           <figcaption><span>${i + 1}. ${esc(label(sc))}</span>${v ? `<button type="button" class="btn sm" data-stshare="${i}">Share</button>` : !vid ? `<button type="button" class="btn sm" data-stpics="${i}">Share</button>` : ''}</figcaption></figure>`;
       }).join('')}</div>
       ${left > 0 ? `<button type="button" class="btn st-more" data-stmore="1"${P.adding ? ' disabled' : ''}>${P.adding ? 'Adding…' : `${Math.min(4, left)} more ${Math.min(4, left) === 1 ? 'clip' : 'clips'} for ${esc(when)}`}</button>` : ''}
-      <p class="note">Each day's pack is picked from ${MV_LIB.length} kinds of clip by what the day's games make interesting, and avoids the kinds this phone made in the last few days. Each clip ends on Statpad's address, and sharing adds a link to the caption.${vid ? ` WhatsApp shrinks Status videos when it posts them; the 4K files stay sharp on TikTok, Instagram and YouTube Shorts. <button type="button" class="linkbtn" data-stpics="share">Share pictures instead</button>` : ''}</p>`;
+      <p class="note">Each day's pack is picked from ${MV_LIB.length} kinds of clip by what the day's games make interesting, and avoids the kinds this phone made in the last few days. Each clip ends on Statpad's address, and sharing adds a link to the caption.${vid ? ` 1080p is what WhatsApp Status shows anyway and is about three times quicker; 4K pays off on TikTok, Instagram and YouTube Shorts. <button type="button" class="linkbtn" data-stpics="share">Share pictures instead</button>` : ''}</p>`;
     morph($('#sheetBody'), html, 'status:' + P.key);
     mvPaintProg();
   }
@@ -5623,7 +5663,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     else if (t.dataset.stsave != null) stSave(t.dataset.stsave);
     else if (t.dataset.stpics != null) stPics(t.dataset.stpics);
     else if (t.dataset.stmore) mvMore();
-    else if (t.dataset.stq) { if (store.get('stq', '4k') === t.dataset.stq) return; store.set('stq', t.dataset.stq); buzz(6); openStatus(S.opener); }
+    else if (t.dataset.stq) { if (store.get('stq2', 'hd') === t.dataset.stq) return; store.set('stq2', t.dataset.stq); buzz(6); openStatus(S.opener); }
     else if (t.dataset.stsnd) { const v = t.dataset.stsnd === '1'; if (store.get('stsnd', true) === v) return; store.set('stsnd', v); buzz(6); openStatus(S.opener); }
   });
   // for the test pages (?debug): one frame as a picture, or a whole clip

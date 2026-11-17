@@ -208,7 +208,7 @@ Ask Statpad understands it too: "turn 10,000 into 500,000", "I want 1 million fr
 
 ## WhatsApp Status pack
 
-**Status pack** (Matches and Slips tabs) makes 11-second videos for the day, in 4K (2160 × 3840) with sound, sized for WhatsApp Status. They're drawn and encoded on the phone itself, so nothing is uploaded anywhere and the workflow doesn't change.
+**Status pack** (Matches and Slips tabs) makes 11-second videos for the day, with sound, sized for WhatsApp Status (1080p, or 4K for other apps). They're drawn and encoded on the phone itself, so nothing is uploaded anywhere and the workflow doesn't change.
 
 Every clip runs the same way: a line of light opens into a floodlit pitch drawn as a hologram, the clip's title slams across the middle while the camera swoops down, and the title docks at the top. The day's numbers then build up and hold long enough to read. Finally the picture powers down into a point that bursts into the end card: the Statpad mark drawn by a laser, the wordmark condensing out of particles, a line for the clip, the recent record of “Nearly definite” picks (when there are 20 or more and at least 70% landed), and the site's address.
 
@@ -233,9 +233,11 @@ Each day the pack takes the **four** kinds the day's games make most interesting
 
 **The sound** is synthesized on the phone and timed to the frame: a low machine hum, a power-up sweep, decode ticks, servo whirs as dials fill, clunks when numbers land, radar pings, a glitch burst, rising tones for a win and falling ones for a defeat, a climbing scale for slip legs and goal bars, and a power-down. No voices and no music.
 
-**Quality.** 4K needs a phone whose video encoder takes 2160 × 3840; if it doesn't, Statpad steps down to 1440p, then 1080p, by itself. **1080p · faster** is about three times quicker. Sound is AAC, or Opus on a phone without an AAC encoder; **Sound → Off** makes silent clips. Keep the sheet open while the videos are made, one after another (each shows its progress); close it and it stops, open it and it carries on. A 4K clip is about 16 MB.
+**Format, and why WhatsApp takes it.** The clips are plain MP4 files, H.264 video with AAC sound, stored the way phone cameras store portrait video: landscape frames with a "turn 90°" flag, which every phone decodes for its own camera videos. (Upright 4K frames, 2160 wide by 3840 tall, are a shape many phones' decoders refuse, and WhatsApp then shows only a blank video icon; that was the cause of clips that wouldn't post.) Before a clip is offered, Statpad plays it back on the phone; if the phone can't show it, that size is dropped and the clip is made smaller by itself (4K, then 1440p, 1080p, 720p). Sound is always AAC, which every phone and app plays: the browser's own encoder when it has one, otherwise an AAC encoder (FFmpeg's, built for WebAssembly, about 1 MB) that loads the first time. Only if that can't load are the clips silent, and the pack says so. **Sound → Off** makes silent clips on purpose.
 
-**Sharing.** **Share all** opens the phone's share sheet with the MP4s and a caption with the site's link; pick WhatsApp, then My status. WhatsApp shrinks Status videos when it posts them, so 4K mainly pays off on TikTok, Instagram and YouTube Shorts. **Share pictures instead** gives the finished frame of each clip as a 4K picture, which is also what phones that can't make video get. The video packer (mp4-muxer, MIT licence) loads from jsDelivr the first time, so the first pack needs a connection.
+**Quality.** **1080p · WhatsApp** is the default: it's what WhatsApp Status shows anyway, and it's about three times quicker to make. **4K** (2160 × 3840 as shown) is for TikTok, Instagram and YouTube Shorts; a 4K clip is about 16 MB, a 1080p one about 8 MB. Keep the sheet open while the videos are made, one after another (each shows its progress); close it and it stops, open it and it carries on.
+
+**Sharing.** **Share all** opens the phone's share sheet with the MP4s and a caption with the site's link; pick WhatsApp, then My status. **Share pictures instead** gives the finished frame of each clip as a 4K picture, which is also what phones that can't make video get. The video packer (Mediabunny, MPL-2.0) and, where needed, its AAC encoder load from jsDelivr the first time, so the first pack needs a connection.
 
 ## Ask Statpad
 
