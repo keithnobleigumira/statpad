@@ -16,7 +16,8 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 | `ledger/` | Every graded prediction and value bet, one CSV file per month. The workflow creates and commits it; rows are only ever added. GitHub shows each file as a table. |
 | `backtest.json`, `results.json`, `live.json`, `teams/` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores; one file per league for team pages and the season simulator). Nothing to upload. |
 | `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. `sw.js` also keeps crests and flags on the phone after the first download. |
-| `crests/` | Club crests and competition logos. The workflow makes them on each publish; nothing to upload. |
+| `crests/` | Club crests and competition logos: one sheet per competition in `crests/s/`, big single crests for match pages. The workflow makes them on each publish; nothing to upload. |
+| `globe/` | The shock map's earth pictures. The workflow fetches and resizes them once; nothing to upload. |
 | App icons | Drawn by the workflow each time it publishes, so there's nothing to upload. |
 | `og.jpg` | The picture shown when the link is shared on WhatsApp, Telegram or X. |
 
@@ -163,7 +164,15 @@ Each is fitted on two past seasons after blending with the market as the site do
 
 ## Live shock map
 
-While games are in play, the Matches tab opens with a turning globe of them, also under **Shock map** (full screen). Land is drawn as an even dot matrix, so games anywhere in the world have a place: the globe turns on its own, slows down while a shock passes the middle, and spins with a drag (tilts too, with a mouse). Each game sits in its country; a game in play sends up a beam of light that rises higher for a bigger shock, and pulses faster and wider as its chances move:
+While games are in play, the Matches tab opens with a globe of them, also under **Shock map** (full screen). It's the real earth, drawn by the phone's graphics chip (WebGL) from NASA's Blue Marble and city-lights pictures: daylight where the sun is up right now, city lights where it's night, with a thin atmosphere at the rim. It turns on its own and slows down while a shock passes the middle.
+
+- **Turn it any way**: drag. On the Matches card a finger turns it sideways only, so the page still scrolls; full screen it turns every way and keeps spinning a little after a flick.
+- **Zoom** (full screen): pinch, scroll with a mouse, double-tap, or use **+** and **−** (up to 16 times). The globe button goes back to the whole world. Sharper pictures (4096 pixels wide) load once you zoom in close.
+- **Busy evenings**: games too close together to tell apart merge into a numbered bubble in the colour of the most dramatic one. Tap a bubble to fly in (on the Matches card it opens the full-screen map there). Zoomed in, every game in play gets a label with its score and minute, and closer still, the games about to start.
+
+The pictures come from NASA (public domain) via the open three-globe project on jsDelivr; the workflow fetches them once, shrinks them to WebP (about 200 KB for both at normal size) and publishes them in `globe/`, and the phone keeps them. **Display → Save data** uses a simple built-in land map instead. Phones without WebGL get the old dotted globe.
+
+Each game sits in its country; a game in play sends up a beam of light that rises higher for a bigger shock, and pulses faster and wider as its chances move:
 
 - **Red, shock**: the favourite's chance of winning has collapsed since kick-off.
 - **Amber, wobble**: a smaller shift.
@@ -244,7 +253,9 @@ The **Bets** tab has two parts: **Coupon** (build a bet) and **My bets** (bets y
 - **Club crests and flags.** Crests appear on match cards, the match page, slips, the coupon, the value board, tables and team pages. National teams show their flag, and competitions show their logo. Teams without a crest yet show a coloured monogram shield.
 - **Quicker to use.** A row of competition chips (with a Live chip while games are in play) filters the day in one tap. Sections slide when you switch tabs. Match pages spring open and can be swiped down to close. Tapping a price sends it flying to the Bets tab, with a light buzz on phones that support it. Each competition's header stays pinned while you scroll its games.
 
-**Where crests come from.** The pipeline asks API-Football for the list of every club in each country Statpad covers (about 30 calls, a few per run and only while the day's allowance has room; repeated monthly) and matches each team on the board to its id. The match is careful: “Salzburg” finds “Red Bull Salzburg”, but “Sheffield Wednesday” never takes Sheffield United's crest, and a name that fits two clubs is left alone. Clubs in Europe's top divisions that API-Football doesn't settle get their crest from the open football-logos collection on GitHub (no key needed). Teams also pick up their id when their next fixture is paired for team news. Each crest is downloaded once (up to 60 a run, the next games first), shrunk to two small sizes and published in `crests/`. The first runs after this update fill in nearly every club within an hour or two; a team neither source can name keeps its monogram. About 110 well-known clubs and every competition logo are built in. Without an API-Football key, crests come from the built-in list and the football-logos collection. Once a crest is on your phone it isn't downloaded again, and **Display → Save data** stops pictures loading at all.
+**Where crests come from.** Three sources, in this order: API-Football (every club in each country Statpad covers, about 30 calls repeated monthly, with a key), the open football-logos collection on GitHub (Europe's top divisions), and **ESPN** (no key). ESPN gives every club in each competition it follows, about 55 of Statpad's 63, one small request per competition a month, and every game paired with ESPN's for live scores or prices tells Statpad both clubs' ESPN ids exactly, whatever the names. The match is careful: “Salzburg” finds “Red Bull Salzburg” and “Raith Rvs” finds “Raith Rovers”, but “Sheffield Wednesday” never takes Sheffield United's crest, and a name that fits two clubs is left alone. Every crest is downloaded once by the workflow (ESPN's too: the page no longer loads pictures from other sites), up to about 120 a run, the next games first. On a test board of 805 clubs this put a crest on file for 96% of them without an API-Football key; the rest (mostly the Finnish and Irish leagues, out of season at ESPN) come from API-Football with the key.
+
+**Why they load quickly.** Each competition's crests are put on one picture, a sheet (WebP, about 2 KB a crest, 64 pixels each), named after its contents. A board of 600 clubs needs about 40 sheets instead of 600 pictures, a competition's crests appear together, and the phone keeps a sheet until its clubs change (then only that sheet is fetched again). Competition logos share one sheet. Match pages use bigger single crests. Each crest's main colour is worked out by the workflow too, so team colours are right straight away. The sheets need the Pillow imaging library: the workflow installs it once into its kept state folder (a few seconds, the first run only), and makes PNG sheets if it can't. **Display → Save data** stops pictures loading at all.
 
 ## App and sharing
 

@@ -1,8 +1,9 @@
 /* Statpad service worker: lets the site install as an app and open offline.
    Always tries the network first, so updates show straight away; the last good copy is kept for offline use.
-   Club crests and flags never change, so they come from the phone's copy once downloaded (saves data). */
+   Club crests (single and on sheets), flags and the globe's earth pictures never change, so they come from the
+   phone's copy once downloaded (saves data). */
 const CACHE = 'statpad-v1', FONTS = 'statpad-fonts-v1', IMGS = 'statpad-crests-v1', IMG_MAX = 600;
-const IMG_HOSTS = ['media.api-sports.io', 'flagcdn.com'];
+const IMG_HOSTS = ['media.api-sports.io', 'flagcdn.com', 'a.espncdn.com'];
 const SHELL = ['./', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -24,7 +25,9 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  if ((url.origin === self.location.origin && url.pathname.includes('/crests/')) || IMG_HOSTS.includes(url.hostname)) {
+  // crests, crest sheets and the shock map's earth pictures never change under the same address
+  if ((url.origin === self.location.origin && (url.pathname.includes('/crests/') || url.pathname.includes('/globe/')))
+      || IMG_HOSTS.includes(url.hostname) || (url.hostname === 'cdn.jsdelivr.net' && url.pathname.includes('/three-globe@'))) {
     e.respondWith(imageFirst(req));
     return;
   }

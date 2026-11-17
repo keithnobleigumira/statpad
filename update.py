@@ -1446,7 +1446,8 @@ def espn_row(e):
                 goals.append([mn, s, bool(d.get('ownGoal')), (d.get('clock') or {}).get('displayValue') or ''])
             elif d.get('redCard'):
                 reds.append([mn, s])
-        return {'id': str(e.get('id')), 'ko': parse_iso((e.get('date') or c.get('date') or '').replace('Z', ':00Z') if re.search(r'T\d\d:\d\dZ$', e.get('date') or '') else (e.get('date') or c.get('date'))),
+        return {'id': str(e.get('id')), 'hid': str((h.get('team') or {}).get('id') or ''), 'aid': str((a.get('team') or {}).get('id') or ''),
+                'ko': parse_iso((e.get('date') or c.get('date') or '').replace('Z', ':00Z') if re.search(r'T\d\d:\d\dZ$', e.get('date') or '') else (e.get('date') or c.get('date'))),
                 'h': names(h.get('team') or {}), 'a': names(a.get('team') or {}),
                 'hs': int(h.get('score') or 0), 'as': int(a.get('score') or 0),
                 'st': typ.get('name') or '', 'state': typ.get('state') or '', 'done': bool(typ.get('completed')),
@@ -1585,6 +1586,7 @@ def refresh_espn(state, matches):
                     miss[mid] = iso(ko)   # a board from after the game doesn't list it: stop asking ESPN for it
                 continue
             ev[mid] = [ESPN_SLUG[lk_], g['id'], iso(ko)]
+            es_learn(state, h, a, g)
             if g['st'] in ESPN_OFF:
                 off[mid] = [g['st'].replace('STATUS_', '')[:4], iso(ko)]
                 games.pop(mid, None)
@@ -1807,18 +1809,28 @@ def refresh_espn_prices(state, matches):
     for m in matches:
         lk, ko = m.get('lk'), parse_iso(m['ko'])
         if lk in ESPN_SLUG and not (L.get(lk) or {}).get('es') and NOW < ko < NOW + timedelta(hours=ES_PX_HOURS):
-            want.setdefault(ESPN_SLUG[lk], []).append((m['id'], lk, ko, base_name(m['h']), base_name(m['a'])))
+            want.setdefault(ESPN_SLUG[lk], []).append((m['id'], lk, ko, base_name(m['h']), base_name(m['a']), m['h'], m['a']))
     for slug, items in sorted(want.items(), key=lambda x: min(i[2] for i in x[1])):
         if time.time() - t0 > ES_PX_BUDGET_S:
             break
         rows = espn_board(slug, [i[2] for i in items], cache)
-        for mid, lk, ko, h, a in items:
+        for mid, lk, ko, h, a, h0, a0 in items:
             g = espn_pair(lk, ko, h, a, rows) if rows else None
+            if g:
+                es_learn(state, h0, a0, g)
             if g and g.get('mkt'):
                 out[mid] = g['mkt']
     keep = {k: v for k, v in (state.get('es_prices') or {}).items() if k not in out and NOW - parse_iso(v.get('upd') or iso(NOW)) < timedelta(hours=12)}
     state['es_prices'] = dict(keep, **out)
     return len(out)
+
+
+def es_learn(state, h, a, g):
+    """A game paired with ESPN's tells us both clubs' ESPN ids exactly, whatever the names: their crests."""
+    ce = state.setdefault('crest_es', {})
+    for name, tid in ((h, g.get('hid')), (a, g.get('aid'))):
+        if tid and str(tid).isdigit() and ce.get(name) != str(tid):
+            ce[name] = str(tid)
 
 
 def espn_results(state):
@@ -2524,7 +2536,17 @@ CREST_SEED = {
 AF_LEAGUE = {'EPL': 39, 'LaLiga': 140, 'BUN': 78, 'SA': 135, 'L1': 61, 'POR': 94, 'ERE': 88, 'BEL': 144, 'KSA': 307, 'ENG2': 40, 'GER2': 79, 'ITA2': 136, 'ESP2': 141, 'FRA2': 62, 'NED2': 89, 'ENG3': 41, 'ENG4': 42, 'SCO1': 179, 'SCO2': 180, 'TUR1': 203, 'GRE1': 197, 'AUT1': 218, 'SUI1': 207, 'DEN1': 119, 'NOR1': 103, 'SWE1': 113, 'POL1': 106, 'ROU1': 283, 'CZE1': 345, 'SRB1': 286, 'IRL1': 357, 'FIN1': 244, 'BRA1': 71, 'ARG1': 128, 'MEX1': 262, 'USA1': 253, 'JPN1': 98, 'CHN1': 169, 'UCL': 2, 'UEL': 3, 'UECL': 848, 'FAC': 45, 'EFLC': 48, 'DFB': 81, 'CDR': 143, 'CI': 137, 'CDF': 66, 'UNL': 5, 'INTF': 10,
              'WSL': 44, 'LIGAF': 142, 'D1F': 64, 'FBL': 82, 'NWSL': 254, 'UWCL': 525, 'AUS1': 188, 'KOR1': 292, 'BRA2': 72, 'CHI1': 265,
              'COL1': 239, 'RSA1': 288, 'LIB': 13, 'SUD': 11}
-CREST_BUDGET_S = 30
+CREST_BUDGET_S = 35
+CREST_ES = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/{}.png&w=120&h=120'
+ES_TEAMS = 'https://site.api.espn.com/apis/site/v2/sports/soccer/{}/teams'
+ES_TEAMS_EVERY_D = 30   # days between refreshes of a competition's club list from ESPN
+ES_TEAMS_PER_RUN = 20   # club lists per run, at most
+# spellings that no rule can link: football-data's (or another feed's) name -> the club's name at ESPN
+CREST_ALIAS = {'los angeles galaxy': 'LA Galaxy', 'inverness c': 'Inverness Caledonian Thistle', 'celta b': 'Celta Fortuna',
+               'sociedad b': 'Real Sociedad II', 'guadalajara chivas': 'Guadalajara', 'santos laguna': 'Santos',
+               'sint truiden': 'Sint-Truidense', 'hamkam': 'Hamarkameratene', 'henan songshan longmen': 'Henan',
+               'buyuksehyr': 'Istanbul Basaksehir', 'erzurumspor': 'Erzurum BB', 'amedspor': 'Amed SFK'}
+CREST_WORDS = {'utd': 'united', 'rvs': 'rovers', 'jrs': 'juniors', 'jnrs': 'juniors', 'ath': 'athletic', 'wed': 'wednesday', 'st': 'saint'}
 AF_TEAMS_EVERY_D = 30   # days between refreshes of a country's club list
 AF_TEAMS_PER_RUN = 4    # club-list calls per run, at most
 AF_TEAMS_RESERVE = 35   # club lists wait while fewer than this many of the day's calls are left (team news and scores first)
@@ -2728,6 +2750,13 @@ def png_encode(w, h, px):
 
 
 def small_png(data, box):
+    Image = pillow()
+    if Image:   # much faster, and reads every PNG flavour
+        im = Image.open(io.BytesIO(data)).convert('RGBA')
+        im.thumbnail((box, box), Image.LANCZOS)
+        b = io.BytesIO()
+        im.save(b, 'PNG', optimize=True)
+        return b.getvalue()
     w, h, px = png_decode(data)
     return png_encode(*png_shrink(w, h, px, box))
 
@@ -2887,6 +2916,67 @@ def fl_refresh(state):
     return True
 
 
+def es_team_lists(state, doc):
+    """Every club in each competition ESPN follows, with ESPN's id (one small request per competition, monthly,
+    no key): the crest for any club on the board that the other sources don't name."""
+    est = state.setdefault('es_teams', {})
+    t0, calls = time.time(), 0
+    lks = sorted({lk for _, lk in crest_names(doc)} | set(doc['leagues']), key=lambda k: (k not in {m['lk'] for m in doc['matches']}, k))
+    for lk in lks:
+        slug = ESPN_SLUG.get(lk)
+        if not slug or (L.get(lk) or {}).get('group') == 'intl':
+            continue
+        rec = est.get(lk)
+        if rec and NOW - parse_iso(rec['at']) < timedelta(days=ES_TEAMS_EVERY_D if rec.get('teams') else 3) and not FORCE:
+            continue
+        if calls >= ES_TEAMS_PER_RUN or time.time() - t0 > 15:
+            break
+        r = fetch(ES_TEAMS.format(slug), tries=1, timeout=15)
+        calls += 1
+        try:
+            ts = json.loads(text_of(r.body))['sports'][0]['leagues'][0].get('teams') or [] if r.status == 200 else None
+        except (ValueError, KeyError, IndexError, TypeError):
+            ts = None
+        if ts is None:
+            est[lk] = {'at': iso(NOW - timedelta(days=ES_TEAMS_EVERY_D - 1)), 'teams': (rec or {}).get('teams') or []}   # try again tomorrow
+            continue
+        teams = []
+        for t in ts:
+            t = t.get('team') or {}
+            if t.get('id') and t.get('logos'):
+                teams.append([t.get('displayName'), t.get('shortDisplayName'), t.get('name'), t.get('location'), str(t['id'])])
+        est[lk] = {'at': iso(NOW), 'teams': teams}
+    if calls:
+        log(f'ESPN club lists: {calls} competitions checked')
+    return calls
+
+
+def crest_alts(name):
+    """Our name and the other ways another feed may write it ('Raith Rvs' -> 'Raith Rovers')."""
+    out = [name]
+    n = norm(name)
+    if n in CREST_ALIAS:
+        out.append(CREST_ALIAS[n])
+    w = n.split()
+    x = ' '.join(CREST_WORDS.get(t, t) for t in w)
+    if x != n:
+        out.append(x)
+    return out
+
+
+def es_crest_id(name, lk, state):
+    """The ESPN id of our club, from that competition's ESPN club list."""
+    teams = ((state.get('es_teams') or {}).get(lk) or {}).get('teams') or []
+    if not teams:
+        return None
+    cands = [[x, t[4]] for t in teams for x in {t[0], t[1], t[2], t[3], (t[0] or '').replace('.', '')} if x]
+    for alt in crest_alts(base_name(name)):
+        tid = best_team(alt, cands)
+        if tid:
+            return tid
+    return None
+
+
 def learn_crests(state, doc):
     """Work out each team's crest: API-Football ids from paired fixtures and the country club lists; the
     football-logos collection for anything still missing."""
@@ -2941,6 +3031,29 @@ def learn_crests(state, doc):
             if path:
                 fx[name] = path
                 n += 1
+    # ESPN: ids learnt from paired games are exact; otherwise the club lists of the competitions the club plays in
+    ce = state.setdefault('crest_es', {})
+    logos = state.get('es_logo') or {}
+    where = {}
+    for m in doc['matches']:
+        for x in (m['h'], m['a']):
+            where.setdefault(x, []).append(m['lk'])
+    for lk, lg in doc['leagues'].items():
+        for r in lg.get('table') or []:
+            where.setdefault(r[0], []).append(lk)
+    for name, lk in crest_names(doc):
+        if name in ce or (L.get(lk) or {}).get('group') == 'intl':
+            continue
+        if name in logos:
+            ce[name] = str(logos[name]); n += 1
+            continue
+        if name in cr or name in fx:
+            continue   # another source has it; ESPN is only asked for clubs nobody else names
+        for lk2 in dict.fromkeys(where.get(name) or [lk]):
+            tid = es_crest_id(name, lk2, state)
+            if tid:
+                ce[name] = tid; n += 1
+                break
     return n
 
 
@@ -2962,26 +3075,29 @@ def fetch_crests(state, doc):
     want, seen = [], set()
     for k in sorted(lc, key=lambda k: k not in doc['leagues']):
         want.append(('l', lc[k]))
+    ce = state.get('crest_es') or {}
     for name, lk in crest_names(doc):
         if name in cr:
             want.append(('t', cr[name]))
-        elif name in fx:
+        if name in fx:
             want.append(('f', fx[name]))
+        if name in ce and not (name in cr and (d / f'{cr[name]}.png').exists()) and not (name in fx and (d / (crest_key(fx[name]) + '.png')).exists()):
+            want.append(('e', ce[name]))   # only while no other picture is on file
     want += [('t', i) for i in sorted(set(cr.values()))]
-    t0, got, fails = time.time(), 0, {'api': 0, 'fl': 0}
+    t0, got, fails = time.time(), 0, {'api': 0, 'fl': 0, 'es': 0}
     for kind, i in want:
-        name = f'{i}.png' if kind == 't' else f'l{i}.png' if kind == 'l' else crest_key(i) + '.png'
+        name = f'{i}.png' if kind == 't' else f'l{i}.png' if kind == 'l' else f'e{i}.png' if kind == 'e' else crest_key(i) + '.png'
         if name in seen or (d / name).exists():
             continue
         seen.add(name)
-        key, src = name[:-4], 'fl' if kind == 'f' else 'api'
+        key, src = name[:-4], 'fl' if kind == 'f' else 'es' if kind == 'e' else 'api'
         if bad.get(key) and NOW - parse_iso(bad[key]) < timedelta(days=2) and not FORCE:
             continue
-        if got >= CREST_PER_RUN or time.time() - t0 > CREST_BUDGET_S:
+        if got >= CREST_PER_RUN * (2 if src == 'es' else 1) or time.time() - t0 > CREST_BUDGET_S:
             break
         if fails[src] >= 3:
             continue   # that server is unhappy this run; the other may still answer
-        url = CREST_TEAM.format(i) if kind == 't' else CREST_LEAGUE.format(i) if kind == 'l' else FL_RAW + quote(i)
+        url = CREST_TEAM.format(i) if kind == 't' else CREST_LEAGUE.format(i) if kind == 'l' else CREST_ES.format(i) if kind == 'e' else FL_RAW + quote(i)
         r = fetch(url, tries=1, timeout=12)
         try:
             if r.status != 200 or not r.body:
@@ -3013,19 +3129,257 @@ def publish_crests(state, doc):
         if not q.exists() or q.stat().st_size != p.stat().st_size:
             shutil.copyfile(p, q)
     cr, fx, lc = state.get('crest') or {}, state.get('crest_fl') or {}, state.get('lgcrest') or {}
+    ce, logos = state.get('crest_es') or {}, state.get('es_logo') or {}
     sign = lambda i, f: i if (d / f).exists() else -i
     crests = {}
     for n0, _ in sorted(crest_names(doc)):
-        n = n0 if (n0 in cr or n0 in fx or n0 in (state.get('es_logo') or {})) else base_name(n0)
-        if n in cr and not (n in fx and not (d / f'{cr[n]}.png').exists() and (d / (crest_key(fx[n]) + '.png')).exists()):
-            crests[n0] = sign(cr[n], f'{cr[n]}.png')
-        elif n in fx and (d / (crest_key(fx[n]) + '.png')).exists():
-            crests[n0] = crest_key(fx[n])
-        elif n in (state.get('es_logo') or {}):
-            crests[n0] = 'E' + state['es_logo'][n]   # ESPN's logo, loaded from ESPN by the page
+        n = n0 if (n0 in cr or n0 in fx or n0 in ce or n0 in logos) else base_name(n0)
+        opts = []   # (key, on file?) in order of preference: API-Football, football-logos, ESPN
+        if n in cr:
+            opts.append((cr[n], (d / f'{cr[n]}.png').exists()))
+        if n in fx:
+            opts.append((crest_key(fx[n]), (d / (crest_key(fx[n]) + '.png')).exists()))
+        es = ce.get(n0) or ce.get(n) or logos.get(n)
+        if es:
+            opts.append(('e' + str(es), (d / f'e{es}.png').exists()))
+        have = next((k for k, ok in opts if ok), None)
+        if have is not None:
+            crests[n0] = have
+        elif n in cr:
+            crests[n0] = -cr[n]   # not on file yet: the page loads it from API-Football's image server meanwhile
+        elif es:
+            crests[n0] = 'E' + str(es)   # not on file yet: the page loads it from ESPN meanwhile
     doc['crests'] = crests
     doc['lgcrests'] = {k: sign(lc[k], f'l{lc[k]}.png') for k in sorted(doc['leagues']) if k in lc}
     return len(doc['crests'])
+
+
+# ----------------------------------------------------------------------------------------------
+# Crest sheets. A board shows hundreds of clubs; one picture each meant hundreds of requests, and crests popping
+# in one by one on a slow connection. Each competition's clubs are put on one sheet (WebP, 64 px a crest, about
+# 2 KB each), named after its content so a phone keeps it until it changes: a competition's crests arrive in one
+# request and show together. Bigger crests (match pages) stay single pictures. The sheets need Pillow, installed
+# once into the kept state folder if the runner lacks it; without it they're PNG, built with the code above.
+# ----------------------------------------------------------------------------------------------
+SHEET_CELL, SHEET_COLS = 64, 8
+_PIL = None
+
+
+def pillow():
+    global _PIL
+    if _PIL is not None:
+        return _PIL or None
+    lib = STATE_DIR / 'pylib'
+    for attempt in (0, 1):
+        try:
+            if lib.exists() and str(lib) not in sys.path:
+                sys.path.insert(0, str(lib))
+            from PIL import Image
+            Image.new('RGBA', (2, 2)).save(io.BytesIO(), 'WEBP')
+            _PIL = Image
+            return Image
+        except Exception:
+            if attempt:
+                break
+            try:
+                import importlib
+                import subprocess
+                subprocess.run([sys.executable, '-m', 'pip', 'install', '--quiet', '--disable-pip-version-check', '--upgrade', '--target', str(lib), 'pillow'],
+                               timeout=150, capture_output=True)
+                importlib.invalidate_caches()
+                for k in [k for k in sys.modules if k == 'PIL' or k.startswith('PIL.')]:
+                    del sys.modules[k]
+            except Exception:
+                break
+    _PIL = False
+    log('crest sheets: Pillow unavailable, using PNG')
+    return None
+
+
+def crest_colour(px):
+    """A crest's main colour from 20x20 RGBA pixels: the most saturated common hue (white, black, grey ignored)."""
+    bins = {}
+    for i in range(0, len(px), 4):
+        r, g, b, a = px[i], px[i + 1], px[i + 2], px[i + 3]
+        if a < 160:
+            continue
+        mx, mn = max(r, g, b), min(r, g, b)
+        dl = mx - mn
+        sat = dl / mx if mx else 0
+        if mx < 40 or sat < 0.28:
+            continue
+        h = 0 if not dl else ((g - b) / dl + 6) % 6 if mx == r else (b - r) / dl + 2 if mx == g else (r - g) / dl + 4
+        e = bins.setdefault(int(h * 2.5 + 0.5) % 15, [0.0, 0, 0, 0, 0])
+        e[0] += sat; e[1] += 1; e[2] += r; e[3] += g; e[4] += b
+    best = max(bins.values(), key=lambda e: e[0], default=None)
+    if not best or best[1] < 6:
+        return None
+    return '#' + ''.join(f'{min(255, round(v / best[1])):02x}' for v in best[2:5])
+
+
+def sheet_build(files):
+    """files: crest pictures in order -> (sheet bytes, extension, cols, rows, colours)."""
+    n = len(files)
+    cols = min(SHEET_COLS, n)
+    rows = (n + cols - 1) // cols
+    C = SHEET_CELL
+    Image = pillow()
+    cols_out = []
+    if Image:
+        sheet = Image.new('RGBA', (cols * C, rows * C), (0, 0, 0, 0))
+        for i, f in enumerate(files):
+            try:
+                im = Image.open(f).convert('RGBA')
+            except Exception:
+                cols_out.append(None)
+                continue
+            cols_out.append(crest_colour(im.resize((20, 20), Image.BILINEAR).tobytes()))
+            im.thumbnail((C - 4, C - 4), Image.LANCZOS)
+            sheet.alpha_composite(im, ((i % cols) * C + (C - im.width) // 2, (i // cols) * C + (C - im.height) // 2))
+        b = io.BytesIO()
+        sheet.save(b, 'WEBP', quality=80, method=6, alpha_quality=90)
+        return b.getvalue(), 'webp', cols, rows, cols_out
+    W = cols * C
+    px = bytearray(W * rows * C * 4)
+    for i, f in enumerate(files):
+        try:
+            w, h, p = png_shrink(*png_decode(f.read_bytes()), C - 4)
+        except Exception:
+            cols_out.append(None)
+            continue
+        _, _, small = png_shrink(w, h, p, 20)
+        cols_out.append(crest_colour(small))
+        x0, y0 = (i % cols) * C + (C - w) // 2, (i // cols) * C + (C - h) // 2
+        for y in range(h):
+            o = ((y0 + y) * W + x0) * 4
+            px[o:o + w * 4] = p[y * w * 4:(y + 1) * w * 4]
+    return png_encode(W, rows * C, px), 'png', cols, rows, cols_out
+
+
+def crest_file(key):
+    d = crest_dir()
+    if isinstance(key, int):
+        return d / f'{key}.png' if key > 0 else None
+    if isinstance(key, str) and key and key[0] != 'E':
+        return d / f'{key}.png'
+    return None
+
+
+def crest_sheets(state, doc):
+    """One sheet per competition on the board (each club on its own league's sheet, cup-only clubs on the cup's),
+    plus one for the competition logos. Rebuilt only when a sheet's clubs or pictures change."""
+    crests = doc.get('crests') or {}
+    home = {}
+    for lk, lg in sorted(doc['leagues'].items()):
+        if not knockout(lk):
+            for r in lg.get('table') or []:
+                home.setdefault(r[0], lk)
+    ms = sorted(doc['matches'], key=lambda m: m['ko'])
+    for cup in (False, True):
+        for m in ms:
+            if knockout(m['lk']) == cup and (L.get(m['lk']) or {}).get('group') != 'intl':
+                for x in (m['h'], m['a']):
+                    home.setdefault(x, m['lk'])
+    members = {}
+    for name in sorted(crests):
+        f = crest_file(crests[name])
+        if name in home and f and f.exists():
+            members.setdefault(home[name], []).append((name, f))
+    lc = doc.get('lgcrests') or {}
+    lg_files = [(lk, crest_dir() / f'l{v}.png') for lk, v in sorted(lc.items()) if v > 0 and (crest_dir() / f'l{v}.png').exists()]
+    if lg_files:
+        members['_L'] = lg_files
+    sd = crest_dir() / 's'
+    sd.mkdir(exist_ok=True)
+    meta = state.setdefault('csheets', {})
+    tcol = state.setdefault('tcol', {})
+    built = 0
+    t0 = time.time()
+    for k, items in sorted(members.items()):
+        sig = hashlib.sha1(json.dumps([[n, f.name, f.stat().st_size] for n, f in items]).encode()).hexdigest()[:12]
+        cur = meta.get(k)
+        if cur and cur.get('sig') == sig and (sd / cur['file']).exists():
+            continue
+        if time.time() - t0 > 40:
+            break   # the rest next run; their old sheets (or single pictures) serve meanwhile
+        data, ext, cols, rows, colours = sheet_build([f for _, f in items])
+        fname = f"{k}.{hashlib.sha1(data).hexdigest()[:10]}.{ext}"
+        (sd / fname).write_bytes(data)
+        meta[k] = {'sig': sig, 'file': fname, 'cols': cols, 'rows': rows, 'names': [n for n, _ in items]}
+        if k != '_L':
+            for (n, _), c in zip(items, colours):
+                if c:
+                    tcol[n] = c
+        built += 1
+    for k in [k for k in meta if k not in members]:
+        del meta[k]
+    keep = {v['file'] for v in meta.values()}
+    for f in sd.iterdir():
+        if f.name not in keep:
+            f.unlink()
+    out = OUT_DIR / 'crests' / 's'
+    out.mkdir(parents=True, exist_ok=True)
+    for name in keep:
+        if not (out / name).exists():
+            shutil.copyfile(sd / name, out / name)
+    # the page's index: sheet -> [file, cols, rows]; club -> [sheet, cell]; competition -> logo cell
+    doc['csh'] = {k: [v['file'], v['cols'], v['rows']] for k, v in meta.items()}
+    csx, lsx = {}, {}
+    for k, v in meta.items():
+        for i, n in enumerate(v['names']):
+            if k == '_L':
+                lsx[n] = i
+            elif crests.get(n) is not None:
+                csx[n] = [k, i]
+    doc['csx'], doc['lsx'] = csx, lsx
+    doc['tcol'] = {n: tcol[n] for n in crests if n in tcol}
+    if len(tcol) > 4000:
+        for n in list(tcol)[:len(tcol) - 4000]:
+            del tcol[n]
+    return built
+
+
+# The shock map's earth: NASA's Blue Marble and city lights (public domain), from the three-globe project on jsDelivr,
+# resized once to 2048 x 1024 WebP (about 200 KB for both; 4096 px versions for close-ups) and published in globe/. Uploaded copies (earth-day.webp,
+# earth-night.webp next to update.py) are used instead if present. Without Pillow the page loads them from jsDelivr.
+GLOBE_CDN = 'https://cdn.jsdelivr.net/gh/vasturiano/three-globe@2.41.4/example/img/'
+GLOBE_SRC = {'earth-day.webp': ('earth-blue-marble.jpg', 72, 2048), 'earth-night.webp': ('earth-night.jpg', 72, 2048),
+             'earth-day-4k.webp': ('earth-blue-marble.jpg', 68, 4096), 'earth-night-4k.webp': ('earth-night.jpg', 68, 4096)}   # 4k: close-ups
+
+
+def globe_textures(state):
+    d = STATE_DIR / 'globe'
+    d.mkdir(parents=True, exist_ok=True)
+    tries = state.setdefault('globe_try', {})
+    out = OUT_DIR / 'globe'
+    n = 0
+    got = {}
+    for name, (src, q, w) in GLOBE_SRC.items():
+        f = d / name
+        if not f.exists() and (ROOT / name).exists():
+            shutil.copyfile(ROOT / name, f)
+        if not f.exists() and not (tries.get(name) and NOW - parse_iso(tries[name]) < timedelta(hours=12)):
+            tries[name] = iso(NOW)
+            Image = pillow()
+            r = got.get(src) or (fetch(GLOBE_CDN + src, tries=1, timeout=60) if Image else None)
+            if r is not None and r.status == 200 and r.body:
+                got[src] = r
+                try:
+                    im = Image.open(io.BytesIO(r.body)).convert('RGB')
+                    if im.width != w:
+                        im = im.resize((w, w // 2), Image.LANCZOS)
+                    b = io.BytesIO()
+                    im.save(b, 'WEBP', quality=q, method=6)
+                    f.write_bytes(b.getvalue())
+                    log(f'globe: {name} saved ({len(b.getvalue()) // 1024} KB)')
+                except Exception as e:
+                    log('globe:', name, 'not saved:', repr(e)[:80])
+        if f.exists():
+            out.mkdir(parents=True, exist_ok=True)
+            if not (out / name).exists():
+                shutil.copyfile(f, out / name)
+            n += 1
+    return n
 
 
 def refresh_crests(state, doc):
@@ -3038,12 +3392,15 @@ def refresh_crests(state, doc):
     if AF_KEY:
         step(lambda: af_country_teams(state, doc), 0)
     step(lambda: fl_refresh(state), False)
+    step(lambda: es_team_lists(state, doc), 0)
     n_new = step(lambda: learn_crests(state, doc), 0)
     got = step(lambda: fetch_crests(state, doc), 0)
     n = publish_crests(state, doc)
-    total = len(crest_names(doc))
-    if n_new or got:
-        log(f'crests: {n_new} teams matched, {got} downloaded, {n} of {total} teams on this board have one')
+    sheets = step(lambda: crest_sheets(state, doc), 0)
+    clubs = [x for x, lk in crest_names(doc) if (L.get(lk) or {}).get('group') != 'intl']
+    own = sum(1 for x in clubs if isinstance(doc['crests'].get(x), str) and doc['crests'][x][0] != 'E' or (isinstance(doc['crests'].get(x), int) and doc['crests'][x] > 0))
+    if n_new or got or sheets:
+        log(f'crests: {n_new} teams matched, {got} downloaded, {own} of {len(clubs)} clubs on this board have one on file ({n} with any), {sheets} sheets rebuilt')
     return n
 
 
@@ -4918,6 +5275,7 @@ def main():
     doc = build(state, prev, seed)
     safe(lambda: espn_publish(state, doc), None)
     safe(lambda: refresh_crests(state, doc), 0)
+    safe(lambda: globe_textures(state), 0)
     safe(lambda: refresh_stakes(state, doc), None)
     n_fx = safe(lambda: apply_fx(state, doc), 0)
     if n_fx:
