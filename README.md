@@ -208,13 +208,34 @@ Ask Statpad understands it too: "turn 10,000 into 500,000", "I want 1 million fr
 
 ## WhatsApp Status pack
 
-**Status pack** (Matches and Slips tabs) draws four 1080×1920 pictures for the day, styled like a heads-up display over a floodlit pitch, each built around its own data graphic:
+**Status pack** (Matches and Slips tabs) makes 11-second videos for the day, in 4K (2160 × 3840) with sound, sized for WhatsApp Status. They're drawn and encoded on the phone itself, so nothing is uploaded anywhere and the workflow doesn't change.
 
-- **Safest pick**: a confidence dial, lit to Statpad's chance, with the cautious floor marked and the crest of the team the pick is about at its centre.
-- **Upset alert**: a radar locked on the underdog's crest, at a real price of 2.60 or more with the best value. It shows fair odds against the price and lights one dot in N for how often it should land.
-- **Most at stake**: both crests beside the team names, then three futures forking from each team's chance now to its chance after a win, a draw and a defeat.
-- **Your slip**: the odds climbing leg by leg while the chance of landing drains away.
-Every match line carries both clubs' crests (national teams show their flag) and the competition's logo; a club without a crest yet gets its coloured monogram, as on the site, and with **Display → Save data** the pictures use monograms only. **Share all 4** opens the phone's share sheet; pick WhatsApp, then My status. On a computer the pictures download instead. Each carries the site's address and an 18+ note.
+Every clip runs the same way: a line of light opens into a floodlit pitch drawn as a hologram, the clip's title slams across the middle while the camera swoops down, and the title docks at the top. The day's numbers then build up and hold long enough to read. Finally the picture powers down into a point that bursts into the end card: the Statpad mark drawn by a laser, the wordmark condensing out of particles, a line for the clip, the recent record of “Nearly definite” picks (when there are 20 or more and at least 70% landed), and the site's address.
+
+### Twelve kinds of clip, a fresh line-up every day
+
+| Clip | What it shows |
+|---|---|
+| Safest pick | A confidence dial filling to Statpad's chance, the cautious chance marked, then the next two safest picks |
+| Upset alert | A radar locking onto the underdog (real price 2.60+ with the best value), fair odds v price, one dot in N |
+| Most at stake | Three futures (win, draw, defeat) for each team's season; falls back to the next few days |
+| Odds slip | The total odds climbing leg by leg while the chance of landing drains |
+| Goal rush | The game with most goals expected: the number, Over 2.5 and both-teams-score rings, and an equalizer of total goals with a ball hopping to the most likely |
+| Exact score | A 6 × 6 grid of scorelines lighting up from 0–0, locking onto the most likely three, with home/draw/away |
+| Match of the day | The headline game in the two teams' own colours: crests, who wins as a tug of war, last five results, expected goals, Statpad's pick |
+| Best value | Fair odds and the best price as two needles on an odds dial, the edge between them, and how often it still loses |
+| Results | The last day's graded picks flipping one by one to landed or missed, the hit rate, and the best prices that landed |
+| Price drop | A price that has fallen 8% or more since it was first seen, drawn as it fell |
+| In form | A team with four or five wins in its last five, its results igniting, and its chance today |
+| Matchday | The day in numbers: games, competitions with their logos, top picks, value bets, and the kick-off times |
+
+Each day the pack takes the **four** kinds the day's games make most interesting (a huge edge, a clear favourite score, a big stakes game and so on), steers away from the kinds this phone made on the last four days, and turns a little by the date, so even a quiet week doesn't repeat; a kind with nothing to show that day is skipped. **4 more clips** makes the next ones on the day's list. Each kind also has a few titles and closing lines, and the camera's swoop and orbit change with the date, so the same kind looks different on another day. The record of what was made is kept on the phone (the last 10 days).
+
+**The sound** is synthesized on the phone and timed to the frame: a low machine hum, a power-up sweep, decode ticks, servo whirs as dials fill, clunks when numbers land, radar pings, a glitch burst, rising tones for a win and falling ones for a defeat, a climbing scale for slip legs and goal bars, and a power-down. No voices and no music.
+
+**Quality.** 4K needs a phone whose video encoder takes 2160 × 3840; if it doesn't, Statpad steps down to 1440p, then 1080p, by itself. **1080p · faster** is about three times quicker. Sound is AAC, or Opus on a phone without an AAC encoder; **Sound → Off** makes silent clips. Keep the sheet open while the videos are made, one after another (each shows its progress); close it and it stops, open it and it carries on. A 4K clip is about 16 MB.
+
+**Sharing.** **Share all** opens the phone's share sheet with the MP4s and a caption with the site's link; pick WhatsApp, then My status. WhatsApp shrinks Status videos when it posts them, so 4K mainly pays off on TikTok, Instagram and YouTube Shorts. **Share pictures instead** gives the finished frame of each clip as a 4K picture, which is also what phones that can't make video get. The video packer (mp4-muxer, MIT licence) loads from jsDelivr the first time, so the first pack needs a connection.
 
 ## Ask Statpad
 
