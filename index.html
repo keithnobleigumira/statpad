@@ -541,6 +541,7 @@ canvas.shk-cv.big { height: min(64vh, 600px); border-radius: 14px; border: 1px s
 .st-q { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 0; }
 .st-opt { display: inline-flex; align-items: center; gap: 8px; }
 .st-more { width: 100%; margin-top: 14px; }
+.st-tip { border-left: 3px solid var(--cobalt); padding: 8px 0 8px 12px; margin-top: 14px; }
 /* what's at stake */
 .badge.b-stk { background: var(--yellow-soft); color: var(--yellow); }
 .badge.b-stk.huge { background: var(--red-soft); color: var(--red); }
@@ -3404,7 +3405,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const hexA = (h, a) => { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${Math.max(0, Math.min(1, a))})`; };
   function srng(seed) { let a = seed >>> 0 || 1; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   const shash = (s) => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h; };
-  function stFont(x, f, stretch, ls) { x.font = f; if ('fontStretch' in x) x.fontStretch = stretch || 'normal'; if ('letterSpacing' in x) x.letterSpacing = ls || '0px'; }
+  let MV_BOOST = false;   // set while drawing clips: labels under 30 px grow so they survive WhatsApp's downscaling
+  function stFont(x, f, stretch, ls) {
+    if (MV_BOOST) {   // small labels: a little bigger and never lighter than semibold, so re-encoding doesn't eat them
+      const sz = +(/(\d+(?:\.\d+)?)px/.exec(f) || [0, 99])[1];
+      if (sz < 30) f = f.replace(/(\d+(?:\.\d+)?)px/, Math.round(sz * 1.12 + 1.5) + 'px').replace(/^(\d{3}) /, (m, w) => (+w < 600 ? '600 ' : m));
+    }
+    x.font = f; if ('fontStretch' in x) x.fontStretch = stretch || 'normal'; if ('letterSpacing' in x) x.letterSpacing = ls || '0px'; }
   function stGrad(x, X0, Y0, X1, Y1, stops) { const g = x.createLinearGradient(X0, Y0, X1, Y1); stops.forEach(([o, c]) => g.addColorStop(o, c)); return g; }
   function stGlow(x, color, blur, fn) { x.save(); x.shadowColor = color; x.shadowBlur = blur * SK; fn(); x.restore(); }
   function stBigText(x, txt, X, Y, c1, c2, glow, align) {
@@ -3600,8 +3607,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function mvCam(t, cam) {   // cam: where this clip's swoop starts and which way the end card orbits
     cam = cam || { th0: -0.85, end: 0.6, h0: 82 };
     const a = ez.io3(tw(t, 0, 2.2)), b = ez.io3(tw(t, MV.CUT - 0.1, 3.2));
-    const th = lerp(cam.th0, 0, a) + Math.sin(t * 0.42) * 0.05 + b * cam.end;
-    let R = lerp(24, 64, a) - t * 0.75, h = lerp(cam.h0, 13, a), ph = lerp(68, 7.5, a);
+    const tt = mvTau(t), th = lerp(cam.th0, 0, a) + Math.sin(tt * 0.42) * 0.05 + b * cam.end;
+    let R = lerp(24, 64, a) - tt * 0.75, h = lerp(cam.h0, 13, a), ph = lerp(68, 7.5, a);
     h = lerp(h, 40, b); ph = lerp(ph, 46, b); R = lerp(R, 50, b);
     const C = { x: Math.sin(th) * R, y: h, z: -Math.cos(th) * R, yaw: -th, ph: ph * D2R, F: 900, cx: 540, cy: 1290 };
     C.cyw = Math.cos(C.yaw); C.syw = Math.sin(C.yaw); C.cp = Math.cos(C.ph); C.sp = Math.sin(C.ph);
@@ -3634,16 +3641,28 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       x.strokeStyle = hexA(col, a); x.lineWidth = w; x.stroke(B[i]);
     }
   }
+  // the world's own clock: full speed for the swoop and the end card, nearly still while the numbers are up
+  const MV_SLOW = [[0, 1], [1.6, 1], [2.6, 0.03], [MV.CUT - 0.2, 0.03], [MV.CUT + 0.4, 1], [99, 1]];
+  function mvTau(t) {
+    let acc = 0;
+    for (let i = 1; i < MV_SLOW.length; i++) {
+      const [t0, s0] = MV_SLOW[i - 1], [t1, s1] = MV_SLOW[i];
+      if (t <= t0) break;
+      const e = Math.min(t, t1), se = s0 + (s1 - s0) * (e - t0) / (t1 - t0);
+      acc += (e - t0) * (s0 + se) / 2;
+    }
+    return acc;
+  }
   const mvWI = (t) => 1 - 0.6 * ez.io3(tw(t, 1.5, 0.9)) + 0.6 * ez.io3(tw(t, MV.CUT - 0.1, 0.6)) - 0.15 * ez.io3(tw(t, MV.END + 0.9, 0.8));
   function mvWorld(x, t, F) {
-    const { c1, c2 } = F, C = mvCam(t, F.sc.cam), W = MV.W, H = MV.H, wi = mvWI(t);
+    const { c1, c2 } = F, C = mvCam(t, F.sc.cam), W = MV.W, H = MV.H, wi = mvWI(t), tt = mvTau(t);
     x.fillStyle = SX.bg; x.fillRect(-40, -40, W + 80, H + 80);
     // drifting fog in the clip's two colours
-    x.save(); x.globalAlpha = 0.95; x.drawImage(F.fog, -60 + Math.sin(t * 0.21) * 30, -60 + Math.cos(t * 0.17) * 40, W + 120, H + 120); x.restore();
+    x.save(); x.globalAlpha = 0.95; x.drawImage(F.fog, -60 + Math.sin(tt * 0.21) * 30, -60 + Math.cos(tt * 0.17) * 40, W + 120, H + 120); x.restore();
     x.save(); x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
-    const scanZ = -70 + ((t * 40) % 190);
-    mvLines(x, C, MV_GRID, c2, 0.34 * wi, 1.4, null, 230);
-    mvLines(x, C, MV_PITCH, c1, 0.95 * wi, 2.4, scanZ, 175);
+    const scanZ = -70 + ((tt * 40) % 190);
+    mvLines(x, C, MV_GRID, c2, 0.34 * wi, 2, null, 230);
+    mvLines(x, C, MV_PITCH, c1, 0.95 * wi, 3.2, scanZ, 175);
     // the scan wave itself, across the pitch
     if (scanZ > -52.5 && scanZ < 52.5) {
       mvP(C, -34, 0, scanZ, PA); mvP(C, 34, 0, scanZ, PB);
@@ -3664,7 +3683,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     MV_TOWERS.forEach(([X, Z], i) => {
       mvP(C, X, 38, Z, PA); if (PA[2] < 3) return;
       const hx = C.cx + C.F * PA[0] / PA[2], hy2 = C.cy - C.F * PA[1] / PA[2];
-      const gx = Math.sin(t * 0.33 + i * 1.9) * 10, gz = Math.cos(t * 0.27 + i * 1.3) * 14;
+      const gx = Math.sin(tt * 0.33 + i * 1.9) * 10, gz = Math.cos(tt * 0.27 + i * 1.3) * 14;
       mvP(C, gx - 9, 0, gz, PA); mvP(C, gx + 9, 0, gz, PB);
       if (PA[2] > 1 && PB[2] > 1) {
         const ax = C.cx + C.F * PA[0] / PA[2], ay = C.cy - C.F * PA[1] / PA[2], bx = C.cx + C.F * PB[0] / PB[2], by = C.cy - C.F * PB[1] / PB[2];
@@ -3673,14 +3692,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       }
       mvP(C, X, 0, Z, PB);
       if (PB[2] > 1) { x.strokeStyle = 'rgba(200,220,255,.16)'; x.lineWidth = 2; x.beginPath(); x.moveTo(hx, hy2); x.lineTo(C.cx + C.F * PB[0] / PB[2], C.cy - C.F * PB[1] / PB[2]); x.stroke(); }
-      const s = Math.max(10, Math.min(46, 2100 / PA[2] * 0.9 + 8)), fl = 0.75 + 0.25 * Math.sin(t * 7 + i * 2.1) * Math.sin(t * 3.1 + i);
+      const s = Math.max(10, Math.min(46, 2100 / PA[2] * 0.9 + 8)), fl = 0.75 + 0.25 * Math.sin(tt * 7 + i * 2.1) * Math.sin(tt * 3.1 + i);
       mvFlare(x, hx, hy2, s * 1.4, c2, 0.7 * fl * (0.35 + 0.65 * wi), 9);
     });
     // dust in the light
     const P = F.dust;
     for (let i = 0; i < P.length; i += 5) {
-      const y = ((P[i + 1] - t * P[i + 2] * 42) % (H + 40) + H + 40) % (H + 40) - 20, xx = P[i] + Math.sin(t * 0.6 + P[i + 4] * 6) * 18;
-      const tw2 = 0.55 + 0.45 * Math.sin(t * (1.5 + P[i + 4] * 2) + P[i + 4] * 20);
+      const y = ((P[i + 1] - tt * P[i + 2] * 42) % (H + 40) + H + 40) % (H + 40) - 20, xx = P[i] + Math.sin(tt * 0.6 + P[i + 4] * 6) * 18;
+      const tw2 = 0.55 + 0.45 * Math.sin(tt * (1.5 + P[i + 4] * 2) + P[i + 4] * 20);
       x.fillStyle = P[i + 4] < 0.5 ? hexA(c1, 0.55 * tw2) : `rgba(235,245,255,${0.4 * tw2})`;
       x.fillRect(xx, y, P[i + 3], P[i + 3]);
     }
@@ -3695,13 +3714,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     fx.fillStyle = SX.bg; fx.fillRect(0, 0, 270, 480);
     const blob = (X, Y, r, col) => { const g = fx.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); fx.fillStyle = g; fx.fillRect(0, 0, 270, 480); };
     blob(222, 60, 240, hexA(c1, .32)); blob(30, 380, 230, hexA(c2, .24)); blob(135, 250, 160, hexA(c1, .08)); blob(250, 420, 120, hexA(c2, .1));
-    const dust = []; for (let i = 0; i < 150; i++) dust.push(R() * MV.W, R() * MV.H, 0.2 + R() * 0.9, R() < 0.1 ? 3 + R() * 2.5 : 1.2 + R() * 1.6, R());
+    const dust = []; for (let i = 0; i < 90; i++) dust.push(R() * MV.W, R() * MV.H, 0.2 + R() * 0.9, R() < 0.1 ? 3 + R() * 2.5 : 1.2 + R() * 1.6, R());
     const key = Wpx + 'x' + Hpx;
     if (!MV_OVER.has(key)) {
       const o = mk(Wpx, Hpx), ox = o.getContext('2d');
-      const n = mk(160, 160), nx = n.getContext('2d'), im = nx.createImageData(160, 160), RN = srng(7);
-      for (let i = 0; i < im.data.length; i += 4) { const v = RN() * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 13; }
-      nx.putImageData(im, 0, 0); ox.fillStyle = ox.createPattern(n, 'repeat'); ox.fillRect(0, 0, Wpx, Hpx);
       const v = ox.createRadialGradient(Wpx / 2, Hpx * 0.47, Wpx * 0.45, Wpx / 2, Hpx / 2, Hpx * 0.68); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.62)');
       ox.fillStyle = v; ox.fillRect(0, 0, Wpx, Hpx);
       MV_OVER.clear(); MV_OVER.set(key, o);
@@ -3918,7 +3934,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // ---- one frame ----
   function mvFrame(F, t, fi) {
     const { x, k, sc } = F; F.fi = fi || 0;
-    const sk0 = SK; SK = k;
+    const sk0 = SK; SK = k; MV_BOOST = true;
     x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.filter = 'none';
     const [dx, dy] = mvShakeAt((sc.shakes || []).concat([[0.64, 8]]), t);
     x.setTransform(k, 0, 0, k, dx * k, dy * k);
@@ -3957,7 +3973,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         if (t < 0.3) mvFlare(x, 540, 960, 70 * ul + 10, F.c1, 1 - t / 0.3, 9);
       }
     }
-    SK = sk0;
+    SK = sk0; MV_BOOST = false;
   }
   function mvEmpty(x, t, F) {
     stFont(x, `800 74px ${SF.d}`, 'expanded', '-1px'); x.fillStyle = SX.ink;
@@ -5404,8 +5420,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // Each size is also checked against this phone's own video decoder, and each finished clip is played back
   // here before it's offered, so a file the phone can't play is never shared.
   const MV_RES = {
-    hd: [[1080, 1920, 'avc1.640028', 6e6], [1080, 1920, 'avc1.4d0028', 6e6], [720, 1280, 'avc1.4d001f', 4e6]],
-    '4k': [[2160, 3840, 'avc1.640033', 12e6], [1440, 2560, 'avc1.640032', 8e6], [1080, 1920, 'avc1.640028', 6e6], [1080, 1920, 'avc1.4d0028', 6e6], [720, 1280, 'avc1.4d001f', 4e6]],
+    hd: [[1080, 1920, 'avc1.640028', 10e6], [1080, 1920, 'avc1.4d0028', 10e6], [720, 1280, 'avc1.4d001f', 6e6]],
+    '4k': [[2160, 3840, 'avc1.640033', 24e6], [1440, 2560, 'avc1.640032', 14e6], [1080, 1920, 'avc1.640028', 10e6], [1080, 1920, 'avc1.4d0028', 10e6], [720, 1280, 'avc1.4d001f', 6e6]],
   };
   async function mvVideoRes(q, below) {
     if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return null;
@@ -5614,6 +5630,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           <figcaption><span>${i + 1}. ${esc(label(sc))}</span>${v ? `<button type="button" class="btn sm" data-stshare="${i}">Share</button>` : !vid ? `<button type="button" class="btn sm" data-stpics="${i}">Share</button>` : ''}</figcaption></figure>`;
       }).join('')}</div>
       ${left > 0 ? `<button type="button" class="btn st-more" data-stmore="1"${P.adding ? ' disabled' : ''}>${P.adding ? 'Adding…' : `${Math.min(4, left)} more ${Math.min(4, left) === 1 ? 'clip' : 'clips'} for ${esc(when)}`}</button>` : ''}
+      ${vid ? `<p class="note st-tip"><b>Sharper on WhatsApp:</b> WhatsApp shrinks Status videos to save data unless you ask for HD. In WhatsApp go to <b>Settings → Storage and data → Media upload quality</b> and pick <b>HD</b> before posting. If your WhatsApp doesn't have that setting, send the clip to yourself with the <b>HD</b> button on, then forward it to My status.</p>` : ''}
       <p class="note">Each day's pack is picked from ${MV_LIB.length} kinds of clip by what the day's games make interesting, and avoids the kinds this phone made in the last few days. Each clip ends on Statpad's address, and sharing adds a link to the caption.${vid ? ` 1080p is what WhatsApp Status shows anyway and is about three times quicker; 4K pays off on TikTok, Instagram and YouTube Shorts. <button type="button" class="linkbtn" data-stpics="share">Share pictures instead</button>` : ''}</p>`;
     morph($('#sheetBody'), html, 'status:' + P.key);
     mvPaintProg();
