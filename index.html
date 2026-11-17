@@ -1296,6 +1296,53 @@ body { background: var(--paper); }
 .mc-load i:nth-child(2) { animation-delay: .15s; } .mc-load i:nth-child(3) { animation-delay: .3s; }
 @keyframes mcDot { 50% { opacity: .25; transform: translateY(-3px); } }
 @media (prefers-reduced-motion: reduce) { .mc-body, .mc-load i { animation: none; } }
+/* momentum wave: who is pushing, minute by minute */
+.mw { margin: 0 0 14px; padding: 12px 12px 8px; border-radius: 14px; background: var(--sunk); border: 1px solid var(--rule-2); }
+.mw-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.mw-h > b { font: 800 17px/1 var(--f-display); letter-spacing: .01em; }
+.mw-h span { font-size: 12.5px; color: var(--ink-2); text-align: right; }
+.mw-h span b { color: var(--ink); font-weight: 700; }
+.mw-k { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--ink-3); margin: 7px 0 6px; }
+.mw-k i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.mw-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.mw-0 { stroke: var(--rule); stroke-width: 1; }
+.mw-ht { stroke: var(--ink-3); stroke-opacity: .55; stroke-dasharray: 2 4; }
+.mw-fut { fill: var(--ink); fill-opacity: .03; }
+.mw-gl { stroke: var(--ink-2); stroke-opacity: .45; stroke-dasharray: 1.5 3; }
+.mw-ball { fill: var(--k); stroke: var(--sunk); stroke-width: 2.5; }
+.mw-nl { stroke: var(--red); stroke-width: 1.3; stroke-opacity: .7; }
+.mw-now { fill: var(--red); transform-box: fill-box; transform-origin: center; animation: mwPulse 1.6s ease-in-out infinite; }
+@keyframes mwPulse { 50% { transform: scale(1.7); opacity: .45; } }
+.mw-bars rect { transform-box: fill-box; animation: mwGrow .55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 6ms); }
+.mw-bars rect.u { transform-origin: 50% 100%; } .mw-bars rect.d { transform-origin: 50% 0; }
+@keyframes mwGrow { from { transform: scaleY(0); } }
+.mw-ax { position: relative; height: 15px; margin-top: 3px; font: 600 10.5px/15px var(--f-body); color: var(--ink-3); }
+.mw-ax span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.mw-ax span.l { transform: none; } .mw-ax span.r { transform: translateX(-100%); }
+.mw-ax span.now { color: var(--red); font-weight: 700; background: var(--sunk); padding: 0 4px; }
+.mw-sp { margin: 6px 0 2px; font-size: 12px; color: var(--ink-3); }
+/* multiverse: the game played 10,000 times */
+.mvx-stage { position: relative; border-radius: 14px; overflow: hidden; background: #03060f; box-shadow: inset 0 0 0 1px rgba(124, 147, 255, .16), 0 22px 44px -28px rgba(40, 60, 160, .65); }
+.mvx-cv { position: relative; z-index: 1; mix-blend-mode: screen; display: block; width: 100%; height: 252px; cursor: pointer; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+.mvx-u, .mvx-o { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; } .mvx-o { z-index: 2; }
+@media (min-width: 560px) { .mvx-cv { height: 284px; } }
+.mvx-b { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.mvx-k { --k: #7c93ff; display: grid; gap: 3px; text-align: left; padding: 9px 10px 8px; border-radius: 12px; border: 1px solid var(--rule); background: var(--card-2); color: var(--ink); font: inherit; cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .15s; }
+.mvx-k.kD { --k: #c4cce4; } .mvx-k.kA { --k: #ff9a5c; }
+[data-theme="light"] .mvx-k.kD { --k: #8792b0; } [data-theme="light"] .mvx-k.kH { --k: #4a63f0; } [data-theme="light"] .mvx-k.kA { --k: #e8743b; }
+.mvx-k span { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.mvx-k span em { font-style: normal; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mvx-k span i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--k); box-shadow: 0 0 8px var(--k); }
+.mvx-k b { font: 800 23px/1 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.mvx-k small { font-size: 11px; color: var(--ink-3); }
+.mvx-k.real small { color: var(--k); font-weight: 700; }
+.mvx-k[aria-pressed="true"] { border-color: var(--k); box-shadow: inset 0 0 0 1px var(--k), 0 10px 24px -14px var(--k); }
+.mvx-k:active { transform: scale(.97); }
+.mvx-say { margin: 12px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.mvx-say b, .mvx-sel b { color: var(--ink); font: 800 15px/1 var(--f-display); letter-spacing: .02em; }
+.mvx-sel { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-3); min-height: 1.45em; }
+.calm .mw-bars rect, .calm .mw-now { animation: none; }
+@media (prefers-reduced-motion: reduce) { .mw-bars rect, .mw-now { animation: none; } }
 </style>
 </head>
 <body>
@@ -2425,7 +2472,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="chips">${chips.map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>
       <div id="sheetLive">${r.started ? liveCard(r) : ''}</div>
       <div id="sheetMC">${mcCard(r)}</div>
+      ${r.started ? `<div id="sheetMV">${mvxCard(r)}</div>` : ''}
       ${storyCard(r)}
+      ${r.started ? '' : `<div id="sheetMV">${mvxCard(r)}</div>`}
       ${stakesCard(m)}
       ${newsCard(m)}
       <div class="card"><h4>Who wins <span>home · draw · away</span></h4><div class="cmp">
@@ -2442,6 +2491,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <p class="note">Fair odds come from the scoreline grid, so the link between the two parts of a combo is priced in. Bookmakers' bet builders usually take a bigger margin: if their price is below the fair odds here, it's poor value. Draw no bet returns your stake on a draw; its chance is of winning when there's a winner.</p>
         <table class="mt"><thead><tr><th>Selection</th><th class="n">Prob</th><th class="n fair">Fair</th><th class="n">Est. price</th><th class="n"></th><th></th></tr></thead><tbody>${xrows}</tbody></table></details>` : ''}
       <div class="card"><h4>Price history <span>average 1X2 price</span></h4>${spark(m.hist, m)}</div>`, 'm:' + S.open);
+    mvxAttach();
   }
 
   // ---------------- value ----------------
@@ -3120,6 +3170,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>On a coupon, picks from the same match are linked (over 2.5 goals and both teams to score tend to land together), so their chance is worked out together from that match's scoreline grid instead of being multiplied. When the live feed lists events, goal and card minutes are exact; otherwise each new goal is placed halfway between two score checks, and the page says so.</p>
       <h3>Match centre</h3>
       <p>For competitions ESPN follows, a match page also shows the game itself, from ESPN's free match summaries. Once the line-ups are in (usually about an hour before kick-off) it draws both teams on a pitch in their formations, in their kit colours, with the benches below. During and after the game it adds a timeline of goals, penalties, cards and substitutions, and the team stats: possession, shots, shots on target, corners, fouls, cards, offsides, saves, passes and tackles. While a game is on and its page is open, it refreshes about once a minute; after the final whistle every 15 minutes, for a day. Your phone asks ESPN directly, so it costs none of the site's data credits.</p>
+      <h3>Momentum</h3>
+      <p>Above the match centre's tabs, a wave shows which side is pushing, minute by minute, read from ESPN's live commentary. Each attacking moment counts for the side making it: a shot on target or off the woodwork 3, a saved or missed penalty 2.5, a shot off target 1.8, a blocked shot 1.6, a corner 1.4, a free kick won in the attacking half 0.6 (on a wing 0.4), an offside 0.6 and a goal 4. Shots from close in count a third more and from long range a third less. Each side's pressure fades with a half-life of about a minute and a half, and the wave is the difference: up for the home side, down for the away side, in the teams' colours, with goals, red cards and half time marked. It says who is on top right now (the last eight minutes), or after the game who was on top for most of it and each side's best ten-minute spell. It is a reading of the commentary, not of the ball's position, so a long spell of possession without shots barely shows.</p>
+      <h3>Multiverse</h3>
+      <p>Every match page plays the game 10,000 times and draws all of them at once. Before kick-off each simulated game takes its final score from Statpad's scoreline grid (the same one behind every price on the page), and its goals are spread over the 90 minutes the way goals really arrive, a little more often late on. Once the game is on, every simulation starts from the real score and minute and plays out the rest exactly as the live chances do, so the picture and the numbers always agree; it re-runs with each new minute and score. Up is the home side ahead, down the away side; each band is as wide as the share of simulated games at that goal difference at that moment, so the main channel thins as games branch off, and the colours show how the games in each band end. Sparks run along randomly chosen games. Tap an ending to follow only the games that reach it. Below are the most common final score, comeback wins, results that change after 85 minutes and, after a goal, how many games it swung. After full time it shows the 10,000 games from before kick-off with the real one traced through them, and how often the real score came up.</p>
       <h3>Scoreline explorer</h3>
       <p>On every match page, tap scores on the grid to make your own set, or pick conditions (result, total goals, both teams to score, winning margin, each team's goals). Statpad adds up the matching scorelines from the whole grid, so the links between the parts are priced in, and shows the chance, the fair odds and a typical bet-builder price. Your bet can go on the coupon and into My bets, where it settles like any other pick.</p>
       <h3>Why this pick</h3>
@@ -6692,6 +6746,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       el.classList.add('live'); const [h, d, a] = el.children; h.style.width = p.H * 100 + '%'; d.style.width = p.D * 100 + '%'; a.style.width = p.A * 100 + '%';
     }
     const sl = $('#sheetLive'); if (sl && S.open) { const r = S.byId.get(S.open); if (r) morph(sl, liveCard(r), 'live:' + S.open); }
+    const sv = $('#sheetMV'); if (sv && S.open) { const r = S.byId.get(S.open); if (r) { morph(sv, mvxCard(r), 'mvx:' + S.open); mvxAttach(); } }
     const was = S.shk.liveN || 0;
     shockRefresh(); S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
     if (S.tab === 'matches' && !!was !== !!S.shk.liveN) renderMatches();
@@ -6896,7 +6951,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   setInterval(esTick, 10e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) esTick(); });
-  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, render: () => render(), mvShot: (...a) => mvDebugShot(...a), mvPlan: () => mvDebugPlan(), mvClip: (...a) => mvDebugClip(...a), esStatus, esTick, esRow, esTuple, esPair, esSim, gsRun: () => gsRun(), gsSolve: (...a) => gsSolve(...a), gsRows: (d) => gsRows(d) };   // for the test scripts
+  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, render: () => render(), mvShot: (...a) => mvDebugShot(...a), mvPlan: () => mvDebugPlan(), mvClip: (...a) => mvDebugClip(...a), esStatus, esTick, esRow, esTuple, esPair, esSim, gsRun: () => gsRun(), gsSolve: (...a) => gsSolve(...a), gsRows: (d) => gsRows(d), openMatch: (id) => openMatch(id), mvxTime: (n, mode) => { const cv = document.querySelector('canvas.mvx-cv'); const t = performance.now(); for (let i = 0; i < n; i++) { window.__mvxMode = mode; mvxDraw(cv, performance.now()); } cv.getContext('2d').getImageData(0, 0, 1, 1); return (performance.now() - t) / n; }, mvxBench: (id) => { const r = S.byId.get(id), st = mvxState(r); S.mvx.cache.delete(id); let t = performance.now(); const X = mvxSim(r, st); const ts = performance.now() - t; const cv = document.querySelector('canvas.mvx-cv'); t = performance.now(); const D = cv && cv._mvx ? mvxDensity(cv._mvx, X) : null; const td = performance.now() - t; t = performance.now(); if (D) mvxPaint(D, -1, cv._mvx.G); return { sim: ts, dens: td, paint: performance.now() - t }; } };   // for the test scripts
   document.addEventListener('input', (e) => {
     const d = e.target.dataset || {};
     if (d.man) {
@@ -7107,6 +7162,363 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       ${scorers}<p class="note">The chances play out the rest of the game from the score, the minute${L.reds.length ? ', red cards' : ''} and each side's expected goals before kick-off.</p></div>`;
   }
 
+  // ---------------- multiverse: the game played 10,000 times, drawn as a river of possible futures ----------------
+  // Before kick-off each universe draws its final score from Statpad's scoreline grid (the one behind every price on
+  // the page), then spreads its goals over the 96 minutes the way goals really arrive: a little faster late on
+  // (goalClock). Once the game is on, every universe starts from the real score and minute and plays out the rest
+  // exactly as the live chances do (livePH), so the river and the numbers always agree. After full time it shows
+  // the 10,000 games from before kick-off with the real one traced through them.
+  // Up the river is the home side ahead, down is the away side; each universe is a path through the goal
+  // difference, and sparks run along randomly chosen ones in the colour of how that universe ends.
+  const MVX_N = 10000, MVX_K = ['H', 'D', 'A'], MVX_C = [[124, 147, 255], [196, 204, 228], [255, 154, 92]], MVX_EASE = 2.2;
+  S.mvx = { sel: null, cache: new Map(), io: null, raf: 0, cvs: new Set() };
+  const mvxN = (n) => Math.round(n).toLocaleString('en-US');
+  const mvxInv = (u) => { const c = 0.084 / T_END; return (-1 + Math.sqrt(1 + 4 * c * u)) / (2 * c); };   // the minute by which goalClock reaches u
+  function mvxRng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const mvxHash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
+  const mvxPois = (l, rnd) => { if (!(l > 0)) return 0; const e = Math.exp(-l); let k = 0, p = rnd(); while (p > e && k < 25) { k++; p *= rnd(); } return k; };
+  function mvxState(r) {
+    const L = r.started ? liveNow(r.m.id) : null;
+    if (L && (L.ft || /^(ET|BT|P|AET|PEN)$/.test(L.st || ''))) return { mode: 'ft', L, t0: 0, h0: 0, a0: 0, rh: 0, ra: 0, key: 'ft' };
+    if (L) {
+      const rh = L.reds.filter((x) => x[1] === 'h').length, ra = L.reds.filter((x) => x[1] === 'a').length, t0 = L.st === 'HT' ? 45 : Math.max(0, Math.min(T_END - 0.5, L.min));
+      return { mode: 'live', L, t0, h0: L.h, a0: L.a, rh, ra, key: `live|${Math.floor(t0)}|${L.h}-${L.a}|${rh}-${ra}` };
+    }
+    return { mode: r.started ? 'nolive' : 'pre', L: null, t0: 0, h0: 0, a0: 0, rh: 0, ra: 0, key: 'pre' };
+  }
+  function mvxSim(r, st) {
+    const a = r.a, id = `${r.m.id}|${st.key}|${a.lh.toFixed(3)}|${a.la.toFixed(3)}`, old = S.mvx.cache.get(r.m.id);
+    if (old && old.id === id) return old;
+    const rnd = mvxRng(mvxHash(id)), N = MVX_N;
+    let draw;
+    if (st.mode === 'live') {
+      const rem = remFrac(st.L.min, st.L.st);
+      const kh = a.lh * rem * ssm(st.h0 - st.a0) * Math.pow(RED_OWN, st.rh) * Math.pow(RED_OPP, st.ra), ka = a.la * rem * ssm(st.a0 - st.h0) * Math.pow(RED_OWN, st.ra) * Math.pow(RED_OPP, st.rh);
+      draw = () => [mvxPois(kh, rnd), mvxPois(ka, rnd)];
+    } else {
+      const M = a.M, cum = [], at = []; let s = 0;
+      for (let i = 0; i < M.length; i++) for (let j = 0; j < M[i].length; j++) { s += M[i][j]; cum.push(s); at.push([i, j]); }
+      draw = () => { const u = rnd() * s; let lo = 0, hi = cum.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < u) lo = m + 1; else hi = m; } return at[lo]; };
+    }
+    const G0 = goalClock(st.t0), G1 = goalClock(T_END), off = new Int32Array(N + 1), oc = new Uint8Array(N), fin = new Int8Array(2 * N), gt = [], gs = [];
+    const cnt = [0, 0, 0], sc = new Map();
+    let comeH = 0, comeA = 0, late = 0;
+    for (let u = 0; u < N; u++) {
+      const [nh, na] = draw(), ev = [];
+      for (let k = 0; k < nh; k++) ev.push([mvxInv(G0 + rnd() * (G1 - G0)), 1]);
+      for (let k = 0; k < na; k++) ev.push([mvxInv(G0 + rnd() * (G1 - G0)), -1]);
+      ev.sort((x, y) => x[0] - y[0]);
+      let g = st.h0 - st.a0, lo = g, hi = g, g85 = g;
+      for (const [t, s] of ev) { gt.push(t); gs.push(s); g += s; if (t <= 85) g85 += s; lo = Math.min(lo, g); hi = Math.max(hi, g); }
+      off[u + 1] = gt.length;
+      const fh = st.h0 + nh, fa = st.a0 + na, o = fh > fa ? 0 : fh === fa ? 1 : 2;
+      oc[u] = o; fin[2 * u] = fh; fin[2 * u + 1] = fa; cnt[o]++;
+      const k = `${fh}–${fa}`; sc.set(k, (sc.get(k) || 0) + 1);
+      if (o === 0 && lo < 0) comeH++; else if (o === 2 && hi > 0) comeA++;
+      if (Math.sign(g85) !== Math.sign(g)) late++;
+    }
+    const X = { id, st, N, off, oc, fin, gt: Float32Array.from(gt), gs: Int8Array.from(gs), cnt, top: [...sc.entries()].sort((x, y) => y[1] - x[1]), comeH, comeA, late };
+    S.mvx.cache.delete(r.m.id); S.mvx.cache.set(r.m.id, X);
+    if (S.mvx.cache.size > 8) S.mvx.cache.delete(S.mvx.cache.keys().next().value);
+    return X;
+  }
+  // a universe's goal difference at minute t, eased over a minute or so either side of each goal
+  function mvxGd(X, u, t) {
+    let g = X.st.h0 - X.st.a0;
+    for (let k = X.off[u], e = X.off[u + 1]; k < e; k++) {
+      const d = (t - X.gt[k]) / MVX_EASE;
+      if (d >= 1) g += X.gs[k]; else if (d > -1) { const q = (d + 1) / 2; g += X.gs[k] * q * q * (3 - 2 * q); } else break;
+    }
+    return g;
+  }
+  const mvxOutOf = (k) => { const [h, a] = k.split('–').map(Number); return h > a ? 0 : h === a ? 1 : 2; };
+  function mvxSay(r, st, X) {
+    const { m } = r, nm = [m.h, null, m.a], out = [], best = X.top[0];
+    if (st.mode === 'ft') {
+      const L = st.L, k = `${L.h}–${L.a}`, e = X.top.find((x) => x[0] === k), n = e ? e[1] : 0, o = mvxOutOf(k);
+      out.push(n ? `The real <b>${k}</b> came up in ${mvxN(n)} of the 10,000 games played before kick-off: about 1 in ${mvxN(X.N / n)}.` : `Not one of the 10,000 games played before kick-off ended <b>${k}</b>.`);
+      out.push(o === 1 ? `${mvxN(X.cnt[1])} of them were draws.` : `${esc(nm[o])} won ${mvxN(X.cnt[o])} of them.`);
+      return out.join(' ');
+    }
+    if (st.mode === 'live') {
+      const L = st.L;
+      out.push(`Most common ending from here: <b>${best[0]}</b>, in ${mvxN(best[1])}.`);
+      const g = L.goals[L.goals.length - 1];
+      if (g && r.a) {
+        const [t, s] = g, bf = L.goals.slice(0, -1), hb = bf.filter((x) => x[1] === 'h').length, ab = bf.length - hb;
+        const rh = L.reds.filter((x) => x[0] <= t && x[1] === 'h').length, ra = L.reds.filter((x) => x[0] <= t && x[1] === 'a').length;
+        const k = s === 'h' ? 'H' : 'A', p0 = livePH(r.a.lh, r.a.la, hb, ab, t, '2H', rh, ra)[k], p1 = livePH(r.a.lh, r.a.la, hb + (s === 'h'), ab + (s === 'a'), t, '2H', rh, ra)[k];
+        out.push(`${esc(s === 'h' ? m.h : m.a)}’s goal at ${t}' took their wins from ${mvxN(p0 * X.N)} universes to ${mvxN(p1 * X.N)}.`);
+      }
+      if (st.h0 !== st.a0) { const tr = st.h0 < st.a0 ? 0 : 2, n = tr === 0 ? X.comeH : X.comeA; if (st.t0 < 88) out.push(`${esc(nm[tr])} come back to win in ${mvxN(n)}.`); }
+      else if (st.t0 < 80) out.push(`In ${mvxN(X.late)} the result changes after 85 minutes.`);
+      return out.join(' ');
+    }
+    out.push(`Most common ending: <b>${best[0]}</b>, in ${mvxN(best[1])} of them.`);
+    if (X.comeH + X.comeA) out.push(`${mvxN(X.comeH + X.comeA)} have a comeback win.`);
+    out.push(`In ${mvxN(X.late)} the result changes after 85 minutes.`);
+    return out.join(' ');
+  }
+  function mvxPickLine(r, X, k) {
+    const o = MVX_K.indexOf(k); if (o < 0) return '';
+    const n = X.cnt[o], s = X.top.find((x) => mvxOutOf(x[0]) === o);
+    if (!n) return `None of the 10,000 end in ${o === 1 ? 'a draw' : `a ${esc(o ? r.m.a : r.m.h)} win`}.`;
+    const gd = X.st.h0 - X.st.a0, behind = (o === 0 && gd < 0) || (o === 2 && gd > 0);
+    const who = o === 1 ? `A draw in ${mvxN(n)}` : `${esc(o ? r.m.a : r.m.h)} win in ${mvxN(n)}`, cb = behind ? 0 : o === 0 ? X.comeH : o === 2 ? X.comeA : 0;
+    return `${who}: most often <b>${s[0]}</b> (${mvxN(s[1])})${cb ? `, and ${mvxN(cb)} of them are comebacks` : ''}.`;
+  }
+  function mvxCard(r) {
+    if (!r || !r.a || !r.a.M) return '';
+    const st = mvxState(r), X = mvxSim(r, st), { m } = r, sel = S.mvx.sel;
+    const sub = st.mode === 'live' ? `10,000 futures from ${Math.floor(st.t0)}'` : st.mode === 'ft' ? '10,000 games before kick-off' : 'the game played 10,000 times';
+    const real = st.mode === 'ft' ? mvxOutOf(`${st.L.h}–${st.L.a}`) : -1, name = [m.h, 'Draw', m.a];
+    const aria = `${mvxN(X.cnt[0])} ${m.h} wins, ${mvxN(X.cnt[1])} draws and ${mvxN(X.cnt[2])} ${m.a} wins out of 10,000`;
+    return `<div class="card mvx" id="mvx"><h4>Multiverse <span>${sub}</span></h4>
+      <div class="mvx-stage"><canvas class="mvx-u" aria-hidden="true"></canvas><canvas class="mvx-cv" data-mvx="${esc(m.id)}" role="img" aria-label="${esc(aria)}"></canvas><canvas class="mvx-o" aria-hidden="true"></canvas></div>
+      <div class="mvx-b" role="group" aria-label="Show one ending">${MVX_K.map((k, o) => `<button type="button" class="mvx-k k${k}${o === real ? ' real' : ''}" data-mvxb="${k}" aria-pressed="${sel === k}"><span><i></i><em>${esc(name[o])}</em></span><b>${mvxN(X.cnt[o])}</b><small>${o === real ? 'real result' : pct(X.cnt[o] / X.N)}</small></button>`).join('')}</div>
+      <p class="mvx-say">${mvxSay(r, st, X)}</p><p class="mvx-sel" aria-live="polite">${sel ? mvxPickLine(r, X, sel) : 'Tap an ending to follow only the universes that reach it.'}</p>
+      ${st.mode === 'nolive' ? '<p class="note">The live score isn’t in yet, so this is the game as it looked at kick-off.</p>' : ''}</div>`;
+  }
+
+  // ---- drawing ----
+  function mvxGeo(W, H) {
+    const x0 = 8, x1 = W - 54, y0 = 26, y1 = H - 32, ln = (y1 - y0) / 7;
+    return { W, H, x0, x1, y0, y1, ln, X: (t) => x0 + ((x1 - x0) * t) / T_END, Y: (g) => (y0 + y1) / 2 - Math.max(-3.3, Math.min(3.3, g)) * ln };
+  }
+  const mvxCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; };
+  function mvxBg(s) {   // deep space, the lanes and the clock: depends only on the size
+    const { G, dpr } = s, c = mvxCanvas(G.W * dpr, G.H * dpr), x = c.getContext('2d'); x.scale(dpr, dpr);
+    const g = x.createRadialGradient(G.W * 0.6, G.H * 0.5, 8, G.W * 0.6, G.H * 0.5, G.W * 0.85); g.addColorStop(0, '#0d1638'); g.addColorStop(0.55, '#070c22'); g.addColorStop(1, '#02040c');
+    x.fillStyle = g; x.fillRect(0, 0, G.W, G.H);
+    const rnd = mvxRng(11);
+    for (let i = 0; i < Math.round(G.W * G.H / 1400); i++) { const z = rnd(); x.fillStyle = `rgba(205,220,255,${(0.06 + z * z * 0.4).toFixed(3)})`; const sz = z > 0.93 ? 1.5 : 0.9; x.fillRect(rnd() * G.W, rnd() * G.H, sz, sz); }
+    for (let k = -3; k <= 3; k++) {
+      const y = Math.round(G.Y(k)) + 0.5; x.strokeStyle = k ? 'rgba(140,160,225,.075)' : 'rgba(175,190,240,.22)'; x.setLineDash(k ? [] : [3, 5]);
+      x.beginPath(); x.moveTo(G.x0, y); x.lineTo(G.x1, y); x.stroke();
+    }
+    x.setLineDash([]);
+    for (const t of [15, 30, 45, 60, 75, 90]) { const xx = Math.round(G.X(t)) + 0.5; x.strokeStyle = t === 45 || t === 90 ? 'rgba(175,190,240,.14)' : 'rgba(175,190,240,.05)'; x.beginPath(); x.moveTo(xx, G.y0 - 4); x.lineTo(xx, G.y1 + 4); x.stroke(); }
+    return c;
+  }
+  // the river: at every moment, how many universes sit at each goal difference (and how each of them ends). Each
+  // lane is drawn as a band as wide as its share, so the channel thins as futures branch off and the branches
+  // swell as more universes flow into them
+  function mvxDensity(s, X) {
+    const G = s.G, t0 = X.st.t0, xa = G.X(t0), w = Math.max(4, G.x1 - xa), step = 2, nc = Math.max(3, Math.ceil(w / step) + 1), pad = Math.ceil(G.ln * 0.7), R = Math.ceil(G.y1 - G.y0) + 2 * pad;
+    const Lc = new Float32Array(nc * 21), ts = new Float32Array(nc), g0 = X.st.h0 - X.st.a0;
+    for (let c = 0; c < nc; c++) ts[c] = Math.min(T_END, t0 + ((c * step) / w) * (T_END - t0));
+    const STRIDE = 3;   // every third universe: the same shapes at a third of the cost
+    for (let u = 0; u < X.N; u += STRIDE) {
+      const o = X.oc[u], plain = X.off[u] === X.off[u + 1];
+      for (let c = 0; c < nc; c++) {
+        const f = Math.max(0, Math.min(6, (plain ? g0 : mvxGd(X, u, ts[c])) + 3)), k0 = Math.min(5, f | 0), fr = f - k0, i = (c * 7 + k0) * 3 + o;
+        Lc[i] += (1 - fr) * STRIDE; if (fr > 0) Lc[i + 3] += fr * STRIDE;
+      }
+    }
+    return { Lc, nc, R, pad, step, ts, x: xa, y: G.y0 - pad, w: (nc - 1) * step, h: R, t0, N: X.N, cnt: X.cnt };
+  }
+  // half the width of lane k's band at column c: a full lane when every universe is in it
+  const mvxHw = (D, G, c, k, n, of) => { const sh = n / of; return sh < 4e-4 ? 0 : Math.max(0.7, 0.5 * G.ln * Math.sqrt(sh)) * (0.3 + 0.7 * Math.min(1, (D.ts[c] - D.t0) / 4)); };
+  function mvxPaint(D, sel, G) {   // the river in colour; with an ending chosen, only its universes, the rest a ghost
+    const { Lc, nc, R, pad } = D, acc = new Float32Array(nc * R * 4), img = new ImageData(nc, R), P = img.data;
+    const band = (c, k, n, of, mix, A) => {
+      const hw = mvxHw(D, G, c, k, n, of); if (!hw) return;
+      const sh = n / of, yc = G.Y(k - 3) - G.y0 + pad, a0 = A * (0.42 + 0.58 * Math.sqrt(Math.min(1, sh)));
+      for (let y = Math.max(0, Math.floor(yc - hw - 2)), y1 = Math.min(R - 1, Math.ceil(yc + hw + 2)); y <= y1; y++) {
+        const d = Math.abs(y + 0.5 - yc), e = Math.max(0, Math.min(1, (hw + 1 - d) / 2)); if (!e) continue;
+        const q = Math.min(1, d / hw), a = a0 * e * (1 - 0.32 * q * q), j = (y * nc + c) * 4;
+        acc[j] += mix[0] * a; acc[j + 1] += mix[1] * a; acc[j + 2] += mix[2] * a; acc[j + 3] += a;
+      }
+    };
+    for (let c = 0; c < nc; c++) for (let k = 0; k < 7; k++) {
+      const i = (c * 7 + k) * 3, m = [Lc[i], Lc[i + 1], Lc[i + 2]], n = m[0] + m[1] + m[2]; if (n < 0.5) continue;
+      const mix = [0, 1, 2].map((ch) => (m[0] * MVX_C[0][ch] + m[1] * MVX_C[1][ch] + m[2] * MVX_C[2][ch]) / n);
+      if (sel < 0) band(c, k, n, D.N, mix, 1);
+      else { band(c, k, n, D.N, [150, 160, 190], 0.14); if (m[sel] >= 0.5 && D.cnt[sel]) band(c, k, m[sel], D.cnt[sel], MVX_C[sel], 1); }
+    }
+    for (let i = 0, n = nc * R; i < n; i++) {
+      const j = i * 4, a = acc[j + 3]; if (a < 0.004) continue;
+      const al = Math.min(1, a), hot = Math.pow(al, 6) * 0.42;
+      for (let ch = 0; ch < 3; ch++) { const col = acc[j + ch] / a; P[j + ch] = col + (255 - col) * hot; }
+      P[j + 3] = al * 235;
+    }
+    const c = mvxCanvas(nc, R); c.getContext('2d').putImageData(img, 0, 0);
+    const gl = mvxCanvas(nc / 4, R / 4), gx = gl.getContext('2d'); gx.imageSmoothingQuality = 'high'; gx.drawImage(c, 0, 0, gl.width, gl.height);
+    return { c, gl, x: D.x, y: D.y, w: D.w, h: D.h };
+  }
+  // where in its band a spark runs: its own lane's width at that moment, so sparks never leave the river
+  function mvxBandAt(s, t, gd) {
+    const D = s.D, G = s.G; if (!D) return 0;
+    const c = Math.max(0, Math.min(D.nc - 1, Math.round((G.X(t) - D.x) / D.step))), k = Math.max(0, Math.min(6, Math.round(gd + 3))), i = (c * 7 + k) * 3;
+    return mvxHw(D, G, c, k, D.Lc[i] + D.Lc[i + 1] + D.Lc[i + 2], D.N);
+  }
+  function mvxFg(s, r, st, X) {   // what sits on top: the real game, the endings and their counts, the labels
+    const { G, dpr } = s, c = mvxCanvas(G.W * dpr, G.H * dpr), x = c.getContext('2d'), sel = MVX_K.indexOf(S.mvx.sel); x.scale(dpr, dpr);
+    const L = st.L, col = (o, a) => `rgba(${MVX_C[o].join(',')},${a})`;
+    if (st.mode === 'live') { const gx = x.createLinearGradient(0, 0, G.X(st.t0), 0); gx.addColorStop(0, 'rgba(2,4,12,.35)'); gx.addColorStop(1, 'rgba(2,4,12,.6)'); x.fillStyle = gx; x.fillRect(0, 0, G.X(st.t0), G.H); }
+    if (L) {
+      const tEnd = st.mode === 'live' ? st.t0 : T_END, gd = (t) => { let g = 0; for (const [tg, sd] of L.goals) { const d = (t - tg) / MVX_EASE; const q = d >= 1 ? 1 : d > -1 ? ((d + 1) / 2) ** 2 * (3 - (d + 1)) : 0; g += (sd === 'h' ? 1 : -1) * q; } return g; };
+      x.save(); x.beginPath();
+      for (let t = 0; t <= tEnd + 0.01; t += 0.5) { const px = G.X(Math.min(t, tEnd)), py = G.Y(gd(Math.min(t, tEnd))); if (t === 0) x.moveTo(px, py); else x.lineTo(px, py); }
+      x.lineJoin = 'round'; x.lineCap = 'round'; x.shadowColor = 'rgba(255,255,255,.75)'; x.shadowBlur = 10; x.strokeStyle = 'rgba(255,255,255,.95)'; x.lineWidth = 2.2; x.stroke(); x.restore();
+      let g = 0;
+      for (const [tg, sd] of L.goals) { g += sd === 'h' ? 1 : -1; if (tg > tEnd) continue; const px = G.X(tg), py = G.Y(g); x.fillStyle = col(sd === 'h' ? 0 : 2, 1); x.strokeStyle = '#03060f'; x.lineWidth = 2; x.beginPath(); x.arc(px, py, 4.2, 0, 7); x.fill(); x.stroke(); }
+      for (const [tr, sd] of L.reds) { if (tr > tEnd) continue; const px = G.X(tr), py = G.Y(gd(tr)); x.fillStyle = '#ff4d4d'; x.strokeStyle = '#03060f'; x.lineWidth = 1.5; x.beginPath(); x.rect(px - 3, py + (sd === 'h' ? -15 : 6), 6, 9); x.fill(); x.stroke(); }
+      if (st.mode === 'ft') {
+        const py = G.Y(L.h - L.a), px = G.X(T_END);
+        x.fillStyle = '#fff'; x.shadowColor = 'rgba(255,255,255,.9)'; x.shadowBlur = 12; x.beginPath(); x.arc(px, py, 4, 0, 7); x.fill(); x.shadowBlur = 0;
+        x.font = `800 13px ${SF.m}`; x.textAlign = 'right'; x.fillStyle = '#fff'; x.fillText(`${L.h}–${L.a}`, px - 8, py - 8);
+      }
+    }
+    // the three endings, down the right-hand side
+    const regions = [[3.5, 0.5], [0.5, -0.5], [-0.5, -3.5]], words = ['home', 'draw', 'away'];
+    for (let o = 0; o < 3; o++) {
+      const [ga, gb] = regions[o], ya = G.Y(ga) + 2, yb = G.Y(gb) - 2, sh = X.cnt[o] / X.N, on = sel < 0 || sel === o, yc = o === 1 ? G.Y(0) : (G.Y(ga) + G.Y(gb)) / 2;
+      x.fillStyle = col(o, on ? (0.25 + 0.75 * Math.min(1, sh * 2.2)).toFixed(3) : 0.12); x.fillRect(G.x1 + 6, Math.min(ya, yb), 3, Math.abs(yb - ya));
+      x.font = `800 16px ${SF.m}`; x.textAlign = 'left'; x.fillStyle = on ? col(o, 1) : col(o, 0.3); x.fillText(mvxN(X.cnt[o]), G.x1 + 13, yc + 1);
+      x.font = `600 9.5px ${SF.b}`; x.fillStyle = on ? 'rgba(205,215,245,.6)' : 'rgba(205,215,245,.22)'; x.fillText(words[o], G.x1 + 13, yc + 12);
+    }
+    // which way is which, and the clock
+    const fit = (txt, w) => { let t = txt; while (t.length > 3 && x.measureText(t).width > w) t = t.slice(0, -2) + '…'; return t; };
+    x.font = `600 10.5px ${SF.b}`; x.textAlign = 'left'; x.fillStyle = col(0, 0.8); x.fillText(fit(`▲ ${r.m.h} ahead`, G.x1 - G.x0 - 60), G.x0 + 2, G.y0 - 11);
+    x.fillStyle = col(2, 0.8); x.fillText(fit(`▼ ${r.m.a} ahead`, G.x1 - G.x0 - 60), G.x0 + 2, G.y1 + 17);
+    x.font = `600 10px ${SF.b}`; x.textAlign = 'center';
+    const nowX = st.mode === 'live' ? G.X(st.t0) : null;
+    for (const [t, l] of [[0, "0'"], [45, 'HT'], [90, "90'"]]) { const px = G.X(t); if (nowX != null && Math.abs(px - nowX) < 26) continue; x.fillStyle = 'rgba(190,205,240,.45)'; x.fillText(l, Math.max(G.x0 + 8, px), G.H - 5); }
+    if (nowX != null) { x.fillStyle = '#ff6b5e'; x.font = `700 10.5px ${SF.b}`; x.fillText(`now ${Math.floor(st.t0)}'`, Math.max(G.x0 + 18, nowX), G.H - 5); x.strokeStyle = 'rgba(255,107,94,.45)'; x.beginPath(); x.moveTo(nowX, G.y0 - 6); x.lineTo(nowX, G.y1 + 6); x.stroke(); }
+    return c;
+  }
+  function mvxSpawn(p, X, fresh, i, n) {
+    p.X = X; p.u = (Math.random() * X.N) | 0; p.o = X.oc[p.u]; p.v = 1 / (6 + Math.random() * 3);
+    p.j = (Math.random() + Math.random() + Math.random() - 1.5) * 0.62; p.ph = fresh ? (i + Math.random()) / n : 0;
+    const st = X.st; p.real = st.mode === 'ft' && X.fin[2 * p.u] === st.L.h && X.fin[2 * p.u + 1] === st.L.a;
+  }
+  function mvxSync(cv) {   // (re)build what changed: the size, the simulation, the chosen ending
+    const r = S.byId && S.byId.get(cv.dataset.mvx); if (!r || !r.a || !r.a.M) return null;
+    const W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return null;
+    const st = mvxState(r), X = mvxSim(r, st), dpr = Math.min(2, window.devicePixelRatio || 1);
+    let s = cv._mvx;
+    if (!s || s.W !== W || s.H !== H || s.dpr !== dpr) {
+      // three layers: the river under (redrawn only when it changes), the sparks (every frame), the labels over
+      const box = cv.parentNode, u = box && box.querySelector('.mvx-u'), o = box && box.querySelector('.mvx-o');
+      for (const c of [cv, u, o]) if (c) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+      s = cv._mvx = { W, H, dpr, G: mvxGeo(W, H), parts: [], X: null, D: null, img: null, old: null, sel: null, mode: null, u, o };
+      s.bg = mvxBg(s);
+    }
+    const sel = MVX_K.indexOf(S.mvx.sel);
+    if (s.X !== X || !s.img) {
+      if (s.img && s.X && motionOK()) s.old = { img: s.img, t: performance.now() };
+      s.D = mvxDensity(s, X); s.img = mvxPaint(s.D, sel, s.G); s.sel = sel;
+      const n = Math.max(220, Math.min(700, Math.round(W * 1.5))), was = s.X && s.X.st;
+      if (!was || was.mode !== X.st.mode || was.h0 !== X.st.h0 || was.a0 !== X.st.a0 || s.parts.length !== n) { s.parts = []; for (let i = 0; i < n; i++) { const p = {}; mvxSpawn(p, X, true, i, n); s.parts.push(p); } }
+      s.under = true;
+    } else if (s.sel !== sel) { s.img = mvxPaint(s.D, sel, s.G); s.sel = sel; s.old = null; s.under = true; }
+    if (s.X !== X || s.mode !== st.mode || s.fgSel !== sel || !s.fg) {
+      s.fg = mvxFg(s, r, st, X); s.fgSel = sel;
+      if (s.o) { const ox = s.o.getContext('2d'); ox.setTransform(1, 0, 0, 1, 0, 0); ox.clearRect(0, 0, s.o.width, s.o.height); ox.drawImage(s.fg, 0, 0); }
+    }
+    s.X = X; s.mode = st.mode;
+    return s;
+  }
+  function mvxBlit(x, im, a) {
+    if (a <= 0) return;
+    x.globalCompositeOperation = 'lighter'; x.globalAlpha = a * 0.45; x.drawImage(im.gl, im.x - 2, im.y - 2, im.w + 4, im.h + 4); x.globalAlpha = a; x.drawImage(im.c, im.x, im.y, im.w, im.h);
+    x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+  }
+  function mvxUnder(s, now) {   // space and the river, cross-fading from the last river when the game moves on
+    const c = s.u; if (!c) return;
+    const x = c.getContext('2d');
+    x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; x.drawImage(s.bg, 0, 0);
+    x.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
+    const fade = s.old ? Math.min(1, (now - s.old.t) / 900) : 1;
+    if (s.old && fade < 1) mvxBlit(x, s.old.img, 1 - fade); else s.old = null;
+    mvxBlit(x, s.img, fade);
+    s.under = !!s.old;
+  }
+  const MVX_LT = MVX_C.map((c) => `rgb(${c.map((v) => Math.round(v + (255 - v) * 0.6)).join(',')})`).concat('#fff');
+  function mvxDraw(cv, now) {
+    let s = cv._mvx;
+    if (!s || s.W !== cv.clientWidth || s.H !== cv.clientHeight) s = mvxSync(cv);
+    if (!s || !s.X) return;
+    if (s.under) mvxUnder(s, now);
+    const x = cv.getContext('2d'), G = s.G, still = !motionOK(), X = s.X, sel = MVX_K.indexOf(S.mvx.sel);
+    x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, cv.width, cv.height); x.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
+    // the sparks: each one a universe, running from now to the final whistle, drawn in four batches
+    const dt = s.t ? Math.min(0.05, (now - s.t) / 1000) : 0; s.t = now;
+    const B = [[], [], [], []], ft = X.st.mode === 'ft', realO = ft ? mvxOutOf(`${X.st.L.h}–${X.st.L.a}`) : -1;
+    if (!window.__mvxBare) for (let i = 0; i < s.parts.length; i++) {
+      const p = s.parts[i];
+      if (!still) { p.ph += dt * p.v; if (p.ph >= 1) mvxSpawn(p, X, false); }
+      const t0 = p.X.st.t0, span = T_END - t0, t = t0 + p.ph * span, tt = Math.max(t0, t - 0.03 * span);
+      const ga = mvxGd(p.X, p.u, t), gb = mvxGd(p.X, p.u, tt), off = p.j * mvxBandAt(s, t, ga);
+      p.x = G.X(t); p.y = G.Y(ga) + off; p.x2 = G.X(tt); p.y2 = G.Y(gb) + off;
+      p.f = Math.min(1, p.ph / 0.05, (1 - p.ph) / 0.06);
+      if (p.f > 0.03) B[p.real ? 3 : p.o].push(p);
+    }
+    x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
+    for (let o = 0; o < 4; o++) {
+      const L = B[o]; if (!L.length) continue;
+      const a = (sel < 0 || sel === (o === 3 ? realO : o) ? 1 : 0.08) * (ft && o < 3 ? 0.6 : 1), rgb = o === 3 ? '#fff' : `rgb(${MVX_C[o].join(',')})`, R0 = o === 3 ? 4.6 : 3.2, C0 = o === 3 ? 1.6 : 0.95;
+      x.globalAlpha = 0.26 * a; x.strokeStyle = rgb; x.lineWidth = 1.1; x.beginPath();
+      for (const p of L) { x.moveTo(p.x2, p.y2); x.lineTo(p.x, p.y); }
+      x.stroke();
+      for (const [k, al, col] of [[1, 0.2, rgb], [0.5, 0.5, rgb], [C0 / R0, 1, MVX_LT[o]]]) {   // halo, body, hot core
+        x.globalAlpha = al * a; x.fillStyle = col; x.beginPath();
+        for (const p of L) { const rr = R0 * k * p.f; x.moveTo(p.x + rr, p.y); x.arc(p.x, p.y, rr, 0, 6.2832); }
+        x.fill();
+      }
+    }
+    x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+    if (X.st.mode === 'live') {   // the present: where every future starts
+      const px = G.X(X.st.t0), py = G.Y(X.st.h0 - X.st.a0), k = still ? 0.4 : (now % 1800) / 1800;
+      x.strokeStyle = `rgba(255,255,255,${(0.7 * (1 - k)).toFixed(3)})`; x.lineWidth = 1.5; x.beginPath(); x.arc(px, py, 4 + 14 * k, 0, 7); x.stroke();
+      x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.arc(px, py, 7, 0, 7); x.fill();
+      x.fillStyle = '#fff'; x.beginPath(); x.arc(px, py, 3.6, 0, 7); x.fill();
+    }
+    s.drawn = true;
+  }
+  function mvxKick() { if (!S.mvx.raf) S.mvx.raf = requestAnimationFrame(mvxLoop); }
+  function mvxLoop(t) {
+    S.mvx.raf = 0;
+    if (document.hidden) return;
+    const sh = $('#sheet'), open = sh && sh.classList.contains('open');
+    let run = false;
+    for (const cv of S.mvx.cvs) {
+      if (!cv.isConnected) { S.mvx.cvs.delete(cv); if (S.mvx.io) S.mvx.io.unobserve(cv); continue; }
+      if (cv._mvx && cv._mvx.drawn && (!cv._vis || !open)) continue;
+      mvxDraw(cv, t); run = true;
+    }
+    if (run && motionOK()) S.mvx.raf = requestAnimationFrame(mvxLoop);
+  }
+  function mvxAttach() {
+    if (!S.mvx.io && 'IntersectionObserver' in window) S.mvx.io = new IntersectionObserver((es) => { for (const e of es) e.target._vis = e.isIntersecting; mvxKick(); });
+    for (const cv of document.querySelectorAll('canvas.mvx-cv')) {
+      if (!S.mvx.cvs.has(cv)) {
+        S.mvx.cvs.add(cv); cv._vis = !S.mvx.io; if (S.mvx.io) S.mvx.io.observe(cv);
+        let d0 = null;
+        cv.addEventListener('pointerdown', (e) => { d0 = { x: e.clientX, y: e.clientY }; });
+        cv.addEventListener('pointerup', (e) => {
+          const ok = d0 && Math.hypot(e.clientX - d0.x, e.clientY - d0.y) < 10; d0 = null; const s = cv._mvx; if (!ok || !s) return;
+          const g = ((s.G.y0 + s.G.y1) / 2 - (e.clientY - cv.getBoundingClientRect().top)) / s.G.ln;
+          mvxPick(g > 0.5 ? 'H' : g < -0.5 ? 'A' : 'D');
+        });
+      }
+      if (mvxSync(cv)) { cv._mvx.drawn = false; }
+    }
+    mvxKick();
+  }
+  function mvxPick(k) {
+    S.mvx.sel = S.mvx.sel === k ? null : k; buzz(6);
+    for (const b of document.querySelectorAll('[data-mvxb]')) b.setAttribute('aria-pressed', String(b.dataset.mvxb === S.mvx.sel));
+    const r = S.open && S.byId.get(S.open), X = r && S.mvx.cache.get(r.m.id), p = $('#mvx .mvx-sel');
+    if (p && X) p.innerHTML = S.mvx.sel ? mvxPickLine(r, X, S.mvx.sel) : 'Tap an ending to follow only the universes that reach it.';
+    for (const cv of S.mvx.cvs) { if (mvxSync(cv)) cv._mvx.drawn = false; }
+    mvxKick();
+  }
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-mvxb]'); if (b) mvxPick(b.dataset.mvxb); });
+  document.addEventListener('visibilitychange', mvxKick);
+  addEventListener('resize', () => { for (const cv of S.mvx.cvs) if (cv._mvx) cv._mvx.drawn = false; mvxKick(); });
+
   // ---------------- live match centre: ESPN's match summary (line-ups, stats, events) on the match page ----------------
   // Fetched by this phone while the match page is open: once a minute during a game, once after it. About 60 KB a
   // time, so it never runs in the background.
@@ -7165,7 +7577,116 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         return { n: a.shortName || nm, last: a.lastName || nm.split(' ').slice(-1)[0], full: nm, num: p.jersey || '', pos: (p.position && p.position.abbreviation) || '', st: !!p.starter, place: +p.formationPlace || 0,
           sin: !!p.subbedIn, sout: !!p.subbedOut, inAt: subMin[nm] || '', outAt: subMin['out:' + nm] || '', g: stat(p, 'totalGoals'), yc: stat(p, 'yellowCards'), rc: stat(p, 'redCards') }; });
     }
-    return { h: T.h, a: T.a, ev, st: ty.name || '', state: ty.state || '', done: !!ty.completed, detail: ty.shortDetail || ty.detail || '', lu: T.h.pl.some((p) => p.st) && T.a.pl.some((p) => p.st) };
+    const mw = mwPlays(j, side);
+    return { h: T.h, a: T.a, ev, st: ty.name || '', state: ty.state || '', done: !!ty.completed, detail: ty.shortDetail || ty.detail || '', lu: T.h.pl.some((p) => p.st) && T.a.pl.some((p) => p.st),
+      plays: mw.plays, e1: mw.e1, e2: mw.e2, per: +((comp.status || {}).period) || 0, clk: (comp.status || {}).displayClock || '' };
+  }
+  // ---------------- momentum wave: who is pushing, minute by minute, from ESPN's commentary ----------------
+  // Every attacking moment in the commentary counts for the side making it: a shot on target or off the post 3,
+  // a missed or saved penalty 2.5, a shot off target 1.8 (blocked 1.6), a corner 1.4, an offside 0.6, a free kick
+  // won in the attacking half 0.6 (on a wing 0.4); goals 4. Shots from close in count a third more, from distance
+  // a third less. Each side's pressure fades with a half-life of about a minute and a half, and the wave is the
+  // difference: up for the home side, down for the away side.
+  const MW_W = { 'shot-on-target': 3, 'shot-hit-woodwork': 3, 'penalty---saved': 2.5, 'penalty---missed': 2.5, 'shot-off-target': 1.8, 'shot-blocked': 1.6, 'corner-awarded': 1.4, offside: 0.6 };
+  const mwMin = (s) => { const m = /(\d+)'?(?:\s*\+\s*(\d+))?/.exec(s || ''); return m ? [+m[1], +m[2] || 0] : null; };
+  function mwPlays(j, side) {
+    const nm = {};
+    for (const [k, s] of [['home', 'h'], ['away', 'a']]) { const t = side[k].team || {}; for (const n of [t.displayName, t.shortDisplayName, t.name, t.location, t.abbreviation]) if (n) nm[n] = s; }
+    const plays = []; let e1 = 0, e2 = 0;
+    for (const c of j.commentary || []) {
+      const p = c.play; if (!p) continue;
+      const ty = (p.type && p.type.type) || '', txt = c.text || p.text || '', mm = mwMin((p.clock && p.clock.displayValue) || (c.time && c.time.displayValue)); if (!mm) continue;
+      const per = (p.period && +p.period.number) || (mm[0] > 45 ? 2 : 1); if (per > 2) continue;
+      if (per === 1) e1 = Math.max(e1, mm[1]); else e2 = Math.max(e2, mm[1]);
+      const s0 = nm[(p.team && p.team.displayName) || ''] || null;
+      let w = MW_W[ty], s = s0;
+      if (w == null) {
+        if (/^goal/.test(ty) || ty === 'penalty---scored') w = 4;
+        else if (ty === 'foul' && / wins a free kick (in the attacking half|on the (left|right) wing)/.test(txt)) { w = /attacking/.test(txt) ? 0.6 : 0.4; s = s0 === 'h' ? 'a' : s0 === 'a' ? 'h' : null; }
+      }
+      if (!w || !s) continue;
+      if (/shot|goal|penalty/.test(ty)) w *= /outside the box|long range|more than 35 yards/.test(txt) ? 0.7 : /very close range|six yard box|centre of the box/.test(txt) ? 1.3 : 1;
+      plays.push([per, mm[0], mm[1], s, +w.toFixed(2)]);
+    }
+    return { plays, e1, e2 };
+  }
+  // where a moment sits on the game's own clock: the first half runs to 45 plus its stoppage time
+  const mwAt = (d, per, base, ex) => (per === 1 ? Math.min(45, base) + ex : Math.max(45, base) + ex + d.e1);
+  function mwSeries(d) {
+    const P = d.plays || []; if (P.length < 4 || d.state === 'pre') return null;
+    const ht = 45 + d.e1, last = P.reduce((m, p) => Math.max(m, mwAt(d, p[0], p[1], p[2])), 0);
+    let now;
+    if (d.done) now = Math.max(90 + d.e1 + d.e2, last);
+    else if (/HALF/.test(d.st) && d.per <= 1 || /^HT$/i.test(d.detail)) now = ht;
+    else { const c = mwMin(d.clk); now = Math.max(last, c ? mwAt(d, d.per || (c[0] > 45 ? 2 : 1), c[0], c[1]) : last); }
+    const end = Math.max(now, 90 + d.e1 + (d.done ? d.e2 : 3)), n = Math.ceil(now) || 1;
+    const add = [new Float64Array(n + 1), new Float64Array(n + 1)];
+    for (const p of P) { const t = mwAt(d, p[0], p[1], p[2]); add[p[3] === 'h' ? 0 : 1][Math.min(n, Math.floor(t))] += p[4]; }
+    const k = Math.exp(-1 / 2.2), v = [0, 0], raw = [];
+    for (let m = 0; m <= n; m++) { v[0] = v[0] * k + add[0][m]; v[1] = v[1] * k + add[1][m]; raw.push(v[0] - v[1]); }
+    const net = raw.map((x, m) => (0.25 * (raw[m - 1] ?? x) + 0.5 * x + 0.25 * (raw[m + 1] ?? x)));
+    const top = Math.max(4, ...net.map(Math.abs)), on = net.map((x) => (x > 0.12 * top ? 1 : x < -0.12 * top ? -1 : 0));
+    const hOn = on.filter((x) => x > 0).length, aOn = on.filter((x) => x < 0).length;
+    const best = (sg) => { let b = null; for (let m = 0; m + 10 <= net.length; m++) { let s = 0; for (let q = m; q < m + 10; q++) s += net[q] * sg; if (!b || s > b.s) b = { s, m }; } return b && b.s > 1.2 * top ? b : null; };
+    const recent = net.slice(-8), r8 = recent.reduce((p, q) => p + q, 0) / recent.length / top;
+    const evAt = (e) => { const mm = mwMin(e.min); return mm ? mwAt(d, mm[0] > 45 ? 2 : 1, mm[0], mm[1]) : null; };
+    const goals = d.ev.filter((e) => e.sc).map((e) => [evAt(e), e.s]).filter((x) => x[0] != null);
+    const reds = d.ev.filter((e) => e.kind === 'rc').map((e) => [evAt(e), e.s]).filter((x) => x[0] != null);
+    return { net, top, n, now, end, ht, hOn, aOn, bh: best(1), ba: best(-1), r8, goals, reds, live: !d.done && d.state === 'in' };
+  }
+  const mwHex = (c) => { const n = parseInt(String(c).replace('#', ''), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  function mwContrast(a, b) {
+    const L = (c) => { const v = mwHex(c).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2] + 0.05; };
+    const p = L(a), q = L(b); return Math.max(p, q) / Math.min(p, q);
+  }
+  function mwWave(d, mm) {
+    const M = mwSeries(d); if (!M) return '';
+    const K = mcKits(d), cs = getComputedStyle(document.documentElement), bg = (cs.getPropertyValue('--card') || '#0d1327').trim();
+    const okBg = /^#[0-9a-f]{6}$/i.test(bg), dark = okBg && mwContrast(bg, '#000000') < 6;
+    const col = (k, v) => {   // the kit colour, lifted (on dark) or deepened (on light) until it reads against the card
+      if (!okBg || !/^#[0-9a-f]{6}$/i.test(k)) return `var(--${v})`;
+      const to = dark ? 255 : 0, [r0, g0, b0] = mwHex(k);
+      for (let f = 0; f <= 0.6; f += 0.06) {
+        const c = '#' + [r0, g0, b0].map((x) => Math.round(x + (to - x) * f).toString(16).padStart(2, '0')).join('');
+        if (mwContrast(c, bg) >= 3) return c;
+      }
+      return `var(--${v})`;
+    };
+    let ch = col(K.h, 'h'), ca = col(K.a, 'a');
+    if (/^#/.test(ch) && /^#/.test(ca) && Math.hypot(...mwHex(ch).map((x, i) => x - mwHex(ca)[i])) < 70) ca = 'var(--a)';
+    const W = 560, H = 150, top = 10, mid = H / 2, amp = mid - top - 2, X = (t) => (W * t) / M.end, bw = W / M.end;
+    const bars = M.net.map((v, m) => {
+      if (Math.abs(v) < 0.04 * M.top) return '';
+      const hgt = Math.max(1.5, (Math.abs(v) / M.top) * amp), up = v > 0, x = X(m) + 0.5;
+      return `<rect class="${up ? 'u' : 'd'}" style="--i:${m}" x="${x.toFixed(1)}" y="${(up ? mid - hgt : mid).toFixed(1)}" width="${Math.max(1, bw - 1.4).toFixed(2)}" height="${hgt.toFixed(1)}" rx="${Math.min(1.6, bw / 3).toFixed(1)}" fill="${up ? ch : ca}" fill-opacity="${(0.42 + 0.58 * Math.min(1, Math.abs(v) / M.top)).toFixed(2)}"/>`;
+    }).join('');
+    const mark = (t, s, kind) => {
+      const x = X(t).toFixed(1), y = s === 'h' ? 7 : H - 7;
+      return kind === 'g' ? `<line x1="${x}" x2="${x}" y1="${s === 'h' ? 11 : mid}" y2="${s === 'h' ? mid : H - 11}" class="mw-gl"/><circle cx="${x}" cy="${y}" r="6.5" class="mw-ball" style="--k:${s === 'h' ? ch : ca}"/>`
+        : `<rect x="${(X(t) - 3).toFixed(1)}" y="${y - 5}" width="6" height="9" rx="1.2" fill="var(--red)"/>`;
+    };
+    const lab = (t, txt, al) => `<span style="left:${((100 * t) / M.end).toFixed(2)}%"${al ? ` class="${al}"` : ''}>${txt}</span>`;
+    const hN = esc(mm ? mm.h : d.h.name), aN = esc(mm ? mm.a : d.a.name);
+    let say;
+    if (M.live) say = M.r8 > 0.16 ? `<b>${hN}</b> on top right now` : M.r8 < -0.16 ? `<b>${aN}</b> on top right now` : 'Even right now';
+    else {
+      const tot = M.hOn + M.aOn, lead = M.hOn >= M.aOn ? hN : aN, sh = tot ? Math.round((100 * Math.max(M.hOn, M.aOn)) / tot) : 50;
+      say = tot < 8 || sh < 55 ? 'Evenly shared' : `<b>${lead}</b> on top for ${sh}% of it`;
+    }
+    const cm = (t) => { if (t <= 45) return Math.max(1, Math.round(t)); if (t <= M.ht) return '45+' + Math.round(t - 45); const c = Math.round(t - d.e1); return c > 90 ? '90+' + (c - 90) : c; };
+    const spell = (b, nm) => (b ? `${nm}'s best spell ${cm(b.m)}'–${cm(b.m + 10)}'` : '');
+    const sp = [spell(M.bh, hN), spell(M.ba, aN)].filter(Boolean).join(' · ');
+    const aria = `Momentum through the game: ${say.replace(/<[^>]+>/g, '')}`;
+    return `<div class="mw"><div class="mw-h"><b>Momentum</b><span>${say}</span></div>
+      <div class="mw-k"><span><i style="background:${ch}"></i>${hN}</span><span><i style="background:${ca}"></i>${aN}</span></div>
+      <svg class="mw-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(aria)}">
+        <line x1="0" x2="${W}" y1="${mid}" y2="${mid}" class="mw-0"/><line x1="${X(M.ht).toFixed(1)}" x2="${X(M.ht).toFixed(1)}" y1="2" y2="${H - 2}" class="mw-ht"/>
+        ${M.live ? `<rect x="${X(M.now).toFixed(1)}" y="0" width="${(W - X(M.now)).toFixed(1)}" height="${H}" class="mw-fut"/>` : ''}
+        <g class="mw-bars">${bars}</g>${M.goals.map(([t, s]) => mark(t, s, 'g')).join('')}${M.reds.map(([t, s]) => mark(t, s, 'r')).join('')}
+        ${M.live ? `<line x1="${X(M.now).toFixed(1)}" x2="${X(M.now).toFixed(1)}" y1="4" y2="${H - 4}" class="mw-nl"/><circle cx="${X(M.now).toFixed(1)}" cy="${mid}" r="4" class="mw-now"/>` : ''}
+      </svg>
+      <div class="mw-ax">${[[0, "0'", 'l'], [M.ht, 'HT'], [Math.min(M.end, 90 + d.e1), "90'", 'r']].filter(([t]) => !M.live || Math.abs(t - M.now) > M.end * 0.07).map(([t, l, c]) => lab(t, l, c)).join('')}${M.live ? lab(M.now, `${cm(M.now)}'`, 'now') : ''}</div>
+      ${sp ? `<p class="mw-sp">${sp}</p>` : ''}</div>`;
   }
   // kit colours that read on the pitch and against each other
   function mcKits(d) {
@@ -7263,7 +7784,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!segs.length) return '';
     let seg = S.mc.seg && segs.some(([k]) => k === S.mc.seg) ? S.mc.seg : d.state === 'pre' ? 'lu' : d.state === 'in' ? 'tl' : 'st';
     const body = seg === 'lu' ? `${mcPitch(d)}<div class="mc-benches">${mcBench(d.h)}${mcBench(d.a)}</div>` : seg === 'st' ? mcStats(d) : mcTimeline(d);
-    return `<div class="seg mc-seg" role="group" aria-label="Match centre">${segs.map(([k, l]) => `<button type="button" data-mcseg="${k}" aria-pressed="${k === seg}">${l}</button>`).join('')}</div>
+    return `${mwWave(d, r.m)}<div class="seg mc-seg" role="group" aria-label="Match centre">${segs.map(([k, l]) => `<button type="button" data-mcseg="${k}" aria-pressed="${k === seg}">${l}</button>`).join('')}</div>
       <div class="mc-body" data-seg="${seg}">${body}</div>`;
   }
   function mcCard(r) {

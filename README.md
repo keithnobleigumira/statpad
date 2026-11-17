@@ -102,6 +102,33 @@ While a game is being played, its card's bar shows the chances now, and the matc
 
 For competitions ESPN follows, a match page also shows the game itself, from ESPN's free match summaries. Once the line-ups are in (usually about an hour before kick-off) it draws both teams on a pitch in their formations and kit colours (with a fix when the two kits clash), with the benches below. During and after the game it adds a timeline (goals, penalties, own goals, cards and substitutions) and the team stats: possession, shots, shots on target, corners, fouls, cards, offsides, saves, passes and tackles, each with a bar. While a game is on and its page is open it refreshes about once a minute, and after the final whistle every 15 minutes for a day. The phone asks ESPN directly, so it uses none of your odds or API-Football credits, and the workflow doesn't change.
 
+## Momentum wave
+
+Above the match centre's tabs, a wave shows which side is pushing, minute by minute, from ESPN's live commentary. Every attacking moment counts for the side making it:
+
+| Moment | Weight |
+|---|---|
+| Goal | 4 |
+| Shot on target, shot off the woodwork | 3 |
+| Penalty saved or missed | 2.5 |
+| Shot off target | 1.8 |
+| Shot blocked | 1.6 |
+| Corner | 1.4 |
+| Free kick won in the attacking half (on a wing) | 0.6 (0.4) |
+| Offside | 0.6 |
+
+Shots from close in count a third more, from long range a third less. Each side's pressure fades with a half-life of about a minute and a half, and the wave is the difference: bars up for the home side, down for the away side, in the teams' kit colours (lifted or deepened until they read on the card). Goals, red cards and half time are marked, and stoppage time is drawn where it happened, so the axis is the game's own clock. The headline says who is on top right now (the last eight minutes); after the game, who was on top for most of it, plus each side's best ten-minute spell. It reads the commentary, not the ball, so a long spell of possession without shots barely shows. It refreshes with the match centre, about once a minute.
+
+## Multiverse
+
+Every match page plays the game 10,000 times and draws all of them at once, as a glowing river:
+
+- **Before kick-off** each simulated game takes its final score from Statpad's scoreline grid (the one behind every price on the page) and spreads its goals over the 90 minutes the way goals really arrive, a little more often late on (the same goal clock as the live chances).
+- **During the game** every simulation starts from the real score and minute and plays out the rest exactly as the live win probability does (score effects, red cards and all), so the river and the numbers always agree. It re-runs with each new minute and score, cross-fading as the futures narrow.
+- **After full time** it shows the 10,000 games from before kick-off with the real game traced through them as a white line, and says how often the real score came up ("about 1 in 15").
+
+Up is the home side ahead, down the away side. Each band is as wide as the share of simulated games at that goal difference at that moment, so the main channel thins as games branch off and the branches swell, and its colour shows how the games in it end (blue home win, silver draw, orange away win). Sparks run along randomly chosen games. Tap an ending (on the river or the buttons below it) to follow only the games that reach it. The card also gives the most common final score, how many games have a comeback win, how many change result after 85 minutes, and, after a goal, how many of the 10,000 it swung. It runs on the phone in a few tens of milliseconds, animates only while it's on screen, and stays still with reduced motion.
+
 ## Scoreline explorer
 
 Every match page has a scoreline grid you can play with. Tap scores to make your own set ("1–0, 2–0 or 2–1"), or pick conditions: result, total goals, both teams to score, winning margin, and each team's goals. Statpad adds up the matching scorelines from the whole grid, so the links between the parts are priced in, and shows the chance, the fair odds and a typical bet-builder price. Add it to the coupon and save it to My bets, where it settles itself like any other pick.
