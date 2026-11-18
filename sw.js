@@ -1,8 +1,10 @@
 /* Statpad service worker: lets the site install as an app and open offline.
    Always tries the network first, so updates show straight away; the last good copy is kept for offline use.
    Club crests (single and on sheets), flags and the globe's earth pictures never change, so they come from the
-   phone's copy once downloaded (saves data). */
-const CACHE = 'statpad-v1', FONTS = 'statpad-fonts-v1', IMGS = 'statpad-crests-v1', IMG_MAX = 600;
+   phone's copy once downloaded (saves data). Pictures are matched on their full address: ESPN's resized crests all
+   share one path and differ only in the query (?img=…/<club>.png), so matching without it handed every club the first
+   ESPN crest the phone had kept. v2 of the picture store drops the copies saved that way. */
+const CACHE = 'statpad-v1', FONTS = 'statpad-fonts-v1', IMGS = 'statpad-crests-v2', IMG_MAX = 900;
 const IMG_HOSTS = ['media.api-sports.io', 'flagcdn.com', 'a.espncdn.com'];
 const SHELL = ['./', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
@@ -67,14 +69,16 @@ self.addEventListener('fetch', (e) => {
   }
 });
 
-// crests & flags: cache first; only readable (same-site or CORS) answers are kept, never opaque ones
+// crests & flags: cache first, by exact address; only readable (same-site or CORS) pictures are kept, never opaque
+// answers or anything that isn't an image (an error page saved as a crest would stick)
 async function imageFirst(req) {
   try {
     const c = await caches.open(IMGS);
-    const hit = await c.match(req, { ignoreSearch: true, ignoreVary: true });
+    const hit = await c.match(req.url, { ignoreVary: true });
     if (hit) return hit;
     const res = await fetch(req);
-    if (res.ok && (res.type === 'basic' || res.type === 'cors')) c.put(req, res.clone()).then(trimImages).catch(() => {});
+    const type = res.headers.get('content-type') || '';
+    if (res.ok && (res.type === 'basic' || res.type === 'cors') && (!type || type.startsWith('image/'))) c.put(req.url, res.clone()).then(trimImages).catch(() => {});
     return res;
   } catch (err) {
     return Response.error();

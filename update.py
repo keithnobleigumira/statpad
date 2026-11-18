@@ -520,6 +520,54 @@ MODEL = dict(DEFAULT_MODEL)
 MODEL0 = dict(DEFAULT_MODEL)   # for leagues without shot counts: goals only, so they need their own shrinkage
 MODEL_W = None      # the market's share in the blend when tuned; the engine's own default is 0.8
 
+# ----------------------------------------------------------------------------------------------
+# Elo: a second, independent read of each team's strength, game by game (World Football Elo style: the swing
+# grows with the goal margin), turned into expected goals around the league's own scoring rate and mixed with
+# the ratings above in log space. On 19 leagues it lowered the model's error on a season it never saw (1X2 + over/
+# under log loss 1.7231 -> 1.7161 with the settings below); the monthly tuning refits it and keeps it only while it
+# still wins on the latest completed season.
+# ----------------------------------------------------------------------------------------------
+ELO_NEW = -60.0                       # newcomers start a little below the league's average
+ELO_GRID = [(0.0, 20.0), (20.0, 20.0), (40.0, 20.0), (40.0, 30.0), (65.0, 20.0)]   # (home advantage, K) tried by the tuning
+ELO_DEF = {'hfa': 40.0, 'k': 20.0}
+ELO = None                            # {'hfa', 'k', 'b', 'c', 'v'} when the tuning switched the mix on
+
+
+def elo_run(games, hfa, k):
+    """Ratings after every game, and each game's gap (home + advantage - away) as it stood before kick-off.
+    games: (date, home, away, home goals, away goals, ...)."""
+    R, gaps = {}, {}
+    for g in sorted(games, key=lambda g: g[0]):
+        d, h, a, hg, ag = g[:5]
+        for t in (h, a):
+            if t not in R:
+                R[t] = (sum(R.values()) / len(R) + ELO_NEW) if R else 1500.0
+        dr = R[h] + hfa - R[a]
+        gaps[(d, h, a)] = dr
+        we = 1 / (1 + 10 ** (-dr / 400))
+        w = 1.0 if hg > ag else 0.5 if hg == ag else 0.0
+        gd = abs(hg - ag)
+        delta = k * (1.0 if gd <= 1 else 1.5 if gd == 2 else (11 + gd) / 8) * (w - we)
+        R[h] += delta
+        R[a] -= delta
+    return R, gaps
+
+
+def elo_lams(dr, hm, am, E):
+    """Expected goals (home, away) from an Elo gap, around the league's average home and away goals."""
+    s = dr / 400
+    return hm * math.exp(E['b'] * s + E['c']), am * math.exp(-E['b'] * s + E['c'])
+
+
+def elo_mix(lh, la, el, v):
+    """The ratings' expected goals mixed with Elo's (share v for the ratings), in log space."""
+    return math.exp(v * math.log(lh) + (1 - v) * math.log(el[0])), math.exp(v * math.log(la) + (1 - v) * math.log(el[1]))
+
+
+def goal_means(games, n=500):
+    g = sorted(games, key=lambda g: g[0])[-n:]
+    return (sum(x[3] for x in g) / len(g), sum(x[4] for x in g) / len(g)) if len(g) >= 40 else (1.45, 1.15)
+
 
 def fit_ratings(games, current_teams, asof=None, init=None, P=None):
     """games: (date, home, away, home goals, away goals, this season?, home shots on target, away shots on target).
@@ -714,7 +762,10 @@ def compute_leagues(results, teams):
             ar = (rt or {}).get('teams', {}).get(t)
             rows.append([t, r['p'], r['w'], r['d'], r['l'], r['gf'], r['ga'], r['pts'], r['form'],
                          ar[0] if ar else None, ar[1] if ar else None])
-        leagues[lk] = {'season': season, 'table': rows,
+        E = ELO or ELO_DEF
+        er, _ = elo_run(games, E['hfa'], E['k'])
+        leagues[lk] = {'season': season, 'table': rows, 'elo': {t: round(v, 1) for t, v in er.items() if t in cur_teams},
+                       'gm': [round(x, 4) for x in goal_means(games)],
                        'mu': rt['mu'] if rt else None, 'home': rt['home'] if rt else None,
                        'ratings': {t: v for t, v in (rt or {}).get('teams', {}).items() if t in cur_teams},
                        'se': {t: v for t, v in (rt or {}).get('se', {}).items() if t in cur_teams},
@@ -2453,7 +2504,11 @@ def expected_goals(lk, h, a, leagues, teams):
     if lg and lg.get('ratings') and h in lg['ratings'] and a in lg['ratings']:
         ah, dh = lg['ratings'][h]
         aa, da = lg['ratings'][a]
-        return [round(math.exp(lg['mu'] + lg['home'] + ah + da), 4), round(math.exp(lg['mu'] + aa + dh), 4)], False
+        lh, la = math.exp(lg['mu'] + lg['home'] + ah + da), math.exp(lg['mu'] + aa + dh)
+        el = lg.get('elo') or {}
+        if ELO and h in el and a in el and lg.get('gm'):   # the tuned mix with Elo, same league only
+            lh, la = elo_mix(lh, la, elo_lams(el[h] + ELO['hfa'] - el[a], lg['gm'][0], lg['gm'][1], ELO), ELO['v'])
+        return [round(lh, 4), round(la, 4)], False
     # cross-league: each side's own league ratings plus a league-strength offset
     rh = teams.resolve_global(h, pool_=pool(lk))
     ra = teams.resolve_global(a, pool_=pool(lk))
@@ -4708,13 +4763,18 @@ def _tune_job(arg):
     sf = season_fits(cur_rows, prev_rows, P)
     lk = _TUNE_LKS[i] if i < len(_TUNE_LKS) else None
     rd = rest_days(cur_rows, prev_rows) if full else None
+    if full:
+        both = list(prev_rows) + list(cur_rows)
+        eg = [elo_run(both, hfa, k)[1] for hfa, k in ELO_GRID]
+        gm = goal_means(prev_rows) if prev_rows else goal_means(cur_rows)
     for r, lh, la, _sh, _sa in season_preds(cur_rows, prev_rows, P, sf=sf):
         if full:
             mk = r[7]
             if mk and mk.get('p'):
                 rh, ra = rd.get((r[0], r[1], r[2]), (None, None))
+                key = (r[0], r[1], r[2])
                 rows.append((lh, la, r[3], r[4], mk['p'][0], mk['p'][2], (mk.get('ou') or {}).get('pO'),
-                             rh, ra, (lk, r[0].strftime('%Y-%m-%d'), r[1], r[2])))
+                             rh, ra, (lk, r[0].strftime('%Y-%m-%d'), r[1], r[2]), [g.get(key) for g in eg], gm))
             continue
         x, y = game_loss(lh, la, r[3], r[4])
         n += 1
@@ -4854,13 +4914,18 @@ def run_tuning(state):
     m_0 = blend_loss(ck_0, lam_ck, 0.0) if len(ck_0) == len(ck_def) else (9, 9)
     on0 = p_on and best0 != dict(DEFAULT_MODEL) and sum(m_0) < sum(m_def) - 1e-4
     w_live = w_best if w_on else W_DEFAULT
+    try:
+        elo = fit_elo(tr_rows, rows_on, lam_ck, w_live)
+    except Exception as e:
+        log('tuning: Elo fit failed', repr(e))
+        elo = None
     fx = safe_fx(tr_rows, lam_tr, tr_jobs, tr_keys, rows_on, lam_ck, (cn_jobs, cn_keys) if p_on else (cd_jobs, cd_keys), w_live, t0)
     r5 = lambda x: round(x, 5)
     out = {'at': iso(NOW), 'v': TUNE_V, 'train': [season_name(c3), season_name(c2)], 'check': season_name(c1), 'check_code': c1,
            'leagues': len(check), 'games': len(ck_new), 'evals': evals, 'secs': round(time.time() - t0),
            'search_secs': round(t_search), 'finished': finished,
            'default': DEFAULT_MODEL, 'params': best, 'on': p_on, 'w': w_best, 'w_on': w_on,
-           'params0': best0, 'on0': on0, 'fx': fx,
+           'params0': best0, 'on0': on0, 'fx': fx, 'elo': elo,
            'll': {'model': [r5(m_def[0]), r5(m_new[0])], 'model_ou': [r5(m_def[1]), r5(m_new[1])],
                   'site': [r5(b_old[0]), r5(b_after[0])], 'site_ou': [r5(b_old[1]), r5(b_after[1])],
                   'market': [r5(mkt[0]), r5(mkt[1])], 'model0': [r5(m_0[0]), r5(m_0[1])]}}
@@ -4870,9 +4935,65 @@ def run_tuning(state):
     return out
 
 
+def fit_elo(tr_rows, ck_rows, lam_ck, w):
+    """The Elo mix: for each setting, the map from Elo gap to expected goals and the ratings' share, fitted on the
+    training seasons by the goals' likelihood; the best is checked on the latest season (model alone, and after the
+    market blend as the site does). On only if the model alone improves there and the site's numbers don't get worse."""
+    def ll_goals(rows, gi, b, c, v):
+        tot = 0.0
+        for r in rows:
+            dr = r[10][gi]
+            if dr is None:
+                continue
+            el = elo_lams(dr, r[11][0], r[11][1], {'b': b, 'c': c})
+            lh, la = elo_mix(r[0], r[1], el, v)
+            tot += lh - r[2] * math.log(lh) + la - r[3] * math.log(la)
+        return tot
+    best = None
+    for gi in range(len(ELO_GRID)):
+        rows = [r for r in tr_rows if len(r) > 11 and r[10][gi] is not None]
+        if len(rows) < 2000:
+            continue
+        bc = min(((ll_goals(rows, gi, b / 100, c / 100, 0.0), b / 100, c / 100) for b in range(30, 101, 5) for c in range(-8, 9, 4)))
+        bv = min(((ll_goals(rows, gi, bc[1], bc[2], v / 10), v / 10) for v in range(3, 10)))
+        if best is None or bv[0] < best[0]:
+            best = (bv[0], gi, bc[1], bc[2], bv[1])
+    if not best:
+        return None
+    _, gi, b, c, v = best
+    E = {'hfa': ELO_GRID[gi][0], 'k': ELO_GRID[gi][1], 'b': b, 'c': c, 'v': v}
+
+    def check(wm):
+        n = l0 = l1 = 0.0
+        for r, (mh, ma) in zip(ck_rows, lam_ck):
+            if len(r) <= 11 or r[10][gi] is None:
+                continue
+            lh, la = elo_mix(r[0], r[1], elo_lams(r[10][gi], r[11][0], r[11][1], E), v)
+            for k, (xh, xa) in enumerate(((r[0], r[1]), (lh, la))):
+                bh, ba = math.exp(wm * math.log(mh) + (1 - wm) * math.log(xh)), math.exp(wm * math.log(ma) + (1 - wm) * math.log(xa))
+                x = sum(game_loss(bh, ba, r[2], r[3]))
+                if k:
+                    l1 += x
+                else:
+                    l0 += x
+            n += 1
+        return (l0 / n, l1 / n) if n else (None, None)
+    m0, m1 = check(0.0)
+    s0, s1 = check(w)
+    if m0 is None:
+        return None
+    E['on'] = m1 < m0 - 1e-3 and s1 <= s0 + 1e-4
+    E['ll'] = {'model': [round(m0, 5), round(m1, 5)], 'site': [round(s0, 5), round(s1, 5)]}
+    log(f"tuning: Elo mix (home advantage {E['hfa']:.0f}, K {E['k']:.0f}, ratings' share {v}): model {m0:.4f} -> {m1:.4f}, "
+        f"site {s0:.4f} -> {s1:.4f} on the check season; {'on' if E['on'] else 'kept off'}")
+    return E
+
+
 def apply_tuning(state):
-    global MODEL, MODEL0, MODEL_W
+    global MODEL, MODEL0, MODEL_W, ELO
     t = state.get('tune') or {}
+    e = t.get('elo') or {}
+    ELO = {k: e[k] for k in ('hfa', 'k', 'b', 'c', 'v')} if e.get('on') and all(k in e for k in ('hfa', 'k', 'b', 'c', 'v')) else None
     MODEL = dict(t['params']) if t.get('on') and t.get('params') else dict(DEFAULT_MODEL)
     MODEL0 = dict(t['params0']) if t.get('on0') and t.get('params0') else dict(DEFAULT_MODEL)
     MODEL_W = t.get('w') if t.get('w_on') else None
@@ -4956,7 +5077,7 @@ def public_tune(state):
     t = state.get('tune')
     if not t:
         return None
-    return {k: t[k] for k in ('at', 'train', 'check', 'leagues', 'games', 'default', 'params', 'on', 'params0', 'on0', 'w', 'w_on', 'll', 'fx') if k in t}
+    return {k: t[k] for k in ('at', 'train', 'check', 'leagues', 'games', 'default', 'params', 'on', 'params0', 'on0', 'w', 'w_on', 'll', 'fx', 'elo') if k in t}
 
 
 # ----------------------------------------------------------------------------------------------
@@ -4985,8 +5106,12 @@ def bt_matches(seasons):
             j, k = past_stakes_jobs(lk, sf)
             jobs += j
             keys += k
+        eg = elo_run(list(prev_rows) + list(cur_rows), ELO['hfa'], ELO['k'])[1] if ELO else {}
+        gm = goal_means(prev_rows or cur_rows) if ELO else None
         for r, lh, la, sh, sa in season_preds(cur_rows, prev_rows, MODEL, sf=sf):
             d, h, a, hg, ag, _hs, _as, mkt, ko = r
+            if ELO and (d, h, a) in eg:
+                lh, la = elo_mix(lh, la, elo_lams(eg[(d, h, a)], gm[0], gm[1], ELO), ELO['v'])
             if not mkt:
                 continue
             mid = f"{lk}-{ko:%Y%m%d}-{slug(h)}-{slug(a)}"

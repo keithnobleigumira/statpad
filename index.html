@@ -538,6 +538,16 @@ canvas.shk-cv.big { height: min(64vh, 600px); border-radius: 14px; border: 1px s
 .st-prog[hidden] { display: none; }
 .st-prog b { display: block; height: 4px; border-radius: 4px; background: rgba(255,255,255,.14); overflow: hidden; }
 .st-prog i { display: block; height: 100%; width: 0; border-radius: 4px; background: linear-gradient(90deg, #35f2b0, #6f8cff); transition: width .3s; }
+.st-pick { display: block; width: 100%; padding: 0; border: 0; margin: 0; background: none; color: inherit; font: inherit; text-align: left; position: relative; border-radius: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.st-pick:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 3px; }
+.st-pick img { transition: transform .18s, box-shadow .25s; }
+.st-pick:active img { transform: scale(.97); }
+.st-pick.on img { box-shadow: 0 0 0 2px #35f2b0, 0 0 26px -4px rgba(53, 242, 176, .55); }
+.st-prog.idle { text-align: center; background: rgba(3, 6, 10, .74); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.st-prog.idle b { display: none; }
+.st-prog.idle > span::before { content: ''; display: inline-block; border-left: 8px solid currentColor; border-top: 5px solid transparent; border-bottom: 5px solid transparent; margin-right: 7px; vertical-align: -1px; }
+.st-prog.next { background: rgba(10, 40, 32, .86); box-shadow: inset 0 0 0 1px rgba(53, 242, 176, .55); }
+.st-prog.next > span::before { border: 0; width: 7px; height: 7px; border-radius: 50%; background: #35f2b0; vertical-align: 1px; }
 .st-q { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 0; }
 .st-opt { display: inline-flex; align-items: center; gap: 8px; }
 .st-more { width: 100%; margin-top: 14px; }
@@ -1296,6 +1306,42 @@ body { background: var(--paper); }
 .mc-load i:nth-child(2) { animation-delay: .15s; } .mc-load i:nth-child(3) { animation-delay: .3s; }
 @keyframes mcDot { 50% { opacity: .25; transform: translateY(-3px); } }
 @media (prefers-reduced-motion: reduce) { .mc-body, .mc-load i { animation: none; } }
+/* the full-screen shock map: no box around the globe, it floats in space */
+#sheet.shk-mode { top: 0; max-height: none; height: 100%; border-radius: 0; border: 0; color: #eaf4ff;
+  background: var(--space, none) 0 0 / 320px 320px repeat, radial-gradient(90% 60% at 50% 34%, #0d2142 0%, #061026 38%, #02050d 72%, #010208 100%); box-shadow: none; }
+@media (min-width: 980px) { #sheet.shk-mode { left: 0; width: auto; border-left: 0; } }
+#sheet.shk-mode .grab { display: none; }
+#sheet.shk-mode .sheet-bar { position: absolute; z-index: 3; left: 0; right: 0; top: 0; border: 0; background: linear-gradient(180deg, rgba(1, 3, 10, .7), transparent); padding-top: max(14px, env(safe-area-inset-top)); }
+#sheet.shk-mode .sheet-bar .t { color: rgba(214, 232, 255, .75); letter-spacing: .06em; }
+#sheet.shk-mode .icon-btn { background: rgba(10, 22, 44, .55); border-color: rgba(120, 170, 255, .22); color: #eaf4ff; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+#sheet.shk-mode .sheet-body { padding-top: 0; flex: 1; }
+#sheet.shk-mode .shk-stage { margin: 0 calc(-1 * var(--gut)); }
+#sheet.shk-mode canvas.shk-cv.big { height: min(78vh, 760px); border: 0; border-radius: 0; background: transparent; }
+#sheet.shk-mode .shk-zoom button { border-radius: 50%; border-color: rgba(120, 170, 255, .22); background: rgba(10, 22, 44, .5); }
+#sheet.shk-mode .shk-key { color: rgba(214, 232, 255, .72); margin-top: 4px; }
+#sheet.shk-mode .sheet-body > .shk-list { background: rgba(8, 18, 38, .5); border: 1px solid rgba(120, 170, 255, .14); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+#sheet.shk-mode .note { color: rgba(214, 232, 255, .55); }
+@media (min-width: 980px) { #sheet.shk-mode .sheet-body > :not(.shk-stage) { max-width: 760px; margin-left: auto; margin-right: auto; } }
+/* the Matches page, calmer: no number strip under the headline games, search and sort on one line */
+.kpis:empty { display: none; }
+.hero .wrap { padding-bottom: 8px; }
+#v-matches .filters { flex-wrap: nowrap; } #v-matches .filters .field.grow { flex: 1 1 auto; } #v-matches .filters .field:not(.grow):not([hidden]) { flex: 0 0 auto; max-width: 46%; }
+#v-matches .sec-head { margin-bottom: 10px; }
+/* the Matches page's tools, one quiet row */
+.xp-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 2px -16px 14px; padding: 2px 16px 4px; scroll-padding: 16px; }
+.xp-row::-webkit-scrollbar { display: none; }
+.xp { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px 0 11px; border-radius: 99px; border: 1px solid var(--rule); background: var(--card); color: var(--ink); font: 600 13.5px/1 var(--f-body); cursor: pointer; white-space: nowrap; transition: background .2s, border-color .2s, transform .15s var(--pop); }
+.xp svg { width: 17px; height: 17px; color: var(--cobalt); }
+.xp:active { transform: scale(.96); }
+.xp.hot { border-color: color-mix(in srgb, var(--red) 45%, var(--rule)); }
+.xp.hot svg { color: var(--red); }
+.xp-n { display: inline-flex; align-items: center; gap: 5px; margin-left: 2px; padding: 3px 7px; border-radius: 99px; background: var(--red-soft); color: var(--red); font: 700 11.5px/1 var(--f-body); }
+.xp-n i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: blink 1.6s ease-in-out infinite; }
+.calm .xp-n i { animation: none; }
+.xp.gold { border-color: color-mix(in srgb, #ffd447 45%, var(--rule)); background: radial-gradient(120% 140% at 0% 0%, rgba(255, 212, 71, .14), transparent 60%), var(--card); }
+.xp.gold svg { color: #e0a800; } [data-theme="dark"] .xp.gold svg { color: #ffd447; }
+@media (min-width: 900px) { .xp-row { margin: 0 0 14px; padding: 2px 0 4px; flex-wrap: wrap; } }
+#tableBox > .bigg { margin-top: 2px; }
 /* slip autopsy */
 .card.ap { border-color: color-mix(in srgb, var(--red) 40%, var(--rule)); background: linear-gradient(180deg, color-mix(in srgb, var(--red) 7%, var(--card)), var(--card) 45%); }
 .ap-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -1385,6 +1431,11 @@ body { background: var(--paper); }
 .mvx-cv { position: relative; z-index: 1; mix-blend-mode: screen; display: block; width: 100%; height: 252px; cursor: pointer; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
 .mvx-u, .mvx-o { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; } .mvx-o { z-index: 2; }
 @media (min-width: 560px) { .mvx-cv { height: 284px; } }
+.mvx-stage.g3 { background: #02040b; }
+.mvx-stage.g3 .mvx-cv { height: clamp(280px, 78vw, 360px); mix-blend-mode: normal; }
+.mvx-stage.g3 .mvx-u, .mvx-stage.g3 .mvx-o { display: none; }
+.mvx-stage.g3 ~ .mvx-b .mvx-k.kH { --k: #5c8aff; } .mvx-stage.g3 ~ .mvx-b .mvx-k.kD { --k: #b2a0ff; } .mvx-stage.g3 ~ .mvx-b .mvx-k.kA { --k: #ff8c46; }
+[data-theme="light"] .mvx-stage.g3 ~ .mvx-b .mvx-k.kH { --k: #3d63f0; } [data-theme="light"] .mvx-stage.g3 ~ .mvx-b .mvx-k.kD { --k: #7a5ce6; } [data-theme="light"] .mvx-stage.g3 ~ .mvx-b .mvx-k.kA { --k: #e2672a; }
 .mvx-b { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 .mvx-k { --k: #7c93ff; display: grid; gap: 3px; text-align: left; padding: 9px 10px 8px; border-radius: 12px; border: 1px solid var(--rule); background: var(--card-2); color: var(--ink); font: inherit; cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .15s; }
 .mvx-k.kD { --k: #c4cce4; } .mvx-k.kA { --k: #ff9a5c; }
@@ -1463,13 +1514,13 @@ body { background: var(--paper); }
     <section id="v-matches" class="section" data-view="matches">
       <div class="sec-head">
         <div><h2>Matches</h2><p class="sub" id="matchesSub">Tap a match for the full breakdown.</p></div>
-        <div class="ctl"><button type="button" class="btn listen-b" data-ask="listen"><svg aria-hidden="true"><use href="#i-mic"/></svg>Ask Statpad</button><button type="button" class="btn listen-b" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen to the briefing</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button><button type="button" class="btn listen-b" data-shockmap="1"><svg aria-hidden="true"><use href="#i-radar"/></svg>Shock map</button></div>
       </div>
+      <div class="xp-row" id="explore" role="group" aria-label="More to explore"></div>
       <div class="days" id="days-matches" role="group" aria-label="Day"></div>
       <div class="lgc" id="lgChips" role="group" aria-label="Competitions"></div>
       <div class="filters">
         <label class="field grow"><svg><use href="#i-search"/></svg><span class="sr">Search teams</span><input id="q" type="search" placeholder="Search a team" autocomplete="off"></label>
-        <label class="field"><svg><use href="#i-filter"/></svg><span class="sr">Competition</span><select id="league"></select></label>
+        <label class="field" hidden><svg><use href="#i-filter"/></svg><span class="sr">Competition</span><select id="league"></select></label>
         <label class="field"><span class="sr">Sort</span><select id="sort">
           <option value="ko">Kick-off</option><option value="conf">Most confident</option><option value="edge">Best value</option><option value="stakes">Most at stake</option><option value="comp">Competition</option></select></label>
       </div>
@@ -2072,7 +2123,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const CR_BAD = new Set();          // picture addresses that failed this session
   const CR_OK = new Set();           // ... and ones already loaded, which redraw shown at once instead of fading in again
   // team colours read from the crests themselves (cached between visits)
-  const TC = (() => { const t = store.get('tcol', {}); return t && typeof t === 'object' ? t : {}; })();
+  // (v2: colours learnt before the picture-store fix may come from another club's crest, so they're dropped once,
+  // with that store itself)
+  const TC = (() => { const t = store.get('tcol2', {}); return t && typeof t === 'object' ? t : {}; })();
+  try { localStorage.removeItem('sp_tcol'); if ('caches' in window) caches.delete('statpad-crests-v1').catch(() => {}); } catch (e) { /* private mode */ }
   const teamCol = (name) => TC[name] || (S.data && S.data.tcol && S.data.tcol[name]) || `hsl(${hueOf(name)} 62% 52%)`;
   // crest sheets: each competition's crests come as one picture (crests/s/), so a board needs a few dozen requests
   // instead of hundreds and a competition's crests appear together. Every crest on a sheet shows its initials until
@@ -2166,7 +2220,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (!best || best.c < 6) return;
       TC[name] = '#' + [best.r, best.g, best.b].map((v) => Math.round(v / best.c).toString(16).padStart(2, '0')).join('');
       clearTimeout(tcLearn.t);
-      tcLearn.t = setTimeout(() => { const ks = Object.keys(TC); for (const k of ks.slice(0, Math.max(0, ks.length - 400))) delete TC[k]; store.set('tcol', TC); }, 1500);
+      tcLearn.t = setTimeout(() => { const ks = Object.keys(TC); for (const k of ks.slice(0, Math.max(0, ks.length - 400))) delete TC[k]; store.set('tcol2', TC); }, 1500);
       for (const el of document.querySelectorAll('[data-tch],[data-tca]')) {
         if (el.dataset.tch === name) el.style.setProperty('--th', TC[name]);
         if (el.dataset.tca === name) el.style.setProperty('--ta', TC[name]);
@@ -2211,7 +2265,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     S.navCC = cc;
     for (const v of document.querySelectorAll('[data-view]')) v.hidden = v.dataset.view !== S.tab;
     $('#hero').hidden = S.tab !== 'matches' || !S.data;
-    $('#tape').hidden = S.tab !== 'matches' || !S.data || !$('#tapeIn').children.length;
+    $('#tape').hidden = S.tab !== 'value' || !S.data || !$('#tapeIn').children.length;
   }
   function renderLive() {
     const el = $('#live'), t = $('#liveText');
@@ -2249,10 +2303,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const priced = up.filter((r) => realMkt(r.m)).length;
     const vals = ENGINE.value(up.filter((r) => r.a).map((r) => ({ m: r.m, a: r.a })), 0.03).length;
     const comps = new Set(up.map((r) => r.m.lk)).size;
-    $('#kpis').innerHTML = [[up.length, 'fixtures'], [priced, 'live prices'], [vals, 'value spots'], [comps, 'competitions']]
-      .map(([v, l]) => `<div class="kpi"><div class="kpi-v mono" data-to="${v}">${S.kpiDone ? v : 0}</div><div class="kpi-l">${l}</div></div>`).join('');
-    if (!S.kpiDone) { S.kpiDone = true; countUp($('#kpis')); }
+    $('#kpis').innerHTML = '';
+    const sub = $('#matchesSub');
+    if (sub) sub.textContent = `${up.length.toLocaleString('en-US')} fixtures in ${comps} competitions, ${priced.toLocaleString('en-US')} with live prices${vals ? ` and ${vals} value spot${vals === 1 ? '' : 's'}` : ''}. Tap a match for the full breakdown.`;
     renderSpot();
+    $('#hero').classList.add('no-ticket'); $('#heroTicket').innerHTML = '';
+    return;   // slips live on the Slips tab only
     // ticket: the first day with enough open games; built after the list is on screen
     const box = $('#heroTicket');
     const dk = days().find((d) => S.rows.filter((r) => r.day === d.key && !r.started && r.a).length >= 4);
@@ -2393,6 +2449,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="fx-odds">${btn('H', '1')}${btn('D', 'X')}${btn('A', '2')}</div>
     </article>`;
   }
+  // the tools that used to crowd the page, as one quiet row: each opens its own screen
+  function renderExplore() {
+    const el = $('#explore'); if (!el) return;
+    const live = (S.shk && S.shk.liveN) || 0, mir = mirShow();
+    morph(el, `<button type="button" class="xp" data-ask="listen"><svg aria-hidden="true"><use href="#i-mic"/></svg>Ask Statpad</button>`
+      + `<button type="button" class="xp" data-listen="day"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Daily briefing</button>`
+      + `<button type="button" class="xp${live ? ' hot' : ''}" data-shockmap="1"><svg aria-hidden="true"><use href="#i-radar"/></svg>Shock map${live ? `<span class="xp-n"><i></i>${live} live</span>` : ''}</button>`
+      + (mir ? `<button type="button" class="xp gold" data-mir="1"><svg aria-hidden="true"><use href="#i-spark"/></svg>Weekend miracles</button>` : '')
+      + `<button type="button" class="xp" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button>`, 'xp');
+  }
   function renderMatches() {
     if (!S.ready) { showProgress(); return; }
     renderDays('days-matches', true);
@@ -2403,11 +2469,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const box = $('#matchList');
     if (!rows.length) {
       if (!S.mirAt) loadMir();
-      morph(box, `${!S.q && S.league !== 'live' ? mirCard() : ''}<div class="empty-state"><b>${S.league === 'live' ? 'No games in play' : 'No matches here'}</b>${S.league === 'live' ? 'Live games show here from kick-off. Pick “All” to see the day’s fixtures.' : S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`, ['list', S.day, S.league, S.sort].join('|'), true); return;
+      renderExplore();
+      morph(box, `<div class="empty-state"><b>${S.league === 'live' ? 'No games in play' : 'No matches here'}</b>${S.league === 'live' ? 'Live games show here from kick-off. Pick “All” to see the day’s fixtures.' : S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`, ['list', S.day, S.league, S.sort].join('|'), true); return;
     }
     S.shk.games = shockGames(); S.shk.key = (S.shk.key || 0) + 1; S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
-    let html = (!S.q ? shockCard(rows) : '') + (!S.q ? mirCard() : '') + (S.sort !== 'stakes' && !S.q ? bigGames(rows) : '');
+    let html = '';
     if (!S.mirAt) loadMir();
+    renderExplore();
     if (S.sort === 'ko' || S.sort === 'comp') {
       // group by competition (ordered by first kick-off, or by group/name)
       const groups = new Map();
@@ -2479,6 +2547,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return L && L.table && L.table.some((r) => r[0] === name) ? `<button type="button" class="tlink" data-team="${esc(lk)}|${esc(name)}">${esc(name)}</button>` : esc(name);
   }
   function renderSheet() {
+    $('#sheet').classList.toggle('shk-mode', S.open === 'shock:');   // the shock map takes the whole screen, nothing around the globe
     if (String(S.open).startsWith('team:')) { renderTeamSheet(); return; }
     if (S.open === 'status:') { renderStatusSheet(); return; }
     if (S.open === 'shock:') { renderShockSheet(); return; }
@@ -2756,9 +2825,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     $('#tSub').textContent = sim ? 'The rest of the season played thousands of times from Statpad’s ratings and prices: each team’s chance of every finishing position. Set results for the next games to see what changes.'
       : 'Standings from results. Attack and defence are the model’s goal multipliers against a league-average side. Tap a team for its page.';
     if (sim) { renderSim(); return; }
+    const stakes = bigGames(S.rows.filter((r) => !r.started));
     const hasR = L.table.some((r) => r[9] != null), hasW = L.table.some((r) => r[2] != null);
     const amax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[9] || 0))) : 1, dmax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[10] || 0))) : 1;
-    $('#tableBox').innerHTML = `<div class="lt"><table><thead><tr><th class="l">#</th><th class="l">Team</th><th>P</th>${hasW ? '<th>W</th><th>D</th><th>L</th>' : ''}<th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th class="l">Form</th>${hasR ? '<th>Attack</th><th>Defence</th>' : ''}</tr></thead><tbody>
+    $('#tableBox').innerHTML = `${stakes}<div class="lt"><table><thead><tr><th class="l">#</th><th class="l">Team</th><th>P</th>${hasW ? '<th>W</th><th>D</th><th>L</th>' : ''}<th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th class="l">Form</th>${hasR ? '<th>Attack</th><th>Defence</th>' : ''}</tr></thead><tbody>
       ${L.table.map((r, i) => `<tr class="${i < 4 ? 'zone' : ''}"><td class="l">${i + 1}</td><td class="l team">${crest(r[0], S.tleague, 'xs')} <button type="button" class="tlink" data-team="${esc(S.tleague)}|${esc(r[0])}">${esc(r[0])}</button></td><td>${r[1]}</td>${hasW ? `<td>${r[2] ?? ''}</td><td>${r[3] ?? ''}</td><td>${r[4] ?? ''}</td>` : ''}<td>${r[5]}</td><td>${r[6]}</td><td>${r[5] - r[6] > 0 ? '+' : ''}${r[5] - r[6]}</td><td><b>${r[7]}</b></td><td class="l">${formDots(r[8]) || ''}</td>
       ${hasR ? `<td>${r[9] != null ? Math.exp(r[9]).toFixed(2) + '×' : ''}<span class="rbar"><i style="width:${r[9] != null ? (Math.exp(r[9]) / amax) * 100 : 0}%"></i></span></td><td>${r[10] != null ? Math.exp(r[10]).toFixed(2) + '×' : ''}<span class="rbar def"><i style="width:${r[10] != null ? (Math.exp(r[10]) / dmax) * 100 : 0}%"></i></span></td>` : ''}</tr>`).join('')}
     </tbody></table></div><p class="note">${esc(L.name)}${L.season ? ' · ' + esc(L.season) : ''}. ${hasR ? 'Attack above 1.00 scores more than an average side; defence below 1.00 concedes less. ' : ''}Points deductions are not applied.</p>`;
@@ -3084,6 +3154,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         ['Pull towards average, in games', String(d.k), String(P.k)],
         ['Shots on target, mixed with goals', pct(d.sw || 0, 0), pct(P.sw || 0, 0)],
         ['Bookmakers’ share of the blend', pct(wb, 0), pct(wn, 0)]];
+      const el = tn.elo;
+      if (el && el.ll) rows.push(['Elo ratings mixed with the model', 'Not used', el.on ? `On: ${pct(1 - el.v, 0)} Elo (model error ${f3(el.ll.model[0])} → ${f3(el.ll.model[1])})` : 'Tested, left off']);
       const fx = tn.fx || null, fxOn = (k) => fx && fx[k] && fx[k].on && fx[k].p;
       if (fx) {
         rows.push(['Short rest (2–3 days since the last league game)', 'Not used', fxOn('rest') ? `On: ${fx.rest.p[0] < 0 ? 'nudged up' : 'nudged down'} ${Math.round(Math.abs(fx.rest.p[0]) * 100)}%` : 'Tested, left off']);
@@ -3202,6 +3274,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>The model</h3>
       <p>Each league's results feed a Poisson model: home goals = μ × home advantage × home attack × away defence, and the same for the away side without the home bonus. Older games count less, last season counts less again, and every team is pulled towards average by a few phantom games so a hot fortnight doesn't swing the ratings. Newly promoted sides start slightly below average.</p>
       <p>Where football-data.co.uk has shot counts (the main European leagues), shots on target count next to goals: each side's goals are mixed with its shots on target times the league's goals per shot on target. Shots are steadier than goals, so a team that creates chances but finishes badly is rated on what it creates. Each rating also carries a standard error, from how much evidence is behind it.</p>
+      <p>A second, independent read of each team comes from Elo ratings, updated game by game, with bigger swings for bigger wins (the World Football Elo method). The gap between two teams' Elo is turned into expected goals around the league's own scoring rate and mixed with the model above, in log space. The monthly tuning fits the mix on two past seasons and keeps it only while it lowers the error on the latest completed season, which it never saw. On 19 leagues it did: the model's error fell from 1.712 to 1.709 (1X2 plus over/under log loss, 2025/26). It matters most for games without bookmaker prices, which rest on the model alone; where prices exist, the tuned blend leans mostly or wholly on them (the Lab shows the current share), because over past seasons they have been the sharpest single source.</p>
       <p>National teams in the Nations League and friendlies are rated the same way, from every international result of the last six years. Neutral venues get no home bonus, and friendlies count 60% because line-ups are rotated. Friendly picks lose an extra 3 points and are kept out of the two safest slip tiers.</p>
       <p>When a match has prices, each bookmaker's margin is removed by the <b>power method</b> (each 1/price raised to one power so they add to 1), which leaves favourites more of their chance than dividing the margin out evenly: bookmakers load more margin onto long shots. On five seasons of the main leagues (30,000 games) this read results better, and lifting Pinnacle to three times the weight of any other bookmaker helped again; exchanges, whose prices before kick-off were the least reliable, count like any bookmaker. Where The Odds API's prices are more than six hours old, DraftKings' prices from ESPN (fresher, and free) are averaged in, because prices closer to kick-off predict better. Statpad fits the two expected-goals numbers that reproduce the consensus, including the goals line where available (2.5, or the line DraftKings offers), and blends them with the model in log space: 80/20 by default, or the share tuned on past seasons (see Tuning). The market is sharper than any table-based model, so it gets the larger share. Every market comes from a Dixon–Coles scoreline grid, which corrects the 0-0, 1-0, 0-1 and 1-1 cells that a plain Poisson model gets wrong.</p>
       <p><b>Per-market correction.</b> Every week the site replays two past seasons through the engine and checks, for each kind of market (home or away win, draw, double chance, goals lines, both teams to score, team goals), whether the stated chances came true as often as stated. A correction fitted on the older season is kept only for the kinds where it predicts the newer season, which it never saw, better. On the last replay this lifted chances above about 75% slightly (they had been coming true a little more often than stated) and nudged draws up.</p>
@@ -3243,7 +3316,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Momentum</h3>
       <p>Above the match centre's tabs, a wave shows which side is pushing, minute by minute, read from ESPN's live commentary. Each attacking moment counts for the side making it: a shot on target or off the woodwork 3, a saved or missed penalty 2.5, a shot off target 1.8, a blocked shot 1.6, a corner 1.4, a free kick won in the attacking half 0.6 (on a wing 0.4), an offside 0.6 and a goal 4. Shots from close in count a third more and from long range a third less. Each side's pressure fades with a half-life of about a minute and a half, and the wave is the difference: up for the home side, down for the away side, in the teams' colours, with goals, red cards and half time marked. It says who is on top right now (the last eight minutes), or after the game who was on top for most of it and each side's best ten-minute spell. It is a reading of the commentary, not of the ball's position, so a long spell of possession without shots barely shows.</p>
       <h3>Multiverse</h3>
-      <p>Every match page plays the game 10,000 times and draws all of them at once. Before kick-off each simulated game takes its final score from Statpad's scoreline grid (the same one behind every price on the page), and its goals are spread over the 90 minutes the way goals really arrive, a little more often late on. Once the game is on, every simulation starts from the real score and minute and plays out the rest exactly as the live chances do, so the picture and the numbers always agree; it re-runs with each new minute and score. Up is the home side ahead, down the away side; each band is as wide as the share of simulated games at that goal difference at that moment, so the main channel thins as games branch off, and the colours show how the games in each band end. Sparks run along randomly chosen games. Tap an ending to follow only the games that reach it. Below are the most common final score, comeback wins, results that change after 85 minutes and, after a goal, how many games it swung. After full time it shows the 10,000 games from before kick-off with the real one traced through them, and how often the real score came up.</p>
+      <p>Every match page plays the game 10,000 times and draws all of them at once. Before kick-off each simulated game takes its final score from Statpad's scoreline grid (the same one behind every price on the page), and its goals are spread over the 90 minutes the way goals really arrive, a little more often late on. Once the game is on, every simulation starts from the real score and minute and plays out the rest exactly as the live chances do, so the picture and the numbers always agree; it re-runs with each new minute and score. It is drawn as a floor of light with time running towards you: kick-off far off, the final whistle at the front, where three gates stand for the home win, the draw and the away win. Each lane of the floor is a goal difference, the home side ahead to the left and the away side to the right; the river on it is as wide as the share of simulated games at that goal difference at that moment, so the main channel thins as games branch off, and its colours show how the games in it end. A few thousand of the games run as streaks of light along their own goals into the gate of how they end. On a phone without WebGL it is drawn as a flat river instead, the home side ahead upwards. Tap a gate (or an ending below) to follow only the games that reach it. Below are the most common final score, comeback wins, results that change after 85 minutes and, after a goal, how many games it swung. After full time it shows the 10,000 games from before kick-off with the real one traced through them, and how often the real score came up.</p>
       <h3>Scoreline explorer</h3>
       <p>On every match page, tap scores on the grid to make your own set, or pick conditions (result, total goals, both teams to score, winning margin, each team's goals). Statpad adds up the matching scorelines from the whole grid, so the links between the parts are priced in, and shows the chance, the fair odds and a typical bet-builder price. Your bet can go on the coupon and into My bets, where it settles like any other pick.</p>
       <h3>Why this pick</h3>
@@ -3261,11 +3334,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Fatigue and motivation</h3>
       <p>Statpad tests two more things each month, on two past seasons, then on a third the test never saw, after blending with the market as the site does: <b>rest</b> (a side with only two or three days since its last league game, against one with more) and <b>motivation</b> (from the season simulation run week by week: a side whose season chances barely move whatever the result, and games where neither side has anything left to play for). Each goes on only if it lowers the error on the unseen season too, and the Lab shows which are on. Football-data.co.uk lists league games only, so cup and European games don't count towards rest. When one applies to a game, its match page says so.</p>
       <h3>Live shock map</h3>
-      <p>While games are in play, the Matches tab opens with a map of them (also under <b>Shock map</b>). It's the real earth, drawn on your phone's graphics chip from NASA's Blue Marble and city-lights pictures: day where the sun is up right now, city lights where it's night, with a thin atmosphere at the rim. It turns on its own and slows down while a shock passes the middle. Drag it to turn it any way. On the full-screen map, pinch, scroll, double-tap or use + and − to zoom in (up to 16 times; sharper pictures load for close-ups), and the globe button goes back to the whole world. Where games are too close to tell apart they merge into a numbered bubble; tap it to fly in, and zoomed in, every game in play gets its score and minute. Display → Save data keeps to a simple built-in map instead of the pictures. Without a graphics chip the page uses a dotted globe. Each game sits in its country with a beam of light that rises higher for a bigger shock, and pulses faster and wider the further the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes: red for a shock, amber for a wobble, blue when it's going to plan, grey for games kicking off soon. The shock number is that fall in percentage points (a small favourite collapsing counts more). Chances in play come from the score, the minute, red cards and each side's expected goals before kick-off. Tap a dot for the match.</p>
+      <p><b>Shock map</b>, in the Matches tab's shortcuts, opens a globe of the games in play, full screen and floating in open space; while games are on, the shortcut glows and counts them. It's the real earth, drawn on your phone's graphics chip from NASA's Blue Marble and city-lights pictures: day where the sun is up right now, city lights where it's night, with a thin atmosphere at the rim. It turns on its own and slows down while a shock passes the middle. Drag it to turn it any way. On the full-screen map, pinch, scroll, double-tap or use + and − to zoom in (up to 16 times; sharper pictures load for close-ups), and the globe button goes back to the whole world. Where games are too close to tell apart they merge into a numbered bubble; tap it to fly in, and zoomed in, every game in play gets its score and minute. Display → Save data keeps to a simple built-in map instead of the pictures. Without a graphics chip the page uses a dotted globe. Each game sits in its country with a beam of light that rises higher for a bigger shock, and pulses faster and wider the further the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes: red for a shock, amber for a wobble, blue when it's going to plan, grey for games kicking off soon. The shock number is that fall in percentage points (a small favourite collapsing counts more). Chances in play come from the score, the minute, red cards and each side's expected goals before kick-off. Tap a dot for the match.</p>
       <h3>Goal seek</h3>
       <p>Under <b>Slips → Goal seek</b>, say what you want to turn your stake into. Statpad works out the odds needed after tax on winnings, then searches every combination of one pick per match, at real bookmaker prices and up to 12 legs, for the slip most likely to land in full while paying that much. Every leg is weighed before it can be used: its price is what a typical bookmaker pays (the market average, not the single best price somewhere), its chance is the cautious one and never above the bookmakers' own consensus, and it must clear the minimum chance you set for every leg (40% unless you change it), so long shots can't be used to buy odds. A table weighs the same goal with every minimum, from any chance to 70%+: long shots need fewer legs but each rarely lands, safer legs need more of them. It shows the chance honestly, what such a slip returns on average, a value-only version if you want every leg to beat the bookmaker's price, and the price of ambition: the best chance for every amount you could aim for. You can also ask by voice: "turn 10,000 into 500,000".</p>
       <h3>WhatsApp Status pack</h3>
-      <p>On the Matches and Slips tabs, <b>Status pack</b> makes 11-second videos for the day, sized for WhatsApp Status, each built around its own animated data graphic. There are thirteen kinds: the safest pick on a confidence dial, an upset alert on a radar that locks onto the underdog, the game with most at stake as three futures, the slip at your target odds climbing leg by leg, a goal rush (the game with most goals expected, as an equalizer of total goals), the most likely exact score on a lit grid of scorelines, the match of the day in the two teams' own colours (who wins as a tug of war, their last five results, expected goals and Statpad's pick), the best value bet as two needles on an odds dial, the last day's results flipping pick by pick to landed or missed, a price that has dropped hard, a team in form, the whole day in numbers, and the weekend's rarest result lit up among 10,000 versions of its game. Each day the pack picks four from what the day's games make interesting, steers away from the kinds made on this phone in the last few days, and turns a little by the date, so it keeps changing; <b>4 more clips</b> makes the next ones on the day's list. Titles, closing lines and camera moves change by day too. Each clip opens with the camera swooping over a floodlit pitch drawn as a hologram and ends on Statpad's address, with the recent record of “Nearly definite” picks when there are enough of them. The sound is made the same way: machine hum, beeps, servo whirs, clunks and radar pings timed to the pictures, with no voices or music. Everything is drawn and encoded on your phone as ordinary MP4 video (H.264 with AAC sound; if the phone's browser has no AAC encoder, one loads with the video packer the first time), stored the way phone cameras store portrait video, so WhatsApp and other apps take it like any video from your gallery. <b>1080p · WhatsApp</b> is the default, as that's what WhatsApp Status shows; <b>4K</b> (2160 × 3840) is for TikTok, Instagram and YouTube Shorts and takes about three times as long. Each finished clip is played back on your phone before it's offered, and a size the phone can't play is made smaller by itself. Sound can be turned off. Phones that can't make video get the same graphics as 4K pictures. Sharing adds the site's link to the caption. Results clips show misses as well as wins.</p>
+      <p>In the Matches tab's shortcuts and on the Slips tab, <b>Status pack</b> makes 11-second videos for the day, sized for WhatsApp Status, each built around its own animated data graphic. There are thirteen kinds: the safest pick on a confidence dial, an upset alert on a radar that locks onto the underdog, the game with most at stake as three futures, the slip at your target odds climbing leg by leg, a goal rush (the game with most goals expected, as an equalizer of total goals), the most likely exact score on a lit grid of scorelines, the match of the day in the two teams' own colours (who wins as a tug of war, their last five results, expected goals and Statpad's pick), the best value bet as two needles on an odds dial, the last day's results flipping pick by pick to landed or missed, a price that has dropped hard, a team in form, the whole day in numbers, and the weekend's rarest result lit up among 10,000 versions of its game. Each day the pack picks four from what the day's games make interesting, steers away from the kinds made on this phone in the last few days, and turns a little by the date, so it keeps changing; <b>4 more clips</b> makes the next ones on the day's list. Titles, closing lines and camera moves change by day too. Each clip opens with the camera swooping over a floodlit pitch drawn as a hologram and ends on Statpad's address, with the recent record of “Nearly definite” picks when there are enough of them. The sound is made the same way: machine hum, beeps, servo whirs, clunks and radar pings timed to the pictures, with no voices or music. Everything is drawn and encoded on your phone as ordinary MP4 video (H.264 with AAC sound; if the phone's browser has no AAC encoder, one loads with the video packer the first time), stored the way phone cameras store portrait video, so WhatsApp and other apps take it like any video from your gallery. <b>1080p · WhatsApp</b> is the default, as that's what WhatsApp Status shows; <b>4K</b> (2160 × 3840) is for TikTok, Instagram and YouTube Shorts and takes about three times as long. The pack opens on a poster of each clip and makes nothing until you pick: the clip you tap is made first, then the rest follow (tap another and it goes next), or <b>Make all</b> makes them in order. Frames are drawn straight into the shape the encoder takes, the background is reused while it holds still and the sound is made alongside, so a 1080p clip takes about half the time it used to. Each finished clip is played back on your phone before it's offered, and a size the phone can't play is made smaller by itself. Sound can be turned off. Phones that can't make video get the same graphics as 4K pictures. Sharing adds the site's link to the caption. Results clips show misses as well as wins.</p>
       <h3>Ask Statpad</h3>
       <p>Tap the microphone at the top, or <b>Ask Statpad</b> on the Matches tab, and speak straight away, or type, in English or Kiswahili. It listens until you've finished, sending your question once you've been quiet for 3 seconds (5, or only when you tap ✓, if you prefer): who wins a game, how a team is doing, the safest picks, a slip at any odds, the best value, what's at stake, title and relegation races, live scores, or how your bets are doing. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so it needs the internet and the microphone allowed for the site; the answers come from the same numbers as the rest of the page and are read aloud. Follow-ups such as "and tomorrow?" work, and so do names a little off. Some browsers don't offer voice input: type instead.</p>
       <h3>My bets</h3>
@@ -3761,7 +3834,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     for (let i = 0; i < NB; i++) {
       const a = (i + 0.6) / NB;
-      x.strokeStyle = hexA(col, a * 0.2); x.lineWidth = w * 3.6; x.stroke(B[i]);
+      if (a > 0.25) { x.strokeStyle = hexA(col, a * 0.2); x.lineWidth = w * 3.6; x.stroke(B[i]); }   // the faintest lines' halo (under 5%) isn't worth drawing
       x.strokeStyle = hexA(col, a); x.lineWidth = w; x.stroke(B[i]);
     }
   }
@@ -3781,8 +3854,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function mvWorld(x, t, F) {
     const { c1, c2 } = F, C = mvCam(t, F.sc.cam), W = MV.W, H = MV.H, wi = mvWI(t), tt = mvTau(t);
     x.fillStyle = SX.bg; x.fillRect(-40, -40, W + 80, H + 80);
-    // drifting fog in the clip's two colours
-    x.save(); x.globalAlpha = 0.95; x.drawImage(F.fog, -60 + Math.sin(tt * 0.21) * 30, -60 + Math.cos(tt * 0.17) * 40, W + 120, H + 120); x.restore();
+    // drifting fog in the clip's two colours (opaque, with its 5% of background already mixed in, so it's a copy, not a blend)
+    const fx0 = -60 + Math.sin(tt * 0.21) * 30, fy0 = -60 + Math.cos(tt * 0.17) * 40;
+    if (F.fogD) {   // video: the fog made once at full size, in the canvas's own orientation, and placed on whole pixels (it has no edges to step)
+      const M = x.getTransform(), X0 = M.a * fx0 + M.c * fy0 + M.e, Y0 = M.b * fx0 + M.d * fy0 + M.f, X1 = M.a * (fx0 + W + 120) + M.c * (fy0 + H + 120) + M.e, Y1 = M.b * (fx0 + W + 120) + M.d * (fy0 + H + 120) + M.f;
+      x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.imageSmoothingEnabled = false; x.drawImage(F.fogD, Math.round(Math.min(X0, X1)), Math.round(Math.min(Y0, Y1))); x.restore();
+    } else x.drawImage(F.fog, fx0, fy0, W + 120, H + 120);
     x.save(); x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
     const scanZ = -70 + ((tt * 40) % 190);
     mvLines(x, C, MV_GRID, c2, 0.34 * wi, 2, null, 230);
@@ -3831,23 +3908,32 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // per clip: fog, dust and the grain/vignette overlay (shared between clips of the same size)
   const MV_OVER = new Map();
-  function mvSetup(sc, D, Wpx, Hpx) {
-    const mk = (w, h) => (typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h }));
+  // rot: draw straight into the encoder's landscape frame (the picture turned a quarter left) instead of drawing
+  // upright and copying it round, which cost as much as a third of each frame
+  function mvSetup(sc, D, Wpx, Hpx, rot) {
+    const mk = mvCanvas;
     const [c1, c2] = sc.th, R = srng(shash(D.dk + sc.kind));
     const fog = mk(270, 480), fx = fog.getContext('2d');
     fx.fillStyle = SX.bg; fx.fillRect(0, 0, 270, 480);
     const blob = (X, Y, r, col) => { const g = fx.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); fx.fillStyle = g; fx.fillRect(0, 0, 270, 480); };
     blob(222, 60, 240, hexA(c1, .32)); blob(30, 380, 230, hexA(c2, .24)); blob(135, 250, 160, hexA(c1, .08)); blob(250, 420, 120, hexA(c2, .1));
+    fx.globalAlpha = 0.05; fx.fillStyle = SX.bg; fx.fillRect(0, 0, 270, 480); fx.globalAlpha = 1;
     const dust = []; for (let i = 0; i < 90; i++) dust.push(R() * MV.W, R() * MV.H, 0.2 + R() * 0.9, R() < 0.1 ? 3 + R() * 2.5 : 1.2 + R() * 1.6, R());
-    const key = Wpx + 'x' + Hpx;
+    const key = Wpx + 'x' + Hpx + (rot ? 'r' : '');
     if (!MV_OVER.has(key)) {
-      const o = mk(Wpx, Hpx), ox = o.getContext('2d');
+      const o = rot ? mk(Hpx, Wpx) : mk(Wpx, Hpx), ox = o.getContext('2d');
+      if (rot) ox.setTransform(0, -1, 1, 0, 0, Wpx);
       const v = ox.createRadialGradient(Wpx / 2, Hpx * 0.47, Wpx * 0.45, Wpx / 2, Hpx / 2, Hpx * 0.68); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.62)');
       ox.fillStyle = v; ox.fillRect(0, 0, Wpx, Hpx);
       MV_OVER.clear(); MV_OVER.set(key, o);
     }
-    const c = mk(Wpx, Hpx);
-    return { c, x: c.getContext('2d', { alpha: false }), k: Wpx / MV.W, Wpx, Hpx, sc, D, c1, c2, cr: D.cr, fog, dust: new Float32Array(dust), over: MV_OVER.get(key), fi: 0 };
+    const c = rot ? mk(Hpx, Wpx) : mk(Wpx, Hpx);
+    let fogD = null;
+    if (rot && Wpx <= 1440) {   // the video's fog, scaled up once rather than every frame (not at 4K: too much memory for a phone)
+      const k = Wpx / MV.W, fw = Math.round((MV.W + 120) * k), fh = Math.round((MV.H + 120) * k);
+      fogD = mk(fh, fw); const gx = fogD.getContext('2d', { alpha: false }); gx.setTransform(0, -1, 1, 0, 0, fw); gx.imageSmoothingQuality = 'high'; gx.drawImage(fog, 0, 0, fw, fh);
+    }
+    return { c, fogD, x: c.getContext('2d', { alpha: false }), k: Wpx / MV.W, Wpx, Hpx, rot: !!rot, sc, D, c1, c2, cr: D.cr, fog, dust: new Float32Array(dust), over: MV_OVER.get(key), fi: 0 };
   }
 
   // ---- the frame around every clip ----
@@ -3976,8 +4062,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     x.save(); x.setTransform(1, 0, 0, 1, 0, 0);
     for (let i = 0; i < 7; i++) {
       const sy = (y0 + R() * (y1 - y0)) * k, h = (5 + R() * 34) * k, dx = (R() - 0.5) * 2 * amt * k * (1 - u);
-      x.drawImage(F.c, 0, sy, F.Wpx, h, dx, sy, F.Wpx, h);
-      if (R() < 0.4) { x.globalCompositeOperation = 'lighter'; x.fillStyle = hexA(R() < 0.5 ? F.c1 : F.c2, 0.18); x.fillRect(0, sy, F.Wpx, h * 0.4); x.globalCompositeOperation = 'source-over'; }
+      // a slice across the picture; in the turned frame that's a column, and a shift right is a shift up
+      if (F.rot) x.drawImage(F.c, sy, 0, h, F.Wpx, sy, -dx, h, F.Wpx); else x.drawImage(F.c, 0, sy, F.Wpx, h, dx, sy, F.Wpx, h);
+      if (R() < 0.4) { x.globalCompositeOperation = 'lighter'; x.fillStyle = hexA(R() < 0.5 ? F.c1 : F.c2, 0.18); if (F.rot) x.fillRect(sy, 0, h * 0.4, F.Wpx); else x.fillRect(0, sy, F.Wpx, h * 0.4); x.globalCompositeOperation = 'source-over'; }
     }
     x.restore();
   }
@@ -4056,13 +4143,32 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
 
   // ---- one frame ----
+  const mvCanvas = (w, h) => (typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h }));
+  // set an upright-picture transform; on a turned canvas it's composed with the quarter turn
+  function mvST(x, F, a, b, c, d, e, f) { if (F.rot) x.setTransform(b, -a, d, -c, f, F.Wpx - e); else x.setTransform(a, b, c, d, e, f); }
+  // The world behind the clip is drawn fresh every frame while it moves. While the numbers are up its clock runs at
+  // 3% and the camera holds still, so when a video is being made it's drawn every few frames into a spare canvas
+  // (with a margin for the shakes) and copied in between: a quarter of the frames, for the same picture.
+  function mvWorldAt(x, t, F, dx, dy) {
+    const k = F.k;
+    if (!F.enc || t < 2.3 || t > MV.CUT - 0.15) { mvST(x, F, k, 0, 0, k, dx * k, dy * k); mvWorld(x, t, F); return; }
+    const m = Math.ceil(40 * k), tt = mvTau(t);
+    if (!F.wc) { F.wc = F.rot ? mvCanvas(F.Hpx + 2 * m, F.Wpx + 2 * m) : mvCanvas(F.Wpx + 2 * m, F.Hpx + 2 * m); F.wx = F.wc.getContext('2d', { alpha: false }); F.wcT = -9; }
+    if (Math.abs(tt - F.wcT) > 0.0035) {
+      const w = F.wx; w.globalAlpha = 1; w.globalCompositeOperation = 'source-over';
+      if (F.rot) w.setTransform(0, -k, k, 0, m, F.Wpx + m); else w.setTransform(k, 0, 0, k, m, m);
+      mvWorld(w, t, F); F.wcT = tt;
+    }
+    x.setTransform(1, 0, 0, 1, 0, 0);
+    x.drawImage(F.wc, (F.rot ? dy : dx) * k - m, (F.rot ? -dx : dy) * k - m);
+  }
   function mvFrame(F, t, fi) {
     const { x, k, sc } = F; F.fi = fi || 0;
     const sk0 = SK; SK = k; MV_BOOST = true;
     x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.filter = 'none';
     const [dx, dy] = mvShakeAt((sc.shakes || []).concat([[0.64, 8]]), t);
-    x.setTransform(k, 0, 0, k, dx * k, dy * k);
-    mvWorld(x, t, F);
+    mvWorldAt(x, t, F, dx, dy);
+    mvST(x, F, k, 0, 0, k, dx * k, dy * k);
     const cu = tw(t, MV.CUT, 0.34);
     if (cu < 1) {
       x.save();
@@ -4083,13 +4189,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     if (t >= MV.END - 0.02) mvEnd(x, t, F);
     x.setTransform(1, 0, 0, 1, 0, 0);
-    x.drawImage(F.over, 0, 0);
+    x.drawImage(F.over, 0, 0);   // the overlay is made in the canvas's own orientation
     // boot: a line of light opens into the picture
     if (t < 0.62) {
       const ul = ez.o3(tw(t, 0, 0.22)), ua = ez.ox(tw(t, 0.15, 0.47)), hh = (MV.H / 2) * ua * k, cy = (MV.H / 2) * k, W = F.Wpx;
+      mvST(x, F, 1, 0, 0, 1, 0, 0);
       x.fillStyle = '#000'; x.fillRect(0, 0, W, cy - hh); x.fillRect(0, cy + hh, W, F.Hpx - (cy + hh));
       if (ua < 0.98) {
-        x.setTransform(k, 0, 0, k, 0, 0);
+        mvST(x, F, k, 0, 0, k, 0, 0);
         const wl = 540 * ul, yy = 960 - (MV.H / 2) * ua, yy2 = 960 + (MV.H / 2) * ua;
         x.save(); x.globalCompositeOperation = 'lighter';
         for (const Y of ua > 0.01 ? [yy, yy2] : [960]) { x.fillStyle = stGrad(x, 540 - wl, 0, 540 + wl, 0, [[0, hexA(F.c1, 0)], [0.5, `rgba(255,255,255,${1 - ua})`], [1, hexA(F.c1, 0)]]); x.fillRect(540 - wl, Y - 3, 2 * wl, 6); }
@@ -5658,35 +5765,36 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     });
   }
   const mvSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // let the page breathe between frames without setTimeout's 4 ms minimum
+  const MV_CH = typeof MessageChannel !== 'undefined' ? new MessageChannel() : null, MV_Q = [];
+  if (MV_CH) MV_CH.port1.onmessage = () => { const r = MV_Q.shift(); if (r) r(); };
+  const mvYield = () => (window.scheduler && typeof scheduler.yield === 'function' ? scheduler.yield() : MV_CH ? new Promise((r) => { MV_Q.push(r); MV_CH.port2.postMessage(0); }) : mvSleep(0));
   async function mvEncode(sc, D, R, AC, onProg, alive) {
-    const M = await loadMedia(), F = mvSetup(sc, D, R.w, R.h), N = Math.round(MV.DUR * MV.FPS);
-    // the landscape frame the encoder gets: the portrait picture turned a quarter left; the file's flag turns it back
-    const mk = (w, h) => (typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h }));
-    const L = mk(R.cw, R.ch), lx = L.getContext('2d', { alpha: false });
+    // the frames are drawn already turned a quarter left, the landscape shape the encoder gets; the file's flag turns them back
+    const M = await loadMedia(), F = mvSetup(sc, D, R.w, R.h, true), N = Math.round(MV.DUR * MV.FPS);
+    F.enc = true;
     const out = new M.Output({ format: new M.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new M.BufferTarget() });
-    const vs = new M.CanvasSource(L, { codec: 'avc', bitrate: R.br, keyFrameInterval: 2, fullCodecString: R.codec, latencyMode: 'quality' });
+    const vs = new M.CanvasSource(F.c, { codec: 'avc', bitrate: R.br, keyFrameInterval: 2, fullCodecString: R.codec, latencyMode: 'quality' });
     out.addVideoTrack(vs, { frameRate: MV.FPS, rotation: R.rot });
     let as = null;
     if (AC) { as = new M.AudioBufferSource({ codec: 'aac', bitrate: 160000 }); out.addAudioTrack(as); }
-    const buf = AC ? await mvAudio(sc, D) : null;
-    let ok = false;
+    let ok = false, ap = null;
     try {
       await out.start();
-      if (as) {   // the sound first: it's quick, and if it fails the clip is remade silent
-        try { await as.add(buf); as.close(); } catch (e) { e.stage = 'audio'; throw e; }
-      }
+      // the sound is mixed and encoded on other threads while the frames are drawn; if it fails the clip is remade silent
+      if (as) { ap = mvAudio(sc, D).then((buf) => as.add(buf)).then(() => as.close()).catch((e) => { const er = e instanceof Error ? e : new Error('sound'); er.stage = 'audio'; throw er; }); ap.catch(() => {}); }
       for (let i = 0; i < N; i++) {
         if (!alive()) throw new Error('stopped');
         mvFrame(F, i / MV.FPS, i);
-        lx.setTransform(0, -1, 1, 0, 0, R.w); lx.drawImage(F.c, 0, 0);
         await vs.add(i / MV.FPS, 1 / MV.FPS);
-        if (i % 2 === 1) { onProg((i + 1) / N); await mvSleep(0); }
+        if (i % 3 === 2) { onProg((i + 1) / N); await mvYield(); }
       }
       vs.close();
+      if (ap) await ap;
       await out.finalize(); ok = true;
     } finally {
       if (!ok) { try { await out.cancel(); } catch (e) { /* already gone */ } }
-      F.c.width = F.c.height = 1; L.width = L.height = 1;
+      F.c.width = F.c.height = 1; if (F.wc) F.wc.width = F.wc.height = 1; if (F.fogD) F.fogD.width = F.fogD.height = 1;
     }
     const blob = new Blob([out.target.buffer], { type: 'video/mp4' });
     if (!(await mvPlayable(blob))) { const e = new Error('This phone could not play the clip back'); e.stage = 'video'; throw e; }
@@ -5730,15 +5838,21 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return D;
   }
   const ST_NAMES = { miracles: 'Weekend miracles', safe: 'Safest pick', upset: 'Upset alert', stakes: 'Most at stake', slip: 'Odds slip', goals: 'Goal rush', score: 'Exact score', match: 'Match of the day', value: 'Best value', results: 'Results', movers: 'Price drop', form: 'In form', today: 'Matchday' };
+  // The pack opens on its posters and makes nothing until the person picks: tap a clip and it's made first, then the
+  // rest follow in order; tap another while one is being made and it goes next (or straight away, if the one being
+  // made wasn't picked and isn't past half way). "Make all" makes them in order.
   async function openStatus(opener) {
     S.open = 'status:'; S.opener = opener || document.activeElement;
-    const sh = $('#sheet');
+    const sh = $('#sheet'), want = S.stWant;
     renderSheet();
     sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; $('#sheetBody').scrollTop = 0;
     const q = store.get('stq2', 'hd'), snd = store.get('stsnd', true), key = [S.ver, (briefingDay() || {}).key || '', S.target, q, snd].join('|');
+    // the video maker (and the sound encoder, where the phone needs one) download while the posters are drawn
+    if (typeof VideoEncoder !== 'undefined') loadMedia().then((M) => (snd ? loadAac(M) : null)).catch(() => {});
     if (!S.stPack || S.stPack.key !== key) {
-      if (S.stPack) mvDrop(S.stPack);
-      S.stPack = { key, q, snd, posters: [], vids: [], prog: null };
+      const was = S.stPack;
+      if (was) mvDrop(was);
+      S.stPack = { key, q, snd, posters: [], vids: [], prog: null, order: [], picked: new Set(), go: !!(was && was.go) };
       try {
         const D = await statusPrep();
         if (!D) { S.stPack.none = true; }
@@ -5749,8 +5863,27 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         }
       } catch (e) { S.stPack.err = String(e && e.message || e); }
     }
-    if (S.stPack && S.stPack.noMux) { delete S.stPack.novideo; delete S.stPack.noMux; }   // try loading the video maker again
+    S.stWant = null;
+    const P = S.stPack;
+    if (P && P.noMux) { delete P.novideo; delete P.noMux; }   // try loading the video maker again
+    if (P && P.D) {
+      for (let i = 0; i < P.D.scenes.length; i++) if (!P.order.includes(i)) P.order.push(i);
+      const j = want ? P.D.scenes.findIndex((sc) => sc.kind === want) : -1;
+      if (j >= 0) stPick(j, true);   // opened from a particular clip: that one is the pick
+    }
     if (S.open === 'status:') { renderSheet(); mvRun(); }
+  }
+  function stPick(i, quiet) {
+    const P = S.stPack; if (!P || !P.D || P.vids[i] || P.novideo || i >= P.D.scenes.length) return;
+    const cur = P.running && P.prog ? P.prog.i : null;
+    P.order = [i, ...P.order.filter((j) => j !== i)];
+    if (cur != null && cur !== i && !P.picked.has(cur) && P.prog.u < 0.5) { P.cut = true; P.order = [i, cur, ...P.order.filter((j) => j !== i && j !== cur)]; }
+    P.picked.add(i); P.go = true;
+    if (!quiet) { buzz(6); renderSheet(); mvRun(); }
+  }
+  function stGoAll() {
+    const P = S.stPack; if (!P || !P.D) return;
+    P.go = true; buzz(6); renderSheet(); mvRun();
   }
   async function mvPosters(P) {
     for (let i = P.posters.length; i < P.D.scenes.length; i++) { const sc = P.D.scenes[i], b = await mvStill(sc, P.D, 540, 960, 'image/jpeg', 0.86); P.posters.push({ k: sc.kind, url: URL.createObjectURL(b) }); }
@@ -5761,7 +5894,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const D = P.D, next = D.plan.slice(D.scenes.length, D.scenes.length + 4); if (!next.length) return;
     P.adding = true; renderSheet();
     try {
-      next.forEach((k) => D.scenes.push(mvBuild(D, k, D.scenes.length)));
+      next.forEach((k) => { P.order.push(D.scenes.length); D.scenes.push(mvBuild(D, k, D.scenes.length)); });
       await mvPosters(P); mvRemember(D.dk, next);
     } finally { P.adding = false; }
     if (S.open === 'status:' && S.stPack === P) { renderSheet(); mvRun(); }
@@ -5769,30 +5902,36 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function mvDrop(P) { for (const i of [...(P.posters || []), ...(P.vids || []), ...(P.pics || [])]) if (i && i.url) URL.revokeObjectURL(i.url); P.dead = true; }
   // make the videos, one after another, while the sheet is open
   async function mvRun() {
-    const P = S.stPack; if (!P || !P.D || P.running || P.novideo) return;
+    const P = S.stPack; if (!P || !P.D || P.running || P.novideo || !P.go) return;
     P.running = true;
     const alive = () => S.open === 'status:' && S.stPack === P && !P.dead;
     try {
-      if (!P.R) { P.R = await mvVideoRes(P.q); P.AC = P.snd ? await mvAudioCodec() : null; if (!P.R) { P.novideo = 'This browser can’t make videos. Pictures are ready instead.'; return; } }
+      if (!P.R) {
+        P.R = await mvVideoRes(P.q); P.AC = P.snd ? await mvAudioCodec() : null;
+        if (!P.R) { P.novideo = 'This browser can’t make videos. Pictures are ready instead.'; return; }
+        if (alive()) renderSheet();
+      }
       await loadMedia();
-      for (let i = 0; i < P.D.scenes.length; i++) {
-        if (P.vids[i]) continue;
+      for (;;) {
+        const i = P.order.find((j) => !P.vids[j] && j < P.D.scenes.length); if (i == null) break;
         if (!alive()) return;
-        P.prog = { i, u: 0, t0: performance.now() }; mvPaintProg();
+        P.prog = { i, u: 0, t0: performance.now() }; P.cut = false; renderSheet();
         let blob = null;
         for (;;) {
-          try { blob = await mvEncode(P.D.scenes[i], P.D, P.R, P.AC, (u) => { P.prog.u = u; mvPaintProg(); }, alive); break; }
+          try { blob = await mvEncode(P.D.scenes[i], P.D, P.R, P.AC, (u) => { P.prog.u = u; mvPaintProg(); }, () => alive() && !P.cut); break; }
           catch (e) {
             if (!alive()) return;
+            if (P.cut) break;   // another clip was picked: make that one now, this one straight after
             if (e && e.stage === 'audio' && P.AC) { P.AC = null; continue; }   // sound failed: make it silent
             const lower = await mvVideoRes(P.q, P.R);   // this size failed: try the next one down
             if (!lower) throw e;
             P.R = lower;
           }
         }
+        if (!blob) continue;
         const sc = P.D.scenes[i];
         P.vids[i] = { k: sc.kind, blob, url: URL.createObjectURL(blob), name: `statpad-${P.dk}-${i + 1}-${sc.kind}.mp4`, ms: Math.round(performance.now() - P.prog.t0) };
-        P.prog = null;
+        P.order = P.order.filter((j) => j !== i); P.prog = null;
         if (alive()) renderSheet();
       }
     } catch (e) {
@@ -5809,11 +5948,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function mvPaintProg() {
     const P = S.stPack; if (!P || !P.prog) return;
     const el = document.querySelector(`[data-stprog="${P.prog.i}"]`); if (!el) return;
-    el.hidden = false; const u = P.prog.u;
+    el.hidden = false; el.classList.remove('idle', 'next'); const u = P.prog.u;
     el.querySelector('i').style.width = Math.round(u * 100) + '%';
     const left = u > 0.04 ? Math.max(1, Math.round((performance.now() - P.prog.t0) / u * (1 - u) / 1000)) : null;
     el.querySelector('span').textContent = `Making ${Math.round(u * 100)}%${left ? ` · about ${left} s` : ''}`;
-    const all = document.querySelector('[data-stall]'); if (all) all.textContent = `Making video ${P.prog.i + 1} of ${P.posters.length}…`;
+    const all = document.querySelector('[data-stall]'); if (all) all.textContent = `Making ${P.vids.filter(Boolean).length + 1} of ${P.posters.length}…`;
   }
   function renderStatusSheet() {
     $('#sheetTitle').textContent = 'WhatsApp Status pack';
@@ -5826,12 +5965,21 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const snd = !P.snd ? 'without sound' : P.AC ? 'with sound' : P.R ? 'silent (the sound encoder didn’t load: try again with a connection)' : 'with sound';
     const label = (sc) => (sc.title ? sc.title.charAt(0) + sc.title.slice(1).toLowerCase() : ST_NAMES[sc.kind]);
     const n = P.posters.length, nw = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'][n] || String(n), left = P.D.plan.length - P.D.scenes.length;
-    const html = `<p class="note st-intro">${vid ? `${nw} 11-second ${n === 1 ? 'video' : 'videos'} for ${esc(when)}, ${res} ${snd}, sized for WhatsApp Status. They're made on your phone, one after another: keep this open until they're done.` : esc(P.novideo)}</p>
+    const done = P.vids.filter(Boolean), avg = done.length ? Math.max(1, Math.round(done.reduce((s, v) => s + v.ms, 0) / done.length / 1000)) : 0;
+    const nextI = P.go ? P.order.find((j) => !P.vids[j] && !(P.prog && P.prog.i === j)) : null;
+    const how = !P.go ? 'Tap the one you want first: it’s made on your phone straight away, and the rest follow. Or make them all in order.'
+      : all ? `Made on your phone${avg ? `, about ${avg} s each` : ''}.` : `They’re made on your phone${avg ? `, about ${avg} s each here` : ''}: keep this open until they’re done. Tap a waiting clip to make it next.`;
+    const html = `<p class="note st-intro">${vid ? `${nw} 11-second ${n === 1 ? 'video' : 'videos'} for ${esc(when)}, ${res} ${snd}, sized for WhatsApp Status. ${how}` : esc(P.novideo)}</p>
       ${vid ? `<div class="st-q"><span class="st-opt"><span class="lbl">Quality</span><span class="seg" id="stQ" role="group" aria-label="Video quality"><button type="button" data-stq="hd" aria-pressed="${P.q !== '4k'}">1080p · WhatsApp</button><button type="button" data-stq="4k" aria-pressed="${P.q === '4k'}">4K</button></span></span><span class="st-opt"><span class="lbl">Sound</span><span class="seg" id="stS" role="group" aria-label="Sound"><button type="button" data-stsnd="1" aria-pressed="${!!P.snd}">On</button><button type="button" data-stsnd="0" aria-pressed="${!P.snd}">Off</button></span></span></div>` : ''}
-      <div class="st-acts">${vid ? `<button type="button" class="btn pri" data-stshare="all"${all ? '' : ' disabled'}><span data-stall>${all ? `Share all ${n}` : `Making video ${Math.min(n, ready + 1)} of ${n}…`}</span></button><button type="button" class="btn" data-stsave="all"${all ? '' : ' disabled'}>Save all</button>` : `<button type="button" class="btn pri" data-stpics="share">Share all ${n}</button><button type="button" class="btn" data-stpics="save">Save all</button>`}</div>
+      <div class="st-acts">${!vid ? `<button type="button" class="btn pri" data-stpics="share">Share all ${n}</button><button type="button" class="btn" data-stpics="save">Save all</button>`
+        : !P.go && !all ? `<button type="button" class="btn pri" data-stgo="all">Make all ${n}</button>`
+        : `<button type="button" class="btn pri" data-stshare="all"${all ? '' : ' disabled'}><span data-stall>${all ? `Share all ${n}` : `Making ${Math.min(n, ready + 1)} of ${n}…`}</span></button><button type="button" class="btn" data-stsave="all"${all ? '' : ' disabled'}>Save all</button>`}</div>
       <div class="st-grid">${P.posters.map((po, i) => {
-        const v = P.vids[i], sc = P.D.scenes[i];
-        return `<figure class="st-fig"><div class="st-media">${v ? `<video src="${v.url}" poster="${po.url}" controls playsinline preload="metadata" loop></video>` : `<img src="${po.url}" alt="${esc(label(sc))}" loading="lazy"><div class="st-prog" data-stprog="${i}"${vid ? '' : ' hidden'}><span>${vid ? 'Waiting' : ''}</span><b><i></i></b></div>`}</div>
+        const v = P.vids[i], sc = P.D.scenes[i], cur = !!(P.prog && P.prog.i === i);
+        const media = v ? `<video src="${v.url}" poster="${po.url}" controls playsinline preload="metadata" loop></video>`
+          : !vid ? `<img src="${po.url}" alt="${esc(label(sc))}" loading="lazy">`
+          : `<button type="button" class="st-pick${cur ? ' on' : ''}" data-stpick="${i}" aria-label="${cur ? 'Making' : 'Make'} ${esc(label(sc))}${cur ? '' : P.go ? ' next' : ' first'}"><img src="${po.url}" alt="" loading="lazy"><span class="st-prog${cur ? '' : ' idle'}${!cur && i === nextI ? ' next' : ''}" data-stprog="${i}"><span>${cur ? 'Starting…' : !P.go ? 'Make this first' : i === nextI ? 'Next' : 'Make this next'}</span><b><i></i></b></span></button>`;
+        return `<figure class="st-fig"><div class="st-media">${media}</div>
           <figcaption><span>${i + 1}. ${esc(label(sc))}</span>${v ? `<button type="button" class="btn sm" data-stshare="${i}">Share</button>` : !vid ? `<button type="button" class="btn sm" data-stpics="${i}">Share</button>` : ''}</figcaption></figure>`;
       }).join('')}</div>
       ${left > 0 ? `<button type="button" class="btn st-more" data-stmore="1"${P.adding ? ' disabled' : ''}>${P.adding ? 'Adding…' : `${Math.min(4, left)} more ${Math.min(4, left) === 1 ? 'clip' : 'clips'} for ${esc(when)}`}</button>` : ''}
@@ -5878,13 +6026,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     mvDownload(list, list.length > 1 ? 'Saving the pictures' : 'Picture saved');
   }
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-statuspack],[data-stshare],[data-stsave],[data-stpics],[data-stq],[data-stsnd],[data-stmore]'); if (!t) return;
+    const t = e.target.closest('[data-statuspack],[data-stshare],[data-stsave],[data-stpics],[data-stq],[data-stsnd],[data-stmore],[data-stpick],[data-stgo]'); if (!t) return;
     e.stopPropagation();
     if (t.dataset.statuspack != null) { S.stWant = t.dataset.statuspack !== '1' ? t.dataset.statuspack : null; openStatus(t); }
     else if (t.dataset.stshare != null) stShare(t.dataset.stshare);
     else if (t.dataset.stsave != null) stSave(t.dataset.stsave);
     else if (t.dataset.stpics != null) stPics(t.dataset.stpics);
     else if (t.dataset.stmore) mvMore();
+    else if (t.dataset.stpick != null) stPick(+t.dataset.stpick);
+    else if (t.dataset.stgo) stGoAll();
     else if (t.dataset.stq) { if (store.get('stq2', 'hd') === t.dataset.stq) return; store.set('stq2', t.dataset.stq); buzz(6); openStatus(S.opener); }
     else if (t.dataset.stsnd) { const v = t.dataset.stsnd === '1'; if (store.get('stsnd', true) === v) return; store.set('stsnd', v); buzz(6); openStatus(S.opener); }
   });
@@ -5902,6 +6052,30 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const h = {}, week = [];
     for (let i = 0; i < 7; i++) { const dk = dayKey(Date.parse(D.dk + 'T12:00:00') + i * 864e5), p = mvPlan(Object.assign({}, D, { dk }), h).slice(0, 4); h[dk] = p; week.push(dk.slice(5) + ' ' + p.join(',')); }
     return { plan: D.plan, scores: MV_LIB.map((f) => [f.k, Math.round(f.score(D) * 100) / 100]), titles: D.scenes.map((sc) => sc.title), week };
+  }
+  // where a clip's time goes, and a check that the turned, cached drawing matches the upright one
+  async function mvDebugProf(i, q, n) {
+    const D = S.mvDbg || (S.mvDbg = await statusPrep()), R = await mvVideoRes(q || 'hd'), sc = typeof i === 'string' ? mvBuild(D, i, 0) : D.scenes[i], N = n || Math.round(MV.DUR * MV.FPS), out = {};
+    const A = mvSetup(sc, D, R.w, R.h), B = mvSetup(sc, D, R.w, R.h, true); B.enc = true;
+    let t0 = performance.now();
+    for (let k = 0; k < N; k++) { mvFrame(A, k / MV.FPS, k); A.x.getImageData(0, 0, 1, 1); }   // each frame really drawn, as the encoder makes it
+    out.upright = performance.now() - t0;
+    t0 = performance.now();
+    for (let k = 0; k < N; k++) { mvFrame(B, k / MV.FPS, k); B.x.getImageData(0, 0, 1, 1); }
+    out.turned = performance.now() - t0;
+    // the same moments both ways: turn B back and compare
+    const T = mvCanvas(R.w, R.h), tx = T.getContext('2d'); out.diff = [];
+    for (const tt of [0.2, 1.0, 2.4, 3.1, 5.0, 6.9, 7.8, 9.5]) {
+      const fi = Math.round(tt * MV.FPS);
+      if (tt > 2.3) for (let k = Math.max(0, fi - 6); k < fi; k++) mvFrame(B, k / MV.FPS, k);   // as in a real run: the cache from a few frames back
+      mvFrame(A, tt, fi); mvFrame(B, tt, fi);
+      tx.setTransform(0, 1, -1, 0, R.w, 0); tx.drawImage(B.c, 0, 0);
+      const a = A.x.getImageData(0, 0, R.w, R.h).data, b = tx.getImageData(0, 0, R.w, R.h).data;
+      let sum = 0, big = 0; for (let p = 0; p < a.length; p += 4) { const d = Math.abs(a[p] - b[p]) + Math.abs(a[p + 1] - b[p + 1]) + Math.abs(a[p + 2] - b[p + 2]); sum += d; if (d > 48) big++; }
+      out.diff.push([tt, +(sum / (a.length / 4) / 3).toFixed(2), +(100 * big / (a.length / 4)).toFixed(3)]);
+    }
+    A.c.width = A.c.height = 1; B.c.width = B.c.height = 1;
+    return { N, R, out };
   }
   async function mvDebugClip(i, q, noAudio) {
     const D = S.mvDbg || (S.mvDbg = await statusPrep());
@@ -7238,6 +7412,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const was = S.shk.liveN || 0;
     shockRefresh(); S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
     if (S.tab === 'matches' && !!was !== !!S.shk.liveN) renderMatches();
+    else if (S.tab === 'matches' && was !== S.shk.liveN) renderExplore();
     if (S.tab === 'matches' && S.ready) renderSpot();
     if (S.tab === 'track') { const w = $('#tkWait'); if (w) w.innerHTML = tkWaitHtml(S.tkT); }
   }
@@ -7439,7 +7614,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   setInterval(esTick, 10e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) esTick(); });
-  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, render: () => render(), mvShot: (...a) => mvDebugShot(...a), mvPlan: () => mvDebugPlan(), mvClip: (...a) => mvDebugClip(...a), esStatus, esTick, esRow, esTuple, esPair, esSim, gsRun: () => gsRun(), gsSolve: (...a) => gsSolve(...a), gsRows: (d) => gsRows(d), openMatch: (id) => openMatch(id), fpTime: (id) => { const t = performance.now(); const c = fpPoster(S.byId.get(id)); const t1 = performance.now(); return new Promise((res) => c.toBlob((b) => res([t1 - t, performance.now() - t1, b.size]), 'image/jpeg', 0.92)); }, mvxTime: (n, mode) => { const cv = document.querySelector('canvas.mvx-cv'); const t = performance.now(); for (let i = 0; i < n; i++) { window.__mvxMode = mode; mvxDraw(cv, performance.now()); } cv.getContext('2d').getImageData(0, 0, 1, 1); return (performance.now() - t) / n; }, mvxBench: (id) => { const r = S.byId.get(id), st = mvxState(r); S.mvx.cache.delete(id); let t = performance.now(); const X = mvxSim(r, st); const ts = performance.now() - t; const cv = document.querySelector('canvas.mvx-cv'); t = performance.now(); const D = cv && cv._mvx ? mvxDensity(cv._mvx, X) : null; const td = performance.now() - t; t = performance.now(); if (D) mvxPaint(D, -1, cv._mvx.G); return { sim: ts, dens: td, paint: performance.now() - t }; } };   // for the test scripts
+  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, render: () => render(), mvShot: (...a) => mvDebugShot(...a), mvPlan: () => mvDebugPlan(), mvClip: (...a) => mvDebugClip(...a), mvProf: (...a) => mvDebugProf(...a), esStatus, esTick, esRow, esTuple, esPair, esSim, gsRun: () => gsRun(), gsSolve: (...a) => gsSolve(...a), gsRows: (d) => gsRows(d), openMatch: (id) => openMatch(id), fpTime: (id) => { const t = performance.now(); const c = fpPoster(S.byId.get(id)); const t1 = performance.now(); return new Promise((res) => c.toBlob((b) => res([t1 - t, performance.now() - t1, b.size]), 'image/jpeg', 0.92)); }, mvxTime: (n, mode) => { const cv = document.querySelector('canvas.mvx-cv'); const t = performance.now(); for (let i = 0; i < n; i++) { window.__mvxMode = mode; mvxDraw(cv, performance.now()); } cv.getContext('2d').getImageData(0, 0, 1, 1); return (performance.now() - t) / n; }, mvxBench: (id) => { const r = S.byId.get(id), st = mvxState(r); S.mvx.cache.delete(id); let t = performance.now(); const X = mvxSim(r, st); const ts = performance.now() - t; const cv = document.querySelector('canvas.mvx-cv'); t = performance.now(); const D = cv && cv._mvx ? mvxDensity(cv._mvx, X) : null; const td = performance.now() - t; t = performance.now(); if (D) mvxPaint(D, -1, cv._mvx.G); return { sim: ts, dens: td, paint: performance.now() - t }; } };   // for the test scripts
   document.addEventListener('input', (e) => {
     const d = e.target.dataset || {};
     if (d.man) {
@@ -7762,7 +7937,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const real = st.mode === 'ft' ? mvxOutOf(`${st.L.h}–${st.L.a}`) : -1, name = [m.h, 'Draw', m.a];
     const aria = `${mvxN(X.cnt[0])} ${m.h} wins, ${mvxN(X.cnt[1])} draws and ${mvxN(X.cnt[2])} ${m.a} wins out of 10,000`;
     return `<div class="card mvx" id="mvx"><h4>Multiverse <span>${sub}</span></h4>
-      <div class="mvx-stage"><canvas class="mvx-u" aria-hidden="true"></canvas><canvas class="mvx-cv" data-mvx="${esc(m.id)}" role="img" aria-label="${esc(aria)}"></canvas><canvas class="mvx-o" aria-hidden="true"></canvas></div>
+      <div class="mvx-stage${mvgOK() ? ' g3' : ''}"><canvas class="mvx-u" aria-hidden="true"></canvas><canvas class="mvx-cv" data-mvx="${esc(m.id)}" role="img" aria-label="${esc(aria)}"></canvas><canvas class="mvx-o" aria-hidden="true"></canvas></div>
       <div class="mvx-b" role="group" aria-label="Show one ending">${MVX_K.map((k, o) => `<button type="button" class="mvx-k k${k}${o === real ? ' real' : ''}" data-mvxb="${k}" aria-pressed="${sel === k}"><span><i></i><em>${esc(name[o])}</em></span><b>${mvxN(X.cnt[o])}</b><small>${o === real ? 'real result' : pct(X.cnt[o] / X.N)}</small></button>`).join('')}</div>
       <p class="mvx-say">${mvxSay(r, st, X)}</p><p class="mvx-sel" aria-live="polite">${sel ? mvxPickLine(r, X, sel) : 'Tap an ending to follow only the universes that reach it.'}</p>
       ${st.mode === 'nolive' ? '<p class="note">The live score isn’t in yet, so this is the game as it looked at kick-off.</p>' : ''}</div>`;
@@ -7807,7 +7982,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // half the width of lane k's band at column c: a full lane when every universe is in it
   const mvxHw = (D, G, c, k, n, of) => { const sh = n / of; return sh < 4e-4 ? 0 : Math.max(0.7, 0.5 * G.ln * Math.sqrt(sh)) * (0.3 + 0.7 * Math.min(1, (D.ts[c] - D.t0) / 4)); };
-  function mvxPaint(D, sel, G) {   // the river in colour; with an ending chosen, only its universes, the rest a ghost
+  function mvxPaint(D, sel, G, CC, hotK) {   // the river in colour; with an ending chosen, only its universes, the rest a ghost
+    CC = CC || MVX_C; hotK = hotK == null ? 0.42 : hotK;
     const { Lc, nc, R, pad } = D, acc = new Float32Array(nc * R * 4), img = new ImageData(nc, R), P = img.data;
     const band = (c, k, n, of, mix, A) => {
       const hw = mvxHw(D, G, c, k, n, of); if (!hw) return;
@@ -7820,13 +7996,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     };
     for (let c = 0; c < nc; c++) for (let k = 0; k < 7; k++) {
       const i = (c * 7 + k) * 3, m = [Lc[i], Lc[i + 1], Lc[i + 2]], n = m[0] + m[1] + m[2]; if (n < 0.5) continue;
-      const mix = [0, 1, 2].map((ch) => (m[0] * MVX_C[0][ch] + m[1] * MVX_C[1][ch] + m[2] * MVX_C[2][ch]) / n);
+      const mix = [0, 1, 2].map((ch) => (m[0] * CC[0][ch] + m[1] * CC[1][ch] + m[2] * CC[2][ch]) / n);
       if (sel < 0) band(c, k, n, D.N, mix, 1);
-      else { band(c, k, n, D.N, [150, 160, 190], 0.14); if (m[sel] >= 0.5 && D.cnt[sel]) band(c, k, m[sel], D.cnt[sel], MVX_C[sel], 1); }
+      else { band(c, k, n, D.N, [150, 160, 190], 0.14); if (m[sel] >= 0.5 && D.cnt[sel]) band(c, k, m[sel], D.cnt[sel], CC[sel], 1); }
     }
     for (let i = 0, n = nc * R; i < n; i++) {
       const j = i * 4, a = acc[j + 3]; if (a < 0.004) continue;
-      const al = Math.min(1, a), hot = Math.pow(al, 6) * 0.42;
+      const al = Math.min(1, a), hot = Math.pow(al, 6) * hotK;
       for (let ch = 0; ch < 3; ch++) { const col = acc[j + ch] / a; P[j + ch] = col + (255 - col) * hot; }
       P[j + 3] = al * 235;
     }
@@ -7883,10 +8059,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function mvxSync(cv) {   // (re)build what changed: the size, the simulation, the chosen ending
     const r = S.byId && S.byId.get(cv.dataset.mvx); if (!r || !r.a || !r.a.M) return null;
+    const st = mvxState(r), X = mvxSim(r, st), dpr = Math.min(2, window.devicePixelRatio || 1), g3 = mvgOK();
+    if (cv.parentNode) cv.parentNode.classList.toggle('g3', g3);   // 3D when WebGL works (and stays working), the flat river otherwise
+    if (g3) return mvgSync(cv, r, st, X, dpr);
     const W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return null;
-    const st = mvxState(r), X = mvxSim(r, st), dpr = Math.min(2, window.devicePixelRatio || 1);
     let s = cv._mvx;
-    if (!s || s.W !== W || s.H !== H || s.dpr !== dpr) {
+    if (!s || s.g3 || s.W !== W || s.H !== H || s.dpr !== dpr) {
       // three layers: the river under (redrawn only when it changes), the sparks (every frame), the labels over
       const box = cv.parentNode, u = box && box.querySelector('.mvx-u'), o = box && box.querySelector('.mvx-o');
       for (const c of [cv, u, o]) if (c) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
@@ -7928,6 +8106,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     let s = cv._mvx;
     if (!s || s.W !== cv.clientWidth || s.H !== cv.clientHeight) s = mvxSync(cv);
     if (!s || !s.X) return;
+    if (s.g3) { if (!mvgDraw(cv, s, now)) cv._mvx = null; else s.drawn = true; return; }
     if (s.under) mvxUnder(s, now);
     const x = cv.getContext('2d'), G = s.G, still = !motionOK(), X = s.X, sel = MVX_K.indexOf(S.mvx.sel);
     x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, cv.width, cv.height); x.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
@@ -7987,6 +8166,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         cv.addEventListener('pointerdown', (e) => { d0 = { x: e.clientX, y: e.clientY }; });
         cv.addEventListener('pointerup', (e) => {
           const ok = d0 && Math.hypot(e.clientX - d0.x, e.clientY - d0.y) < 10; d0 = null; const s = cv._mvx; if (!ok || !s) return;
+          if (s.g3) {   // the nearest gate across
+            const px = s.g3.px; if (!px) return; const ex = e.clientX - cv.getBoundingClientRect().left;
+            let b = 0; for (let o = 1; o < 3; o++) if (Math.abs(px[o] - ex) < Math.abs(px[b] - ex)) b = o;
+            mvxPick(MVX_K[b]); return;
+          }
           const g = ((s.G.y0 + s.G.y1) / 2 - (e.clientY - cv.getBoundingClientRect().top)) / s.G.ln;
           mvxPick(g > 0.5 ? 'H' : g < -0.5 ? 'A' : 'D');
         });
@@ -8006,6 +8190,366 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   document.addEventListener('click', (e) => { const b = e.target.closest('[data-mvxb]'); if (b) mvxPick(b.dataset.mvxb); });
   document.addEventListener('visibilitychange', mvxKick);
   addEventListener('resize', () => { for (const cv of S.mvx.cvs) if (cv._mvx) cv._mvx.drawn = false; mvxKick(); });
+
+  // ---- the multiverse in 3D: the futures pour out of the present across a floor of light, into three gates ----
+  // Time runs towards you: kick-off far off near the horizon, the final whistle at your feet. Each lane of the floor
+  // is a goal difference, the home side ahead to the left and the away side to the right; the river of all 10,000
+  // universes is painted on it, and a few thousand of them run as streaks of light along their own goals into the
+  // gate of how they end. Every streak's path is worked out on the graphics chip from its goal times, so a frame
+  // costs the page a handful of draw calls. The scene goes through a glow pass (bloom), then a little lens
+  // fringing, scanlines and grain. One shared WebGL context draws it and the picture is copied into the card's
+  // canvas; with no WebGL (or if the context is lost) the flat river is drawn instead.
+  let MVG = null;
+  const MVG_N = 2600, MVG_LEN = 20, MVG_PORT = [-2, 0, 2], MVG_PY = 1.05, MVG_PZ = -0.35;
+  const MVG_PROJ = `uniform vec4 uCam; uniform vec2 uCS; uniform vec4 uScr;
+    vec3 proj(vec3 w) { vec3 d = w - uCam.xyz; float zc = d.z * uCS.x - d.y * uCS.y, yc = d.y * uCS.x + d.z * uCS.y; return vec3(uScr.z + uCam.w * d.x / zc, uScr.w - uCam.w * yc / zc, zc); }
+    vec2 ndc(vec2 s) { return vec2(s.x / uScr.x * 2.0 - 1.0, 1.0 - s.y / uScr.y * 2.0); }`;
+  const MVG_FP = '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n';
+  const MVG_C = [[92, 138, 255], [178, 160, 255], [255, 140, 70]];   // the 3D river's colours: electric blue, violet, ember
+  const MVG_COL = MVG_C.map((c) => `vec3(${c.map((v) => (v / 255).toFixed(3)).join(',')})`);
+  const MVG_SRC = {
+    quadV: `attribute vec2 aP; varying vec2 vUV; void main() { vUV = aP * 0.5 + 0.5; gl_Position = vec4(aP, 0.0, 1.0); }`,
+    skyF: `precision mediump float; varying vec2 vUV; uniform sampler2D uT; void main() { gl_FragColor = vec4(texture2D(uT, vec2(vUV.x, 1.0 - vUV.y)).rgb, 1.0); }`,
+    floorV: `attribute vec2 aXZ; varying vec2 vXZ; varying float vZc; ${MVG_PROJ}
+      void main() { vec3 p = proj(vec3(aXZ.x, 0.0, aXZ.y)); vXZ = aXZ; vZc = p.z; gl_Position = vec4(ndc(p.xy) * p.z, 0.0, p.z); }`,
+    floorF: `${MVG_FP} varying vec2 vXZ; varying float vZc; uniform vec4 uCam;
+      uniform sampler2D uRiv, uGlo; uniform vec4 uMap; uniform vec4 uTime; uniform vec4 uGeo; uniform float uLive;
+      void main() {
+        float X = vXZ.x, Z = vXZ.y, LEN = uGeo.x, TE = uGeo.y, t0 = uTime.y, span = uTime.z;
+        float t = TE * (1.0 - Z / LEN), g = -X, px = vZc / uCam.w;
+        float far = 1.0 - smoothstep(LEN * 0.92, LEN * 1.6, Z), side = 1.0 - smoothstep(3.8, 7.0, abs(X)), nearF = smoothstep(-6.0, -1.5, Z);
+        float inT = step(-0.3, t) * step(t, TE + 0.3), inX = 1.0 - smoothstep(3.45, 3.6, abs(X));
+        float fade = 1.0 - smoothstep(0.03, 0.14, px);   // fine lines give way to moire in the distance
+        // the grid: a line down every lane, fainter half-lanes, a line every 15 minutes (HT and FT brighter), ticks every 5
+        float dl = abs(fract(X + 0.5) - 0.5), lane = smoothstep(px * 1.7, 0.0, dl) * (0.55 + 0.45 * inX);
+        float dh = abs(fract(X) - 0.5), hl = smoothstep(px * 1.2, 0.0, dh) * 0.28 * fade;
+        float d15 = abs(fract(t / 15.0 + 0.5) - 0.5) * 15.0 * LEN / TE, l15 = smoothstep(px * 1.7, 0.0, d15) * inX * inT;
+        float big = step(abs(t - 45.0), 2.0) + step(abs(t - 90.0), 2.0);
+        float d5 = abs(fract(t / 5.0 + 0.5) - 0.5) * 5.0 * LEN / TE, l5 = smoothstep(px * 1.1, 0.0, d5) * 0.3 * inX * inT * fade;
+        float past = uLive * (1.0 - smoothstep(t0 - 0.5, t0 + 0.5, t));
+        float scanT = t0 + fract(uTime.x / 3.6) * span * 1.15, scan = exp(-pow((t - scanT) / 1.8, 2.0)) * step(t0, t);
+        vec3 gc = vec3(0.24, 0.5, 1.0);
+        vec3 em = gc * (lane * (abs(X) < 0.5 ? 0.42 : 0.2) + hl * 0.5 + l15 * (0.22 + 0.4 * big) + l5 * 0.6) * (1.0 + 2.2 * scan) * (1.0 - 0.6 * past);
+        // the river of all 10,000 universes, from now to the final whistle
+        float tc = clamp(t, t0, TE), gcl = clamp(g, -3.3, 3.3);
+        vec2 uv = vec2(uMap.x * tc + uMap.y, uMap.z * gcl + uMap.w);
+        float onR = step(t0, t) * (1.0 - smoothstep(TE - 5.0, TE + 0.3, t) * 0.85) * step(t, TE + 0.3) * (1.0 - smoothstep(t0 + uTime.w * span - 1.5, t0 + uTime.w * span + 1.5, t));   // thins out into the gates
+        vec4 rv = texture2D(uRiv, uv), go = texture2D(uGlo, uv);
+        vec3 riv = (rv.rgb * rv.a * 0.8 + go.rgb * go.a * 0.5) * onR * (1.0 + 0.9 * scan);
+        float lm = max(max(riv.r, riv.g), riv.b); riv *= (1.0 - exp(-lm * 1.5)) / max(lm, 0.001) * 0.62;   // keep the colour where the river is thickest
+        em += riv;
+        // a ripple spreading out from the present
+        float rr = fract(uTime.x * 0.42) * 3.4, dn = length(vec2(X - uGeo.z, (Z - uGeo.w) * 0.8));
+        em += vec3(0.7, 0.85, 1.0) * exp(-pow((dn - rr) / 0.05, 2.0)) * (1.0 - rr / 3.4) * 0.35;
+        float a = far * side * nearF * 0.94;
+        vec3 base = mix(vec3(0.004, 0.012, 0.035), vec3(0.016, 0.03, 0.075), smoothstep(LEN * 1.2, -2.0, Z));
+        gl_FragColor = vec4(base * a + em * far * side * nearF, a);
+      }`,
+    pathV: `attribute vec4 aV; attribute vec2 aN; varying float vS, vI; ${MVG_PROJ}
+      void main() { vec3 p = proj(vec3(aV.x + aN.x * aV.z, 0.08, aV.y + aN.y * aV.z)); vS = aV.z; vI = aV.w; gl_Position = vec4(ndc(p.xy) * p.z, 0.0, p.z); }`,
+    pathF: `precision mediump float; varying float vS, vI; void main() { float k = exp(-vS * vS * 4.5); gl_FragColor = vec4(vec3(0.86, 0.93, 1.0) * k * vI, 0.0); }`,
+    partV: `attribute vec2 aC; attribute vec4 aE0, aE1, aP; attribute vec2 aQ; ${MVG_PROJ}
+      uniform vec4 uTime; uniform vec4 uGeo; uniform vec4 uMap; uniform vec3 uPort; uniform vec4 uMode; uniform sampler2D uShare;
+      varying vec4 vA; varying vec3 vCol; varying float vI;
+      float ev(float e, float t) { return e == 0.0 ? 0.0 : sign(e) * smoothstep(-1.0, 1.0, (t - abs(e)) / uGeo.z); }
+      float gd(float t) { return aP.x + ev(aE0.x, t) + ev(aE0.y, t) + ev(aE0.z, t) + ev(aE0.w, t) + ev(aE1.x, t) + ev(aE1.y, t) + ev(aE1.z, t) + ev(aE1.w, t); }
+      vec3 pos(float ph) {
+        float t = uTime.y + ph * uTime.z, g = clamp(gd(t), -3.3, 3.3), k = clamp(floor(g + 3.5), 0.0, 6.0);
+        float sh = uGeo.w > 0.5 ? texture2D(uShare, vec2(uMap.x * t + uMap.y, (k + 0.5) / 7.0)).r : 0.36;
+        float hw = max(0.03, 0.5 * sh) * (0.3 + 0.7 * min(1.0, (t - uTime.y) / 4.0));
+        vec3 w = vec3(-(g + aP.z * hw), 0.05, ${MVG_LEN.toFixed(1)} * (1.0 - t / uGeo.y));
+        float gx = aP.y < 0.5 ? uPort.x : aP.y < 1.5 ? uPort.y : uPort.z, e = smoothstep(0.84, 1.0, ph);
+        vec3 gate = vec3(gx + aP.z * 0.3 * (1.0 - e), ${MVG_PY.toFixed(2)} + aP.z * 0.2 * (1.0 - e), ${MVG_PZ.toFixed(2)});
+        return mix(w, gate, e * e);
+      }
+      void main() {
+        float ph = fract(aQ.x + uTime.x * aP.w), pt = max(0.0, ph - 0.04);
+        vec3 h = proj(pos(ph)), tl = proj(pos(pt));
+        vec2 d = h.xy - tl.xy; float len = length(d); vec2 dir = len > 0.01 ? d / len : vec2(1.0, 0.0), nr = vec2(-dir.y, dir.x);
+        float r = clamp(0.055 * uCam.w / h.z, 1.3 * uMode.w, 4.6 * uMode.w), along = aC.x * (len + 2.0 * r) - r;
+        gl_Position = vec4(ndc(tl.xy + dir * along + nr * aC.y * r), 0.0, 1.0);
+        vA = vec4(along, aC.y * r, len, r);
+        float t = uTime.y + ph * uTime.z, rev = 1.0 - smoothstep(uTime.y + uTime.w * uTime.z - 2.0, uTime.y + uTime.w * uTime.z, t);
+        float fade = min(1.0, min(ph / 0.05, (1.0 - ph) / 0.025)) * rev;
+        vCol = aQ.y > 0.5 ? vec3(1.0) : aP.y < 0.5 ? ${MVG_COL[0]} : aP.y < 1.5 ? ${MVG_COL[1]} : ${MVG_COL[2]};
+        float o = aQ.y > 0.5 ? uMode.y : aP.y, sel = uMode.x < -0.5 ? 1.0 : (abs(o - uMode.x) < 0.5 ? 1.15 : 0.06);
+        vI = fade * sel * (aQ.y > 0.5 ? 1.7 : uMode.z);
+      }`,
+    partF: `precision mediump float; varying vec4 vA; varying vec3 vCol; varying float vI;
+      void main() {
+        float a = vA.x, len = max(vA.z, 0.001), r = vA.w, dx = max(0.0, max(-a, a - len)), d = length(vec2(dx, vA.y)) / r;
+        float tl = clamp(a / len, 0.0, 1.0), body = exp(-d * d * 3.2) * (0.1 + 0.9 * tl * tl), core = exp(-d * d * 16.0) * tl * tl * tl;
+        gl_FragColor = vec4((vCol * body * 0.5 + vec3(1.0) * core * 0.5) * vI, 0.0);
+      }`,
+    sprV: `attribute vec3 aW; attribute vec2 aK; attribute vec4 aS; attribute vec3 aCl; ${MVG_PROJ}
+      varying vec2 vUV; varying vec4 vS; varying vec3 vCl;
+      void main() { vec3 p = proj(aW); float r = aS.x * uCam.w / p.z; vUV = aK * vec2(aS.w, 1.0) * 1.0; vS = aS; vCl = aCl; gl_Position = vec4(ndc(p.xy + aK * vec2(r * aS.w, r)), 0.0, 1.0); }`,
+    sprF: `precision mediump float; varying vec2 vUV; varying vec4 vS; varying vec3 vCl; uniform float uT;
+      void main() {
+        vec2 uv = vUV; float d = length(uv), ty = vS.y, I = vS.z; vec3 c;
+        if (ty < 0.5) {   // the present: a hot point with an anamorphic streak
+          float core = exp(-d * d * 60.0) * 2.2 + exp(-d * 5.0) * 0.45, streak = exp(-abs(uv.y) * 46.0) * exp(-abs(uv.x) * 0.95) * 0.95;
+          float ray = exp(-abs(uv.x) * 55.0) * exp(-abs(uv.y) * 3.2) * 0.6;
+          c = mix(vCl, vec3(1.0), 0.55) * (core + streak + ray);
+        } else if (ty < 1.5) {   // a gate: a lit ring, turning ticks, a vortex inside
+          float a = atan(uv.y, uv.x), dir = vS.w > 0.5 ? 1.0 : -1.0;
+          float ring = exp(-pow((d - 0.64) / 0.028, 2.0)) * 1.5, halo = exp(-pow((d - 0.64) / 0.17, 2.0)) * 0.3;
+          float tk = step(0.5, fract(a * 3.8197 + uT * 0.3 * dir)) * exp(-pow((d - 0.79) / 0.016, 2.0)) * 0.85;
+          float arc = step(0.82, fract(a * 0.15915 - uT * 0.09 * dir)) * exp(-pow((d - 0.9) / 0.012, 2.0)) * 0.9;
+          float sw = 0.5 + 0.5 * sin(a * 3.0 - d * 11.0 + uT * 2.4 * dir), inner = smoothstep(0.64, 0.0, d) * (0.05 + 0.4 * sw * smoothstep(0.0, 0.55, d));
+          c = vCl * (ring + halo + tk + arc + inner) + vec3(1.0) * (ring * 0.3 + exp(-d * d * 26.0) * 0.5);
+        } else if (ty < 2.5) {   // a goal in the real game
+          c = vCl * exp(-pow((d - 0.55) / 0.08, 2.0)) + vec3(1.0) * exp(-d * d * 22.0) * 1.4;
+        } else {   // a pool of light under a gate, a flat ellipse that fades out well inside its square
+          vec2 q = uv / vec2(vS.w, 1.0); c = vCl * exp(-dot(q, q) * 5.0);
+        }
+        gl_FragColor = vec4(c * I, 0.0);
+      }`,
+    downF: `precision mediump float; varying vec2 vUV; uniform sampler2D uT; uniform vec2 uPx;
+      void main() { vec3 c = texture2D(uT, vUV + uPx * vec2(-1.0, -1.0)).rgb + texture2D(uT, vUV + uPx * vec2(1.0, -1.0)).rgb + texture2D(uT, vUV + uPx * vec2(-1.0, 1.0)).rgb + texture2D(uT, vUV + uPx).rgb;
+        c *= 0.25; gl_FragColor = vec4(max(c - 0.24, 0.0) * 1.4, 1.0); }`,
+    blurF: `precision mediump float; varying vec2 vUV; uniform sampler2D uT; uniform vec2 uD;
+      void main() { vec3 c = texture2D(uT, vUV).rgb * 0.227 + (texture2D(uT, vUV + uD * 1.385).rgb + texture2D(uT, vUV - uD * 1.385).rgb) * 0.316 + (texture2D(uT, vUV + uD * 3.231).rgb + texture2D(uT, vUV - uD * 3.231).rgb) * 0.07; gl_FragColor = vec4(c, 1.0); }`,
+    compF: `precision mediump float; varying vec2 vUV; uniform sampler2D uS, uB; uniform vec4 uP;
+      float h(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main() {
+        vec2 c = vUV - 0.5; float r2 = dot(c, c); vec2 o = c * r2 * 0.016;
+        vec3 s = vec3(texture2D(uS, vUV + o).r, texture2D(uS, vUV).g, texture2D(uS, vUV - o).b);
+        vec3 col = s + texture2D(uB, vUV).rgb * uP.w;
+        col *= 1.0 - r2 * 0.85;
+        col *= 0.95 + 0.05 * sin(gl_FragCoord.y * 3.14159 / max(1.0, uP.y));
+        col += (h(gl_FragCoord.xy + uP.x) - 0.5) * 0.022;
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  };
+  function mvgOK() {
+    if (MVG !== null) return !!MVG;
+    MVG = false;
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = 2;
+      const gl = c.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: false });
+      const inst = gl && gl.getExtension('ANGLE_instanced_arrays'); if (!inst) return false;
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) || 'shader'); return s; };
+      const prog = (vs, fs) => {
+        const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, MVG_SRC[vs])); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, MVG_SRC[fs])); gl.linkProgram(p);
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p) || 'link');
+        const A = {}, U = {};
+        for (let i = 0, n = gl.getProgramParameter(p, gl.ACTIVE_ATTRIBUTES); i < n; i++) { const a = gl.getActiveAttrib(p, i); A[a.name] = gl.getAttribLocation(p, a.name); }
+        for (let i = 0, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i < n; i++) { const u = gl.getActiveUniform(p, i); U[u.name.replace(/\[0\]$/, '')] = gl.getUniformLocation(p, u.name); }
+        return { p, A, U };
+      };
+      const P = { sky: prog('quadV', 'skyF'), floor: prog('floorV', 'floorF'), path: prog('pathV', 'pathF'), part: prog('partV', 'partF'), spr: prog('sprV', 'sprF'), down: prog('quadV', 'downF'), blur: prog('quadV', 'blurF'), comp: prog('quadV', 'compF') };
+      const buf = (data, use) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, use || gl.STATIC_DRAW); return b; };
+      const B = {
+        tri: buf(new Float32Array([-1, -1, 3, -1, -1, 3])),
+        floor: buf(new Float32Array([-9, -6, 9, -6, -9, MVG_LEN * 1.75, 9, MVG_LEN * 1.75])),
+        corner: buf(new Float32Array([0, -1, 0, 1, 1, -1, 1, 1])),
+        inst: buf(new Float32Array(14), gl.DYNAMIC_DRAW), path: buf(new Float32Array(6), gl.DYNAMIC_DRAW), spr: buf(new Float32Array(12), gl.DYNAMIC_DRAW),
+      };
+      const tex = () => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); return t; };
+      const T = { sky: tex(), riv: tex(), glo: tex(), share: tex() };
+      c.addEventListener('webglcontextlost', (e) => { e.preventDefault(); MVG = false; for (const cv of S.mvx.cvs) cv._mvx = null; mvxKick(); });
+      MVG = { c, gl, inst, P, B, T, tex, vtf: gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) > 0, W: 0, H: 0, fb: null, cur: null };
+    } catch (e) { MVG = false; }
+    return !!MVG;
+  }
+  // render targets: the scene at full size, the glow at a quarter
+  function mvgSize(W, H) {
+    const M = MVG, gl = M.gl; M.c.width = W; M.c.height = H; M.W = W; M.H = H;
+    if (M.fb) for (const f of M.fb) { gl.deleteFramebuffer(f.f); gl.deleteTexture(f.t); }
+    const mk = (w, h) => { const t = M.tex(); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null); const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0); return { f, t, w, h }; };
+    const qw = Math.max(1, Math.ceil(W / 4)), qh = Math.max(1, Math.ceil(H / 4));
+    M.fb = [mk(W, H), mk(qw, qh), mk(qw, qh)];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); M.sky = null;
+  }
+  // the camera, in CSS pixels: a slow drift so the floor feels like a place
+  function mvgCam(W, H, T) {
+    const mv = motionOK(), P = 20 * Math.PI / 180;
+    return { x: mv ? Math.sin(T * 0.13) * 0.32 : 0, y: 7 + (mv ? Math.sin(T * 0.09) * 0.16 : 0), z: -11, f: 1.66 * Math.min(W, H * 1.12), c: Math.cos(P), s: Math.sin(P), cx: W / 2, cy: H * 0.46 };
+  }
+  const mvgP = (K, X, Y, Z) => { const dx = X - K.x, dy = Y - K.y, dz = Z - K.z, zc = dz * K.c - dy * K.s, yc = dy * K.c + dz * K.s; return [K.cx + K.f * dx / zc, K.cy - K.f * yc / zc, zc]; };
+  const mvgZ = (t) => MVG_LEN * (1 - t / T_END);
+  // the streaks: which universe each one follows, its goal times (signed by side), lane jitter, speed and phase
+  function mvgParts(X) {
+    const n = MVG_N, a = new Float32Array(n * 14), ft = X.st.mode === 'ft', R = mvxRng(mvxHash(X.id + '|g3'));
+    for (let i = 0; i < n; i++) {
+      let u = 0; for (let k = 0; k < 24; k++) { u = (R() * X.N) | 0; if (X.off[u + 1] - X.off[u] <= 8) break; }
+      const o = i * 14, b = X.off[u], e = Math.min(X.off[u + 1], b + 8);
+      for (let k = 0; k < 8; k++) a[o + k] = b + k < e ? X.gs[b + k] * Math.max(0.01, X.gt[b + k]) : 0;
+      a[o + 8] = X.st.h0 - X.st.a0; a[o + 9] = X.oc[u]; a[o + 10] = (R() + R() + R() - 1.5) * 0.62; a[o + 11] = 1 / (5.2 + R() * 3.4);
+      a[o + 12] = R(); a[o + 13] = ft && X.fin[2 * u] === X.st.L.h && X.fin[2 * u + 1] === X.st.L.a ? 1 : 0;
+    }
+    return a;
+  }
+  // how full each lane is at each moment (square root of its share), for keeping streaks inside their band
+  function mvgShare(D) {
+    const out = new Uint8Array(D.nc * 7 * 4);
+    for (let c = 0; c < D.nc; c++) for (let k = 0; k < 7; k++) { const i = (c * 7 + k) * 3, v = Math.round(255 * Math.sqrt(Math.min(1, (D.Lc[i] + D.Lc[i + 1] + D.Lc[i + 2]) / D.N))), j = (k * D.nc + c) * 4; out[j] = out[j + 1] = out[j + 2] = v; out[j + 3] = 255; }
+    return out;
+  }
+  // the real game as a laser across the floor: a wide soft glow and a hot core
+  function mvgPath(st) {
+    const L = st.L; if (!L) return null;
+    const tEnd = st.mode === 'live' ? st.t0 : T_END, pts = [];
+    const gd = (t) => { let g = 0; for (const [tg, sd] of L.goals) { const d = (t - tg) / MVX_EASE; const q = d >= 1 ? 1 : d > -1 ? ((d + 1) / 2) ** 2 * (3 - (d + 1)) : 0; g += (sd === 'h' ? 1 : -1) * q; } return g; };
+    for (let t = 0; t <= tEnd + 1e-6; t += 0.5) pts.push([-gd(t), mvgZ(t)]);
+    if (pts.length < 2) return null;
+    const v = [];
+    for (const [w, I] of [[0.26, 0.42], [0.055, 1.6]]) for (let i = 0; i < pts.length - 1; i++) {
+      const [x0, z0] = pts[i], [x1, z1] = pts[i + 1], l = Math.hypot(x1 - x0, z1 - z0) || 1, nx = -(z1 - z0) / l * w, nz = (x1 - x0) / l * w;
+      const A = [x0, z0, -1, I, nx, nz], Bq = [x0, z0, 1, I, nx, nz], C = [x1, z1, -1, I, nx, nz], Dq = [x1, z1, 1, I, nx, nz];
+      v.push(...A, ...Bq, ...C, ...Bq, ...Dq, ...C);
+    }
+    return { v: new Float32Array(v), n: v.length / 6, gd, tEnd };
+  }
+  function mvgSync(cv, r, st, X, dpr) {
+    const W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return null;
+    let s = cv._mvx;
+    if (!s || !s.g3 || s.W !== W || s.H !== H || s.dpr !== dpr) {
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      for (const c of cv.parentNode ? cv.parentNode.querySelectorAll('.mvx-u, .mvx-o') : []) c.width = c.height = 1;
+      s = cv._mvx = { g3: { ver: 0, iv: 0, born: performance.now() }, W, H, dpr, X: null, parts: [] };
+    }
+    const g = s.g3, sel = MVX_K.indexOf(S.mvx.sel);
+    if (s.X !== X) {
+      const Gv = mvxGeo(420, 226), D = mvxDensity({ G: Gv }, X);
+      Object.assign(g, { Gv, D, img: mvxPaint(D, sel, Gv, MVG_C, 0.12), sel, parts: mvgParts(X), share: mvgShare(D), path: mvgPath(st) });
+      const step = D.step, nc = D.nc;   // texture coordinates of the river from the minute and the goal difference
+      g.map = [((Gv.x1 - Gv.x0) / T_END) / step / nc, ((Gv.x0 - D.x) / step + 0.5) / nc, -Gv.ln / D.h, ((Gv.y0 + Gv.y1) / 2 - D.y) / D.h];
+      g.ver++; g.iv++;
+    } else if (g.sel !== sel) { g.img = mvxPaint(g.D, sel, g.Gv, MVG_C, 0.12); g.sel = sel; g.iv++; }
+    s.X = X; s.r = r; s.st = st; s.mode = st.mode;
+    return s;
+  }
+  // deep space for behind the floor, made once per size: a nebula in the clip colours and a few hundred stars
+  function mvgSky(W, H, K) {
+    const c = mvxCanvas(W, H), x = c.getContext('2d'), hz = K.cy - K.f * K.s / K.c;
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#02030a'); g.addColorStop(0.5, '#050a1c'); g.addColorStop(1, '#02040b'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const R = mvxRng(77), blob = (X, Y, r, col) => { const q = x.createRadialGradient(X, Y, 0, X, Y, r); q.addColorStop(0, col); q.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = q; x.fillRect(0, 0, W, H); };
+    blob(W * 0.22, H * 0.12, W * 0.55, 'rgba(70,60,190,.22)'); blob(W * 0.82, H * 0.2, W * 0.5, 'rgba(255,120,70,.1)'); blob(W * 0.5, Math.max(0, hz), W * 0.7, 'rgba(60,140,255,.14)');
+    for (let i = 0, n = Math.round(W * H / 1500); i < n; i++) { const z = R(); x.fillStyle = `rgba(${z > 0.9 ? '255,236,214' : '205,222,255'},${(0.08 + z * z * z * 0.7).toFixed(3)})`; const sz = z > 0.95 ? 1.7 : z > 0.7 ? 1.1 : 0.75; x.fillRect(R() * W, R() * H, sz, sz); }
+    return c;
+  }
+  function mvgAttr(gl, M, p, name, b, size, stride, off, div) {
+    const l = p.A[name]; if (l == null || l < 0) return -1;
+    gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, gl.FLOAT, false, stride * 4, off * 4); M.inst.vertexAttribDivisorANGLE(l, div || 0);
+    return l;
+  }
+  function mvgOff(gl, M, ls) { for (const l of ls) if (l >= 0) { M.inst.vertexAttribDivisorANGLE(l, 0); gl.disableVertexAttribArray(l); } }
+  function mvgDraw(cv, s, now) {
+    const M = MVG; if (!M) return false;
+    const gl = M.gl; if (gl.isContextLost()) return false;
+    const g = s.g3, X = s.X, st = s.st, W = cv.width, H = cv.height, dpr = s.dpr, mv = motionOK();
+    if (M.W !== W || M.H !== H) mvgSize(W, H);
+    const T = mv ? (now / 1000) % 3600 : 47.3, K = mvgCam(s.W, s.H, T); g.K = K;
+    const up = (t, w, h, data, fmt) => { gl.bindTexture(gl.TEXTURE_2D, t); if (data) gl.texImage2D(gl.TEXTURE_2D, 0, fmt || gl.RGBA, w, h, 0, fmt || gl.RGBA, gl.UNSIGNED_BYTE, data); else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, w); };
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    if (M.cur !== g || M.ver !== g.ver) {
+      up(M.T.share, g.D.nc, 7, g.share);
+      gl.bindBuffer(gl.ARRAY_BUFFER, M.B.inst); gl.bufferData(gl.ARRAY_BUFFER, g.parts, gl.STATIC_DRAW);
+      if (g.path) { gl.bindBuffer(gl.ARRAY_BUFFER, M.B.path); gl.bufferData(gl.ARRAY_BUFFER, g.path.v, gl.STATIC_DRAW); }
+      M.cur = g; M.ver = g.ver; M.iv = -1;
+    }
+    if (M.iv !== g.iv) { up(M.T.riv, g.img.c); up(M.T.glo, g.img.gl); M.iv = g.iv; }
+    const skyKey = `${W}x${H}`; if (M.sky !== skyKey) { up(M.T.sky, mvgSky(W, H, mvgCam(W, H, 0))); M.sky = skyKey; }
+    const sel = MVX_K.indexOf(S.mvx.sel), ft = st.mode === 'ft', realO = ft ? mvxOutOf(`${st.L.h}–${st.L.a}`) : -1;
+    const age = (now - g.born) / 1300, reveal = mv ? Math.min(1, 1 - Math.pow(1 - Math.min(1, Math.max(0, age)), 3)) : 1;
+    const t0 = st.t0, span = T_END - t0, g0 = st.h0 - st.a0;
+    const common = (p) => { gl.useProgram(p.p); const U = p.U; if (U.uCam) { gl.uniform4f(U.uCam, K.x, K.y, K.z, K.f * dpr); gl.uniform2f(U.uCS, K.c, K.s); gl.uniform4f(U.uScr, W, H, K.cx * dpr, K.cy * dpr); } return U; };
+    const quad = (p) => { const l = mvgAttr(gl, M, p, 'aP', M.B.tri, 2, 2, 0); gl.drawArrays(gl.TRIANGLES, 0, 3); mvgOff(gl, M, [l]); };
+    const S0 = M.fb[0], B1 = M.fb[1], B2 = M.fb[2];
+    // the scene
+    gl.bindFramebuffer(gl.FRAMEBUFFER, S0.f); gl.viewport(0, 0, W, H);
+    gl.disable(gl.BLEND);
+    let U = common(M.P.sky); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, M.T.sky); gl.uniform1i(U.uT, 0); quad(M.P.sky);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    U = common(M.P.floor);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, M.T.riv); gl.uniform1i(U.uRiv, 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, M.T.glo); gl.uniform1i(U.uGlo, 1);
+    gl.uniform4f(U.uMap, ...g.map); gl.uniform4f(U.uTime, T, t0, span, reveal); gl.uniform4f(U.uGeo, MVG_LEN, T_END, -g0, mvgZ(t0)); gl.uniform1f(U.uLive, st.mode === 'live' ? 1 : 0);
+    let l = mvgAttr(gl, M, M.P.floor, 'aXZ', M.B.floor, 2, 2, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); mvgOff(gl, M, [l]);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    if (g.path) { U = common(M.P.path); const ls = [mvgAttr(gl, M, M.P.path, 'aV', M.B.path, 4, 6, 0), mvgAttr(gl, M, M.P.path, 'aN', M.B.path, 2, 6, 4)]; gl.drawArrays(gl.TRIANGLES, 0, g.path.n); mvgOff(gl, M, ls); }
+    if (!window.__mvxBare) {
+      U = common(M.P.part);
+      gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, M.T.share); gl.uniform1i(U.uShare, 2);
+      gl.uniform4f(U.uTime, T, t0, span, reveal); gl.uniform4f(U.uGeo, MVG_LEN, T_END, MVX_EASE, M.vtf ? 1 : 0); gl.uniform4f(U.uMap, ...g.map);
+      gl.uniform3f(U.uPort, ...MVG_PORT); gl.uniform4f(U.uMode, sel, realO, ft ? 0.55 : 1, dpr);
+      const ls = [mvgAttr(gl, M, M.P.part, 'aC', M.B.corner, 2, 2, 0, 0), mvgAttr(gl, M, M.P.part, 'aE0', M.B.inst, 4, 14, 0, 1), mvgAttr(gl, M, M.P.part, 'aE1', M.B.inst, 4, 14, 4, 1), mvgAttr(gl, M, M.P.part, 'aP', M.B.inst, 4, 14, 8, 1), mvgAttr(gl, M, M.P.part, 'aQ', M.B.inst, 2, 14, 12, 1)];
+      M.inst.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, g.parts.length / 14);
+      mvgOff(gl, M, ls);
+    }
+    // the present, the three gates, the real game's goals
+    const spr = [], put = (Xw, Yw, Zw, size, type, I, asp, col) => { for (const [kx, ky] of [[-1, -1], [1, -1], [-1, 1], [1, -1], [1, 1], [-1, 1]]) spr.push(Xw, Yw, Zw, kx, ky, size, type, I, asp, col[0], col[1], col[2]); };
+    const C = MVG_C.map((c) => c.map((v) => v / 255)), pulse = mv ? 0.85 + 0.15 * Math.sin(T * 4.2) : 1;
+    if (!ft) put(-g0, 0.12, mvgZ(t0), 0.75, 0, pulse * Math.min(1, 0.3 + reveal), 5.5, [0.75, 0.86, 1]);
+    for (let o = 0; o < 3; o++) {
+      const sh = X.cnt[o] / X.N, I = (sel < 0 ? 0.5 + 0.7 * Math.min(1, sh * 2.2) : sel === o ? 1.35 : 0.16) * (0.4 + 0.6 * reveal);
+      put(MVG_PORT[o], MVG_PY, MVG_PZ, 1.08, 1, I, 1, o === realO ? [1, 1, 1] : C[o]);
+      // its light on the floor
+      put(MVG_PORT[o], 0.0, MVG_PZ - 0.1, 0.7, 3, I * 0.22, 2.2, C[o]);
+    }
+    if (st.L) { let gg = 0; for (const [tg, sd] of st.L.goals) { gg += sd === 'h' ? 1 : -1; if (tg <= (g.path ? g.path.tEnd : 0)) put(-gg, 0.1, mvgZ(tg), 0.3, 2, 1.2, 1, C[sd === 'h' ? 0 : 2]); } }
+    U = common(M.P.spr); gl.uniform1f(U.uT, T);
+    gl.bindBuffer(gl.ARRAY_BUFFER, M.B.spr); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(spr), gl.DYNAMIC_DRAW);
+    let ls = [mvgAttr(gl, M, M.P.spr, 'aW', M.B.spr, 3, 12, 0), mvgAttr(gl, M, M.P.spr, 'aK', M.B.spr, 2, 12, 3), mvgAttr(gl, M, M.P.spr, 'aS', M.B.spr, 4, 12, 5), mvgAttr(gl, M, M.P.spr, 'aCl', M.B.spr, 3, 12, 9)];
+    gl.drawArrays(gl.TRIANGLES, 0, spr.length / 12); mvgOff(gl, M, ls);
+    // glow: bright parts at a quarter size, blurred twice each way
+    gl.disable(gl.BLEND);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, B1.f); gl.viewport(0, 0, B1.w, B1.h);
+    U = common(M.P.down); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, S0.t); gl.uniform1i(U.uT, 0); gl.uniform2f(U.uPx, 1 / W, 1 / H); quad(M.P.down);
+    U = common(M.P.blur); gl.uniform1i(U.uT, 0);
+    for (const sp of [1, 2]) for (const [a, b, dx, dy] of [[B1, B2, 1, 0], [B2, B1, 0, 1]]) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, b.f); gl.bindTexture(gl.TEXTURE_2D, a.t); gl.uniform2f(U.uD, dx * sp / a.w, dy * sp / a.h); quad(M.P.blur);
+    }
+    // to the screen: scene plus glow, a little lens fringing, scanlines, grain
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H);
+    U = common(M.P.comp);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, S0.t); gl.uniform1i(U.uS, 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, B1.t); gl.uniform1i(U.uB, 1);
+    gl.uniform4f(U.uP, mv ? (T * 60) % 97 : 0, dpr, 0, 0.9); quad(M.P.comp);
+    const x = cv.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'copy'; x.drawImage(M.c, 0, 0); x.globalCompositeOperation = 'source-over';
+    mvgLabels(x, s, K, sel, realO, reveal);
+    return true;
+  }
+  // the words, on top and crisp: each gate's count and name under it, the clock down the side, the present
+  function mvgLabels(x, s, K, sel, realO, reveal) {
+    const { X, st, r, dpr } = s, m = r.m, names = [m.h, 'Draw', m.a], words = ['win', '', 'win'];
+    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.globalAlpha = Math.min(1, reveal * 1.4);
+    const col = (o, a) => `rgba(${MVG_C[o].join(',')},${a})`, px = [];
+    const fit = (t, w) => { let q = t; while (q.length > 3 && x.measureText(q).width > w) q = q.slice(0, -2) + '…'; return q; };
+    const gw = Math.abs(mvgP(K, MVG_PORT[2], MVG_PY, MVG_PZ)[0] - mvgP(K, MVG_PORT[1], MVG_PY, MVG_PZ)[0]);
+    for (let o = 0; o < 3; o++) {
+      const [gx, gy, zc] = mvgP(K, MVG_PORT[o], MVG_PY, MVG_PZ), rr = 1.08 * 0.64 * K.f / zc, on = sel < 0 || sel === o, y0 = Math.min(gy + rr + 21, s.H - 22);
+      px.push(gx);
+      x.textAlign = 'center'; x.shadowColor = 'rgba(0,0,0,.9)'; x.shadowBlur = 8;
+      x.font = `800 ${Math.round(Math.min(24, Math.max(17, s.W / 17)))}px ${SF.d}`; x.fillStyle = on ? (o === realO ? '#fff' : col(o, 1)) : 'rgba(205,215,245,.28)';
+      x.fillText(mvxN(X.cnt[o]), gx, y0);
+      x.font = `600 10.5px ${SF.b}`; x.fillStyle = on ? 'rgba(220,228,250,.78)' : 'rgba(205,215,245,.25)';
+      x.fillText(fit(o === 1 ? 'Draw' : `${names[o]} ${words[o]}`, gw - 8), gx, y0 + 14);
+      if (o === realO) { x.font = `700 9.5px ${SF.b}`; x.fillStyle = '#fff'; x.fillText('REAL RESULT', gx, gy - rr - 8); }
+    }
+    s.g3.px = px;
+    // the clock down the left edge of the floor
+    x.shadowBlur = 0; x.font = `600 10px ${SF.b}`; x.textAlign = 'right';
+    const nowT = st.mode === 'live' ? st.t0 : null;
+    for (const [t, lab] of [[0, "0'"], [45, 'HT'], [90, "90'"]]) {
+      if (nowT != null && Math.abs(t - nowT) < 9) continue;
+      const [lx, ly] = mvgP(K, -3.75, 0, mvgZ(t)); x.fillStyle = 'rgba(170,190,240,.5)'; x.fillText(lab, lx - 4, ly + 3);
+    }
+    if (nowT != null) {
+      const [nx, ny] = mvgP(K, -(st.h0 - st.a0), 0, mvgZ(nowT)); x.textAlign = 'center'; x.font = `700 10.5px ${SF.b}`; x.fillStyle = '#ff7a6b';
+      x.fillText(`now ${Math.floor(nowT)}'`, nx, ny - 14);
+    }
+    if (st.mode === 'ft') {
+      const [fx, fy] = mvgP(K, -(st.L.h - st.L.a), 0, mvgZ(T_END)); x.textAlign = 'center'; x.font = `800 13px ${SF.m}`; x.fillStyle = '#fff'; x.shadowColor = 'rgba(0,0,0,.9)'; x.shadowBlur = 6;
+      x.fillText(`${st.L.h}–${st.L.a}`, fx, fy - 10); x.shadowBlur = 0;
+    }
+    // which side is which
+    x.font = `600 10px ${SF.b}`; x.fillStyle = 'rgba(190,205,240,.42)';
+    x.textAlign = 'left'; x.fillText(fit(`◀ ${m.h} ahead`, s.W * 0.42), 12, 20); x.textAlign = 'right'; x.fillText(fit(`${m.a} ahead ▶`, s.W * 0.42), s.W - 12, 20);
+    x.globalAlpha = 1; x.shadowBlur = 0;
+  }
 
   // ---------------- match fingerprint: a game drawn as one line, kept as a poster ----------------
   // One ridge wound from the centre outwards, every turn a lap of the game's clock: kick-off at the top, running
@@ -8640,7 +9184,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   });
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-sortstakes]'); if (!t) return;
-    S.sort = 'stakes'; store.set('sort', S.sort); renderMatches();
+    S.sort = 'stakes'; store.set('sort', S.sort);
+    if (S.tab !== 'matches') { setTab('matches'); return; }
+    renderMatches();
     const el = $('#matchList'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
@@ -9491,7 +10037,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function openAsk(opener, listen) {
     if (S.open && S.open !== 'ask:') S.askBack = S.open;
     S.open = 'ask:'; if (!$('#sheet').classList.contains('open')) S.opener = opener || document.activeElement;
-    renderAskSheet();
+    $('#sheet').classList.remove('shk-mode'); renderAskSheet();
     const sh = $('#sheet'); sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
     setTimeout(() => { const b = $('#sheetBody'); b.scrollTop = b.scrollHeight; }, 30);
     if (listen && SRec && !S.ask.cur) askListen();
@@ -9757,6 +10303,10 @@ void main() {
     const dpr = Math.min(2, window.devicePixelRatio || 1), b = document.createElement('canvas');
     b.width = Math.round(V.W * dpr); b.height = Math.round(V.H * dpr);
     const x = b.getContext('2d'); x.scale(dpr, dpr);
+    if (full) {   // full screen: the globe floats in the sheet's own space, with nothing drawn around it
+      if (!gl) { const halo = x.createRadialGradient(V.cx, V.cy, V.R * 0.96, V.cx, V.cy, V.R * 1.32); halo.addColorStop(0, 'rgba(63,214,255,.28)'); halo.addColorStop(0.35, 'rgba(63,150,255,.10)'); halo.addColorStop(1, 'rgba(63,150,255,0)'); x.fillStyle = halo; x.beginPath(); x.arc(V.cx, V.cy, V.R * 1.32, 0, Math.PI * 2); x.fill(); }
+      return b;
+    }
     const g = x.createRadialGradient(V.cx, V.cy, V.R * 0.2, V.cx, V.cy, Math.max(V.W, V.H) * 0.75); g.addColorStop(0, '#0a1626'); g.addColorStop(1, '#02050a');
     x.fillStyle = g; x.fillRect(0, 0, V.W, V.H);
     let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -9769,10 +10319,13 @@ void main() {
   }
   function shkHud(x, V, n, live, full) {   // the read-out, drawn last so the globe never covers it
     x.strokeStyle = 'rgba(63,214,255,.5)'; x.lineWidth = 2;
-    for (const [X, Y, sx, sy] of [[8, 8, 1, 1], [V.W - 8, 8, -1, 1], [8, V.H - 8, 1, -1], [V.W - 8, V.H - 8, -1, -1]]) { x.beginPath(); x.moveTo(X, Y + sy * 16); x.lineTo(X, Y); x.lineTo(X + sx * 16, Y); x.stroke(); }
+    if (!full) for (const [X, Y, sx, sy] of [[8, 8, 1, 1], [V.W - 8, 8, -1, 1], [8, V.H - 8, 1, -1], [V.W - 8, V.H - 8, -1, -1]]) { x.beginPath(); x.moveTo(X, Y + sy * 16); x.lineTo(X, Y); x.lineTo(X + sx * 16, Y); x.stroke(); }
     x.font = `600 10px ${SF.m}`; if ('letterSpacing' in x) x.letterSpacing = '2px'; x.fillStyle = 'rgba(200,225,245,.8)'; x.textAlign = 'left';
-    x.fillText(live ? `LIVE · ${n} IN PLAY` : 'NO GAMES IN PLAY', 18, 24);
-    x.textAlign = 'right'; x.fillStyle = 'rgba(200,225,245,.5)'; x.fillText(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), V.W - 18, 24);
+    if (full) x.fillText(live ? `LIVE · ${n} IN PLAY` : 'NO GAMES IN PLAY', 18, V.H - 34);   // full screen: the title bar floats over the top
+    else {
+      x.fillText(live ? `LIVE · ${n} IN PLAY` : 'NO GAMES IN PLAY', 18, 24);
+      x.textAlign = 'right'; x.fillStyle = 'rgba(200,225,245,.5)'; x.fillText(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), V.W - 18, 24);
+    }
     x.textAlign = 'left'; x.fillStyle = 'rgba(200,225,245,.4)';
     x.fillText(full ? (V.W > 420 ? 'DRAG TO TURN · PINCH OR SCROLL TO ZOOM · TAP A GAME' : 'DRAG · PINCH TO ZOOM · TAP') : (V.W > 340 ? 'DRAG TO SPIN · TAP A GAME OR A BUBBLE' : 'DRAG · TAP'), 18, V.H - 16);
     if ('letterSpacing' in x) x.letterSpacing = '0px';
@@ -9847,7 +10400,7 @@ void main() {
     if (full && rot.z >= 2.6 && GLX && GLX.max >= 4096 && !EARTH.hi && EARTH.asked) earthLoad(true);   // sharper pictures for close-ups
     const c0 = Math.cos(rot.lon * D2R), s0 = Math.sin(rot.lon * D2R), cp = Math.cos(rot.lat * D2R), sp = Math.sin(rot.lat * D2R);
     const P = (u) => { const a = u[0] * c0 + u[1] * s0; return [V.cx + V.R * (u[1] * c0 - u[0] * s0), V.cy - V.R * (cp * u[2] - sp * a), sp * u[2] + cp * a]; };
-    x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cv._base, 0, 0);
+    x.setTransform(1, 0, 0, 1, 0, 0); if (full) x.clearRect(0, 0, cv.width, cv.height); x.drawImage(cv._base, 0, 0);
     const Wd = cv.width, Hd = cv.height;
     const glc = cv._gl ? glGlobe(V, [-s0, c0, 0, -sp * c0, -sp * s0, cp, cp * c0, cp * s0, sp], sunU(Date.now()), Wd, Hd, dpr) : null;
     if (glc) x.drawImage(glc, 0, 0, Wd, Hd, 0, 0, Wd, Hd);
@@ -10055,7 +10608,19 @@ void main() {
     renderSheet();
     const sh = $('#sheet'); sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; $('#sheetBody').scrollTop = 0;
   }
+  // the full-screen map's backdrop: deep space with a few thousand stars, drawn once into a tile the sheet wears
+  function shkSpace() {
+    if (S.shkSpace) return S.shkSpace;
+    try {
+      const c = document.createElement('canvas'), N = 640; c.width = c.height = N; const x = c.getContext('2d');
+      let seed = 11; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 520; i++) { const a = rnd(), s = a > 0.97 ? 1.6 : a > 0.8 ? 1.1 : 0.7; x.fillStyle = `rgba(${a > 0.9 ? '255,240,220' : '205,225,255'},${(0.08 + 0.6 * a * a * a).toFixed(2)})`; x.beginPath(); x.arc(rnd() * N, rnd() * N, s / 2 + 0.2, 0, 7); x.fill(); }
+      S.shkSpace = c.toDataURL('image/png');
+    } catch (e) { S.shkSpace = ''; }
+    return S.shkSpace;
+  }
   function renderShockSheet() {
+    const sp = shkSpace(); if (sp) $('#sheet').style.setProperty('--space', `url(${sp})`);
     $('#sheetTitle').textContent = 'Live shock map';
     $('#sheetBody').innerHTML = `<div class="shk-stage"><canvas class="shk-cv big" data-shkcv="sheet" role="img" aria-label="Globe of the games in play: drag to turn it, pinch or scroll to zoom"></canvas>
       <div class="shk-zoom" role="group" aria-label="Zoom the globe"><button type="button" data-shkz="in" aria-label="Zoom in">+</button><button type="button" data-shkz="out" aria-label="Zoom out">−</button><button type="button" data-shkz="home" aria-label="Back to the whole globe"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 12h16M12 4c3 3 3 13 0 16M12 4c-3 3-3 13 0 16" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button></div></div>
