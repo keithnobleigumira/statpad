@@ -14,7 +14,7 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 | `matches.json` | Starter data (5–9 Nov 2026). It is replaced on the first run. |
 | `track.json` | The track record. The workflow creates it and commits it; don't edit it by hand. |
 | `ledger/` | Every graded prediction and value bet, one CSV file per month. The workflow creates and commits it; rows are only ever added. GitHub shows each file as a table. |
-| `backtest.json`, `results.json`, `live.json`, `teams/` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores; one file per league for team pages and the season simulator). Nothing to upload. |
+| `backtest.json`, `results.json`, `live.json`, `miracles.json`, `teams/` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores; the latest weekend's rarest results; one file per league for team pages and the season simulator). Nothing to upload. |
 | `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. `sw.js` also keeps crests and flags on the phone after the first download. |
 | `crests/` | Club crests and competition logos: one sheet per competition in `crests/s/`, big single crests for match pages. The workflow makes them on each publish; nothing to upload. |
 | `globe/` | The shock map's earth pictures. The workflow fetches and resizes them once; nothing to upload. |
@@ -83,6 +83,18 @@ It shows each leg's real chance, fair odds and whether its price is value or sho
 
 **Pictures** are read on the phone itself by Tesseract, an open-source text reader, so the picture is never uploaded. Its files (about 4.5 MB) download from the jsDelivr CDN the first time and are cached after that. Before reading, Statpad turns the picture grey, flips dark-mode screenshots, evens out the light in photos and sizes it for the reader. It reads rows left to right, so a price stays with its pick, and it handles slips that print the pick before the game as well as after it. The text it read appears in the box: if a team name or price was misread, fix it there and tap **Check slip** again. Screenshots read almost perfectly; photos work best taken straight on, in good light, with the phone held upright.
 
+## Slip autopsy
+
+Lost a slip? Add it under **Bets → Check slip** the same way (screenshot, photo or text) and Statpad examines it. It works for games from the last ten days: each leg is matched to its game in the track record, and the goal minutes come from the record or, for older games, from ESPN's scoreboard for that day. **Autopsy of a lost slip** builds one from real recent games so you can see what it looks like. If the slip's text says "Lost" (most bookmakers print it on settled slips), the checker knows its games are already played and picks those rather than the teams' next games.
+
+- **Time of death.** A leg dies at the goal that made it impossible (the third goal for under 2.5, both teams scoring for "both teams to score: no", a goal against for win to nil), otherwise at the final whistle. The slip dies with its first dead leg: that leg is the **cause of death**, with the goal and the minute.
+- **Let down by.** The leg with the highest chance before kick-off that still lost.
+- **Vital signs.** A heart-monitor chart of the chance that the whole slip lands, from the first kick-off until it died, worked out again at every goal with the live model (on a log scale, 1 in 1,000 up to certain, with a beat at each goal and the hours between games cut out). It sweeps across and flatlines in red at the time of death, and the phone gives a buzz.
+- **How unlucky.** How many of 10,000 weekends a slip like it lands (from the scoreline grids before kick-off, same-match legs counted together), whether the odds were fair, and, when only one leg lost, what the slip would have paid without it ("one leg from glory", after your tax setting). The verdict runs Robbed (it landed more often than not), Unlucky, Brave, Long shot and Lottery ticket (under 1 in 100).
+- **Share the autopsy** makes a 1080 × 1920 picture for a status: the monitor, time and cause of death, the three numbers and the legs, with the site's link.
+
+A slip whose legs all came in gets a short "Landed" note instead; one with games still to play is checked as usual.
+
 ## Live scores and cash-out
 
 Live scores come from ESPN's public scoreboards, which need no key and have no daily limit. Two things read them:
@@ -128,6 +140,18 @@ Every match page plays the game 10,000 times and draws all of them at once, as a
 - **After full time** it shows the 10,000 games from before kick-off with the real game traced through them as a white line, and says how often the real score came up ("about 1 in 15").
 
 Up is the home side ahead, down the away side. Each band is as wide as the share of simulated games at that goal difference at that moment, so the main channel thins as games branch off and the branches swell, and its colour shows how the games in it end (blue home win, silver draw, orange away win). Sparks run along randomly chosen games. Tap an ending (on the river or the buttons below it) to follow only the games that reach it. The card also gives the most common final score, how many games have a comeback win, how many change result after 85 minutes, and, after a goal, how many of the 10,000 it swung. It runs on the phone in a few tens of milliseconds, animates only while it's on screen, and stays still with reduced motion.
+
+## Match fingerprint
+
+For games with ESPN's commentary, the match page draws the game as a fingerprint: one line wound from the centre outwards, where every turn is a lap of the game's clock (kick-off at the top, running clockwise). The ridge is pushed out where the home side was pressing (from the momentum wave) and pulled in where the away side was, a little more on every turn, so the outer ridges carry the most; its colour leans to the side on top, in the teams' kit colours. Goals cut the outer ridges and are marked at their minute, red cards notch the rim, more shots wind more turns, possession stretches it, and the game's id seeds the small irregularities, so no two games make the same print. While a game is on it draws only the minutes played so far.
+
+**Share the poster** and **Save in 4K** give a 2160 × 3840 picture: the fingerprint, each goal's minute, the score in the teams' colours, possession, shots, and how often that exact score came up before kick-off ("1 in 15"). It's drawn on the phone.
+
+## Weekend miracles
+
+After each weekend (Friday to Monday, in the record's time zone), the update writes `miracles.json`: the weekend's graded games, rarest final score first. Rarity is how many of 10,000 versions of the game, drawn from Statpad's scoreline grid before kick-off, ended with exactly that score (a 5–5 can be 5 in 10,000, a 1–0 is often over 1,000). It also names the **biggest shock**, the win with the lowest chance before kick-off. Games graded before the record kept expected goals have them worked back from their home, draw and away chances.
+
+On the Matches tab a **Weekend miracles** row shows the rarest six from Friday until Thursday; **All of them** opens the full list with a field of 10,000 dots where the versions that ended with the real score light up (tap any game to light up its own). **Make WhatsApp clips** opens the Status pack with the Weekend miracles clip first. The file is a few KB, so the phone never downloads the whole track record for it.
 
 ## Scoreline explorer
 
@@ -239,7 +263,7 @@ Ask Statpad understands it too: "turn 10,000 into 500,000", "I want 1 million fr
 
 Every clip runs the same way: a line of light opens into a floodlit pitch drawn as a hologram, the clip's title slams across the middle while the camera swoops down, and the title docks at the top. The day's numbers then build up and hold long enough to read. Finally the picture powers down into a point that bursts into the end card: the Statpad mark drawn by a laser, the wordmark condensing out of particles, a line for the clip, the recent record of “Nearly definite” picks (when there are 20 or more and at least 70% landed), and the site's address.
 
-### Twelve kinds of clip, a fresh line-up every day
+### Thirteen kinds of clip, a fresh line-up every day
 
 | Clip | What it shows |
 |---|---|
@@ -255,6 +279,7 @@ Every clip runs the same way: a line of light opens into a floodlit pitch drawn 
 | Price drop | A price that has fallen 8% or more since it was first seen, drawn as it fell |
 | In form | A team with four or five wins in its last five, its results igniting, and its chance today |
 | Matchday | The day in numbers: games, competitions with their logos, top picks, value bets, and the kick-off times |
+| Weekend miracles | The weekend's rarest real result: the score slams in, a field of 10,000 versions of the game wipes in and the few that ended that way light up, then the next three rarest. Most likely from Saturday to Tuesday |
 
 Each day the pack takes the **four** kinds the day's games make most interesting (a huge edge, a clear favourite score, a big stakes game and so on), steers away from the kinds this phone made on the last four days, and turns a little by the date, so even a quiet week doesn't repeat; a kind with nothing to show that day is skipped. **4 more clips** makes the next ones on the day's list. Each kind also has a few titles and closing lines, and the camera's swoop and orbit change with the date, so the same kind looks different on another day. The record of what was made is kept on the phone (the last 10 days).
 

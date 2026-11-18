@@ -1296,6 +1296,65 @@ body { background: var(--paper); }
 .mc-load i:nth-child(2) { animation-delay: .15s; } .mc-load i:nth-child(3) { animation-delay: .3s; }
 @keyframes mcDot { 50% { opacity: .25; transform: translateY(-3px); } }
 @media (prefers-reduced-motion: reduce) { .mc-body, .mc-load i { animation: none; } }
+/* slip autopsy */
+.card.ap { border-color: color-mix(in srgb, var(--red) 40%, var(--rule)); background: linear-gradient(180deg, color-mix(in srgb, var(--red) 7%, var(--card)), var(--card) 45%); }
+.ap-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.ap-case { font: 700 12.5px/1 var(--f-body); color: var(--ink-3); letter-spacing: .02em; }
+.ap-grade { font: 800 15px/1 var(--f-display); letter-spacing: .03em; color: #fff; background: var(--red); padding: 6px 11px 5px; border-radius: 99px; }
+.ap-mon { border-radius: 12px; overflow: hidden; background: #02100b; box-shadow: inset 0 0 0 1px rgba(61, 220, 151, .28), 0 16px 32px -22px rgba(61, 220, 151, .45); }
+.ap-cv { display: block; width: 100%; height: 172px; }
+.ap-tod, .ap-cause { margin-top: 14px; display: grid; gap: 3px; }
+.ap-tod span, .ap-cause span { font: 650 11.5px/1.2 var(--f-body); color: var(--ink-3); }
+.ap-tod b { font: 800 27px/1.05 var(--f-display); color: var(--red); letter-spacing: .01em; }
+.ap-cause b { font: 800 21px/1.12 var(--f-display); }
+.ap-tod small, .ap-cause small { font-size: 12.5px; color: var(--ink-2); line-height: 1.35; }
+.ap-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.ap-stats div { background: var(--sunk); border-radius: 12px; padding: 10px 10px 9px; display: grid; gap: 4px; align-content: start; }
+.ap-stats b { font: 800 25px/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.ap-stats span { font-size: 11.5px; color: var(--ink-3); line-height: 1.25; }
+.ap-one { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--red-soft); font-size: 13.5px; line-height: 1.4; }
+.ap-one b { font: 800 18px/1 var(--f-display); }
+.ap-say { font-size: 13px; color: var(--ink-2); margin: 10px 0 0; line-height: 1.45; }
+.ap-legs { list-style: none; padding: 0; margin: 14px 0 6px; display: grid; gap: 8px; }
+.ap-l { display: grid; grid-template-columns: 12px 1fr; gap: 10px; align-items: start; }
+.ap-l > i { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: var(--pitch); box-shadow: 0 0 8px var(--pitch); }
+.ap-l.lost > i { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.ap-l.open > i, .ap-l.void > i { background: var(--ink-3); box-shadow: none; }
+.ap-l b { font-size: 13.5px; display: block; line-height: 1.3; } .ap-l.killer b { color: var(--red); }
+.ap-l small { font-size: 12px; color: var(--ink-3); } .ap-l small em { font-style: normal; font-weight: 700; color: var(--ink); }
+.card.ap.dead { animation: apDead .7s ease-out; }
+@keyframes apDead { 15% { box-shadow: 0 0 0 3px rgba(255, 77, 77, .65), 0 0 48px rgba(255, 77, 77, .45); } }
+.card.ap.won { border-color: color-mix(in srgb, var(--pitch) 45%, var(--rule)); background: var(--card); } .card.ap.won .ap-grade { background: var(--pitch); color: #04150c; }
+.ck-ap { color: var(--ink-2); }
+/* weekend miracles */
+.mir { margin: 16px 0 18px; min-width: 0; }
+.mir-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(172px, 1fr); gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 6px; scrollbar-width: thin; }
+.mir-c { scroll-snap-align: start; text-align: left; display: grid; gap: 6px; align-content: start; padding: 12px 13px; border-radius: 18px; color: var(--ink); font: inherit; cursor: pointer; min-width: 0;
+  background: radial-gradient(120% 90% at 100% 0%, rgba(255, 212, 71, .16), transparent 60%), linear-gradient(180deg, var(--card-2), var(--card)); border: 1px solid color-mix(in srgb, #ffd447 28%, var(--rule)); box-shadow: var(--shadow); transition: transform .15s var(--pop); }
+.mir-c:active { transform: scale(.97); }
+.mir-n { font-size: 11.5px; color: var(--ink-3); } .mir-n b { font: 800 22px/1 var(--f-display); color: #e0a800; margin-right: 2px; }
+[data-theme="dark"] .mir-n b { color: #ffd447; }
+.mir-sc { display: flex; align-items: center; gap: 8px; } .mir-sc b { font: 800 30px/1 var(--f-display); letter-spacing: .02em; }
+.mir-t { font-size: 13px; font-weight: 650; line-height: 1.25; } .mir-c small { font-size: 11.5px; color: var(--ink-3); }
+.mir-c.top { border-color: color-mix(in srgb, #ffd447 55%, var(--rule)); }
+.mir-hero { padding: 0; overflow: hidden; }
+.mir-stage { background: radial-gradient(90% 80% at 50% 40%, #121a3c, #03050c); }
+.mir-cv { display: block; width: 100%; aspect-ratio: 1 / 1; max-height: 420px; }
+.mir-h { padding: 14px 16px 16px; } .mir-h p { margin: 8px 0 0; font-size: 14px; color: var(--ink-2); line-height: 1.45; } .mir-h p b { color: var(--ink); font: 800 17px/1 var(--f-display); }
+.mir-sc.big b { font: 800 22px/1.15 var(--f-display); } .mir-sc.big em, .mir-g em { font-style: normal; color: #e0a800; } [data-theme="dark"] .mir-sc.big em, [data-theme="dark"] .mir-g em { color: #ffd447; }
+.mir-shock p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink-2); } .mir-shock b { color: var(--ink); }
+.mir-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mir-l button { position: relative; width: 100%; display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; text-align: left; padding: 10px 8px 12px; border-radius: 12px; border: 0; background: transparent; color: var(--ink); font: inherit; cursor: pointer; overflow: hidden; }
+.mir-l.on button { background: var(--sunk); }
+.mir-rk { font: 800 15px/1 var(--f-display); color: var(--ink-3); }
+.mir-g { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; min-width: 0; } .mir-g b { font-size: 13.5px; line-height: 1.25; } .mir-g small { grid-column: 2; font-size: 11.5px; color: var(--ink-3); }
+.mir-v { text-align: right; display: grid; } .mir-v b { font: 800 20px/1 var(--f-display); font-variant-numeric: tabular-nums; } .mir-v small { font-size: 11px; color: var(--ink-3); }
+.mir-bar { position: absolute; left: 8px; bottom: 4px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, #ffd447, #ff5ea8); opacity: .75; }
+/* match fingerprint */
+.fp-stage { border-radius: 16px; overflow: hidden; background: radial-gradient(80% 80% at 50% 45%, #0e1638, #04060e 70%); box-shadow: inset 0 0 0 1px rgba(214, 224, 242, .08); }
+.fp-cv { display: block; width: 100%; aspect-ratio: 1 / 1; max-height: 520px; margin: 0 auto; }
+.fp-key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 12px 0 0; font-size: 12px; color: var(--ink-2); }
+.fp-key i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; } .fp-key i.g { background: #fff; box-shadow: 0 0 0 2px var(--ink-3); }
 /* momentum wave: who is pushing, minute by minute */
 .mw { margin: 0 0 14px; padding: 12px 12px 8px; border-radius: 14px; background: var(--sunk); border: 1px solid var(--rule-2); }
 .mw-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
@@ -1787,7 +1846,9 @@ const ENGINE = (() => {
     return out.sort((x, y) => y.s.edge - x.s.edge);
   }
 
-  return { VERSION, analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP };
+  // a market's name for a match, for games the page has no analysis of any more (finished ones)
+  function labelOf(key, m) { const f = [...LABELS, ...EXTRAS].find((x) => x[0] === key); return f ? f[1](m) : null; }
+  return { VERSION, analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf };
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 
@@ -2341,10 +2402,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const rows = filtered();
     const box = $('#matchList');
     if (!rows.length) {
-      morph(box, `<div class="empty-state"><b>${S.league === 'live' ? 'No games in play' : 'No matches here'}</b>${S.league === 'live' ? 'Live games show here from kick-off. Pick “All” to see the day’s fixtures.' : S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`, ['list', S.day, S.league, S.sort].join('|'), true); return;
+      if (!S.mirAt) loadMir();
+      morph(box, `${!S.q && S.league !== 'live' ? mirCard() : ''}<div class="empty-state"><b>${S.league === 'live' ? 'No games in play' : 'No matches here'}</b>${S.league === 'live' ? 'Live games show here from kick-off. Pick “All” to see the day’s fixtures.' : S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`, ['list', S.day, S.league, S.sort].join('|'), true); return;
     }
     S.shk.games = shockGames(); S.shk.key = (S.shk.key || 0) + 1; S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
-    let html = (!S.q ? shockCard(rows) : '') + (S.sort !== 'stakes' && !S.q ? bigGames(rows) : '');
+    let html = (!S.q ? shockCard(rows) : '') + (!S.q ? mirCard() : '') + (S.sort !== 'stakes' && !S.q ? bigGames(rows) : '');
+    if (!S.mirAt) loadMir();
     if (S.sort === 'ko' || S.sort === 'comp') {
       // group by competition (ordered by first kick-off, or by group/name)
       const groups = new Map();
@@ -2420,6 +2483,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (S.open === 'status:') { renderStatusSheet(); return; }
     if (S.open === 'shock:') { renderShockSheet(); return; }
     if (S.open === 'display:') { renderDisplaySheet(); return; }
+    if (S.open === 'miracles:') { renderMirSheet(); return; }
     if (S.ask && S.ask.cur && S.open !== 'ask:') askAbortRec();
     if (S.open === 'ask:') { if (!$('#askForm')) renderAskSheet(); return; }
     const r = S.byId.get(S.open); if (!r) { closeSheet(); return; }
@@ -2472,7 +2536,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="chips">${chips.map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>
       <div id="sheetLive">${r.started ? liveCard(r) : ''}</div>
       <div id="sheetMC">${mcCard(r)}</div>
-      ${r.started ? `<div id="sheetMV">${mvxCard(r)}</div>` : ''}
+      ${r.started ? `<div id="sheetMV">${mvxCard(r)}</div><div id="sheetFP">${fpCard(r)}</div>` : ''}
       ${storyCard(r)}
       ${r.started ? '' : `<div id="sheetMV">${mvxCard(r)}</div>`}
       ${stakesCard(m)}
@@ -2491,7 +2555,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <p class="note">Fair odds come from the scoreline grid, so the link between the two parts of a combo is priced in. Bookmakers' bet builders usually take a bigger margin: if their price is below the fair odds here, it's poor value. Draw no bet returns your stake on a draw; its chance is of winning when there's a winner.</p>
         <table class="mt"><thead><tr><th>Selection</th><th class="n">Prob</th><th class="n fair">Fair</th><th class="n">Est. price</th><th class="n"></th><th></th></tr></thead><tbody>${xrows}</tbody></table></details>` : ''}
       <div class="card"><h4>Price history <span>average 1X2 price</span></h4>${spark(m.hist, m)}</div>`, 'm:' + S.open);
-    mvxAttach();
+    mvxAttach(); fpAttach();
   }
 
   // ---------------- value ----------------
@@ -3170,6 +3234,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>On a coupon, picks from the same match are linked (over 2.5 goals and both teams to score tend to land together), so their chance is worked out together from that match's scoreline grid instead of being multiplied. When the live feed lists events, goal and card minutes are exact; otherwise each new goal is placed halfway between two score checks, and the page says so.</p>
       <h3>Match centre</h3>
       <p>For competitions ESPN follows, a match page also shows the game itself, from ESPN's free match summaries. Once the line-ups are in (usually about an hour before kick-off) it draws both teams on a pitch in their formations, in their kit colours, with the benches below. During and after the game it adds a timeline of goals, penalties, cards and substitutions, and the team stats: possession, shots, shots on target, corners, fouls, cards, offsides, saves, passes and tackles. While a game is on and its page is open, it refreshes about once a minute; after the final whistle every 15 minutes, for a day. Your phone asks ESPN directly, so it costs none of the site's data credits.</p>
+      <h3>Slip autopsy</h3>
+      <p>Add a slip whose games have been played (from the last ten days) the same way, and if it lost, Statpad examines it. Each leg is matched to its game in the track record, and the goal minutes come from the record or from ESPN's scoreboard for that day. A leg dies at the goal that made it impossible (the third goal for under 2.5, a goal against for win to nil), or else at the final whistle; the slip's time of death is the first of those, and that leg is the cause of death. "Let down by" is the leg with the highest chance before kick-off that still lost. The monitor shows the slip's vital signs: the chance that the whole slip lands, from the first kick-off until it died, worked out again at every goal with the live model, on a scale from 1 in 1,000 to certain, with a beat at each goal and the hours between games cut out. It also shows how often a slip like it lands (out of 10,000 weekends, from the scoreline grids before kick-off), whether the odds were fair, and, when only one leg lost, what the slip would have paid without it. The verdict runs from Robbed (it landed in most versions of the weekend) to Lottery ticket (under 1 in 100). Writing "Lost" or "Status: Lost" on the slip tells the checker its games are already played. The picture to share is drawn on the phone.</p>
+      <h3>Weekend miracles</h3>
+      <p>After each weekend (Friday to Monday), the update lists its graded games by how rare the final score was: how many of 10,000 versions of the game, drawn from Statpad's scoreline grid before kick-off, ended with exactly that score. A 5–5 can be 5 in 10,000; a 1–0 is usually over 1,000. It also names the biggest shock: the win with the lowest chance before kick-off. Games played before the record kept expected goals have them worked back from their home, draw and away chances. The list is on the Matches tab until Thursday and goes into the Status pack's line-up.</p>
+      <h3>Match fingerprint</h3>
+      <p>For a game with ESPN's commentary, the match page draws the game as one line wound from the centre outwards. Every turn is a lap of the game's clock, with kick-off at the top, running clockwise. The ridge is pushed out where the home side was pressing (from the momentum wave) and pulled in where the away side was, a little more on every turn, so the outer ridges carry the most. Its colour leans to the side on top, in the teams' colours. Goals cut the outer ridges and are marked at their minute, red cards notch the rim, more shots wind more turns, possession stretches it, and the game's id seeds the small irregularities. It is saved or shared as a 4K poster (2160 × 3840) with the score, possession, shots and how often that score came up before kick-off.</p>
       <h3>Momentum</h3>
       <p>Above the match centre's tabs, a wave shows which side is pushing, minute by minute, read from ESPN's live commentary. Each attacking moment counts for the side making it: a shot on target or off the woodwork 3, a saved or missed penalty 2.5, a shot off target 1.8, a blocked shot 1.6, a corner 1.4, a free kick won in the attacking half 0.6 (on a wing 0.4), an offside 0.6 and a goal 4. Shots from close in count a third more and from long range a third less. Each side's pressure fades with a half-life of about a minute and a half, and the wave is the difference: up for the home side, down for the away side, in the teams' colours, with goals, red cards and half time marked. It says who is on top right now (the last eight minutes), or after the game who was on top for most of it and each side's best ten-minute spell. It is a reading of the commentary, not of the ball's position, so a long spell of possession without shots barely shows.</p>
       <h3>Multiverse</h3>
@@ -3195,7 +3265,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Goal seek</h3>
       <p>Under <b>Slips → Goal seek</b>, say what you want to turn your stake into. Statpad works out the odds needed after tax on winnings, then searches every combination of one pick per match, at real bookmaker prices and up to 12 legs, for the slip most likely to land in full while paying that much. Every leg is weighed before it can be used: its price is what a typical bookmaker pays (the market average, not the single best price somewhere), its chance is the cautious one and never above the bookmakers' own consensus, and it must clear the minimum chance you set for every leg (40% unless you change it), so long shots can't be used to buy odds. A table weighs the same goal with every minimum, from any chance to 70%+: long shots need fewer legs but each rarely lands, safer legs need more of them. It shows the chance honestly, what such a slip returns on average, a value-only version if you want every leg to beat the bookmaker's price, and the price of ambition: the best chance for every amount you could aim for. You can also ask by voice: "turn 10,000 into 500,000".</p>
       <h3>WhatsApp Status pack</h3>
-      <p>On the Matches and Slips tabs, <b>Status pack</b> makes 11-second videos for the day, sized for WhatsApp Status, each built around its own animated data graphic. There are twelve kinds: the safest pick on a confidence dial, an upset alert on a radar that locks onto the underdog, the game with most at stake as three futures, the slip at your target odds climbing leg by leg, a goal rush (the game with most goals expected, as an equalizer of total goals), the most likely exact score on a lit grid of scorelines, the match of the day in the two teams' own colours (who wins as a tug of war, their last five results, expected goals and Statpad's pick), the best value bet as two needles on an odds dial, the last day's results flipping pick by pick to landed or missed, a price that has dropped hard, a team in form, and the whole day in numbers. Each day the pack picks four from what the day's games make interesting, steers away from the kinds made on this phone in the last few days, and turns a little by the date, so it keeps changing; <b>4 more clips</b> makes the next ones on the day's list. Titles, closing lines and camera moves change by day too. Each clip opens with the camera swooping over a floodlit pitch drawn as a hologram and ends on Statpad's address, with the recent record of “Nearly definite” picks when there are enough of them. The sound is made the same way: machine hum, beeps, servo whirs, clunks and radar pings timed to the pictures, with no voices or music. Everything is drawn and encoded on your phone as ordinary MP4 video (H.264 with AAC sound; if the phone's browser has no AAC encoder, one loads with the video packer the first time), stored the way phone cameras store portrait video, so WhatsApp and other apps take it like any video from your gallery. <b>1080p · WhatsApp</b> is the default, as that's what WhatsApp Status shows; <b>4K</b> (2160 × 3840) is for TikTok, Instagram and YouTube Shorts and takes about three times as long. Each finished clip is played back on your phone before it's offered, and a size the phone can't play is made smaller by itself. Sound can be turned off. Phones that can't make video get the same graphics as 4K pictures. Sharing adds the site's link to the caption. Results clips show misses as well as wins.</p>
+      <p>On the Matches and Slips tabs, <b>Status pack</b> makes 11-second videos for the day, sized for WhatsApp Status, each built around its own animated data graphic. There are thirteen kinds: the safest pick on a confidence dial, an upset alert on a radar that locks onto the underdog, the game with most at stake as three futures, the slip at your target odds climbing leg by leg, a goal rush (the game with most goals expected, as an equalizer of total goals), the most likely exact score on a lit grid of scorelines, the match of the day in the two teams' own colours (who wins as a tug of war, their last five results, expected goals and Statpad's pick), the best value bet as two needles on an odds dial, the last day's results flipping pick by pick to landed or missed, a price that has dropped hard, a team in form, the whole day in numbers, and the weekend's rarest result lit up among 10,000 versions of its game. Each day the pack picks four from what the day's games make interesting, steers away from the kinds made on this phone in the last few days, and turns a little by the date, so it keeps changing; <b>4 more clips</b> makes the next ones on the day's list. Titles, closing lines and camera moves change by day too. Each clip opens with the camera swooping over a floodlit pitch drawn as a hologram and ends on Statpad's address, with the recent record of “Nearly definite” picks when there are enough of them. The sound is made the same way: machine hum, beeps, servo whirs, clunks and radar pings timed to the pictures, with no voices or music. Everything is drawn and encoded on your phone as ordinary MP4 video (H.264 with AAC sound; if the phone's browser has no AAC encoder, one loads with the video packer the first time), stored the way phone cameras store portrait video, so WhatsApp and other apps take it like any video from your gallery. <b>1080p · WhatsApp</b> is the default, as that's what WhatsApp Status shows; <b>4K</b> (2160 × 3840) is for TikTok, Instagram and YouTube Shorts and takes about three times as long. Each finished clip is played back on your phone before it's offered, and a size the phone can't play is made smaller by itself. Sound can be turned off. Phones that can't make video get the same graphics as 4K pictures. Sharing adds the site's link to the caption. Results clips show misses as well as wins.</p>
       <h3>Ask Statpad</h3>
       <p>Tap the microphone at the top, or <b>Ask Statpad</b> on the Matches tab, and speak straight away, or type, in English or Kiswahili. It listens until you've finished, sending your question once you've been quiet for 3 seconds (5, or only when you tap ✓, if you prefer): who wins a game, how a team is doing, the safest picks, a slip at any odds, the best value, what's at stake, title and relegation races, live scores, or how your bets are doing. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so it needs the internet and the microphone allowed for the site; the answers come from the same numbers as the rest of the page and are read aloud. Follow-ups such as "and tomorrow?" work, and so do names a little off. Some browsers don't offer voice input: type instead.</p>
       <h3>My bets</h3>
@@ -4532,7 +4602,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // away from the ones this phone made on the last few days, and shuffles a little by the date, so the clips keep
   // changing; "4 more" makes the next ones on the list. Titles, closing lines and camera moves vary by day too.
   Object.assign(ST_TH, { goals: ['#ff7a1f', '#ffd447'], score: ['#2fa8ff', '#b6ff3b'], match: ['#ff3b5c', '#4d7bff'], value: ['#19e68c', '#ffc94d'],
-    results: ['#a6ff4d', '#4dd2ff'], movers: ['#ff4d6d', '#ffb347'], form: ['#ffb000', '#ff2e63'], today: ['#6f8cff', '#35f2b0'] });
+    results: ['#a6ff4d', '#4dd2ff'], movers: ['#ff4d6d', '#ffb347'], form: ['#ffb000', '#ff2e63'], today: ['#6f8cff', '#35f2b0'], miracles: ['#ffd447', '#ff5ea8'] });
   const MV_TITLES = {
     safe: ['SAFEST PICK', 'TOP CONFIDENCE', 'MOST LIKELY TODAY'], upset: ['UPSET ALERT', 'SHOCK WATCH', 'UNDERDOG RADAR'],
     stakes: ['MOST AT STAKE', 'BIG STAKES', 'PRESSURE GAME'], slip: ['{t}-ODDS SLIP', 'THE {t}-ODDS BUILD', 'SLIP OF THE DAY'],
@@ -4540,6 +4610,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     match: ['MATCH OF THE DAY', 'HEADLINER', 'BIG GAME'], value: ['BEST VALUE', 'VALUE HUNTER', 'PRICE CHECK'],
     results: ['RESULTS', 'HOW WE DID', 'THE RECEIPTS'], movers: ['PRICE DROP', 'MONEY MOVING', 'ODDS ON THE MOVE'],
     form: ['IN FORM', 'HOT STREAK', 'FORM GUIDE'], today: ['MATCHDAY', 'TODAY ON STATPAD', 'THE DAY AHEAD'],
+    miracles: ['WEEKEND MIRACLES', 'AGAINST ALL ODDS', 'IT ACTUALLY HAPPENED'],
   };
   const MV_TAGS = {
     safe: ['The safest picks, every day.', 'Confidence you can check.'], upset: ['Spot the upsets before kick-off.', 'Long shots, priced properly.'],
@@ -4548,6 +4619,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     match: ['Every big game, read by the numbers.', 'The whole fixture list, priced.'], value: ['Find prices worth taking.', 'Value bets, checked against the market.'],
     results: ['Every pick graded in public.', 'No hiding the misses.'], movers: ['Watch the market move.', 'Prices tracked all day.'],
     form: ['Form, fixtures and chances in one place.', 'Who’s flying, and who’s next.'], today: ['Every game, every chance.', 'All of today, in one place.'],
+    miracles: ['The weekend’s rarest results, measured.', 'What almost never happens, happened.'],
   };
   const mvPickOf = (D, list) => list[shash(D.dk + list[0]) % list.length];
   // make a colour usable as a glow on the dark world: a hex, bright and saturated enough
@@ -5020,6 +5092,78 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return sc;
   }
 
+  // ---- 13. Weekend miracles: the rarest real result, lit up among 10,000 versions of its game ----
+  function mvMiracles(D) {
+    const Mi = D.mir, T = mvT({ head: 0.9, grid: 1.7, lit: 3.0, list: 3.9 });
+    const sc = { kind: 'miracles', th: ST_TH.miracles, kicker: 'Weekend miracles', id: Mi && Mi.top.id, T, shakes: Mi ? [[T.lit + 0.05, 10]] : [] };
+    if (!Mi) { sc.empty = 'No weekend to look back on yet.'; return sc; }
+    const top = Mi.top, n = mirN(top.pe), R = srng(shash(top.id)), lit = new Set(); while (lit.size < Math.min(n, 9999)) lit.add(Math.floor(R() * 10000));
+    const G = 100, cell = 6.1, gx = 72, gy = 812, r0 = 1.7, side = G * cell;
+    const dots = new Path2D(); for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) dots.rect(gx + j * cell + cell / 2 - r0, gy + i * cell + cell / 2 - r0, 2 * r0, 2 * r0);
+    const L = [...lit].map((k) => [gx + (k % G) * cell + cell / 2, gy + Math.floor(k / G) * cell + cell / 2]);
+    const rest = Mi.items.filter((q) => q !== top).slice(0, 3);
+    sc.draw = (x, t, F) => {
+      const { c1, c2, fi } = F, P = 72, W = MV.W, RX = gx + side + 46;
+      mvVersus(x, t, F, { m: top.m, ko: top.ko }, T.head, 456, W - 2 * P - 104 - 230);
+      // the real score, beside the names
+      const us = tw(t, T.head + 0.7, 0.45);
+      if (us > 0) {
+        stFont(x, `600 170px ${SF.m}`, null, '-6px'); const s = `${top.hs}–${top.as}`;
+        x.save(); const e = ez.ob(us, 2.2); x.translate(W - P, 600); x.scale(e, e); x.globalAlpha = Math.min(1, us * 2.5);
+        stBigText(x, s, 0, 0, '#ffffff', c1, hexA(c1, .8), 'right'); mvLandFlash(x, s, 0, 0, t, T.head + 1.05, 'right'); x.restore();
+        stFont(x, `650 24px ${SF.b}`); x.fillStyle = SX.mut; x.textAlign = 'right'; x.globalAlpha = Math.min(1, us * 2); x.fillText('final score', W - P, 646); x.textAlign = 'left'; x.globalAlpha = 1;
+      }
+      // 10,000 versions of the game, wiped in row by row
+      mvPanel(x, gx - 24, gy - 64, W - 2 * P + 48, side + 92, 26, c1, c2, tw(t, T.grid - 0.25, 0.45));
+      const uw = tw(t, T.grid, 0.9);
+      if (uw > 0) {
+        stFont(x, `650 23px ${SF.b}`); x.fillStyle = SX.dim; mvDecText(x, '10,000 versions of this game, before kick-off', gx, gy - 26, tw(t, T.grid - 0.1, 0.5), fi + 61);
+        x.save(); x.beginPath(); x.rect(gx - 4, gy - 4, side + 8, (side + 8) * ez.o3(uw)); x.clip(); x.fillStyle = 'rgba(190,205,240,.3)'; x.fill(dots); x.restore();
+        const sy = gy + side * ez.o3(uw); if (uw < 1) { x.fillStyle = hexA(c1, .7 * (1 - uw)); x.fillRect(gx - 8, sy - 2, side + 16, 3); }
+      }
+      // the ones that ended like the real game
+      const ul = tw(t, T.lit, 0.35);
+      if (ul > 0) {
+        x.save(); x.globalCompositeOperation = 'lighter';
+        const fl = 1 - tw(t, T.lit, 0.9);
+        L.forEach(([X, Y], i) => {
+          if (fl > 0 && i < 60) { x.strokeStyle = hexA(c1, 0.75 * fl); x.lineWidth = 2; x.beginPath(); x.arc(X, Y, 4 + 40 * (1 - fl), 0, TAU); x.stroke(); }
+          x.fillStyle = hexA(c1, 0.22 * ul); x.beginPath(); x.arc(X, Y, 15, 0, TAU); x.fill();
+          x.fillStyle = hexA(c1, 0.5 * ul); x.beginPath(); x.arc(X, Y, 8, 0, TAU); x.fill();
+          x.fillStyle = `rgba(255,250,225,${ul})`; x.beginPath(); x.arc(X, Y, 4.2, 0, TAU); x.fill();
+        });
+        x.restore();
+        // the count, beside the field
+        const k = Math.round(n * ez.o3(tw(t, T.lit, 0.6)));
+        stFont(x, `600 150px ${SF.m}`, null, '-5px'); x.globalAlpha = Math.min(1, ul * 2);
+        stBigText(x, mvxN(k), RX, gy + 150, '#ffffff', c1, hexA(c1, .7)); mvLandFlash(x, mvxN(k), RX, gy + 150, t, T.lit + 0.6);
+        stFont(x, `650 30px ${SF.b}`); x.fillStyle = SX.ink; x.fillText('of 10,000', RX, gy + 200);
+        stFont(x, `600 25px ${SF.b}`); x.fillStyle = SX.mut;
+        wrapLines(x, `ended ${top.hs}–${top.as}: ${mirIn(top.pe)}`, W - RX - P + 8, 3).forEach((ln, j) => x.fillText(ln, RX, gy + 250 + j * 34));
+        stFont(x, `600 23px ${SF.b}`); x.fillStyle = c2; mvDecText(x, fitText(x, `${lgName(top.m.lk)}`, W - RX - P + 8), RX, gy + side - 6, tw(t, T.lit + 0.4, 0.5), fi + 62);
+        x.globalAlpha = 1;
+      }
+      // the next rarest
+      rest.forEach((q, i) => {
+        const u = tw(t, T.list + i * 0.16, 0.42); if (u <= 0) return;
+        const Y = gy + side + 82 + i * 74, e = ez.o4(u);
+        x.save(); x.globalAlpha = Math.min(1, u * 2); x.translate(70 * (1 - e), 0);
+        stFont(x, `600 30px ${SF.m}`); x.fillStyle = c2; x.fillText(String(i + 2), P, Y);
+        stFont(x, `700 31px ${SF.b}`); x.fillStyle = SX.ink; x.fillText(fitText(x, `${q.m.h} ${q.hs}–${q.as} ${q.m.a}`, W - 2 * P - 270), P + 40, Y);
+        stFont(x, `600 40px ${SF.m}`); x.fillStyle = c1; x.textAlign = 'right'; x.fillText(mirIn(q.pe), W - P, Y + 2); x.textAlign = 'left';
+        x.restore();
+      });
+    };
+    sc.sfx = (Z) => {
+      mvVersusSfx(Z, T.head); SFX.thud(Z, T.head + 1.05, 0.5, 0.6);
+      SFX.servo(Z, T.grid, 0.9, 200, 900, 0.045, -0.3); for (let i = 0; i < 30; i++) SFX.click(Z, T.grid + i * 0.03, 0.03, -0.6 + (i % 5) * 0.3);
+      SFX.glitch(Z, T.lit - 0.12, 0.1, 0.07, 0); SFX.thud(Z, T.lit, 0.6, 0); L.slice(0, 14).forEach((p, i) => SFX.spark(Z, T.lit + 0.02 + i * 0.03, 0.05, -0.7 + (p[0] - 72) / 610 * 1.4));
+      [1320, 1760, 2640].forEach((f, i) => SFX.blip(Z, T.lit + 0.62 + i * 0.07, f, 0.07, 0.4));
+      rest.forEach((q, i) => SFX.blip(Z, T.list + i * 0.16 + 0.05, 1200 - i * 140, 0.06, 0.4));
+    };
+    return sc;
+  }
+
   // ---- 10. Price drop: the odds line falling ----
   function mvMovers(D) {
     const v = D.mover, T = mvT({ head: 0.9, big: 1.75, chart: 2.3, chartD: 1.4, from: 3.9, pick: 4.4 }, ['chartD']);
@@ -5264,6 +5408,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         D.res = { dk: k, picks: ps, n: ps.length, w, label: `${wdFmt.format(d0)} ${dFmt.format(d0)}` };
       }
     }
+    // the latest weekend's rarest results (the site's miracles file)
+    D.mir = null;
+    if (mirShow()) { const it = S.mir.items.map(mirOf); D.mir = { top: it[0], items: it, n: S.mir.n }; }
     // the whole day
     const all = S.rows.filter((r) => r.day === dk && r.a);
     if (all.length) {
@@ -5292,6 +5439,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     { k: 'movers', fam: 'game', make: (D) => mvMovers(D), score: (D) => (D.mover ? 0.5 + Math.min(0.4, -D.mover.drop * 1.5) : 0) },
     { k: 'form', fam: 'pick', make: (D) => mvForm(D), score: (D) => (D.form ? 0.4 + 0.08 * D.form.k : 0) },
     { k: 'today', fam: 'proof', make: (D) => mvToday(D), score: (D) => (D.today && D.today.n >= 8 ? 0.45 + Math.min(0.3, D.today.n / 400) : 0) },
+    { k: 'miracles', fam: 'proof', make: (D) => mvMiracles(D), score: (D) => (D.mir ? 0.5 + Math.min(0.3, (0.01 - Math.min(0.01, D.mir.top.pe)) * 40) + ([6, 0, 1, 2].includes(new Date(Date.parse(D.dk + 'T12:00:00')).getDay()) ? 0.15 : 0) : 0) },
   ];
   // the day's order: interest, minus what this phone made on the last few days, a turn of the wheel by date,
   // and a little shuffle by date; no more than two of one family in each four
@@ -5568,17 +5716,20 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   async function statusPrep() {
     const D = statusData(); if (!D) return null;
     if (!S.trackAt) { loadTrack(); for (let i = 0; i < 25 && !S.trackAt; i++) await mvSleep(100); }
+    if (!S.mirAt) { loadMir(); for (let i = 0; i < 20 && !S.mirAt; i++) await mvSleep(100); }
     D.proof = mvProof(); D.site = mvSite();
     mvFindings(D);
     D.plan = mvPlan(D);
     const lgOne = new Map(); for (const r of S.rows) if (r.day === D.dk && r.a && !lgOne.has(r.m.lk)) lgOne.set(r.m.lk, r.m);   // one game per competition, for its logo
     D.cr = await mvCrests([...D.safe.map((r) => r.m), D.up && D.up.r.m, D.big && D.big.m, ...(D.slip ? D.slip.legs.map((l) => l.m) : []),
-      ...[D.feature, D.goals, D.score, D.val && D.val.r, D.mover && D.mover.r, D.form && D.form.r].map((r) => r && r.m), ...lgOne.values()]);
+      ...[D.feature, D.goals, D.score, D.val && D.val.r, D.mover && D.mover.r, D.form && D.form.r].map((r) => r && r.m), ...(D.mir ? D.mir.items.slice(0, 4).map((q) => q.m) : []), ...lgOne.values()]);
     if (document.fonts && document.fonts.load) await Promise.race([Promise.all(['500 30px "Bricolage Grotesque"', '650 30px "Bricolage Grotesque"', '700 30px "Bricolage Grotesque"', '800 30px "Bricolage Grotesque"', '600 30px "Big Shoulders"', '700 30px "Big Shoulders"', '850 40px "Big Shoulders"'].map((f) => document.fonts.load(f).catch(() => {}))), mvSleep(3000)]);
+    if (S.stWant && D.plan.includes(S.stWant)) D.plan = [S.stWant, ...D.plan.filter((k) => k !== S.stWant)];
+    S.stWant = null;
     D.scenes = D.plan.slice(0, 4).map((k, i) => mvBuild(D, k, i));
     return D;
   }
-  const ST_NAMES = { safe: 'Safest pick', upset: 'Upset alert', stakes: 'Most at stake', slip: 'Odds slip', goals: 'Goal rush', score: 'Exact score', match: 'Match of the day', value: 'Best value', results: 'Results', movers: 'Price drop', form: 'In form', today: 'Matchday' };
+  const ST_NAMES = { miracles: 'Weekend miracles', safe: 'Safest pick', upset: 'Upset alert', stakes: 'Most at stake', slip: 'Odds slip', goals: 'Goal rush', score: 'Exact score', match: 'Match of the day', value: 'Best value', results: 'Results', movers: 'Price drop', form: 'In form', today: 'Matchday' };
   async function openStatus(opener) {
     S.open = 'status:'; S.opener = opener || document.activeElement;
     const sh = $('#sheet');
@@ -5729,7 +5880,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-statuspack],[data-stshare],[data-stsave],[data-stpics],[data-stq],[data-stsnd],[data-stmore]'); if (!t) return;
     e.stopPropagation();
-    if (t.dataset.statuspack != null) openStatus(t);
+    if (t.dataset.statuspack != null) { S.stWant = t.dataset.statuspack !== '1' ? t.dataset.statuspack : null; openStatus(t); }
     else if (t.dataset.stshare != null) stShare(t.dataset.stshare);
     else if (t.dataset.stsave != null) stSave(t.dataset.stsave);
     else if (t.dataset.stpics != null) stPics(t.dataset.stpics);
@@ -6141,12 +6292,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     'Sporting CP': 'Sp Lisbon', 'Braga': 'Sp Braga', 'Sint-Truiden': 'St Truiden', 'Union Saint-Gilloise': 'St. Gilloise' };
   let CK = null;   // index: name variant -> team keys; team key -> fixtures
   function ckIndex() {
-    if (CK && CK.at === S.data.generated && CK.n === S.rows.length) return CK;
+    const tn = S.track && S.track.picks ? S.track.picks.length : 0;
+    if (CK && CK.at === S.data.generated && CK.n === S.rows.length && CK.tn === tn) return CK;
     const vars = new Map(), fx = new Map(), first = new Map();
-    const lo = Date.now() - 3 * 3600e3;
+    const lo = Date.now() - 3 * 3600e3, back = Date.now() - 10 * 864e5;
     const add = (v, t) => { if (!v) return; if (!vars.has(v)) vars.set(v, new Set()); vars.get(v).add(t); };
-    for (const r of S.rows) {
-      if (r.ko < lo) continue;
+    // upcoming games, and the last ten days' finished ones (for a slip's autopsy): the page's own, then the record's
+    const past = gradedIn(back, Date.now()).filter((g) => !S.byId.has(g.m.id));
+    for (const r of [...S.rows, ...past]) {
+      if (r.ko < (r.past || r.started ? back : lo)) continue;
       for (const nm of [r.m.h, r.m.a]) {
         const t = ckKey(nm);
         if (!fx.has(t)) {
@@ -6162,7 +6316,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     for (const [w, ts] of first) if (ts.size === 1 && !vars.has(w)) add(w, [...ts][0]);   // a distinctive word, used by one team only
     for (const list of fx.values()) list.sort((x, y) => x.ko - y.ko);
-    CK = { at: S.data.generated, n: S.rows.length, vars, fx };
+    CK = { at: S.data.generated, n: S.rows.length, tn, vars, fx };
     return CK;
   }
   // team mentions in a line: longest match wins, no overlaps
@@ -6207,22 +6361,21 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     return { hits, toks };
   }
-  function ckFixture(hits) {
+  function ckFixture(hits, settled) {   // settled: the slip says it's lost or won, so its games have been played
     const I = ckIndex(); let best = null;
     for (let x = 0; x < hits.length; x++) for (let y = x + 1; y < hits.length; y++) {
       if (hits[x].t === hits[y].t) continue;
       for (const r of I.fx.get(hits[x].t) || []) {
         const kh = ckKey(r.m.h), ka = ckKey(r.m.a);
         if ((kh === hits[x].t && ka === hits[y].t) || (ka === hits[x].t && kh === hits[y].t)) {
-          const sc = hits[x].w + hits[y].w - (r.started ? 5 : 0);
+          const sc = hits[x].w + hits[y].w + (r.started ? (settled ? 5 : -5) : 0) - Math.abs(r.ko - Date.now()) / 864e5 * 0.01;
           if (!best || sc > best.sc) best = { r, sc, sure: true };
-          break;
         }
       }
     }
     if (best) return best;
     for (const h of hits) {   // one team named: its next game within four days
-      const r = (I.fx.get(h.t) || []).find((z) => !z.started && z.ko < Date.now() + 4 * 86400e3) || (I.fx.get(h.t) || [])[0];
+      const L = I.fx.get(h.t) || [], r = settled ? [...L].reverse().find((z) => z.started) || L[0] : L.find((z) => !z.started && z.ko < Date.now() + 4 * 86400e3) || L[0];
       if (r && (!best || h.w > best.sc)) best = { r, sc: h.w, sure: false };
     }
     return best;
@@ -6234,7 +6387,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const r = S.byId.get(m.id), s = r && r.a ? r.a.sels.find((x) => x.key === key) : null;
     if (s) return s.label;
     const L = { '12': `${m.h} or ${m.a}`, O05: 'Over 0.5 goals', O35: 'Over 3.5 goals', U15: 'Under 1.5 goals', U45: 'Under 4.5 goals', O45: 'Over 4.5 goals' };
-    return L[key] || key;
+    return L[key] || ENGINE.labelOf(key, m) || key;
   }
   // chance of a pick from the match's scoreline grid: win, and stake back (draw no bet)
   function gridP(M, key) {
@@ -6333,8 +6486,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const CK_KEEP = /\b(over|under|goals?|btts|gg|ng|draw|home|away|1x|x2|dnb|handicap|yes|no)\b/;
   // icons and list numbers read in front of a line: "✕ Home", "X Over", "1. Liverpool…"
   const ckClean = (ln) => ln.replace(/^\s*(?:[xX✕✖×•▪●◦*>]|\d{1,2}\s*[.)])\s+(?=[A-Za-zÀ-ž])/, '').trim();
+  const CK_DONE = /^\s*(?:(?:bet\s*)?status|result|outcome)?\s*[:\-]?\s*(lost|won|settled|void|lose|cashed out)\s*$/i;
   function ckParse(text, fromPicture) {
-    const lines = String(text || '').split(/\r?\n|;|\|/).map((x) => ckClean(x.trim())).filter(Boolean);
+    const all = String(text || '').split(/\r?\n|;|\|/).map((x) => ckClean(x.trim())).filter(Boolean);
+    const settled = all.some((l) => CK_DONE.test(l)), lines = all.filter((l) => !CK_DONE.test(l));
     let total = null, stake = null, code = null;
     const items = [];
     for (const ln of lines) {
@@ -6343,7 +6498,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if ((m = l.match(/(?:total|tot\.?|overall)\s*(?:odds?)?\s*[:=@x]?\s*(\d+(?:\.\d+)?)/))) { total = +m[1]; continue; }
       if ((m = l.match(/(?:stake|amount|bet amount)\s*[:=]?\s*(?:ugx|ush|shs?|sh\.)?\s*(\d[\d ]*)/))) { stake = +m[1].replace(/\s/g, ''); continue; }
       if ((m = ln.match(/(?:booking\s*)?code\s*[:=#]?\s*([A-Z0-9]{4,14})/i))) { code = m[1].toUpperCase(); continue; }
-      const { hits } = ckHits(ln, fromPicture), f = hits.length ? ckFixture(hits) : null;
+      const { hits } = ckHits(ln, fromPicture), f = hits.length ? ckFixture(hits, settled) : null;
       if (!f && CK_META.test(l) && !CK_KEEP.test(l.replace(new RegExp(CK_META.source, 'g'), ' '))) continue;
       items.push({ ln, f });
     }
@@ -6416,11 +6571,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div id="chkPicState" class="ck-pstate" hidden></div>
         <label class="lbl" for="chkText">Or paste the slip's text</label>
         <textarea id="chkText" rows="7" spellcheck="false" placeholder="Arsenal vs Chelsea  1X @1.35&#10;Real Madrid - Getafe  Over 2.5 @1.60&#10;Bayern v Dortmund  GG @1.55&#10;Total odds 3.35"></textarea>
-        <div class="bf-acts" style="justify-content:flex-start;flex-wrap:wrap"><button type="button" class="btn pri" id="chkGo">Check slip</button><button type="button" class="btn" id="chkEx">Try an example</button><button type="button" class="btn ghost" id="chkClear">Clear</button></div>
-        <p class="note">One game per line works best, with the pick and odds after it (1, X, 2, 1X, Over 2.5, GG, NG, DNB, "Arsenal win & over 1.5"…). The pick can also go on the next line, or the line before.</p></div>
+        <div class="bf-acts" style="justify-content:flex-start;flex-wrap:wrap"><button type="button" class="btn pri" id="chkGo">Check slip</button><button type="button" class="btn" id="chkEx">Try an example</button><button type="button" class="btn" id="chkLost">Autopsy of a lost slip</button><button type="button" class="btn ghost" id="chkClear">Clear</button></div>
+        <p class="note">One game per line works best, with the pick and odds after it (1, X, 2, 1X, Over 2.5, GG, NG, DNB, "Arsenal win & over 1.5"…). The pick can also go on the next line, or the line before.</p>
+        <p class="note ck-ap">Lost a slip from the last ten days? Add it the same way for its autopsy: the leg that killed it, the minute it died, and how often a slip like it lands.</p></div>
         <div id="chkOut"></div>`;
       $('#chkText').value = S.chkText || '';
     }
+    if (!S.trackAt && !S.trackBusy) loadTrack().then(() => { CK = null; if (S.chk && $('#chkText')) { S.chk = ckParse($('#chkText').value, true); paintCheck(); } });
     paintCheck();
   }
   function paintCheck() {
@@ -6430,6 +6587,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!P.legs.length) { out.innerHTML = `<div class="empty-state"><b>No games found</b>Statpad couldn't find these games in its fixtures for the next few days. Check the team names, or that the games are in the leagues Statpad covers.</div>`; return; }
     const E = ckEval(P), tax = S.bcfg.tax;
     const v = E.be && E.tot ? verdict({ be: E.be }, E.tot) : null;
+    const A = apExamine(P, E), apKey = A && !A.landed ? A.id + '|' + A.killer.fate.at + '|' + A.legs.map((l) => (l.F && l.F.goals ? 1 : 0)).join('') : null;
+    S.ap.cur = A && !A.landed ? A : null;
     const legs = E.rows.map((x) => {
       const m = x.r.m, opts = CK_KEYS.filter((k) => SETTLE[k] && (k === x.g.key || (x.r.a && gridP(x.r.a.M, k)))).map((k) => `<option value="${k}" ${k === x.g.key ? 'selected' : ''}>${esc(ckLabel(k, m))}</option>`).join('');
       const odd = x.price && x.fair && (x.price > x.fair * 2.2 || x.price < x.fair * 0.55);
@@ -6443,8 +6602,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }).join('');
     const wk = E.weak && E.without && E.chance ? `<div class="sum-row"><span>Weakest leg: ${esc(ckLabel(E.weak.g.key, E.weak.r.m))}</span><b>${pct(E.weak.p, 0)}</b></div>
       <p class="note">Without it, the chance rises from ${pct(E.chance, 1)} to ${pct(E.without.chance, 1)}${E.without.odds ? ` and the odds fall to about ${odds(E.without.odds)}` : ''}.</p>` : '';
-    out.innerHTML = `<div class="card ck-sum">
-        <h4>The verdict <span>${E.rows.length} game${E.rows.length === 1 ? '' : 's'} found${P.code ? ' · code ' + esc(P.code) : ''}</span></h4>
+    out.innerHTML = `${A ? (A.landed ? apLanded(A) : apCard(A)) : ''}<div class="card ck-sum">
+        <h4>${A ? 'Before kick-off' : 'The verdict'} <span>${E.rows.length} game${E.rows.length === 1 ? '' : 's'} found${P.code ? ' · code ' + esc(P.code) : ''}</span></h4>
         ${v ? `<div class="verdict v-${v[0]}"><b>${v[1]}</b><span>${esc(v[2])}</span></div>` : ''}
         <div class="sum-row big"><span>Slip odds${P.total ? '' : E.prod ? ' (legs multiplied)' : ''}</span><b>${E.tot ? odds(E.tot) : '–'}</b></div>
         <div class="sum-row"><span>Real chance it lands (Statpad)</span><b>${E.chance != null ? pct(E.chance, E.chance < 0.1 ? 1 : 0) : '–'}</b></div>
@@ -6459,6 +6618,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="bf-acts" style="justify-content:flex-start;flex-wrap:wrap"><button type="button" class="btn pri" id="chkToCoupon">Put on my coupon</button></div>
       </div>
       <ul class="ck-legs">${legs}</ul>`;
+    if (S.ap.cur) { const again = S.ap.shown !== apKey; S.ap.shown = apKey; apPlay(S.ap.cur, again); }
   }
   function ckExample() {
     const now = Date.now(), pickTxt = { H: '1', A: '2', '1X': '1X', X2: 'X2', O15: 'Over 1.5', O25: 'Over 2.5', U25: 'Under 2.5', U35: 'Under 3.5', BTTS: 'GG', BTTS_N: 'NG', H_O05: 'Home over 0.5', A_O05: 'Away over 0.5' };
@@ -6514,6 +6674,334 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (e.target.id === 'chkText') { S.chkText = e.target.value; store.set('chk', S.chkText); }
   });
 
+  // ---------------- finished games, from the track record ----------------
+  // Graded rows: [id, lk, ko, home, away, home goals, away goals, source, key, chance, price, real, tier, won, CLV,
+  // pH, pD, pA, raw chance, expected goals home, expected goals away, goal minutes]. The last three are newer:
+  // for older rows the expected goals are worked back from the home, draw and away chances.
+  function lamFrom1x2(pH, pA) {
+    const lg = (p) => Math.log(Math.max(1e-6, p) / Math.max(1e-6, 1 - p));
+    const f = (u, v) => {
+      const M = ENGINE.matrix(Math.exp(u), Math.exp(v)); let H = 0, A = 0;
+      for (let i = 0; i < M.length; i++) for (let j = 0; j < M.length; j++) { if (i > j) H += M[i][j]; else if (j > i) A += M[i][j]; }
+      return [lg(H) - lg(pH), lg(A) - lg(pA)];
+    };
+    let u = Math.log(1.4), v = Math.log(1.1);
+    for (let it = 0; it < 14; it++) {   // Newton's method on the logs of the two expected goals
+      const F = f(u, v); if (Math.abs(F[0]) + Math.abs(F[1]) < 1e-6) break;
+      const e = 1e-4, Fu = f(u + e, v), Fv = f(u, v + e), a = (Fu[0] - F[0]) / e, b = (Fv[0] - F[0]) / e, c = (Fu[1] - F[1]) / e, d = (Fv[1] - F[1]) / e, det = a * d - b * c;
+      if (!det) break;
+      u = Math.max(-3, Math.min(1.9, u - Math.max(-1, Math.min(1, (d * F[0] - b * F[1]) / det))));
+      v = Math.max(-3, Math.min(1.9, v - Math.max(-1, Math.min(1, (a * F[1] - c * F[0]) / det))));
+    }
+    return [Math.exp(u), Math.exp(v)];
+  }
+  const GR = new Map();
+  function gradedRow(p) {
+    let g = GR.get(p[0]); if (g && g.src === p) return g;
+    let lh = p[19], la = p[20];
+    if (!(lh > 0 && la > 0)) [lh, la] = p[15] > 0 && p[17] > 0 ? lamFrom1x2(p[15], p[17]) : [1.35, 1.1];
+    const ko = Date.parse(p[2]), M = ENGINE.matrix(lh, la);
+    g = { src: p, m: { id: p[0], lk: p[1], ko: p[2], h: p[3], a: p[4] }, ko, day: dayKey(ko), started: true, past: true, fin: [p[5], p[6]],
+      goals: Array.isArray(p[21]) ? p[21] : null, a: { lh, la, M, p: { H: p[15], D: p[16], A: p[17] }, sels: [] } };
+    GR.set(p[0], g); return g;
+  }
+  const gradedIn = (from, to) => ((S.track && S.track.picks) || []).filter((p) => { const t = Date.parse(p[2]); return t >= from && t < to && p[5] != null; }).map(gradedRow);
+  // the chance of one exact score on a grid, past its edge too
+  function exactP(r, h, a) {
+    const M = r.a.M; if (h < M.length && a < M.length) return M[h][a];
+    const po = (l, k) => { let p = Math.exp(-l); for (let i = 1; i <= k; i++) p *= l / i; return p; };
+    return po(r.a.lh, h) * po(r.a.la, a);
+  }
+
+  // ---------------- slip autopsy: a lost slip, examined ----------------
+  // For a slip whose games have been played: which leg killed it and at what minute (a goal that made the pick
+  // impossible, or the final whistle), the leg that let it down most (the likeliest one that lost), how often a
+  // slip like it lands, and its vital signs: the chance of the whole slip from the first kick-off to the moment it
+  // died, re-worked at every goal with the live model.
+  S.ap = { goals: {}, busy: new Set(), play: null };
+  const apReal = (ko, min) => ko + (min + (min > 45 ? 17 : 0)) * 60e3;   // the clock time of a match minute, with half time
+  function apFinal(r) {   // the final score and goal minutes of a game, once it's over
+    const f = S.ap.goals[r.m.id];
+    if (r.fin) return { hs: r.fin[0], as: r.fin[1], goals: r.goals || (f && f.goals) || null, reds: (f && f.reds) || [] };
+    const L = liveNow(r.m.id);
+    if (L && L.ft) return { hs: L.h, as: L.a, goals: L.goals && L.goals.length === L.h + L.a ? L.goals.map((g) => [g[0], g[1]]) : (f && f.goals) || null, reds: L.reds || [] };
+    const sc = S.results && S.results.scores && S.results.scores[r.m.id];
+    if (sc) return { hs: sc[0], as: sc[1], goals: (f && f.goals) || null, reds: (f && f.reds) || [] };
+    if (f && f.done) return { hs: f.hs, as: f.as, goals: f.goals, reds: f.reds || [] };
+    return null;
+  }
+  async function apFetch(r) {   // goal minutes from ESPN's scoreboard for that day, for a game the record has no minutes for
+    const id = r.m.id, slug = esSlug(r.m.lk); if (!slug || S.ap.busy.has(id) || S.ap.goals[id]) return;
+    S.ap.busy.add(id);
+    let got = { none: true };
+    try {
+      for (const day of [...new Set([esDay(r.ko - 5 * 3600e3), esDay(r.ko)])]) {
+        const rows = await esBoard({ slug, day }); if (!rows) continue;
+        const g = esPair({ ko: r.ko, h: r.m.h, a: r.m.a }, rows);
+        if (g && g.done) { const q = esGoals(g); got = { done: true, hs: g.hs, as: g.as, goals: q.reg || q.goals, reds: g.reds }; break; }
+      }
+    } catch (e) { /* no minutes then */ }
+    S.ap.goals[id] = got; S.ap.busy.delete(id);
+    if (S.chk) paintCheck();
+  }
+  // a pick's fate through its game: when it became impossible, or certain
+  function apFate(key, F) {
+    const fn = settleFn(key); if (!fn || !F) return null;
+    const end = fn(F.hs, F.as), can = (h, a, want) => { for (let i = h; i <= h + 9; i++) for (let j = a; j <= a + 9; j++) if (want(fn(i, j))) return true; return false; };
+    const res = end === null ? 'void' : end ? 'won' : 'lost';
+    let at = null, how = 'ft', h = 0, a = 0;
+    if (F.goals && F.goals.length === F.hs + F.as) {
+      for (const [m, s] of F.goals) {
+        if (s === 'h') h++; else a++;
+        if (res === 'lost' && !can(h, a, (o) => o !== false)) { at = m; how = 'goal'; break; }
+        if (res === 'won' && !can(h, a, (o) => o !== true)) { at = m; how = 'goal'; break; }
+      }
+    }
+    return { res, at: at == null ? 90 : at, how, h, a, side: how === 'goal' ? F.goals.find((g, i) => i === h + a - 1)[1] : null, exact: !!F.goals };
+  }
+  // the live chance of a match's picks together, at a minute, from the score then (the live model)
+  function apLiveP(r, keys, F, min, st) {
+    const g = (F.goals || []).filter((x) => x[0] <= min), h0 = g.filter((x) => x[1] === 'h').length, a0 = g.length - h0;
+    const rd = (F.reds || []).filter((x) => x[0] <= min), rh = rd.filter((x) => x[1] === 'h').length, ra = rd.length - rh;
+    const rem = remFrac(min, st), kh = r.a.lh * rem * ssm(h0 - a0) * Math.pow(RED_OWN, rh) * Math.pow(RED_OPP, ra), ka = r.a.la * rem * ssm(a0 - h0) * Math.pow(RED_OWN, ra) * Math.pow(RED_OPP, rh);
+    const N = 10, ph = [Math.exp(-kh)], pa = [Math.exp(-ka)];
+    for (let k = 1; k <= N; k++) { ph.push(ph[k - 1] * kh / k); pa.push(pa[k - 1] * ka / k); }
+    const fns = keys.map(settleFn); let w = 0;
+    for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) if (fns.every((fn) => fn(h0 + i, a0 + j) !== false)) w += ph[i] * pa[j];
+    return w;
+  }
+  function apGroupP(r, keys, F, T) {   // the chance of this match's legs at clock time T
+    const el = (T - r.ko) / 60e3;
+    if (el <= 0 || !F) { let w = 0; const M = r.a.M, fns = keys.map(settleFn); for (let i = 0; i < M.length; i++) for (let j = 0; j < M.length; j++) if (fns.every((fn) => fn(i, j) !== false)) w += M[i][j]; return w; }
+    if (el >= 112) return keys.every((k) => settleFn(k)(F.hs, F.as) !== false) ? 1 : 0;
+    if (!F.goals) return null;   // no minutes: the chance from before kick-off holds until the final whistle
+    const min = el <= 47 ? el : el < 64 ? 45 : Math.min(T_END, el - 17);
+    return apLiveP(r, keys, F, min, el <= 47 ? '1H' : el < 64 ? 'HT' : '2H');
+  }
+  function apExamine(P, E) {
+    const rows = E.rows.filter((x) => x.g.key && x.p != null); if (!rows.length) return null;
+    const legs = rows.map((x) => { const F = apFinal(x.r); return { x, F, fate: F ? apFate(x.g.key, F) : null }; });
+    for (const l of legs) if (S.ap.goals[l.x.r.m.id] == null && ((l.F && !l.F.goals) || (!l.F && Date.now() > l.x.r.ko + 115 * 60e3))) apFetch(l.x.r);
+    const dead = legs.filter((l) => l.fate && l.fate.res === 'lost'), open = legs.filter((l) => !l.fate);
+    if (!dead.length) return open.length ? null : { landed: true, legs, E };
+    dead.forEach((l) => { l.when = apReal(l.x.r.ko, l.fate.at) + (l.fate.how === 'ft' ? 5 * 60e3 : 0); });
+    const killer = dead.slice().sort((p, q) => p.when - q.when)[0], betrayer = dead.slice().sort((p, q) => q.x.p - p.x.p)[0];
+    const won = legs.filter((l) => l.fate && l.fate.res !== 'lost').length;
+    // vital signs: the slip's chance over the game windows (time with no game running is cut out)
+    const byM = new Map(); for (const l of legs) { const id = l.x.r.m.id; if (!byM.has(id)) byM.set(id, { r: l.x.r, keys: [], F: l.F }); byM.get(id).keys.push(l.x.g.key); }
+    const groups = [...byM.values()], t0 = Math.min(...groups.map((g) => g.r.ko)), tDie = killer.when;
+    const wins = groups.map((g) => [g.r.ko - 6 * 60e3, g.r.ko + 114 * 60e3]).filter((w) => w[0] < tDie + 4 * 60e3).sort((p, q) => p[0] - q[0]);
+    const segs = []; for (const w of wins) { const s = segs[segs.length - 1]; if (s && w[0] <= s[1] + 20 * 60e3) s[1] = Math.max(s[1], w[1]); else segs.push(w.slice()); }
+    segs[segs.length - 1][1] = Math.max(tDie + 22 * 60e3, Math.min(segs[segs.length - 1][1], tDie + 22 * 60e3));
+    const span = segs.reduce((s, w) => s + w[1] - w[0], 0), pts = [], K = 260;
+    let pre = groups.reduce((s, g) => s * apGroupP(g.r, g.keys, g.F, t0 - 1), 1);
+    for (let k = 0; k <= K; k++) {
+      let left = (k / K) * span, si = 0; while (si < segs.length - 1 && left > segs[si][1] - segs[si][0]) { left -= segs[si][1] - segs[si][0]; si++; }
+      const T = segs[si][0] + left;
+      let p = 1; for (const g of groups) { const q = apGroupP(g.r, g.keys, g.F, T); p *= q == null ? apGroupP(g.r, g.keys, g.F, g.r.ko - 1) : q; }
+      if (T >= tDie) p = 0;
+      pts.push([k / K, p, T, si]);
+    }
+    const marks = [];   // goals in the slip's games, as heartbeats
+    for (const g of groups) for (const [m, s] of (g.F && g.F.goals) || []) {
+      const T = apReal(g.r.ko, m); if (T > tDie + 60e3) continue;
+      let left = 0, at = null; for (const w of segs) { if (T >= w[0] && T <= w[1]) { at = (left + T - w[0]) / span; break; } left += w[1] - w[0]; }
+      if (at != null) marks.push([at, s, g.r, m]);
+    }
+    let segX = 0; const bounds = segs.map((w) => { const x0 = segX / span; segX += w[1] - w[0]; return [x0, w[0]]; });
+    const tot = E.tot, shortBy = dead.length === 1 && tot && killer.x.price > 1 ? tot / killer.x.price : null;
+    const ch = E.chance || 0, grade = ch >= 0.5 ? ['Robbed', 'It landed in most versions of the weekend.'] : ch >= 0.2 ? ['Unlucky', 'A fair shot that didn’t come in.'] : ch >= 0.05 ? ['Brave', 'It needed a few things to go right.']
+      : ch >= 0.01 ? ['Long shot', 'Most versions of the weekend kill a slip like this.'] : ['Lottery ticket', 'Almost every version of the weekend kills a slip like this.'];
+    const id = (() => { let h = 2166136261; for (const l of legs) { const s = l.x.r.m.id + l.x.g.key; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); } return (h >>> 0).toString(16).slice(-4).toUpperCase(); })();
+    return { legs, dead, killer, betrayer, won, open: open.length, pts, marks, bounds, pre, tDie, shortBy, grade, chance: ch, tot, id, stake: P.stake };
+  }
+  const apLabel = (l) => ckLabel(l.x.g.key, l.x.r.m);
+  function apCause(A) {
+    const l = A.killer, f = l.fate, m = l.x.r.m, nm = f.side === 'h' ? m.h : m.a;
+    if (f.how === 'goal') {
+      const nth = f.h + f.a, ord = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh'][nth] || nth + 'th';
+      return `${nm}’s goal, the ${ord} of the game, at ${f.at}' (${f.h}–${f.a})`;
+    }
+    return `The final whistle at ${l.F.hs}–${l.F.as}`;
+  }
+  const apWhen = (T) => `${wdFmt.format(T)} ${dFmt.format(T)}, ${tFmt.format(T)}`;
+  function apCard(A) {
+    const k = A.killer, m = k.x.r.m, n = A.legs.length, of = (p) => Math.max(1, Math.round(p * 10000));
+    const legs = A.legs.map((l) => {
+      const f = l.fate, st = !f ? 'open' : f.res, sc = l.F ? `${l.F.hs}–${l.F.as}` : '';
+      const note = !f ? 'not played yet' : f.res === 'lost' ? (f.how === 'goal' ? `died at ${f.at}'` : 'died at full time') : f.res === 'void' ? 'stake back' : f.how === 'goal' ? `safe from ${f.at}'` : 'landed';
+      return `<li class="ap-l ${st}${l === k ? ' killer' : ''}"><i aria-hidden="true"></i><div><b>${esc(apLabel(l))}</b><small>${esc(l.x.r.m.h)} ${sc ? `<em>${sc}</em>` : 'v'} ${esc(l.x.r.m.a)} · ${note}${l.x.p != null ? ` · was ${pct(l.x.p, 0)}` : ''}</small></div></li>`;
+    }).join('');
+    const one = A.shortBy ? `<p class="ap-one">One leg from glory: without it the slip pays <b>${odds(A.shortBy)}</b>${A.stake ? `: ${money(collectFor(A.stake, A.shortBy, 0, S.bcfg.tax).net)} back on your ${money(A.stake)} after tax` : ''}.</p>` : '';
+    const bk = A.tot && A.chance ? (A.tot * A.chance >= 0.97 ? `The odds of ${odds(A.tot)} were fair or better.` : `The bookmaker paid ${odds(A.tot)}; fair odds were ${odds(1 / A.chance)}.`) : '';
+    const fetching = A.legs.some((l) => l.F && !l.F.goals && S.ap.busy.has(l.x.r.m.id));
+    return `<div class="card ap" id="apCard">
+      <div class="ap-top"><span class="ap-case">Slip autopsy · case ${A.id}</span><span class="ap-grade">${A.grade[0]}</span></div>
+      <div class="ap-mon"><canvas class="ap-cv" aria-label="The slip's chance from the first kick-off until it died"></canvas></div>
+      <div class="ap-tod"><span>Time of death</span><b>${esc(apWhen(A.tDie))}</b><small>${esc(m.h)} v ${esc(m.a)}${k.fate.how === 'goal' ? `, ${k.fate.at}'` : ', full time'}${fetching ? ' · finding the minute…' : ''}</small></div>
+      <div class="ap-cause"><span>Cause of death</span><b>${esc(apLabel(k))}</b><small>${esc(apCause(A))}</small></div>
+      ${A.betrayer !== k && A.betrayer.x.p > k.x.p ? `<div class="ap-cause"><span>Let down by</span><b>${esc(apLabel(A.betrayer))}</b><small>the safest-looking leg that lost: ${pct(A.betrayer.x.p, 0)} before kick-off</small></div>` : ''}
+      <div class="ap-stats"><div><b>${A.won}/${n}</b><span>legs survived</span></div><div><b>${mvxN(of(A.chance))}</b><span>of 10,000 weekends it lands</span></div><div><b>${A.tot ? odds(A.tot) : '–'}</b><span>slip odds</span></div></div>
+      ${one}
+      <p class="ap-say">${esc(A.grade[1])} A slip like this lands about 1 time in ${Math.max(1, Math.round(1 / Math.max(1e-4, A.chance)))}. ${esc(bk)}</p>
+      <ul class="ap-legs">${legs}</ul>
+      <div class="bf-acts" style="justify-content:flex-start;flex-wrap:wrap"><button type="button" class="btn pri" id="apShare"><svg width="16" height="16" aria-hidden="true"><use href="#i-share"/></svg>Share the autopsy</button><button type="button" class="btn" id="apReplay">Replay</button></div>
+    </div>`;
+  }
+  function apLanded(A) {
+    const ch = A.E.chance || 0;
+    return `<div class="card ap won"><div class="ap-top"><span class="ap-case">Slip autopsy</span><span class="ap-grade">Landed</span></div>
+      <p class="ap-say">No autopsy needed: every leg came in. A slip like this lands about 1 time in ${Math.max(1, Math.round(1 / Math.max(1e-4, ch)))}, so enjoy it.</p></div>`;
+  }
+  // the monitor: the slip's chance on a log scale, swept left to right like a heart monitor, flatlining at death
+  function apDraw(x, A, W, H, u, opt) {
+    opt = opt || {};
+    const pl = opt.pl || 10, pr = opt.pr || 10, pt = opt.pt || 14, pb = opt.pb || 22, X = (f) => pl + (W - pl - pr) * f;
+    const lo = Math.log10(Math.min(A.pre, 1e-3) / 3), Y = (p) => pt + (H - pt - pb) * (1 - (Math.log10(Math.max(p, 10 ** lo)) - lo) / -lo), k = opt.k || 1;
+    x.fillStyle = opt.bg || '#02100b'; x.fillRect(0, 0, W, H);
+    x.strokeStyle = 'rgba(61,220,151,.08)'; x.lineWidth = 1 * k;
+    const gs = 22 * k; for (let gx = pl; gx <= W - pr; gx += gs) { x.beginPath(); x.moveTo(gx, pt); x.lineTo(gx, H - pb); x.stroke(); }
+    for (let gy = pt; gy <= H - pb; gy += gs) { x.beginPath(); x.moveTo(pl, gy); x.lineTo(W - pr, gy); x.stroke(); }
+    x.font = `600 ${10 * k}px ${SF.b}`; x.textAlign = 'left';
+    const levels = [1, 0.1, 0.01, 0.001].filter((p) => Math.log10(p) >= lo);
+    for (const p of levels) { const y = Y(p); x.strokeStyle = 'rgba(61,220,151,.16)'; x.setLineDash([2 * k, 4 * k]); x.beginPath(); x.moveTo(pl, y); x.lineTo(W - pr, y); x.stroke(); x.setLineDash([]); }
+    A.bounds.forEach(([f, T], i) => {
+      const xx = X(f), s = `${wdFmt.format(T)} ${tFmt.format(T)}`, w = x.measureText(s).width, nx = i + 1 < A.bounds.length ? X(A.bounds[i + 1][0]) : W - pr;
+      if (f > 0) { x.strokeStyle = 'rgba(160,240,200,.25)'; x.beginPath(); x.moveTo(xx, pt); x.lineTo(xx, H - pb); x.stroke(); }
+      if (xx + 4 * k + w <= nx - 4 * k) { x.fillStyle = 'rgba(160,240,200,.5)'; x.fillText(s, xx + 4 * k, H - 7 * k); }
+    });
+    // the trace, with a beat at every goal
+    const P = A.pts, upto = u, beat = (f) => { for (const [mf, s] of A.marks) { const d = (f - mf) * 260; if (d > -1.2 && d < 1.6) return Math.sin(d * Math.PI) * Math.exp(-Math.abs(d)) * 16 * k; } return 0; };
+    let dieX = null;
+    x.lineJoin = 'round'; x.lineCap = 'round';
+    for (const pass of [0, 1]) {
+      x.beginPath(); let started = false;
+      for (const [f, p] of P) {
+        if (f > upto) break;
+        const xx = X(f), yy = p > 0 ? Y(p) - beat(f) : H - pb - 2 * k;
+        if (p <= 0 && dieX == null) dieX = xx;
+        if (!started) { x.moveTo(xx, yy); started = true; } else x.lineTo(xx, yy);
+      }
+      if (pass === 0) { x.strokeStyle = 'rgba(61,220,151,.25)'; x.lineWidth = 7 * k; x.stroke(); }
+      else { x.strokeStyle = '#3ddc97'; x.lineWidth = 2.2 * k; x.stroke(); }
+    }
+    if (dieX != null) {   // flatline in red from the moment of death
+      const end = X(Math.min(upto, 1)); x.strokeStyle = '#ff4d4d'; x.lineWidth = 2.4 * k; x.shadowColor = 'rgba(255,77,77,.8)'; x.shadowBlur = 10 * k;
+      x.beginPath(); x.moveTo(dieX, H - pb - 2 * k); x.lineTo(end, H - pb - 2 * k); x.stroke(); x.shadowBlur = 0;
+      x.fillStyle = '#ff4d4d'; x.beginPath(); x.arc(dieX, H - pb - 2 * k, 4 * k, 0, 7); x.fill();
+      x.font = `800 ${12 * k}px ${SF.d}`; x.textAlign = dieX > W * 0.7 ? 'right' : 'left'; x.fillText(`✝ ${A.killer.fate.how === 'goal' ? A.killer.fate.at + "'" : 'FT'}`, dieX + (dieX > W * 0.7 ? -8 : 8) * k, H - pb - 10 * k); x.textAlign = 'left';
+      x.font = `600 ${10 * k}px ${SF.b}`;
+    } else if (upto < 1) {   // the sweep's bright head
+      const i = Math.max(0, P.findIndex((q) => q[0] > upto) - 1), [f, p] = P[i]; const xx = X(f), yy = Y(Math.max(p, 1e-9)) - beat(f);
+      x.fillStyle = '#c9ffe6'; x.shadowColor = '#3ddc97'; x.shadowBlur = 14 * k; x.beginPath(); x.arc(xx, yy, 3.4 * k, 0, 7); x.fill(); x.shadowBlur = 0;
+    }
+    x.font = `600 ${10 * k}px ${SF.b}`; x.textAlign = 'left';
+    for (const p of levels) {
+      const y = Y(p), s = p === 1 ? 'certain' : `1 in ${1 / p}`, w = x.measureText(s).width;
+      x.fillStyle = 'rgba(2,16,11,.78)'; x.fillRect(pl + 2 * k, y - 13 * k, w + 6 * k, 12 * k); x.fillStyle = 'rgba(160,240,200,.6)'; x.fillText(s, pl + 5 * k, y - 4 * k);
+    }
+  }
+  function apPlay(A, anim) {
+    const cv = $('#apCard .ap-cv'); if (!cv) return;
+    const W = cv.clientWidth, H = cv.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1); if (!W) return;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const t0 = performance.now(), dur = anim !== false && motionOK() ? 3200 : 0, dieF = (A.pts.find((q) => q[1] <= 0) || [1])[0];
+    const id = (S.ap.play = {}); let buzzed = false;
+    const step = (now) => {
+      if (S.ap.play !== id || !cv.isConnected) return;
+      const u = dur ? Math.min(1, (now - t0) / dur) : 1;
+      apDraw(x, A, W, H, u);
+      if (!buzzed && u >= dieF) { buzzed = true; if (dur) { buzz(300); const c = $('#apCard'); if (c) { c.classList.remove('dead'); void c.offsetWidth; c.classList.add('dead'); } } }
+      if (u < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  // the picture to share: 1080 × 1920, for a status
+  function apCanvas(A) {
+    const W = 1080, H = 1920, P = 72, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d'), k = A.killer, m = k.x.r.m;
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#04140e'); g.addColorStop(1, '#010604'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.textAlign = 'left'; x.fillStyle = '#3ddc97'; x.font = `600 30px ${SF.b}`; x.fillText(`CASE ${A.id}  ·  ${A.legs.length} LEGS  ·  ODDS ${A.tot ? odds(A.tot) : '–'}`, P, 120);
+    let z = 170; for (; z > 80; z -= 4) { x.font = `800 ${z}px ${SF.d}`; if (x.measureText('SLIP AUTOPSY').width <= W - 2 * P) break; }
+    x.fillStyle = '#ffffff'; x.fillText('SLIP AUTOPSY', P - 4, 260);
+    x.fillStyle = '#ff4d4d'; x.font = `800 44px ${SF.d}`; x.fillText(A.grade[0].toUpperCase(), P, 330);
+    x.save(); x.translate(P, 380); rrPath(x, 0, 0, W - 2 * P, 470, 26); x.clip(); apDraw(x, A, W - 2 * P, 470, 1, { k: 2.1, pl: 20, pr: 20, pt: 30, pb: 48 }); x.restore();
+    x.strokeStyle = 'rgba(61,220,151,.4)'; x.lineWidth = 2; rrPath(x, P, 380, W - 2 * P, 470, 26); x.stroke();
+    let y = 940;
+    const block = (lab, big, small, col) => {
+      x.fillStyle = 'rgba(160,240,200,.6)'; x.font = `600 28px ${SF.b}`; x.fillText(lab.toUpperCase(), P, y);
+      x.fillStyle = col || '#ffffff'; x.font = `800 60px ${SF.d}`; x.fillText(fitText(x, big, W - 2 * P), P, y + 66);
+      x.fillStyle = 'rgba(225,240,232,.75)'; x.font = `500 30px ${SF.b}`; x.fillText(fitText(x, small, W - 2 * P), P, y + 110); y += 170;
+    };
+    block('Time of death', apWhen(A.tDie), `${m.h} v ${m.a}${k.fate.how === 'goal' ? `, ${k.fate.at}'` : ', full time'}`, '#ff4d4d');
+    block('Cause of death', apLabel(k), apCause(A));
+    // three numbers
+    const cols = [[`${A.won}/${A.legs.length}`, 'legs survived'], [mvxN(Math.max(1, Math.round(A.chance * 10000))), 'of 10,000 weekends it lands'], [A.shortBy ? odds(A.shortBy) : (A.tot ? odds(A.tot) : '–'), A.shortBy ? 'without the killer leg' : 'slip odds']];
+    const cw = (W - 2 * P) / 3;
+    cols.forEach(([b, s], i) => { x.fillStyle = i === 1 ? '#3ddc97' : '#ffffff'; x.font = `800 76px ${SF.d}`; x.fillText(b, P + i * cw, y + 30); x.fillStyle = 'rgba(225,240,232,.6)'; x.font = `500 25px ${SF.b}`; wrapLines(x, s, cw - 20, 2).forEach((ln, j) => x.fillText(ln, P + i * cw, y + 72 + j * 30)); });
+    y += 150;
+    const say = A.shortBy ? `One leg from glory: without it the slip pays ${odds(A.shortBy)}.` : `${A.grade[1]} It lands about 1 time in ${Math.max(1, Math.round(1 / Math.max(1e-4, A.chance)))}.`;
+    x.fillStyle = A.shortBy ? '#ffd9d9' : 'rgba(225,240,232,.8)'; x.font = `600 32px ${SF.b}`;
+    wrapLines(x, say, W - 2 * P, 2).forEach((ln, j) => x.fillText(ln, P, y + j * 42)); y += 120;
+    // the legs
+    const L = A.legs.slice(0, 8), rh = Math.min(66, Math.max(48, (H - 190 - y) / Math.max(1, L.length)));
+    for (const l of L) {
+      const f = l.fate, lost = f && f.res === 'lost';
+      x.fillStyle = lost ? '#ff4d4d' : f ? '#3ddc97' : 'rgba(225,240,232,.4)'; x.beginPath(); x.arc(P + 13, y - 12, 13, 0, 7); x.fill();
+      x.fillStyle = l === k ? '#ff8080' : '#ffffff'; x.font = `700 33px ${SF.b}`; x.fillText(fitText(x, apLabel(l), W - 2 * P - 380), P + 44, y);
+      x.fillStyle = 'rgba(225,240,232,.6)'; x.font = `500 27px ${SF.b}`; x.textAlign = 'right';
+      x.fillText(fitText(x, `${l.x.r.m.h} ${l.F ? `${l.F.hs}–${l.F.as}` : 'v'} ${l.x.r.m.a}`, 330), W - P, y); x.textAlign = 'left';
+      y += rh;
+    }
+    if (A.legs.length > L.length) { x.fillStyle = 'rgba(225,240,232,.5)'; x.font = `500 26px ${SF.b}`; x.fillText(`+ ${A.legs.length - L.length} more`, P + 40, y); }
+    const site = mvSite();
+    x.fillStyle = '#3ddc97'; x.fillRect(0, H - 150, W, 150);
+    x.fillStyle = '#02100b'; x.font = `800 46px ${SF.d}`; x.fillText('GET YOUR SLIP’S AUTOPSY ON STATPAD', P, H - 86);
+    x.font = `600 28px ${SF.b}`; x.fillText(site || 'Statpad', P, H - 44);
+    return c;
+  }
+  async function shareCanvas(c, name, text, saved) {
+    let blob = null;
+    try { blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92)); } catch (e) { blob = null; }
+    if (!blob) { toast('Couldn’t make the image'); return; }
+    let file = null;
+    try { file = new File([blob], name, { type: 'image/jpeg' }); } catch (e) { /* old browser */ }
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'Statpad', text }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+    toast(saved);
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('#apShare,#apReplay,#chkLost'); if (!t) return;
+    if (t.id === 'chkLost') { const ex = apExample(); if (!ex) { toast('No finished games in the record to build one from yet'); return; } $('#chkText').value = ex; ckRun(); return; }
+    const A = S.ap.cur; if (!A) return;
+    if (t.id === 'apReplay') { apPlay(A); return; }
+    const site = mvSite();
+    shareCanvas(apCanvas(A), `statpad-autopsy-${A.id}.jpg`, `My slip's autopsy: ${A.grade[0].toLowerCase()}. Get yours on Statpad${site ? ': https://' + site : ''}`, 'Autopsy picture saved');
+  });
+  // a lost slip from the record, to see what an autopsy looks like: real games from the last few days, everyday
+  // prices, one leg that lost; kept only if the checker reads every line back as written
+  function apExample() {
+    const T = S.track; if (!T || !T.picks) return '';
+    const now = Date.now(), pickTxt = { H: '1', A: '2', '1X': '1X', X2: 'X2', O15: 'Over 1.5', O25: 'Over 2.5', U25: 'Under 2.5', U35: 'Under 3.5', BTTS: 'GG', BTTS_N: 'NG', H_O05: 'Home over 0.5', A_O05: 'Away over 0.5' };
+    const recent = T.picks.filter((p) => pickTxt[p[8]] && p[10] > 1 && now - Date.parse(p[2]) < 9 * 864e5 && /^[A-Za-z .']+$/.test(p[3] + p[4]));
+    const pref = (p) => (p[10] >= 1.25 && p[10] <= 2.2 ? 0 : 1);
+    const lost = recent.filter((p) => !p[13]).sort((x, y) => pref(x) - pref(y) || y[9] - x[9]), win = recent.filter((p) => p[13]).sort((x, y) => pref(x) - pref(y) || y[9] - x[9]);
+    for (const L of lost.slice(0, 8)) {
+      const day = L[2].slice(0, 10), pick = [...win.filter((p) => p[2].slice(0, 10) === day && p[0] !== L[0]).slice(0, 4), L];
+      for (const w of win) { if (pick.length >= 5) break; if (!pick.includes(w)) pick.push(w); }
+      pick.sort((x, y) => Date.parse(x[2]) - Date.parse(y[2]));
+      const txt = pick.map((p) => `${p[3]} vs ${p[4]}  ${pickTxt[p[8]]} @${p[10].toFixed(2)}`).join('\n') + `\nTotal odds: ${pick.reduce((a, p) => a * p[10], 1).toFixed(2)}\nStake: 10000\nStatus: Lost`;
+      CK = null;
+      const P = ckParse(txt, false);
+      if (P.legs.length === pick.length && P.legs.every((g, i) => g.r.m.id === pick[i][0] && g.key === pick[i][8])) return txt;
+    }
+    return '';
+  }
   // ---------------- reading a slip from a picture ----------------
   // Tesseract (open-source text recognition) runs in the browser, so the picture never leaves the phone. Its files
   // (about 4.5 MB) download the first time; after that they come from the phone's cache.
@@ -6951,7 +7439,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   setInterval(esTick, 10e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) esTick(); });
-  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, render: () => render(), mvShot: (...a) => mvDebugShot(...a), mvPlan: () => mvDebugPlan(), mvClip: (...a) => mvDebugClip(...a), esStatus, esTick, esRow, esTuple, esPair, esSim, gsRun: () => gsRun(), gsSolve: (...a) => gsSolve(...a), gsRows: (d) => gsRows(d), openMatch: (id) => openMatch(id), mvxTime: (n, mode) => { const cv = document.querySelector('canvas.mvx-cv'); const t = performance.now(); for (let i = 0; i < n; i++) { window.__mvxMode = mode; mvxDraw(cv, performance.now()); } cv.getContext('2d').getImageData(0, 0, 1, 1); return (performance.now() - t) / n; }, mvxBench: (id) => { const r = S.byId.get(id), st = mvxState(r); S.mvx.cache.delete(id); let t = performance.now(); const X = mvxSim(r, st); const ts = performance.now() - t; const cv = document.querySelector('canvas.mvx-cv'); t = performance.now(); const D = cv && cv._mvx ? mvxDensity(cv._mvx, X) : null; const td = performance.now() - t; t = performance.now(); if (D) mvxPaint(D, -1, cv._mvx.G); return { sim: ts, dens: td, paint: performance.now() - t }; } };   // for the test scripts
+  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, render: () => render(), mvShot: (...a) => mvDebugShot(...a), mvPlan: () => mvDebugPlan(), mvClip: (...a) => mvDebugClip(...a), esStatus, esTick, esRow, esTuple, esPair, esSim, gsRun: () => gsRun(), gsSolve: (...a) => gsSolve(...a), gsRows: (d) => gsRows(d), openMatch: (id) => openMatch(id), fpTime: (id) => { const t = performance.now(); const c = fpPoster(S.byId.get(id)); const t1 = performance.now(); return new Promise((res) => c.toBlob((b) => res([t1 - t, performance.now() - t1, b.size]), 'image/jpeg', 0.92)); }, mvxTime: (n, mode) => { const cv = document.querySelector('canvas.mvx-cv'); const t = performance.now(); for (let i = 0; i < n; i++) { window.__mvxMode = mode; mvxDraw(cv, performance.now()); } cv.getContext('2d').getImageData(0, 0, 1, 1); return (performance.now() - t) / n; }, mvxBench: (id) => { const r = S.byId.get(id), st = mvxState(r); S.mvx.cache.delete(id); let t = performance.now(); const X = mvxSim(r, st); const ts = performance.now() - t; const cv = document.querySelector('canvas.mvx-cv'); t = performance.now(); const D = cv && cv._mvx ? mvxDensity(cv._mvx, X) : null; const td = performance.now() - t; t = performance.now(); if (D) mvxPaint(D, -1, cv._mvx.G); return { sim: ts, dens: td, paint: performance.now() - t }; } };   // for the test scripts
   document.addEventListener('input', (e) => {
     const d = e.target.dataset || {};
     if (d.man) {
@@ -7519,6 +8007,153 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   document.addEventListener('visibilitychange', mvxKick);
   addEventListener('resize', () => { for (const cv of S.mvx.cvs) if (cv._mvx) cv._mvx.drawn = false; mvxKick(); });
 
+  // ---------------- match fingerprint: a game drawn as one line, kept as a poster ----------------
+  // One ridge wound from the centre outwards, every turn a lap of the game's clock: kick-off at the top, running
+  // clockwise. Where the home side was pressing (the momentum wave) the ridge bulges out, where the away side was
+  // it is pulled in, a little more on every turn, so the outer ridges carry the whole story; its colour leans to
+  // the side on top. Goals cut the outer ridges and light a spark at their minute; red cards notch the rim. More
+  // shots wind more turns, possession stretches it, and the game's id seeds the small irregularities: no two alike.
+  function fpData(r) {
+    const c = S.mc.d[r.m.id], d = c && c.d; if (!d || d.state === 'pre') return null;
+    const M = mwSeries(d); if (!M || M.n < 20) return null;
+    const num = (s, k) => parseFloat(d[s].stats[k]), poss = num('h', 'possessionPct'), sh = (num('h', 'totalShots') || 0) + (num('a', 'totalShots') || 0);
+    const hs = +d.h.score || 0, as = +d.a.score || 0, K = mcKits(d);
+    const lift = (c) => { if (!/^#[0-9a-f]{6}$/i.test(c)) return c; for (let f = 0; f <= 0.7; f += 0.05) { const q = '#' + mwHex(c).map((v) => Math.round(v + (255 - v) * f).toString(16).padStart(2, '0')).join(''); if (mwContrast(q, '#05070f') >= 4.2) return q; } return '#ffffff'; };
+    let ch = lift(K.h), ca = lift(K.a);
+    if (Math.hypot(...mwHex(ch).map((v, i) => v - mwHex(ca)[i])) < 80) ca = '#ff9a5c';
+    return { r, d, M, hs, as, ch, ca, poss: isFinite(poss) ? poss : 50, shots: sh, done: !!d.done, pe: r.a && r.a.M ? exactP(r, hs, as) : null, key: `${r.m.id}|${M.n}|${hs}-${as}|${d.done ? 1 : 0}` };
+  }
+  // the ridge: points along the spiral, each with its pressure (-1 away … +1 home)
+  function fpRidge(Fd, R) {
+    const { M } = Fd, turns = 20 + Math.min(14, Math.round(Fd.shots / 2)), R0 = R * 0.07, gap = (R - R0) / turns, rnd = mvxRng(mvxHash(Fd.r.m.id));
+    const ph = [rnd() * 6.28, rnd() * 6.28, rnd() * 6.28, rnd() * 6.28], ex = 1 + (Fd.poss - 50) / 260, rot = (rnd() - 0.5) * 0.5;
+    const sm = M.net.map((_, i) => { let s = 0, w = 0; for (let k = -3; k <= 3; k++) { const v = M.net[i + k]; if (v == null) continue; const q = Math.exp(-(k * k) / 4.5); s += v * q; w += q; } return s / w / M.top; });
+    const at = (t) => { const i = Math.floor(t), f = t - i; if (t > M.n) return null; const a = sm[Math.min(sm.length - 1, i)], b = sm[Math.min(sm.length - 1, i + 1)]; return a + (b - a) * f; };
+    const steps = 180, pts = [];
+    for (let s = 0; s <= turns * steps; s++) {
+      const q = s / steps, a = (q % 1) * Math.PI * 2, t = (q % 1) * M.end, v = at(t);
+      const n = Math.sin(a * 2 + ph[0] + q * 0.31) * 0.28 + Math.sin(a * 3 + ph[1] - q * 0.17) * 0.18 + Math.sin(a * 5 + ph[2]) * 0.08 + Math.sin(q * 0.9 + ph[3]) * 0.15;
+      const r = R0 + gap * q + gap * 0.72 * (v || 0) * q * 0.9 + gap * n * (0.4 + q / turns);
+      const th = -Math.PI / 2 + a + rot * (q / turns);
+      pts.push([Math.cos(th) * r * ex, Math.sin(th) * r / ex, v, q, t]);
+    }
+    // scaled so the widest bulge just reaches R
+    let mx = 1; for (const p of pts) mx = Math.max(mx, Math.hypot(p[0], p[1]));
+    const sc = R / mx; for (const p of pts) { p[0] *= sc; p[1] *= sc; }
+    const rim = (f) => { const p = pts[Math.min(pts.length - 1, Math.round((turns - 1 + ((f % 1) + 1) % 1) * steps))]; return Math.hypot(p[0], p[1]); };
+    return { pts, turns, gap: gap * sc, R0: R0 * sc, rim };
+  }
+  function fpDraw(x, Fd, cx, cy, R, u, k) {
+    k = k || 1;
+    const G = Fd.ridge && Fd.ridgeR === R ? Fd.ridge : (Fd.ridge = fpRidge(Fd, R), Fd.ridgeR = R, Fd.ridge), { pts, turns, gap } = G, M = Fd.M;
+    const cut = M.goals.map(([t]) => (t / M.end) % 1), red = M.reds.map(([t, s]) => [(t / M.end) % 1, s]);
+    const hx = mwHex(Fd.ch), ax = mwHex(Fd.ca), nx = [214, 224, 242];
+    const B = 7, paths = Array.from({ length: 2 * B + 1 }, () => new Path2D());   // colour buckets: away … neutral … home
+    const last = Math.max(1, Math.floor(pts.length * Math.min(1, u)));
+    let cur = null;   // runs of one colour drawn as one polyline, so the joins don't show
+    for (let i = 1; i < last; i++) {
+      const p = pts[i - 1], q = pts[i], f = (q[3] % 1);
+      if (q[4] > M.n + 0.5) { cur = null; continue; }   // a game still going: the rest of the clock is blank
+      if (q[3] > turns * 0.38 && cut.some((c) => { const dd = Math.abs(f - c); return Math.min(dd, 1 - dd) < 0.006 + 0.007 * (q[3] / turns); })) { cur = null; continue; }   // goals cut the outer ridges
+      const v = q[2] || 0, b = Math.max(-B, Math.min(B, Math.round(v * B * 1.4)));
+      if (cur !== b) { paths[b + B].moveTo(cx + p[0], cy + p[1]); cur = b; }
+      paths[b + B].lineTo(cx + q[0], cy + q[1]);
+    }
+    x.lineCap = 'butt'; x.lineJoin = 'round';
+    const lw = Math.max(0.8, gap * 0.34);
+    for (let b = -B; b <= B; b++) {
+      const w = Math.abs(b) / B, c = b > 0 ? hx : b < 0 ? ax : nx, col = nx.map((v, j) => Math.round(v + (c[j] - v) * Math.min(1, w * 1.15)));
+      x.strokeStyle = `rgb(${col.join(',')})`; x.globalAlpha = 0.55 + 0.45 * w; x.lineWidth = lw * (1 + 0.35 * w);
+      if (w > 0.4) { x.shadowColor = `rgba(${col.join(',')},.55)`; x.shadowBlur = 10 * k * w; } else x.shadowBlur = 0;
+      x.stroke(paths[b + B]);
+    }
+    x.shadowBlur = 0; x.globalAlpha = 1;
+    // the rim, just outside the outer ridge: kick-off, half time, goals, red cards
+    const ang = (f) => -Math.PI / 2 + f * Math.PI * 2, pos = (f, rr) => [cx + Math.cos(ang(f)) * rr, cy + Math.sin(ang(f)) * rr], Rr = (f) => G.rim(f) + 12 * k;
+    Fd.rimPos = (f, off) => pos(f, Rr(f) + (off || 0));
+    if (u >= 1) {
+      x.strokeStyle = 'rgba(214,224,242,.4)'; x.lineWidth = 1.4 * k;
+      for (const [f, L] of [[0, 16], [M.ht / M.end, 10]]) { const [a1, b1] = pos(f, Rr(f) - 6 * k), [a2, b2] = pos(f, Rr(f) - 6 * k + L * k); x.beginPath(); x.moveTo(a1, b1); x.lineTo(a2, b2); x.stroke(); }
+      M.goals.forEach(([t, s]) => {
+        const f = (t / M.end) % 1, [X, Y] = pos(f, Rr(f) + 4 * k), col = s === 'h' ? Fd.ch : Fd.ca;
+        x.shadowColor = col; x.shadowBlur = 16 * k; x.fillStyle = '#ffffff'; x.beginPath(); x.arc(X, Y, 4.2 * k, 0, 7); x.fill();
+        x.shadowBlur = 0; x.strokeStyle = col; x.lineWidth = 2 * k; x.beginPath(); x.arc(X, Y, 8 * k, 0, 7); x.stroke();
+      });
+      red.forEach(([f]) => { const [X, Y] = pos(f, Rr(f) + 4 * k); x.save(); x.translate(X, Y); x.rotate(ang(f) + Math.PI / 2); x.fillStyle = '#ff4d4d'; x.fillRect(-3 * k, -5 * k, 6 * k, 10 * k); x.restore(); });
+    }
+  }
+  function fpCard(r) {
+    const Fd = fpData(r); if (!Fd) return '';
+    const m = r.m, sp = Fd.M;
+    return `<div class="card fp" id="fpCard"><h4>Fingerprint <span>${Fd.done ? 'the whole game, one line' : 'still forming'}</span></h4>
+      <div class="fp-stage"><canvas class="fp-cv" data-fp="${esc(m.id)}" role="img" aria-label="The fingerprint of ${esc(m.h)} ${Fd.hs}–${Fd.as} ${esc(m.a)}: one ridge per lap of the game's clock, pushed out when ${esc(m.h)} pressed and in when ${esc(m.a)} did"></canvas></div>
+      <p class="fp-key"><span><i style="background:${Fd.ch}"></i>${esc(m.h)} pressing: ridges pushed out</span><span><i style="background:${Fd.ca}"></i>${esc(m.a)} pressing: pulled in</span><span><i class="g"></i>Goals cut the ridges</span></p>
+      <p class="note">Every turn of the line is the whole game, kick-off at the top, running clockwise; outer turns carry it more strongly. More shots wind more turns. No two games make the same print.</p>
+      <div class="bf-acts" style="justify-content:flex-start;flex-wrap:wrap"><button type="button" class="btn pri" data-fpshare="${esc(m.id)}"><svg width="16" height="16" aria-hidden="true"><use href="#i-share"/></svg>Share the poster</button><button type="button" class="btn" data-fpsave="${esc(m.id)}">Save in 4K</button></div>
+    </div>`;
+  }
+  function fpAttach() {
+    const cv = $('canvas.fp-cv'); if (!cv) return;
+    const r = S.byId.get(cv.dataset.fp), Fd = r && fpData(r); if (!Fd) return;
+    const W = cv.clientWidth, dpr = Math.min(2, window.devicePixelRatio || 1); if (!W) return;
+    const fresh = cv._fpKey !== Fd.key || cv._w !== W; if (!fresh) return;
+    const anim = cv._fpKey == null && motionOK(); cv._fpKey = Fd.key; cv._w = W;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(W * dpr);
+    const x = cv.getContext('2d'), t0 = performance.now(), dur = anim ? 1900 : 0, id = (cv._play = {});
+    const step = (now) => {
+      if (cv._play !== id || !cv.isConnected) return;
+      const u = dur ? Math.min(1, (now - t0) / dur) : 1;
+      x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, W);
+      fpDraw(x, Fd, W / 2, W / 2, W * 0.4, 1 - Math.pow(1 - u, 2.2), 1);
+      if (u < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  // the poster: 2160 × 3840, for a status or a phone's lock screen
+  function fpPoster(r) {
+    const Fd = fpData(r); if (!Fd) return null;
+    const W = 2160, H = 3840, P = 150, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d'), m = r.m, d = Fd.d;
+    const g = x.createRadialGradient(W / 2, 1500, 100, W / 2, 1500, 2300); g.addColorStop(0, '#0b1230'); g.addColorStop(0.6, '#05070f'); g.addColorStop(1, '#010205');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.fillStyle = 'rgba(214,224,242,.6)'; x.font = `600 46px ${SF.b}`; x.textAlign = 'left'; x.fillText('MATCH FINGERPRINT', P, 230);
+    x.textAlign = 'right'; x.fillText(`${dFmt.format(r.ko)} ${new Date(r.ko).getFullYear()}`, W - P, 230); x.textAlign = 'left';
+    fpDraw(x, Fd, W / 2, 1480, 860, 1, 2.6);
+    // the minute of each goal, and kick-off when no goal sits there
+    const M = Fd.M; x.textAlign = 'center';
+    const lab = (f, s, font, col) => { const [X, Y] = Fd.rimPos(f, 70); x.font = font; x.fillStyle = col; x.fillText(s, X, Y + 16); };
+    if (!M.goals.some(([t]) => { const f = (t / M.end) % 1; return Math.min(f, 1 - f) < 0.05; })) lab(0, "0'", `600 40px ${SF.b}`, 'rgba(214,224,242,.6)');
+    for (const [t] of M.goals) { const mm = Math.round(t > M.ht ? t - d.e1 : Math.min(45, t)); lab((t / M.end) % 1, `${mm > 90 ? '90+' + (mm - 90) : mm}'`, `800 50px ${SF.d}`, '#ffffff'); }
+    // the game
+    let y = 2740; x.textAlign = 'left';
+    const name = (s, z) => { x.font = `800 ${z}px ${SF.d}`; return x.measureText(s).width; };
+    let z = 190; const line = `${m.h.toUpperCase()} ${Fd.hs}–${Fd.as} ${m.a.toUpperCase()}`; while (z > 90 && name(line, z) > W - 2 * P) z -= 6;
+    x.font = `800 ${z}px ${SF.d}`;
+    const hW = x.measureText(m.h.toUpperCase() + ' ').width, sW = x.measureText(`${Fd.hs}–${Fd.as} `).width;
+    x.fillStyle = Fd.ch; x.fillText(m.h.toUpperCase(), P, y); x.fillStyle = '#ffffff'; x.fillText(`${Fd.hs}–${Fd.as}`, P + hW, y); x.fillStyle = Fd.ca; x.fillText(m.a.toUpperCase(), P + hW + sW, y);
+    y += 90; x.fillStyle = 'rgba(214,224,242,.7)'; x.font = `600 50px ${SF.b}`; x.fillText(`${lgName(m.lk)} · ${longFmt.format(r.ko)}`, P, y);
+    // three numbers
+    y += 170;
+    const stat = (k) => [d.h.stats[k], d.a.stats[k]];
+    const tri = [[`${Math.round(Fd.poss)}–${Math.round(100 - Fd.poss)}`, 'possession %'], [stat('totalShots').every((v) => v != null) ? stat('totalShots').join('–') : '–', 'shots'], [Fd.pe ? mirIn(Fd.pe) : '–', 'this score, before kick-off']];
+    const cw = (W - 2 * P) / 3;
+    tri.forEach(([b, s], i) => { x.fillStyle = '#ffffff'; x.font = `800 110px ${SF.d}`; x.fillText(b, P + i * cw, y); x.fillStyle = 'rgba(214,224,242,.6)'; x.font = `500 40px ${SF.b}`; x.fillText(s, P + i * cw, y + 60); });
+    y += 190;
+    x.fillStyle = 'rgba(214,224,242,.62)'; x.font = `500 42px ${SF.b}`;
+    wrapLines(x, `One line, wound from the centre out. Every turn is the whole game, kick-off at the top, clockwise. Pushed out when ${m.h} were pressing, pulled in when ${m.a} were. Goals cut the ridges.`, W - 2 * P, 4).forEach((ln, i) => x.fillText(ln, P, y + i * 60));
+    const site = mvSite();
+    x.fillStyle = 'rgba(214,224,242,.85)'; x.font = `700 48px ${SF.b}`; x.fillText(`Statpad${site ? ' · ' + site : ''}`, P, H - 150);
+    x.fillStyle = 'rgba(214,224,242,.45)'; x.font = `500 38px ${SF.b}`; x.fillText('Every game has one. Find yours on the match page.', P, H - 92);
+    return c;
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-fpshare],[data-fpsave]'); if (!b) return;
+    const r = S.byId.get(b.dataset.fpshare || b.dataset.fpsave); if (!r) return;
+    const c = fpPoster(r); if (!c) { toast('No fingerprint for this game yet'); return; }
+    const nm = `statpad-fingerprint-${r.m.h}-${r.m.a}`.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.jpg', site = mvSite();
+    if (b.dataset.fpsave) { c.toBlob((blob) => { if (!blob) return; const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nm; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000); toast('Poster saved'); }, 'image/jpeg', 0.93); return; }
+    shareCanvas(c, nm, `The fingerprint of ${r.m.h} ${fpData(r).hs}–${fpData(r).as} ${r.m.a}. Every game has one, on Statpad${site ? ': https://' + site : ''}`, 'Poster saved');
+  });
   // ---------------- live match centre: ESPN's match summary (line-ups, stats, events) on the match page ----------------
   // Fetched by this phone while the match page is open: once a minute during a game, once after it. About 60 KB a
   // time, so it never runs in the background.
@@ -7801,6 +8436,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const r = S.byId.get(id); if (!r) return;
     const y = $('#sheetBody').scrollTop;
     morph(box, mcCard(r), 'mc:' + id + ':' + (S.mc.seg || ''));
+    const fb = $('#sheetFP'); if (fb) { morph(fb, fpCard(r), 'fp:' + id); fpAttach(); }
     $('#sheetBody').scrollTop = y;
   }
   document.addEventListener('click', (e) => {
@@ -7910,6 +8546,98 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       return `<button type="button" class="bigg-c" data-open="${esc(r.m.id)}"><span class="stk-lv ${st.cls}">${st.lv} · ${st.s}</span><b>${pair(r.m)}${esc(r.m.h)} v ${esc(r.m.a)}</b><small>${esc(lgName(r.m.lk))} · ${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}</small>${s ? `<span class="bigg-s">${esc(s.name)}, ${esc(s.z.toLowerCase())}: <b>${fmtP(s.w)}</b> with a win, <b>${fmtP(s.l)}</b> with a defeat</span>` : ''}</button>`;
     }).join('')}</div></div>`;
   }
+  // ---------------- weekend miracles: the results that almost never happen ----------------
+  // The site's update writes miracles.json (a few KB): the latest weekend's graded games, rarest final score first,
+  // each with how often Statpad's scoreline grid gave that exact score before kick-off, and that result.
+  S.mir = null; S.mirAt = 0;
+  async function loadMir(force) {
+    if (S.mirBusy || (!force && Date.now() - S.mirAt < 20 * 60e3)) return;
+    S.mirBusy = true;
+    try { const r = await fetch('miracles.json?t=' + Math.floor(Date.now() / 600e3), { cache: 'no-store' }); if (r.ok) S.mir = await r.json(); } catch (e) { /* none yet */ }
+    S.mirBusy = false; S.mirAt = Date.now();
+    if (mirShow() && S.tab === 'matches' && S.ready && !S.q) renderMatches();
+    if (S.open === 'miracles:') renderSheet();
+  }
+  const mirOf = (x) => ({ id: x[0], m: { id: x[0], lk: x[1], ko: x[2], h: x[3], a: x[4] }, ko: Date.parse(x[2]), hs: x[5], as: x[6], pe: x[7], po: x[8], lh: x[9], la: x[10], goals: x[11] });
+  function mirShow() { const M = S.mir; return !!(M && M.items && M.items.length >= 3 && Date.now() < Date.parse(M.to) + 3 * 864e5); }
+  const mirN = (p) => Math.max(1, Math.round(p * 10000));
+  const mirIn = (p) => `1 in ${mvxN(Math.max(2, Math.round(1 / Math.max(1e-6, p))))}`;
+  function mirSpan() {
+    const M = S.mir, a = new Date(Date.parse(M.from)), b = new Date(Date.parse(M.to) - 1);
+    return `${wdFmt.format(a)} ${dFmt.format(a)} – ${wdFmt.format(b)} ${dFmt.format(b)}`;
+  }
+  function mirCard() {
+    if (!mirShow()) return '';
+    const it = S.mir.items.map(mirOf).slice(0, 6);
+    return `<div class="mir"><div class="bigg-h"><h3>Weekend miracles</h3><button type="button" class="linkbtn" data-mir="1">All of them</button></div>
+      <div class="mir-row">${it.map((x, i) => `<button type="button" class="mir-c${i === 0 ? ' top' : ''}" data-mir="${esc(x.id)}">
+        <span class="mir-n"><b>${mvxN(mirN(x.pe))}</b> in 10,000</span>
+        <span class="mir-sc">${pair(x.m)}<b>${x.hs}–${x.as}</b></span>
+        <span class="mir-t">${esc(x.m.h)} v ${esc(x.m.a)}</span><small>${esc(lgName(x.m.lk))} · ${esc(wdFmt.format(x.ko))}</small></button>`).join('')}</div></div>`;
+  }
+  function openMir(opener, id) {
+    S.open = 'miracles:'; S.opener = opener || document.activeElement; S.mirFocus = id && id !== '1' ? id : null;
+    renderSheet();
+    const sh = $('#sheet'); sh.classList.add('open'); $('#scrim').classList.add('open'); sh.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; $('#sheetBody').scrollTop = 0;
+  }
+  function renderMirSheet() {
+    $('#sheetTitle').textContent = 'Weekend miracles';
+    if (!mirShow()) { $('#sheetBody').innerHTML = '<div class="empty-state"><b>No weekend to look back on yet</b>The rarest results appear here once the weekend’s games are graded.</div>'; loadMir(true); return; }
+    const M = S.mir, all = M.items.map(mirOf), shock = M.shock ? all.find((x) => x.id === M.shock) : null;
+    const list = all.filter((x) => x !== shock || all.indexOf(x) < 15);
+    const top = (S.mirFocus && all.find((x) => x.id === S.mirFocus)) || all[0];
+    const lmin = Math.log10(Math.min(...list.map((x) => x.pe))), row = (x, i) => {
+      const w = Math.max(6, 100 * (1 - (Math.log10(x.pe) - lmin) / (-1.2 - lmin)));
+      return `<li class="mir-l${x === top ? ' on' : ''}"><button type="button" data-mirpick="${esc(x.id)}"><span class="mir-rk">${i + 1}</span>
+        <span class="mir-g">${pair(x.m)}<b>${esc(x.m.h)} <em>${x.hs}–${x.as}</em> ${esc(x.m.a)}</b><small>${esc(lgName(x.m.lk))} · ${esc(wdFmt.format(x.ko))} ${tFmt.format(x.ko)}</small></span>
+        <span class="mir-v"><b>${mvxN(mirN(x.pe))}</b><small>${mirIn(x.pe)}</small></span><i class="mir-bar" style="width:${Math.min(100, w).toFixed(1)}%"></i></button></li>`;
+    };
+    $('#sheetBody').innerHTML = `<div class="card mir-hero" id="mirHero">
+        <div class="mir-stage"><canvas class="mir-cv" role="img" aria-label="10,000 dots, one for each version of the game played before kick-off; ${mirN(top.pe)} of them lit, the versions that ended ${top.hs}–${top.as}"></canvas></div>
+        <div class="mir-h"><div class="mir-sc big">${pair(top.m)}<b>${esc(top.m.h)} <em>${top.hs}–${top.as}</em> ${esc(top.m.a)}</b></div>
+        <p>Before kick-off, Statpad played this game 10,000 times. <b>${mvxN(mirN(top.pe))}</b> of them ended ${top.hs}–${top.as}: ${mirIn(top.pe)}. ${top.po < 0.3 ? `The result itself was a ${pct(top.po, 0)} chance.` : ''}</p></div></div>
+      ${shock ? `<div class="card mir-shock"><h4>Biggest shock <span>${esc(lgName(shock.m.lk))}</span></h4><p><b>${esc(shock.hs > shock.as ? shock.m.h : shock.m.a)}</b> beat ${esc(shock.hs > shock.as ? shock.m.a : shock.m.h)} ${Math.max(shock.hs, shock.as)}–${Math.min(shock.hs, shock.as)}: a ${pct(shock.po, 0)} chance before kick-off, ${mirIn(shock.po)}.</p></div>` : ''}
+      <div class="card"><h4>The rarest scores <span>${esc(mirSpan())} · ${M.n} games</span></h4><ol class="mir-list">${list.map(row).join('')}</ol>
+        <p class="note">Each number is how many of 10,000 simulated versions of the game, from Statpad’s scoreline grid before kick-off, ended with that exact score. Tap a game to light up its own 10,000.</p></div>
+      <div class="bf-acts" style="justify-content:flex-start"><button type="button" class="btn pri" data-statuspack="miracles">Make WhatsApp clips</button></div>`;
+    requestAnimationFrame(() => mirPlay(top));
+  }
+  // 10,000 dots, one per version of the game; the ones that ended with the real score light up
+  function mirPlay(top) {
+    const cv = $('#mirHero .mir-cv'); if (!cv) return;
+    const W = cv.clientWidth, H = cv.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1); if (!W) return;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = mirN(top.pe), R = mvxRng(mvxHash(top.id)), lit = new Set(); while (lit.size < Math.min(n, 9999)) lit.add(Math.floor(R() * 10000));
+    const G = 100, cell = Math.min((W - 16) / G, (H - 16) / G), gx = (W - cell * G) / 2, gy = (H - cell * G) / 2, r0 = Math.max(0.55, cell * 0.28);
+    const dots = new Path2D(); for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) dots.rect(gx + j * cell + cell / 2 - r0, gy + i * cell + cell / 2 - r0, 2 * r0, 2 * r0);
+    const L = [...lit].map((k) => [gx + (k % G) * cell + cell / 2, gy + Math.floor(k / G) * cell + cell / 2]);
+    const t0 = performance.now(), dur = motionOK() ? 2400 : 0, id = (S.mirPlayId = {});
+    const step = (now) => {
+      if (S.mirPlayId !== id || !cv.isConnected) return;
+      const t = dur ? (now - t0) / dur : 1, uw = Math.min(1, t / 0.45), ul = Math.max(0, Math.min(1, (t - 0.5) / 0.25));
+      x.clearRect(0, 0, W, H);
+      x.save(); x.beginPath(); x.rect(0, 0, W, gy + cell * G * uw); x.clip(); x.fillStyle = 'rgba(170,185,230,.17)'; x.fill(dots); x.restore();
+      if (ul > 0) {
+        x.save(); x.globalCompositeOperation = 'lighter';
+        const fl = 1 - Math.min(1, (t - 0.5) / 0.5);
+        for (const [X, Y] of L) {
+          if (fl > 0 && L.length < 400) { x.strokeStyle = `rgba(255,212,71,${(0.6 * fl).toFixed(3)})`; x.lineWidth = 1.2; x.beginPath(); x.arc(X, Y, r0 + 14 * (1 - fl), 0, 7); x.stroke(); }
+          const gr = x.createRadialGradient(X, Y, 0, X, Y, r0 * 9); gr.addColorStop(0, `rgba(255,212,71,${0.55 * ul})`); gr.addColorStop(1, 'rgba(255,212,71,0)');
+          x.fillStyle = gr; x.beginPath(); x.arc(X, Y, r0 * 9, 0, 7); x.fill();
+          x.fillStyle = `rgba(255,248,220,${ul})`; x.beginPath(); x.arc(X, Y, r0 * 2.1, 0, 7); x.fill();
+        }
+        x.restore();
+      }
+      if (t < 1.05) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mir]'); if (b) { openMir(b, b.dataset.mir); return; }
+    const p = e.target.closest('[data-mirpick]');
+    if (p && S.open === 'miracles:') { S.mirFocus = p.dataset.mirpick; buzz(6); renderMirSheet(); const h = $('#mirHero'); if (h) h.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'auto', block: 'start' }); }
+  });
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-sortstakes]'); if (!t) return;
     S.sort = 'stakes'; store.set('sort', S.sort); renderMatches();

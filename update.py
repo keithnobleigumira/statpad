@@ -3827,7 +3827,7 @@ for (const m of inp.matches) {
   try { a = E.analyse(m, now); } catch (err) { a = null; }
   if (!a) continue;
   out.picks[m.id] = {
-    src: a.src, p: [a.p.H, a.p.D, a.p.A], pm: a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A] : null, m: a.mkt ? a.mkt.p : null,
+    src: a.src, p: [a.p.H, a.p.D, a.p.A], pm: a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A] : null, m: a.mkt ? a.mkt.p : null, x: [a.lh, a.la],
     k: a.top ? a.top.key : null, pp: a.top ? a.top.pAdj : null, pr: a.top ? a.top.price : null, r: a.top ? !!a.top.real : false,
     pu: a.top ? (a.top.pRaw != null ? a.top.pRaw : a.top.pAdj) : null,
     t: a.top && a.top.pLo != null ? a.tier : undefined, pl: a.top && a.top.pLo != null ? a.top.pLo : undefined,
@@ -4081,6 +4081,19 @@ def load_track(state):
     return tr, repo
 
 
+def goal_times(state, mid, hs, as_):
+    """The goal minutes seen while the game was live ([[minute, 'h' or 'a'], ...]), when they add up to the final
+    score: the slip autopsy and the weekend miracles on the site use them."""
+    g = (((state.get('af') or {}).get('live') or {}).get('games') or {}).get(mid)
+    try:
+        goals = [[int(x[0]), x[1]] for x in (g[5] or [])] if g and len(g) > 5 else []
+    except (TypeError, ValueError, IndexError):
+        return None
+    if goals and sum(1 for x in goals if x[1] == 'h') == hs and sum(1 for x in goals if x[1] == 'a') == as_:
+        return sorted(goals)
+    return [] if hs == 0 and as_ == 0 else None
+
+
 def track_update(doc, state):
     tr, repo = load_track(state)
     agg = tr['agg']
@@ -4102,7 +4115,8 @@ def track_update(doc, state):
             rec = pend.get(mid) or {'id': mid, 'op': None}
             rec.update({'lk': m['lk'], 'ko': m['ko'], 'h': m['h'], 'a': m['a'], 'src': e['src'], 'p': r4(e['p']),
                         'pm': r4(e['pm']), 'm': r4(e['m']), 'k': e['k'], 'pp': round(e['pp'], 4), 'pr': e['pr'],
-                        'r': bool(e['r']), 'cl': best, 'pu': round(e['pu'], 4) if e.get('pu') is not None else None})
+                        'r': bool(e['r']), 'cl': best, 'pu': round(e['pu'], 4) if e.get('pu') is not None else None,
+                        'x': [round(v, 3) for v in e['x']] if e.get('x') else None})
             if 't' in e:
                 rec['t'] = e['t']
                 rec['pl'] = round(e['pl'], 4)
@@ -4212,7 +4226,8 @@ def track_update(doc, state):
             c = agg['clv']
             c[0] += 1; c[1] = round(c[1] + clv, 4); c[2] += int(clv > 0)
         tr['picks'].append([mid, rec['lk'], rec['ko'], rec['h'], rec['a'], hs, as_, rec['src'], rec['k'], rec['pp'],
-                            rec['pr'], int(bool(rec['r'])), t, int(won), clv] + rec['p'] + [rec.get('pu') or rec['pp']])
+                            rec['pr'], int(bool(rec['r'])), t, int(won), clv] + rec['p'] + [rec.get('pu') or rec['pp']]
+                           + (rec.get('x') or [None, None]) + [goal_times(state, mid, hs, as_)])
         cpk = (rec.get('cp') or {}).get(rec['k'])
         buf.append(ledger_row('pick', rec, hs, as_, ver_r, rec['k'], rec['pp'], rec.get('pl'), rec['pr'], rec['r'], None, None, rec.get('f'), won,
                               round(rec['pr'] * cpk - 1, 4) if cpk and rec.get('r') and rec['pr'] and rec['pr'] > 1 else None, t if t != '-' else None))
@@ -4470,6 +4485,83 @@ def dc_probs(lh, la, n=11):
                 U += v
     t = H + D + A
     return H / t, D / t, A / t, 1 - U / t
+
+
+def dc_exact(lh, la, hg, ag, n=11):
+    """The chance of one exact score on the engine's grid (past its edge, plain Poisson)."""
+    po = lambda l, k: math.exp(-l) * l ** k / math.factorial(k)
+    if hg >= n or ag >= n:
+        return po(lh, hg) * po(la, ag)
+    c00, c01, c10, c11 = 1 - lh * la * RHO_DC, 1 + lh * RHO_DC, 1 + la * RHO_DC, 1 - RHO_DC
+    tot = 0.0
+    for i in range(n):
+        for j in range(n):
+            v = po(lh, i) * po(la, j)
+            if i < 2 and j < 2:
+                v *= c00 if i == 0 and j == 0 else c01 if i == 0 else c10 if j == 0 else c11
+            tot += v
+            if i == hg and j == ag:
+                hit = v
+    return hit / tot
+
+
+def lam_from_1x2(ph, pa):
+    """The expected goals that give these home and away chances on the engine's grid (Newton's method on the logs),
+    for graded games saved before the record kept expected goals."""
+    lg = lambda p: math.log(max(1e-6, p) / max(1e-6, 1 - p))
+    def f(u, v):
+        H, _, A, _ = dc_probs(math.exp(u), math.exp(v))
+        return lg(H) - lg(ph), lg(A) - lg(pa)
+    u, v = math.log(1.4), math.log(1.1)
+    for _ in range(14):
+        F0, F1 = f(u, v)
+        if abs(F0) + abs(F1) < 1e-6:
+            break
+        e = 1e-4
+        Fu, Fv = f(u + e, v), f(u, v + e)
+        a, b, c, d = (Fu[0] - F0) / e, (Fv[0] - F0) / e, (Fu[1] - F1) / e, (Fv[1] - F1) / e
+        det = a * d - b * c
+        if not det:
+            break
+        u = max(-3, min(1.9, u - max(-1, min(1, (d * F0 - b * F1) / det))))
+        v = max(-3, min(1.9, v - max(-1, min(1, (a * F1 - c * F0) / det))))
+    return math.exp(u), math.exp(v)
+
+
+MIR_KEEP = 15
+
+
+def publish_miracles(tr):
+    """Weekend miracles: the latest weekend's graded games (Friday to Monday, in the record's time zone), the rarest
+    final scores first, each with how often Statpad's grid gave that exact score and that result before kick-off."""
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(TRACK_TZ)
+    except Exception:
+        tz = timezone.utc
+    loc = NOW.astimezone(tz)
+    fri = (loc - timedelta(days=(loc.weekday() - 4) % 7)).replace(hour=0, minute=0, second=0, microsecond=0)
+    t0, t1 = fri.astimezone(timezone.utc), (fri + timedelta(days=4)).astimezone(timezone.utc)
+    items = []
+    for p in tr.get('picks') or []:
+        ko = parse_iso(p[2])
+        if not (t0 <= ko < t1) or p[5] is None or p[6] is None:
+            continue
+        hs, as_ = int(p[5]), int(p[6])
+        lh, la = (p[19], p[20]) if len(p) > 20 and p[19] and p[20] else lam_from_1x2(p[15], p[17])
+        o = 0 if hs > as_ else 1 if hs == as_ else 2
+        goals = p[21] if len(p) > 21 and isinstance(p[21], list) else None
+        items.append([p[0], p[1], p[2], p[3], p[4], hs, as_, round(dc_exact(lh, la, hs, as_), 6), round(p[15 + o], 4), round(lh, 3), round(la, 3), goals])
+    if not items:
+        return None
+    items.sort(key=lambda x: x[7])
+    wins = [x for x in items if x[5] != x[6]]
+    shock = min(wins, key=lambda x: x[8]) if wins else None
+    keep = items[:MIR_KEEP] + ([shock] if shock and shock not in items[:MIR_KEEP] else [])
+    return {'app': 'Statpad', 'generated': iso(NOW), 'tz': TRACK_TZ, 'from': iso(t0), 'to': iso(t1), 'n': len(items),
+            'live': NOW < t1, 'shock': shock[0] if shock else None,
+            'cols': ['id', 'lk', 'ko', 'home', 'away', 'home goals', 'away goals', 'exact-score chance', 'result chance', 'xg home', 'xg away', 'goal minutes'],
+            'items': keep}
 
 
 def game_loss(lh, la, hg, ag):
@@ -5337,6 +5429,9 @@ def main():
             changed = True
     if track:
         (OUT_DIR / 'track.json').write_text(json.dumps(track, ensure_ascii=False, separators=(',', ':')))
+        mir = safe(lambda: publish_miracles(track), None)
+        if mir:
+            (OUT_DIR / 'miracles.json').write_text(json.dumps(mir, ensure_ascii=False, separators=(',', ':')))
         publish_ledger()
         sig = json.dumps([track['agg'], len(track['picks']), len(track['slips']), track['open'], track['pending'], track.get('vopen'), track.get('ledger')])
         if sig != state.get('track_sig'):
