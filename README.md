@@ -299,18 +299,34 @@ Each day the pack takes the **four** kinds the day's games make most interesting
 
 **Sharing.** **Share all** opens the phone's share sheet with the MP4s and a caption with the site's link; pick WhatsApp, then My status. **Share pictures instead** gives the finished frame of each clip as a 4K picture, which is also what phones that can't make video get. The video packer (Mediabunny, MPL-2.0) and, where needed, its AAC encoder load from jsDelivr the first time, so the first pack needs a connection.
 
-## Ask Statpad
+## Statpad, the assistant
 
-Tap the microphone in the header, or **Ask Statpad** on the Matches tab, and speak straight away (it starts listening), or type. English or Kiswahili. It listens until you've finished: pauses mid-sentence are fine, and it sends your question once you've been quiet for 3 seconds, or when you tap ✓. In the Ask panel you can make that 5 seconds, or only when you tap ✓.
+A glowing orb floats over every page: the matches, every tab, match pages, team pages and the tools. **Tap** it to open the assistant over whatever you're looking at; **press and hold** to talk straight away (the microphone in the header and **Ask Statpad** on the Matches tab do the same). Drag the orb to either side or up and down; it remembers. On a computer, **Ctrl/⌘ + K** opens it.
 
-- "Who wins Arsenal v Chelsea?" / "Nani atashinda Arsenal dhidi ya Chelsea?"
-- "Safest picks today", "Give me a 5 odds slip", "Best value", "Biggest games"
-- "Who will win the Premier League?", "Who gets relegated from La Liga?"
-- "How are Arsenal doing?", "What's the score in the Arsenal game?", "How are my bets doing?"
+**Talk to it like a person.** English or Kiswahili, spoken or typed; it answers in the language you use. Some of what it handles:
 
-The phone's browser turns speech into text (Chrome on Android, Safari on iPhone); everything else runs on the page, from the same numbers. Spoken questions are answered aloud (typed ones too, if you tick the box), and answers come with buttons to open the match, add the pick or the slip to the coupon, or open the simulator. Follow-ups work: "and tomorrow?", "what about Serie A?". You can name a market ("over 2.5 tips", "both teams to score today"), and names a little off ("Chelsi", "Liverpul") are still found.
+| | For example |
+|---|---|
+| A game | "Who wins Arsenal v Chelsea?", "why?", "how sure are you?", "will both teams score?", "what's the most likely score?", "who scores first?", "best odds?", "in how many universes do they win?" |
+| Picks | "Safest picks today", "sure bets for Saturday", "top 3 over 2.5 tips in the Premier League tomorrow", "nearly definite picks", "best value", "underdogs this weekend", "likely draws", "which games have the most goals", "biggest games" |
+| Slips | "Give me a 10 odds slip", "build a 4-leg slip for tomorrow", "an over 1.5 accumulator", "make a slip of these", "another one", "make it safer", "turn 10,000 into 500,000" |
+| Teams and leagues | "How are Arsenal doing?", "when do Chelsea play next?", "is Barcelona playing this weekend?", "Barcelona injuries", "compare Real Madrid and Barcelona", "Premier League table", "who is top of Serie A?", "who will win La Liga?", "who goes down?" |
+| Live, bets, record | "What's live?", "any upsets?", "what's the score in the Arsenal game?", "how are my bets doing?", "what's in my coupon?", "how accurate is Statpad?", "yesterday's results", "how are value bets doing?" |
+| Odds and how it works | "What does odds of 2.5 mean?", "5/2 in decimal", "if I stake 5,000 at 3.2 what do I win?" (after your tax setting), "what is a value bet?", "what's the cautious chance?", "how do you make predictions?", "how does the shock map work?" (answered from the Method text) |
+| Doing things | "Open Arsenal v Chelsea", "take me to the Lab", "show the Bundesliga table", "open the shock map", "make WhatsApp clips", "read me the briefing", "add it to my coupon", "add them all", "clear my coupon", "dark mode", "set my budget to 20,000 a week", "set target odds to 5", "my team is Arsenal", "call me Sam" |
+| Kiswahili | "Nani atashinda Arsenal dhidi ya Chelsea?", "kwa nini?", "na kesho?", "nipe mkeka wa odds 10", "machaguo salama ya leo", "mechi za kesho ni zipi", "Arsenal wanaendeleaje?", "msimamo wa Premier League" |
 
-If the microphone does nothing: allow it for the site (tap the icon left of the address, then Permissions), and check you're online, since the phone needs the internet to turn speech into text. Inside the claude.ai preview the microphone is blocked; it works on your GitHub Pages site. Where a browser has no voice input, type instead.
+**It keeps the thread.** "And tomorrow?", "what about La Liga?", "and Chelsea?", "more", "why the second one?", "add it" and "yes" all lean on what came before. It knows what's on screen, so on a match page "who wins?" means that match. When a word fits several clubs ("Manchester") it asks which, and when a day has no games it offers the nearest one ("want those?"). Names a little off ("Chelsi", "Liverpul") are still found.
+
+**It does things, then gets out of the way.** When it opens a match, a team, a tab or a tool, the panel shrinks to a strip at the bottom with the answer and suggestions, so the page shows; tap the strip, or ask again, to bring it back up. Answers come as cards: a match with the three-way chances and the pick, a list of picks with crests, a slip with its total odds and chance, a league table, the record. Tap any of them to open it.
+
+**Voice.** Spoken questions get spoken answers; under the assistant's settings (the sliders) you can have every answer read aloud, or none. **Hands-free** listens again after each spoken answer, so you can keep talking without touching the phone; say "stop" or tap the orb to end. Tapping the orb or the microphone while it talks interrupts it. A short tone marks the microphone opening and closing.
+
+**It speaks up.** While the page is open, when a game in one of your open bets, in your coupon or involving your team kicks off, has a goal or finishes, a note pops up beside the orb (and goes into the conversation) with your bet's chance from there: "Goal for Arsenal! Arsenal 1–0 Hull, 34'. Your bet is now about 75% to land." Tap it to open the assistant. With every answer read aloud turned on, it says it too.
+
+**What it remembers.** Your name and your team ("my team is Arsenal": the greeting then mentions their next game), the language, the voice settings and where you put the orb, on this phone only. The conversation itself is kept only while the page is open.
+
+The phone's browser turns speech into text (Chrome on Android, Safari on iPhone); everything after that runs on the page, from the same numbers as everything else, and nothing is sent anywhere. It doesn't know about things outside Statpad (the weather, the news) and says so. If the microphone does nothing: allow it for the site (tap the icon left of the address, then Permissions), and check you're online. Inside the claude.ai preview the microphone is blocked; it works on your GitHub Pages site. Where a browser has no voice input, type instead.
 
 ## Combos, draw no bet and handicaps
 
