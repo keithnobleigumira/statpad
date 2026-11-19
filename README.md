@@ -93,7 +93,7 @@ None of this makes football predictable: the bookmakers' consensus is already ve
 
 ## Check a slip
 
-Under **Bets → Check slip**, tap **Screenshot or photo** and pick a screenshot of a slip (or take a photo of a printed one), or paste a slip's text from WhatsApp, Telegram or a tipster. Statpad finds each game among its fixtures for the next few days (nicknames like Man Utd, Barca, Spurs or Gladbach work) and reads the pick and odds: 1, X, 2, 1X, X2, 12, over/under, GG/NG, draw no bet, ±1.5 handicaps, win to nil and same-game combos such as "Arsenal win & over 1.5". The pick can sit on the same line as the game or the next one, and a "Total odds" line is read too.
+Under **Slips → Check a slip**, tap **Screenshot or photo** and pick a screenshot of a slip (or take a photo of a printed one), or paste a slip's text from WhatsApp, Telegram or a tipster. Statpad finds each game among its fixtures for the next few days (nicknames like Man Utd, Barca, Spurs or Gladbach work) and reads the pick and odds: 1, X, 2, 1X, X2, 12, over/under, GG/NG, draw no bet, ±1.5 handicaps, win to nil and same-game combos such as "Arsenal win & over 1.5". The pick can sit on the same line as the game or the next one, and a "Total odds" line is read too.
 
 It shows each leg's real chance, fair odds and whether its price is value or short, then the whole slip: the chance it lands, its fair odds, the odds needed to break even after tax, the average result per 1,000 staked, and the weakest leg with what dropping it would do. Picks it can't read, and markets it doesn't price (half-time, corners, cards, scorers), are left for you to choose from a list. **Put on my coupon** moves the legs to your coupon, from where you can save the bet.
 
@@ -101,7 +101,7 @@ It shows each leg's real chance, fair odds and whether its price is value or sho
 
 ## Slip autopsy
 
-Lost a slip? Add it under **Bets → Check slip** the same way (screenshot, photo or text) and Statpad examines it. It works for games from the last ten days: each leg is matched to its game in the track record, and the goal minutes come from the record or, for older games, from ESPN's scoreboard for that day. **Autopsy of a lost slip** builds one from real recent games so you can see what it looks like. If the slip's text says "Lost" (most bookmakers print it on settled slips), the checker knows its games are already played and picks those rather than the teams' next games.
+Lost a slip? Add it under **Slips → Check a slip** the same way (screenshot, photo or text) and Statpad examines it. It works for games from the last ten days: each leg is matched to its game in the track record, and the goal minutes come from the record or, for older games, from ESPN's scoreboard for that day. **Autopsy of a lost slip** builds one from real recent games so you can see what it looks like. If the slip's text says "Lost" (most bookmakers print it on settled slips), the checker knows its games are already played and picks those rather than the teams' next games.
 
 - **Time of death.** A leg dies at the goal that made it impossible (the third goal for under 2.5, both teams scoring for "both teams to score: no", a goal against for win to nil), otherwise at the final whistle. The slip dies with its first dead leg: that leg is the **cause of death**, with the goal and the minute.
 - **Let down by.** The leg with the highest chance before kick-off that still lost.
@@ -167,7 +167,7 @@ For games with ESPN's commentary, the match page draws the game as a fingerprint
 
 After each weekend (Friday to Monday, in the record's time zone), the update writes `miracles.json`: the weekend's graded games, rarest final score first. Rarity is how many of 10,000 versions of the game, drawn from Statpad's scoreline grid before kick-off, ended with exactly that score (a 5–5 can be 5 in 10,000, a 1–0 is often over 1,000). It also names the **biggest shock**, the win with the lowest chance before kick-off. Games graded before the record kept expected goals have them worked back from their home, draw and away chances.
 
-On the Matches tab, **Weekend miracles** in the row of shortcuts under the heading (from Friday until Thursday) opens the full list with a field of 10,000 dots where the versions that ended with the real score light up (tap any game to light up its own). **Make WhatsApp clips** opens the Status pack with the Weekend miracles clip first. The file is a few KB, so the phone never downloads the whole track record for it.
+On the Overview, **Weekend miracles** in the row of shortcuts (from Friday until Thursday) opens the full list with a field of 10,000 dots where the versions that ended with the real score light up (tap any game to light up its own). **Make WhatsApp clips** opens the Status pack with the Weekend miracles clip first. The file is a few KB, so the phone never downloads the whole track record for it.
 
 ## Scoreline explorer
 
@@ -179,7 +179,7 @@ Each match page opens with the story behind the top pick: the teams' attack and 
 
 ## Value board
 
-**Value** lists real prices above the bookmakers' own fair price: edge = fair chance × best price − 1, where the fair chance is the consensus of all the bookmakers with their margin taken off (power method, Pinnacle counted three times). It's line-shopping: one bookmaker paying more than the market as a whole thinks the outcome is worth. Each row shows the best price and bookmaker, the average price, the fair odds and chance, a ¼-Kelly stake, how many bookmakers price the game, how old the prices are, which way the average price has moved, and how past bets with a similar edge did (from the five-season history in the Lab, with its 95% range). A row turns amber when the fair price rests on a single bookmaker or the prices are more than 12 hours old. Sort by edge, kick-off or number of bookmakers.
+**Value** lists real prices above the bookmakers' own fair price: edge = fair chance × best price − 1, where the fair chance is the consensus of all the bookmakers with their margin taken off (power method, Pinnacle counted three times). It's line-shopping: one bookmaker paying more than the market as a whole thinks the outcome is worth. Each row shows the best price and bookmaker, the average price, the fair odds and chance, a ¼-Kelly stake, how many bookmakers price the game, how old the prices are, which way the average price has moved, and how past bets with a similar edge did (from the five-season history in the Lab, with its 95% range). Edges are gold; a row's edge turns grey, with a note, when the fair price rests on a single bookmaker or the prices are more than 12 hours old. Each row also carries an opportunity score (see Look and feel). Sort by edge, opportunity, kick-off or number of bookmakers.
 
 Until this update, edges were measured against Statpad's own fitted chance. The Lab's replay showed that was a mistake: on 2025/26 those edges came mostly from small gaps between the two-number scoreline model and the market's own draw and goals prices, and the 1,909 bets they flagged lost 7.3%. Measured against the consensus, the same season flagged 284 bets that won 13.9% and beat the closing price 73% of the time. Even so, about 6 value bets in 10 lose; the edge only shows over hundreds of bets.
 
@@ -191,7 +191,7 @@ Until this update, edges were measured against Statpad's own fitted chance. The 
 
 ## Season simulator
 
-**Tables → Season simulator** plays the rest of the league season 5,000 times on the phone, in about a quarter of a second. Games that already have bookmaker prices use Statpad's blended expected goals; the rest use the team ratings, and each simulated season nudges every team's strength a little, because ratings are never exact. You get each team's average final points, its chance of the title (or promotion places in second divisions), the top places and the bottom places, and a strip showing every finishing position.
+**Leagues → Season simulator** plays the rest of the league season 5,000 times on the phone, in about a quarter of a second. Games that already have bookmaker prices use Statpad's blended expected goals; the rest use the team ratings, and each simulated season nudges every team's strength a little, because ratings are never exact. You get each team's average final points, its chance of the title (or promotion places in second divisions), the top places and the bottom places, and a strip showing every finishing position.
 
 **What if…** lets you set results for the next games (1, X or 2). The season is replayed with those results fixed, and changes from the normal forecast are marked ▲▼. Clear them to go back.
 
@@ -217,7 +217,7 @@ Tap **Listen** and Statpad reads out the day's briefing (the safest picks, the b
 
 Every hour the workflow plays the rest of each league season 10,000 times (the season simulator's method, seeded so the same inputs give the same answer) and measures how far each coming game moves both teams' chances of the title, the top places or the bottom places, after a win, a draw or a defeat. The **stakes** number adds both teams' swings between winning and losing, in percentage points: 45+ is Huge, 25+ High, 10+ Some.
 
-- Match cards show **High stakes** and **Huge stakes** badges. The **Tables** tab opens with **Most at stake**, and **All by stakes** sorts the Matches tab by it.
+- Match cards show **High stakes** and **Huge stakes** badges. The **Leagues** page opens with **Most at stake**, and **All by stakes** sorts the Matches page by it.
 - Each match page has a **What's at stake** card: for both teams, the chance that moves most, after a win, a draw and a defeat.
 - The simulator's What-if list and team pages' next games show it too, and the spoken briefing names the game with most at stake.
 
@@ -235,7 +235,7 @@ Each is fitted on two past seasons after blending with the market as the site do
 
 ## Live shock map
 
-**Shock map**, in the row of shortcuts on the Matches tab, opens a globe of the games in play, full screen, floating in open space with nothing around it; while games are on, the shortcut glows and counts them. It's the real earth, drawn by the phone's graphics chip (WebGL) from NASA's Blue Marble and city-lights pictures: daylight where the sun is up right now, city lights where it's night, with a thin atmosphere at the rim. It turns on its own and slows down while a shock passes the middle.
+**Shock map**, in the row of shortcuts on the Overview, opens a globe of the games in play, full screen, floating in open space with nothing around it; while games are on, the shortcut glows and counts them. It's the real earth, drawn by the phone's graphics chip (WebGL) from NASA's Blue Marble and city-lights pictures: daylight where the sun is up right now, city lights where it's night, with a thin atmosphere at the rim. It turns on its own and slows down while a shock passes the middle.
 
 - **Turn it any way**: drag. It turns every way and keeps spinning a little after a flick.
 - **Zoom** (full screen): pinch, scroll with a mouse, double-tap, or use **+** and **−** (up to 16 times). The globe button goes back to the whole world. Sharper pictures (4096 pixels wide) load once you zoom in close.
@@ -275,7 +275,7 @@ Ask Statpad understands it too: "turn 10,000 into 500,000", "I want 1 million fr
 
 ## WhatsApp Status pack
 
-**Status pack** (in the Matches tab's shortcuts, and on the Slips tab) makes 11-second videos for the day, with sound, sized for WhatsApp Status (1080p, or 4K for other apps). They're drawn and encoded on the phone itself, so nothing is uploaded anywhere and the workflow doesn't change.
+**Status pack** (in the Overview's shortcuts, and in Smart slips) makes 11-second videos for the day, with sound, sized for WhatsApp Status (1080p, or 4K for other apps). They're drawn and encoded on the phone itself, so nothing is uploaded anywhere and the workflow doesn't change.
 
 **Pick the one you want first.** The pack opens on a poster of each clip and makes nothing until you choose: tap a clip and it's made straight away, then the rest follow in order; tap another while one is being made and it goes next (or takes over at once, if the one being made wasn't one you picked and isn't half done). **Make all** makes them in order. Opening the pack from a particular clip (Weekend miracles' **Make WhatsApp clips**) makes that one first.
 
@@ -315,7 +315,7 @@ Each day the pack takes the **four** kinds the day's games make most interesting
 
 ## Statpad, the assistant
 
-There is one way in: **Ask Statpad** on the Matches tab (on a computer, **Ctrl/⌘ + K** too). It opens the assistant, listening. Tap the orb at the top of the conversation to **tuck it away**: the orb then floats over every page (the matches, every tab, match pages, team pages and the tools) while you look around. **Tap** the orb to bring the conversation back; **press and hold** it to talk straight away. Drag it to either side or up and down; it remembers. **Close** the conversation (×, or say "bye") and the orb goes with it, until the next time you tap Ask Statpad.
+There is one way in: **Ask Statpad** on the Overview (on a computer, **Ctrl/⌘ + K** too). It opens the assistant, listening. Tap the orb at the top of the conversation to **tuck it away**: the orb then floats over every page (the matches, every tab, match pages, team pages and the tools) while you look around. **Tap** the orb to bring the conversation back; **press and hold** it to talk straight away. Drag it to either side or up and down; it remembers. **Close** the conversation (×, or say "bye") and the orb goes with it, until the next time you tap Ask Statpad.
 
 **Talk to it like a person.** English or Kiswahili, spoken or typed; it answers in the language you use. Some of what it handles:
 
@@ -354,7 +354,7 @@ They come from the same scoreline grid as every other market, so the link betwee
 
 ## My bets
 
-The **Bets** tab has two parts: **Coupon** (build a bet) and **My bets** (bets you placed).
+Bets live in **Slip Studio** (the **Slips** tab): **Your coupon** (build a bet) and **My bets** (bets you placed; also under **Saved**).
 
 - **Save a bet.** In the coupon, tap **Save to My bets**. Enter your bookmaker's total odds, your stake (quick buttons for 1,000 to 20,000 UGX), the bookmaker, and optionally the booking code and any accumulator bonus.
 - **Price check.** Before you save, it shows Statpad's chance of the bet landing, its fair odds, the odds you need to break even after the tax on winnings, what you'd collect, and what the bet is worth on average. It also gives a verdict: good value, about fair or poor price.
@@ -365,13 +365,36 @@ The **Bets** tab has two parts: **Coupon** (build a bet) and **My bets** (bets y
 
 ## Look and feel
 
-- **Dark by default.** The site now opens in a floodlit night theme. The sliders button in the header opens **Display**, where you can choose Dark, Light or Match phone, turn off crests to save data, turn off vibration, and reduce motion.
-- **A calmer Matches page.** The page opens on the day's games: a line saying how many fixtures, competitions, live prices and value spots there are, the headline games, the competition chips and the list. Everything else sits in one row of shortcuts under the heading: **Ask Statpad**, **Daily briefing**, **Shock map** (glowing with a count while games are on), **Weekend miracles** (after a weekend) and **Status pack**. Slips are only on the Slips tab, the price-movers tape only on the Value tab, and **Most at stake** on the Tables tab.
-- **Headline games.** The top of the Matches page is a swipeable row of the day's biggest games, live ones included: both crests, expected goals (or the live score), the three-way chances and the top pick. Each card takes the colours of the two clubs' crests.
+Statpad's design is called **Floodlight Intelligence**: a match-day broadcast with a terminal's precision. Surfaces are flat midnight panels with thin, low-contrast edges, no glow and no colour washes; the clubs' own kit colours are the only decoration.
+
+- **One typeface, three voices.** Everything is set in **Mona Sans**, GitHub's variable family, which can be narrow or wide. Wide and heavy for headlines, scores and the numbers that matter (the broadcast voice); normal width for everything you read; and its tabular figures wherever numbers line up in columns (the terminal voice: prices and percentages never jiggle as they change). It comes from Google Fonts and the phone keeps it after the first visit. Shared slip pictures and Status pack videos keep their own two faces (Big Shoulders and Bricolage Grotesque), loaded a moment after the page.
+- **Colour with one job each.** Cool colours are chances: ice blue for the home side, orange for the away side, slate for the draw. Gold is value (edges, value prices, the radar). Coral is a loss, mint a win or the model's edge. Dark ("night match") is the default; **Display** has Light ("day match") and Match phone.
+- **Navigation.** On a computer a sidebar holds every section (Overview, Matches, Value, Slips, Lab, Leagues, Saved, How it works); the button at its foot folds it down to icons, and it remembers. On a phone, five tabs: **Overview**, **Matches**, **Value**, **Slips** and **More** (Lab, Leagues, Saved, How it works, Display).
+- **Find.** The search box in the header (press **/** on a computer) finds any team, match or competition on the board, and any section. Arrow keys move, Enter opens.
+- **Links to a section.** The address follows the section, so `…/statpad/#value` opens the Value board and `#slips`, `#track`, `#tables` or `#saved` the others. Installed as an app, a long press on its icon offers Value, Slips, My bets and the Lab.
+
+**Overview.** The home page is the day's broadcast open:
+
+- the date, large, with how many games and competitions;
+- four tiles (the day's games and the first kick-off, value spots and the best edge, how often top picks landed, and predictions graded), whose numbers count up when the page opens;
+- the headline games as **score bugs**, the strip a TV broadcast puts in the corner: each club's kit colour and a three-letter code, its chance (or, in play, its score), the three-way bar (in kit colours, unless the two kits are too alike), the draw, expected goals and the top pick;
+- the ticker, an LED board of games in play and the market's moves;
+- the shortcuts (**Ask Statpad**, **Daily briefing**, **Shock map**, **Weekend miracles**, **Status pack**);
+- the **intelligence feed**: the biggest edge on the board, where money is moving, where Statpad's model and the market disagree, the most confident pick (with how often a pick like it still loses), the goals game and the coin toss of the day, each a tap from its match;
+- and the **next kick-offs**.
+
+The first time the page opens in a visit, the board comes up bank by bank, like floodlights warming before kick-off. Reduced motion skips that and the counting.
+
+**Match centre.** Each match page has four tabs. **Overview**: warnings, the live card, the match centre, the story behind the pick, who wins (Statpad, market and model side by side) and the scoreline explorer. **Markets**: every market, the combos and the price history. **Teams**: what's at stake and team news. **Model**: how the price was made (expected goals, the blend, the bookmakers and how fresh their prices are, the top pick and its cautious chance, and the draw correction for the league), the 10,000-game multiverse and the spread of total goals. Once a game is on, the multiverse and the fingerprint move to Overview.
+
+**Value intelligence.** Every value bet gets an **opportunity score** out of 100, in a ring beside its edge: 45% the size of the edge (full marks at 10%), 20% the chance it lands, 20% how many bookmakers stand behind the fair price (full marks at eight) and 15% how fresh the prices are. Above 70 is strong, 50 good, 35 fair, below that thin. The value board can sort by it. Above the list, the **Opportunity radar** maps the edges: one row per competition, one column per market (result, double chance, goals, both teams to score, team goals), each cell the best edge in it, brighter for bigger, tap to open its match.
+
+**Slip Studio.** Slips and bets are one place now, with one switch along the top: **Smart slips** (the target-odds slips), **Goal seek**, **Your coupon**, **Check a slip** and **My bets**. Tapping a price still sends it flying to the Slips tab, whose badge counts the coupon.
+
 - **Club crests and flags.** Crests appear on match cards, the match page, slips, the coupon, the value board, tables and team pages. National teams show their flag, and competitions show their logo. Teams without a crest yet show a coloured monogram shield.
-- **Type with character.** Headings, scores, odds and stamps are set in Big Shoulders, a tall signage face like a stadium scoreboard; text and tables are in Bricolage Grotesque, with figures that line up in columns. Both come from Google Fonts and the phone keeps them after the first visit; until they arrive the page uses the phone's own condensed and plain fonts.
-- **Smooth, not rebuilt.** When prices, scores or chances refresh, the page changes only what changed instead of redrawing whole lists, so bars glide to their new length, crests don't blink, the live globe keeps turning and nothing jumps under your thumb. The pill in each switch (Value bets / Market movers, the Lab sections, the minimum edge and so on) slides to the option you tap, a new day slides in from the side it's on and its chip glides to the middle of the row, and presses answer at once. **Display → Motion → Reduced** (or the phone's own reduce-motion setting) keeps everything still.
-- **Quicker to use.** A row of competition chips (with a Live chip while games are in play) filters the day in one tap. Sections slide when you switch tabs. Match pages spring open and can be swiped down to close. Tapping a price sends it flying to the Bets tab, with a light buzz on phones that support it. Each competition's header stays pinned while you scroll its games.
+- **Smooth, not rebuilt.** When prices, scores or chances refresh, the page changes only what changed instead of redrawing whole lists, so bars glide to their new length, crests don't blink, the live globe keeps turning and nothing jumps under your thumb. The pill in each switch slides to the option you tap, a new day slides in from the side it's on and its chip glides to the middle of the row, and presses answer at once. **Display → Motion → Reduced** (or the phone's own reduce-motion setting) keeps everything still.
+- **Quicker to use.** A row of competition chips (with a Live chip while games are in play) filters the day in one tap. Sections slide when you switch. Match pages spring open and can be swiped down to close. Each competition's header stays pinned while you scroll its games.
+- **Install icon and link card.** The app icon and the link-preview picture (`og.jpg`) are redrawn in the new colours. The workflow draws the icons, so the new ones need the updated `update.yml`; until then the old icon stays.
 
 **Where crests come from.** Three sources, in this order: API-Football (every club in each country Statpad covers, about 30 calls repeated monthly, with a key), the open football-logos collection on GitHub (Europe's top divisions), and **ESPN** (no key). ESPN gives every club in each competition it follows, about 55 of Statpad's 63, one small request per competition a month, and every game paired with ESPN's for live scores or prices tells Statpad both clubs' ESPN ids exactly, whatever the names. The match is careful: “Salzburg” finds “Red Bull Salzburg” and “Raith Rvs” finds “Raith Rovers”, but “Sheffield Wednesday” never takes Sheffield United's crest, and a name that fits two clubs is left alone. Every crest is downloaded once by the workflow (ESPN's too: the page no longer loads pictures from other sites), up to about 120 a run, the next games first. On a test board of 805 clubs this put a crest on file for 96% of them without an API-Football key; the rest (mostly the Finnish and Irish leagues, out of season at ESPN) come from API-Football with the key.
 
