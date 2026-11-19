@@ -38,6 +38,27 @@ Every run saves each match's top pick before kick-off, along with the 10-odds sl
 
 **Value bets: do they pay?** Each value bet is taken once, 1 unit at the best price the moment the board first shows it. The Lab shows the return per unit with its 95% range (over a few hundred bets luck alone moves the return by several percent either way, so the range says whether a result means anything yet), profit, closing-line value (the price taken against the bookmakers' fair price at kick-off; beating it is the quickest sign of a real edge), the worst run from a peak, results by edge, the bets waiting or in play with their chance now, and the latest settled. Beside it is the same rule run on the last five full seasons of football-data.co.uk's main leagues (about 5,000 bets, recomputed weekly): **+5.0% a unit, 95% range +1.1% to +8.9%, closing price beaten 71% of the time, worst run −41 units**, positive in each of the five seasons. That uses the best price football-data lists; in practice the best price often comes from a bookmaker that limits winning accounts, so treat it as an upper bound.
 
+**Closing-line value, with its own verdict.** Profit needs thousands of bets to separate an edge from luck (a 2% edge at even money needs roughly 7,000–10,000); closing-line value needs a few hundred, because each bet's gap to the closing price varies far less than its result. So the Lab gives closing-line value its own 95% range and verdict: *beating the closing price by more than luck explains* when the whole range is above zero. On the five past seasons it is **+3.1% a bet, 95% range +2.9% to +3.4%**. Records saved before v55 start counting the range from the update.
+
+**Bankroll stress test.** Under the five-season replay, the same value bets are staked four ways from a bank of 1 (flat 1% of the bank, quarter, half and full Kelly; Kelly stakes the edge divided by the price less one) on the real seasons in order and on 2,000 made-up seasons, each 180 match days drawn at random from the real ones, so runs of bad luck that never happened in that order are counted too. No bet goes above its cap (1%, 5%, 10%, 25%) and no day above half the bank. On the five past seasons:
+
+| Staking | Typical season | Bad season (1 in 10) | Losing season | Bank halves at some point |
+|---|---|---|---|---|
+| Flat 1% | ×1.49 | ×0.83 | 18% | 4% |
+| Quarter Kelly | ×1.44 | ×1.03 | 8% | 0% |
+| Half Kelly | ×1.92 | ×1.00 | 10% | 6% |
+| Full Kelly | ×3.03 | ×0.87 | 12% | 56% |
+
+Quarter Kelly grows almost as fast as flat staking with half the falls; full Kelly looks best on a typical season but halves the bank in more than half of them, because the edges it stakes on are estimates. These are upper bounds: they use the best price across dozens of bookmakers before any of them limits the account.
+
+**Research log.** Lab → Accuracy lists the ideas tested for this version on games the model never saw, kept or off, with the numbers (log loss is home, draw and away plus over/under 2.5 a game, lower is better):
+
+- **Learning from the closing price: off.** Fitted to the bookmakers' closing prices instead of results, the learned blend predicted the unseen season worse on two different splits (1.6817 → 1.6829 and 1.6685 → 1.6689). The closing price is sharper than the early one (by about 0.003 a game on 1X2), but what makes it sharper, late team news and sharp money, isn't something the blend can learn from it.
+- **Line-up rotation: off.** Starting line-ups for 32,731 past games in 19 leagues (from ESPN), compared with each side's usual team over its previous eight games. Against the early prices, a side missing 30% of its usual team scored about 6% fewer goals and conceded about 6% more, but the gain was within luck (+0.0005 a game, 95% range −0.0003 to +0.0013); against the closing prices it was nothing (−0.0001), because by kick-off the market has priced the line-ups in. Statpad already fetches fresh prices as soon as line-ups appear.
+- **Rest days counting cup and European games: off.** ESPN's cup and European fixtures (21 competitions, 2021–2026) changed the rest days of 3,548 of 18,465 games, but the blend predicted the unseen season worse (1.6817 → 1.6820) and the rest effect it had found shrank by half.
+- **Margin removal: power method kept.** On 34,232 games over five seasons, power read the results best against Shin's method, the odds-ratio method and an even split, on early and closing prices, average and Pinnacle alike (early average prices: power 0.99595, Shin 0.99608, odds ratio 0.99620, even 0.99680).
+- **Quarter Kelly as the stake: kept** (see the stress test above).
+
 **Accuracy: is Statpad right?** Log loss and Brier score on home, draw and away, for Statpad, the bookmakers' consensus and Statpad's model on its own; a calibration chart; the same numbers for each engine version (every prediction is stamped with the engine that made it, so an upgrade is judged on games it actually predicted); the weekly replay of last season; the tuning; and links to the ledger.
 
 **Levels:**

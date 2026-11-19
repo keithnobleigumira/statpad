@@ -4629,8 +4629,9 @@ def vb_band(e):
 
 def new_vb():
     # bets, won, units profit, sum of squared profits (for the error range), sum of CLV, bets with a closing
-    # price, bets that beat it, and the largest fall from a peak in the running total (units)
-    return {'n': 0, 'w': 0, 'u': 0.0, 'u2': 0.0, 'c': 0.0, 'nc': 0, 'b': 0, 'pk': 0.0, 'dd': 0.0}
+    # price, bets that beat it, the largest fall from a peak in the running total (units), and closing-line
+    # value again as bets, sum and sum of squares, for its own error range (records older than v55 start it late)
+    return {'n': 0, 'w': 0, 'u': 0.0, 'u2': 0.0, 'c': 0.0, 'nc': 0, 'b': 0, 'pk': 0.0, 'dd': 0.0, 'cs': [0, 0.0, 0.0]}
 
 
 def vb_add(a, won, price, clv):
@@ -4639,6 +4640,8 @@ def vb_add(a, won, price, clv):
     a['u'] = round(a['u'] + pr, 4); a['u2'] = round(a['u2'] + pr * pr, 4)
     if clv is not None:
         a['c'] = round(a['c'] + clv, 4); a['nc'] += 1; a['b'] += int(clv > 0)
+        cs = a.setdefault('cs', [0, 0.0, 0.0])
+        cs[0] += 1; cs[1] = round(cs[1] + clv, 5); cs[2] = round(cs[2] + clv * clv, 6)
     a['pk'] = max(a['pk'], a['u']); a['dd'] = round(max(a['dd'], a['pk'] - a['u']), 4)
     return pr
 
@@ -6430,6 +6433,54 @@ def bt_matches(seasons):
 VH_SEASONS = 5           # past seasons for the value-bet history
 
 
+# Bankroll stress test: the replay's value bets staked four ways, on the real seasons in order and on made-up
+# seasons drawn from their match days with replacement, so the bad luck that didn't happen is counted too.
+# Kelly stakes the edge over the price less one; fractions of it trade growth for smaller falls. No day stakes
+# more than STRESS_DAY_CAP of the bank, and no bet more than its cap.
+STRESS_POLICIES = [('flat', 'Flat 1% of the bank', None, 0.01), ('q', 'Quarter Kelly', 0.25, 0.05), ('h', 'Half Kelly', 0.5, 0.1), ('k', 'Full Kelly', 1.0, 0.25)]
+STRESS_SIMS = 2000
+STRESS_DAY_CAP = 0.5
+
+
+def stress_test(bets, n_seasons):
+    import random
+    days = {}
+    for ko, _code, _key, edge, pr, won, _cl in bets:
+        days.setdefault(str(ko)[:10], []).append((edge, pr, won))
+    days = [days[k] for k in sorted(days)]
+    if len(days) < 50 or n_seasons < 1:
+        return None
+    per = max(1, round(len(days) / n_seasons))
+    out = {}
+    for key, name, kf, cap in STRESS_POLICIES:
+        g = []
+        for day in days:
+            st = [cap if kf is None else min(cap, kf * e / (pr - 1)) for e, pr, _w in day]
+            tot = sum(st)
+            sc = min(1.0, STRESS_DAY_CAP / tot) if tot > 0 else 1.0
+            g.append(max(1e-9, 1 + sum(s * sc * ((pr - 1) if w else -1) for s, (_e, pr, w) in zip(st, day))))
+        bank, peak, dd = 1.0, 1.0, 0.0
+        for x in g:
+            bank *= x; peak = max(peak, bank); dd = max(dd, 1 - bank / peak)
+        rng = random.Random(7)
+        ends, dds, half = [], [], 0
+        for _ in range(STRESS_SIMS):
+            b, pk, d = 1.0, 1.0, 0.0
+            for _ in range(per):
+                b *= g[rng.randrange(len(g))]
+                if b > pk:
+                    pk = b
+                elif 1 - b / pk > d:
+                    d = 1 - b / pk
+            ends.append(b); dds.append(d); half += d >= 0.5
+        ends.sort(); dds.sort()
+        q = lambda v, f: round(v[min(len(v) - 1, int(f * len(v)))], 4)
+        out[key] = {'name': name, 'real': round(bank ** (1 / n_seasons), 4), 'real_dd': round(dd, 4),
+                    'med': q(ends, 0.5), 'p10': q(ends, 0.1), 'p90': q(ends, 0.9), 'lose': round(sum(e < 1 for e in ends) / len(ends), 4),
+                    'half': round(half / STRESS_SIMS, 4), 'dd_med': q(dds, 0.5), 'dd_p90': q(dds, 0.9)}
+    return {'days': len(days), 'per': per, 'sims': STRESS_SIMS, 'cap': STRESS_DAY_CAP, 'pol': out}
+
+
 def value_history():
     """Every value bet the Value board's rule would have flagged on the last five full seasons of football-data's
     main leagues: the best listed price at least 2% above the consensus's fair price (margin taken off, Pinnacle
@@ -6469,9 +6520,11 @@ def value_history():
         vb_add(by_s.setdefault(season_name(code), new_vb()), won, pr, clv)
         vb_add(by_k.setdefault('1X2' if key in ('H', 'D', 'A') else 'Goals', new_vb()), won, pr, clv)
         curve.append(allv['u'])
-    log(f'value history: {len(bets)} bets on {len(seasons)} seasons, {allv["u"] / allv["n"]:+.3f} a unit ({time.time() - t0:.0f} s)')
+    stress = stress_test(bets, len(seasons))
+    log(f'value history: {len(bets)} bets on {len(seasons)} seasons, {allv["u"] / allv["n"]:+.3f} a unit ({time.time() - t0:.0f} s)'
+        + (f"; stress test, quarter Kelly: typical season x{stress['pol']['q']['med']:.2f}, 1 in 10 x{stress['pol']['q']['p10']:.2f}" if stress else ''))
     return {'at': iso(NOW), 'seasons': [season_name(c) for c in sorted(seasons)], 'min': VB_MIN, 'all': allv, 'bands': bands,
-            'by_season': by_s, 'by_kind': by_k, 'curve': thin_curve(curve), 'leagues': sum(1 for c in L.values() if c['fd'])}
+            'by_season': by_s, 'by_kind': by_k, 'curve': thin_curve(curve), 'leagues': sum(1 for c in L.values() if c['fd']), 'stress': stress}
 
 
 def run_backtest(state):
