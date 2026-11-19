@@ -331,6 +331,9 @@ h2 { font: 850 clamp(30px, 4.4vw, 42px)/.95 var(--f-display); letter-spacing: .0
 .bt-tune-h { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .bt-tune-h b { font-size: 14px; }
 .tune-t td:first-child { white-space: normal; font-weight: 500; font-size: 13px; }
+/* the newer stages' values are sentences: let them wrap rather than push the table past the screen */
+.tune-t td:last-child { white-space: normal; text-wrap: balance; }
+@media (max-width: 560px) { .tune-t td:first-child { width: 44%; } .tune-t td { font-size: 12px; } .tune-t th:nth-child(2), .tune-t td:nth-child(2) { white-space: normal; } }
 .mt td.n small { display: block; font-size: 10.5px; color: var(--ink-3); }
 .bt-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); margin-top: 14px; }
 @media (min-width: 980px) { .bt-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .bt-kpis { grid-column: 1 / -1; } }
@@ -1701,7 +1704,7 @@ body.va-on .va-nudge { display: none; }
 /* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
 const ENGINE = (() => {
   // the engine's version, stamped on every prediction the track record keeps, so versions can be compared later
-  const VERSION = '2026-11-17';
+  const VERSION = '2026-11-19';
   const N = 11, RHO = -0.07, W_MKT = 0.8, W_EXT = 0.5, HAIR = 0.03;
   const M_DC = 0.05, M_EST = 0.06, M_DER = 0.065, STALE_H = 36;
   const TIERS = {
@@ -1726,8 +1729,10 @@ const ENGINE = (() => {
   const MGROUP = (k) => (k === 'H' || k === 'A' ? 'HA' : k === 'D' ? 'D' : k === '1X' || k === 'X2' ? 'DC' : k === 'O15' || k === 'O25' || k === 'U25' || k === 'U35' ? 'OU'
     : k === 'BTTS' || k === 'BTTS_N' ? 'BTTS' : /^[HA]_O\d5$/.test(k) ? 'TG' : 'CB');
   function setMcal(c) { MCAL = c && typeof c === 'object' ? c : null; }
-  function mcal(p, key) {
-    const c = MCAL && MCAL[MGROUP(key)];
+  // a correction for this kind of market in this kind of league (top, second tier, other) wins over the market's own
+  function mcal(p, key, lk) {
+    const g = MCAL && MCAL._g && lk ? MCAL._g[lk] : null;
+    const c = MCAL && ((g && MCAL[MGROUP(key) + '|' + g]) || MCAL[MGROUP(key)]);
     if (!c || !(p > 0) || !(p < 1)) return p;
     const q = Math.min(0.995, Math.max(0.005, p)), z = c[0] + c[1] * Math.log(q / (1 - q));
     return 1 / (1 + Math.exp(-z));
@@ -1741,11 +1746,18 @@ const ENGINE = (() => {
     return 1 / (1 + Math.exp(-z));
   }
 
+  // the draw correction: one value per league, fitted by the pipeline's monthly tuning when it beat the fixed one on
+  // a season the tuning never saw; each game carries its league's (m.rho), the page's record uses the map (setRho)
+  let RHO_L = null;
+  function setRho(r) { RHO_L = r && typeof r === 'object' ? r : null; }
+  const rhoOk = (r) => typeof r === 'number' && r > -0.35 && r < 0.2;
+  function rhoFor(lk) { const r = RHO_L && (RHO_L[lk] != null ? RHO_L[lk] : RHO_L._); return rhoOk(r) ? r : RHO; }
   function pois(l) { const p = new Float64Array(N); p[0] = Math.exp(-l); for (let k = 1; k < N; k++) p[k] = p[k - 1] * l / k; return p; }
-  function matrix(lh, la) {
+  function matrix(lh, la, rho) {
+    const R = rhoOk(rho) ? rho : RHO;
     const a = pois(lh), b = pois(la), M = []; let s = 0;
     for (let i = 0; i < N; i++) { const r = new Float64Array(N); for (let j = 0; j < N; j++) r[j] = a[i] * b[j]; M.push(r); }
-    M[0][0] *= 1 - lh * la * RHO; M[0][1] *= 1 + lh * RHO; M[1][0] *= 1 + la * RHO; M[1][1] *= 1 - RHO;
+    M[0][0] *= 1 - lh * la * R; M[0][1] *= 1 + lh * R; M[1][0] *= 1 + la * R; M[1][1] *= 1 - R;
     for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) s += M[i][j];
     for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) M[i][j] /= s;
     return M;
@@ -1785,10 +1797,10 @@ const ENGINE = (() => {
     return S[0];
   }
   // fit expected goals to target probabilities {H, A, O (over the goals line L, 2.5 unless given; optional)}
-  function fit(t, start) {
+  function fit(t, start, rho) {
     const L = t.L === 1.5 || t.L === 3.5 || t.L === 4.5 ? t.L : 2.5;
     const f = (x) => {
-      const m = markets(matrix(Math.exp(x[0]), Math.exp(x[1])));
+      const m = markets(matrix(Math.exp(x[0]), Math.exp(x[1]), rho));
       const o = L === 1.5 ? m.O15 : L === 3.5 ? m.O35 : L === 4.5 ? m.O45 : m.O25;
       return (m.H - t.H) ** 2 + (m.A - t.A) ** 2 + (t.O != null ? 0.5 * (o - t.O) ** 2 : 0);
     };
@@ -1852,15 +1864,22 @@ const ENGINE = (() => {
     now = now || Date.now();
     const lm = m.lm && m.lm[0] > 0 && m.lm[1] > 0 ? m.lm : null;
     const mk = m.mkt && m.mkt.p && m.mkt.p.length === 3 ? m.mkt : null;
-    const pMod = lm ? markets(matrix(lm[0], lm[1])) : null;
+    const rho = rhoOk(m.rho) ? m.rho : rhoFor(m.lk);
+    const pMod = lm ? markets(matrix(lm[0], lm[1], rho)) : null;
     let lh, la, src;
-    const wm = m.wm > 0 && m.wm <= 1 ? m.wm : W_MKT;   // the market's share, tuned on past seasons when available
+    let wm = m.wm > 0 && m.wm <= 1 ? m.wm : W_MKT;   // the market's share, tuned on past seasons when available
+    // the learned blend, when the tuning found it beats a fixed share: per side, the weight on log(model / market)
+    // and a shift ([home weight, home shift, away weight, away shift]); the weight can be below zero
+    const st = Array.isArray(m.st) && m.st.length === 4 && m.st.every((x) => typeof x === 'number' && Math.abs(x) < 1.5) ? m.st : null;
     if (mk) {
       const t = { H: mk.p[0], A: mk.p[2], O: mk.ou && mk.ou.pO ? mk.ou.pO : null, L: mk.ou && mk.ou.line };
-      const [fh, fa] = fit(t, lm || [1.4, 1.1]);
-      if (lm) { lh = blend(fh, lm[0], wm); la = blend(fa, lm[1], wm); src = 'blend'; } else { lh = fh; la = fa; src = 'market'; }
+      const [fh, fa] = fit(t, lm || [1.4, 1.1], rho);
+      if (lm && st) {
+        lh = fh * Math.exp(st[0] * Math.log(lm[0] / fh) + st[1]); la = fa * Math.exp(st[2] * Math.log(lm[1] / fa) + st[3]);
+        wm = Math.min(1.5, Math.max(0, 1 - (st[0] + st[2]) / 2)); src = 'blend';
+      } else if (lm) { lh = blend(fh, lm[0], wm); la = blend(fa, lm[1], wm); src = 'blend'; } else { lh = fh; la = fa; src = 'market'; }
     } else if (m.ext && m.ext.length === 3) {
-      const [eh, ea] = fit({ H: m.ext[0], A: m.ext[2], O: null }, lm || [1.4, 1.1]);
+      const [eh, ea] = fit({ H: m.ext[0], A: m.ext[2], O: null }, lm || [1.4, 1.1], rho);
       if (lm) { lh = blend(eh, lm[0], W_EXT); la = blend(ea, lm[1], W_EXT); } else { lh = eh; la = ea; }
       src = 'external';
     } else if (lm) { [lh, la] = lm; src = 'model'; }
@@ -1869,7 +1888,7 @@ const ENGINE = (() => {
     const fx = m.fx && m.fx[0] > 0 && m.fx[1] > 0 && Math.abs(Math.log(m.fx[0])) < 0.5 ? m.fx : null;
     if (fx) { lh *= fx[0]; la *= fx[1]; }
 
-    const M = matrix(lh, la), p = markets(M);
+    const M = matrix(lh, la, rho), p = markets(M);
     const diverge = pMod && mk ? Math.abs(pMod.H - mk.p[0]) : null;
     const ageH = mk && mk.upd ? (now - Date.parse(mk.upd)) / 3600e3 : null;
     // safety haircuts. Those about the estimate itself (no market to lean on, a cross-league model, a friendly)
@@ -1890,7 +1909,7 @@ const ENGINE = (() => {
     else if (src === 'market') sh = sa = sigMkt(mk, ageH);
     else if (src === 'external') { sh = Math.hypot((1 - W_EXT) * ls[0], W_EXT * SIG_EXT); sa = Math.hypot((1 - W_EXT) * ls[1], W_EXT * SIG_EXT); }
     else [sh, sa] = ls;
-    const pc = CORNERS.map(([u, v]) => markets(matrix(lh * Math.exp(u * sh), la * Math.exp(v * sa))));
+    const pc = CORNERS.map(([u, v]) => markets(matrix(lh * Math.exp(u * sh), la * Math.exp(v * sa), rho)));
 
     let best = null, bi = -1;
     // value is measured against the bookmakers' own consensus with the margin taken off (Pinnacle weighted three
@@ -1910,7 +1929,7 @@ const ENGINE = (() => {
       } else if (i != null) price = 1 / (prob * (1 + M_EST));
       else price = 1 / (prob * (1 + M_DER));
       price = real ? price : r2(price);
-      const pRaw = Math.max(0, mcal(prob, key) - hair), pAdj = calib(pRaw);
+      const pRaw = Math.max(0, mcal(prob, key, m.lk) - hair), pAdj = calib(pRaw);
       const sd = Math.sqrt(pc.reduce((acc, c) => acc + (c[key] - prob) ** 2, 0) / 4);
       const pLo = Math.max(0, pAdj - care - Z_LO * sd);
       const s = { key, label: lab(m), group, p: prob, pRaw, pAdj, sd, pLo, tier: tierOf(pLo), fair: real && pm ? 1 / pm : 1 / prob, price, real, bk, pm,
@@ -1928,7 +1947,7 @@ const ENGINE = (() => {
     const scores = [];
     for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) scores.push([i, j, M[i][j]]);
     scores.sort((x, y) => y[2] - x[2]);
-    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, sig: [sh, sa], wm: src === 'blend' ? wm : null, fx, sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5) };
+    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, sig: [sh, sa], wm: src === 'blend' ? wm : null, fx, rho, st: !!(st && src === 'blend'), sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5) };
   }
 
   function tierOf(p) { return p >= 0.82 ? 'A' : p >= 0.70 ? 'B' : p >= 0.58 ? 'C' : null; }
@@ -1985,7 +2004,7 @@ const ENGINE = (() => {
 
   // a market's name for a match, for games the page has no analysis of any more (finished ones)
   function labelOf(key, m) { const f = [...LABELS, ...EXTRAS].find((x) => x[0] === key); return f ? f[1](m) : null; }
-  return { VERSION, analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf };
+  return { VERSION, analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf, setRho, rhoFor };
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 
@@ -3233,23 +3252,56 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     let tuneHtml = '';
     if (tn && tn.params && tn.ll) {
       const d = tn.default || {}, P = tn.on ? tn.params : d, wb = 0.8, wn = tn.w_on ? tn.w : wb, f3 = (x) => (x == null ? '–' : x.toFixed(3));
+      const stk = tn.stack, stOn = !!(stk && stk.on), xg = tn.xg, kal = tn.kal, rh = tn.rho, f4 = (x) => (x == null ? '–' : x.toFixed(4)), mn = (x) => x.toFixed(2).replace('-', '−');
       const rows = [['Memory (a game’s weight halves every…)', `${Math.round(d.hl)} days`, `${Math.round(P.hl)} days`],
         ['Weight of last season’s games', pct(d.pw, 0), pct(P.pw, 0)],
         ['Pull towards average, in games', String(d.k), String(P.k)],
-        ['Shots on target, mixed with goals', pct(d.sw || 0, 0), pct(P.sw || 0, 0)],
-        ['Bookmakers’ share of the blend', pct(wb, 0), pct(wn, 0)]];
+        ['Shots on target, mixed with goals', pct(d.sw || 0, 0), pct(P.sw || 0, 0)]];
+      if (d.nt != null || P.nt != null) rows.push(['Promoted sides start below average by', pct(d.nt != null ? d.nt : 0.12, 0), pct(P.nt != null ? P.nt : 0.12, 0)]);
+      if (xg) rows.push(['Shot quality from the commentary (xG), mixed with goals', 'Not used', xg.on ? `On: ${pct(xg.sx, 0)} (model error ${f3(xg.ll[0])} → ${f3(xg.ll[1])})` : xg.ll ? 'Tested, left off' : `Collecting: ${pct(xg.cover || 0, 0)} of games so far`]);
+      rows.push(['Bookmakers’ share of the blend', pct(wb, 0), stOn ? 'Learned per game (below)' : pct(wn, 0)]);
       const el = tn.elo;
       if (el && el.ll) rows.push(['Elo ratings mixed with the model', 'Not used', el.on ? `On: ${pct(1 - el.v, 0)} Elo (model error ${f3(el.ll.model[0])} → ${f3(el.ll.model[1])})` : 'Tested, left off']);
+      if (kal && kal.ll) rows.push(['Game-by-game ratings mixed with the model', 'Not used', kal.on ? `On: ${pct(1 - kal.v, 0)} (model error ${f3(kal.ll.model[0])} → ${f3(kal.ll.model[1])})` : `Tested, left off (model error ${f3(kal.ll.model[0])} → ${f3(kal.ll.model[1])})`]);
+      if (rh && rh.ll) { const v = Object.values(rh.lk || {}); rows.push(['Draw correction (low scores)', '−0.07 for every league', rh.on ? `Per league, ${mn(Math.min(...v))} to ${mn(Math.max(...v))} (error ${f4(rh.ll[0] / 2)} → ${f4(rh.ll[1] / 2)})` : 'Tested, left off']); }
+      if (stk && stk.ll) rows.push(['Learned blend (model against bookmakers, by game)', 'Not used', stOn ? `On (error ${f4(stk.ll[0] / 2)} → ${f4(stk.ll[1] / 2)})` : 'Tested, left off']);
       const fx = tn.fx || null, fxOn = (k) => fx && fx[k] && fx[k].on && fx[k].p;
       if (fx) {
         rows.push(['Short rest (2–3 days since the last league game)', 'Not used', fxOn('rest') ? `On: ${fx.rest.p[0] < 0 ? 'nudged up' : 'nudged down'} ${Math.round(Math.abs(fx.rest.p[0]) * 100)}%` : 'Tested, left off']);
+        if (fx.rest && fx.rest.in_blend) rows[rows.findIndex((r) => r[0].startsWith('Short rest'))][2] = 'In the learned blend';
         if (fx.dead) rows.push(['Nothing left to play for', 'Not used', fxOn('dead') ? `On: ${fx.dead.p[0] > 0 ? 'nudged down' : 'nudged up'} ${Math.round(Math.abs(fx.dead.p[0]) * 100)}%` : 'Tested, left off']);
         if (fx.open) rows.push(['Both sides with nothing to play for: more goals', 'Not used', fxOn('open') ? `On: +${Math.round(fx.open.p[0] * 100)}% goals` : 'Tested, left off']);
       }
       const fxNote = fx ? ` Fatigue and motivation are tested the same way, one at a time, on top of the blend: each goes on only if it also lowers the error on ${esc(tn.check || '')}${['rest', 'dead', 'open'].filter((k) => fx[k] && fx[k].ll).map((k) => ` (${{ rest: 'short rest', dead: 'nothing to play for', open: 'open games' }[k]}: ${f3(fx[k].ll[0] / 2)} → ${f3(fx[k].ll[1] / 2)} a game, results and goals averaged)`).join('')}.` : '';
       tuneHtml = `<div class="bt-tune"><div class="bt-tune-h"><b>Settings tuned on ${esc((tn.train || []).join(' and '))}, checked on ${esc(tn.check || '')}</b><span class="chip ${tn.on || tn.w_on ? '' : 'warn'}">${tn.on || tn.w_on ? 'In use' : 'Old settings kept'}</span></div>
         <div class="tt-wrap"><table class="tt tune-t"><thead><tr><th>Setting</th><th>Before</th><th>Now</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td class="${r[1] !== r[2] ? 'edge-pos' : ''}">${r[2]}</td></tr>`).join('')}</tbody></table></div>
-        <p class="note">Prediction error on ${esc(tn.check || '')}, a season the tuning never saw (log loss on results, lower is better): Statpad <b class="mono">${f3(tn.ll.site[0])} → ${f3(tn.ll.site[1])}</b>; the model on its own ${f3(tn.ll.model[0])} → ${f3(tn.ll.model[1])}; the bookmakers on their own ${f3(tn.ll.market[0])}. ${tn.on || tn.w_on ? 'New settings are only switched on when they beat the old ones there.' : 'The tuned settings did not beat the old ones there, so the old ones stay.'} Leagues without shot counts use their own goals-only settings.${fxNote}</p></div>`;
+        <p class="note">Prediction error on ${esc(tn.check || '')}, a season the tuning never saw (log loss on results, lower is better): Statpad <b class="mono">${f4(tn.ll.site[0])} → ${f4(tn.ll.final ? tn.ll.final[0] : tn.ll.site[1])}</b>; the model on its own ${f3(tn.ll.model[0])} → ${f3(tn.ll.model[1])}; the bookmakers on their own ${f4(tn.ll.market[0])}.${tn.evals ? ` ${tn.evals} settings tried in ${tn.search_secs} s${tn.search === 'bayes' ? ' (a Bayesian search over all of them at once)' : ''}.` : ''} ${tn.on || tn.w_on ? 'New settings are only switched on when they beat the old ones there.' : 'The tuned settings did not beat the old ones there, so the old ones stay.'} Leagues without shot counts use their own goals-only settings.${fxNote}</p></div>`;
+    }
+    // the live check: Statpad against the bookmakers on games graded since the last tuning, by kind of league
+    let lcHtml = '';
+    const LC = B.lc;
+    if (LC && LC.groups) {
+      const dd = (x) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(4);
+      const lrows = Object.values(LC.groups).filter((g) => g.since && g.since[0] >= 30).map((g) => {
+        const v = g.since, ahead = v[6] < 0, behind = v[5] > 0;
+        return `<tr><td>${esc(g.name)}</td><td>${v[0].toLocaleString('en-US')}</td><td class="mono">${v[1].toFixed(3)}</td><td class="mono">${v[2].toFixed(3)}</td><td class="mono hide-sm">${v[3].toFixed(3)}</td><td class="mono ${ahead ? 'edge-pos' : behind ? 'pl-neg' : ''}">${dd(v[4])}<small> (${dd(v[5])} to ${dd(v[6])})</small></td><td>${ahead ? 'Statpad ahead' : behind ? `Bookmakers ahead${g.guard ? '; learned blend off here' : ''}` : 'Level so far'}</td></tr>`;
+      }).join('');
+      const a90 = LC.all90;
+      lcHtml = `<div class="bt-tune"><div class="bt-tune-h"><b>Live check${LC.since ? `, since the tuning of ${esc(LC.since)}` : ''}</b>${Object.values(LC.groups).some((g) => g.guard) ? '<span class="chip warn">Blend off somewhere</span>' : ''}</div>
+        ${lrows ? `<div class="tt-wrap"><table class="tt tune-t"><thead><tr><th>Games</th><th>Graded</th><th>Statpad</th><th>Bookmakers</th><th class="hide-sm">Model</th><th>Difference (95% range)</th><th>So far</th></tr></thead><tbody>${lrows}</tbody></table></div>` : '<p class="note">Not enough graded games since the last tuning yet.</p>'}
+        <p class="note">Log loss on home, draw and away for every graded game (lower is better), and Statpad's minus the bookmakers', paired game by game. ${a90 ? `Over the last 90 days: ${a90[0].toLocaleString('en-US')} games, Statpad ${a90[1].toFixed(4)} against the bookmakers' ${a90[2].toFixed(4)}.` : ''} If, on ${300} or more games in a kind of league, Statpad's learned blend is clearly behind the bookmakers' own prices (the whole range above zero), it is switched off there until the next monthly tuning has looked again. That is the early warning for drift: the tuning tests on past seasons, this watches the games happening now.</p></div>`;
+    }
+    // the model autopsy: where the chances have been systematically off
+    let auHtml = '';
+    const AU = B.au;
+    if (AU && (AU.flagged || AU.live)) {
+      const pc1 = (x) => (x * 100).toFixed(1) + '%';
+      const arow = (r, after) => `<tr><td>${esc(r[0])}</td><td>${r[1].toLocaleString('en-US')}</td><td class="mono">${pc1(r[2])}</td><td class="mono">${pc1(r[3])}</td>${after ? `<td class="mono ${Math.abs(r[4]) >= AU.z && Math.abs(r[6]) < AU.z ? 'edge-pos' : ''}">${pc1(r[5])}${Math.abs(r[4]) >= AU.z && Math.abs(r[6]) < AU.z ? ' ✓' : ''}</td>` : ''}</tr>`;
+      const fl = AU.flagged || [], lv = (AU.live || []).filter((r) => Math.abs(r[4]) >= 2);
+      auHtml = `<div class="bt-tune"><div class="bt-tune-h"><b>Model autopsy</b><span class="chip">${(AU.n || 0).toLocaleString('en-US')} chances checked</span></div>
+        ${fl.length ? `<div class="tt-wrap"><table class="tt tune-t"><thead><tr><th>Where</th><th>Chances</th><th>Stated</th><th>Landed</th><th>After corrections</th></tr></thead><tbody>${fl.map((r) => arow(r, true)).join('')}</tbody></table></div>` : `<p class="note">On ${esc(AU.season || '')} no kind of market, league, chance band or side was off by more than ${AU.z} standard errors. The closest calls:</p>${(AU.top || []).length ? `<div class="tt-wrap"><table class="tt tune-t"><thead><tr><th>Where</th><th>Chances</th><th>Stated</th><th>Landed</th><th>After corrections</th></tr></thead><tbody>${AU.top.map((r) => arow(r, true)).join('')}</tbody></table></div>` : ''}`}
+        ${lv.length ? `<p class="note"><b>In the live record</b> (top picks):</p><div class="tt-wrap"><table class="tt tune-t"><thead><tr><th>Where</th><th>Picks</th><th>Stated</th><th>Landed</th></tr></thead><tbody>${lv.map((r) => arow(r, false)).join('')}</tbody></table></div>` : ''}
+        <p class="note">Every chance Statpad gave on the replayed ${esc(AU.season || '')} season, before any correction, grouped by kind of market and league, chance band and side (${AU.segs || 0} groups of ${AU.min_n || 300} or more). Listed are the groups where what landed was more than ${AU.z} standard errors from what was stated, so chance alone would rarely do it. The weekly corrections (fitted on the season before, kept only where they predict this one better) are what “after corrections” applies; ✓ marks the groups they bring back in line. The live record's top picks are checked the same way once there are enough.</p></div>`;
     }
     const ruleHtml = oA && oA[0] && tA[0] ? `<p class="note">Cautious-chance rule: without it, ${oA[0].toLocaleString('en-US')} top picks would have been Nearly definite and ${pct(oA[1] / oA[0], 1)} landed. With it, ${tA[0].toLocaleString('en-US')} were, and ${pct(tA[1] / tA[0], 1)} landed.</p>` : '';
     const llTxt = lls ? (lls[0] <= lls[1] ? 'Statpad was sharper than the bookmakers’ average prices.' : `The bookmakers’ average prices were a little sharper than Statpad, which is why Statpad leans ${pct(B.wm || 0.8, 0)} on the market.`) : '';
@@ -3262,7 +3314,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           ${v[0] ? `<div><b class="mono ${v[2] >= 0 ? 'pl-pos' : 'pl-neg'}">${sgn(v[2] / v[0], 1)}</b><span>return on ${v[0].toLocaleString('en-US')} value bets at the best price (${pct(v[1] / v[0], 0)} won)</span></div>` : ''}
           ${lls ? `<div><b class="mono">${lls[0].toFixed(3)} <small>vs ${lls[1].toFixed(3)}</small></b><span>log loss, Statpad vs the market (lower is better). ${llTxt}</span></div>` : ''}
         </div>
-      </div>${tuneHtml}</div>`;
+      </div>${tuneHtml}${lcHtml}${auHtml}</div>`;
   }
   function tuneCard() {
     const c = (S.data && S.data.calib) || null;
@@ -3349,7 +3401,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Data status</h3>
       <div class="status">
         <div><span>Data generated</span><b>${new Date(d.generated).toLocaleString()}</b></div>
-        ${st('results', 'Results &amp; tables')}${st('espn_data', 'More competitions (ESPN)')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('live', 'Live scores &amp; fast results')}${st('team_news', 'Team news &amp; injuries')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
+        ${st('results', 'Results &amp; tables')}${st('espn_data', 'More competitions (ESPN)')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('live', 'Live scores &amp; fast results')}${st('team_news', 'Team news &amp; injuries')}${st('xg', 'Shot quality (commentary xG)')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
         <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.interval_min ? ' · refresh every ' + (o.interval_min >= 120 ? Math.round(o.interval_min / 60) + ' h' : Math.round(o.interval_min) + ' min') : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
         <div><span>Live scores on this phone</span><b>${esc(esStatus())}</b></div>
         <div><span>Matches loaded</span><b>${d.matches.length} · ${Object.keys(d.leagues || {}).length} competitions</b></div>
@@ -3358,9 +3410,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>The model</h3>
       <p>Each league's results feed a Poisson model: home goals = μ × home advantage × home attack × away defence, and the same for the away side without the home bonus. Older games count less, last season counts less again, and every team is pulled towards average by a few phantom games so a hot fortnight doesn't swing the ratings. Newly promoted sides start slightly below average.</p>
       <p>Where football-data.co.uk has shot counts (the main European leagues), shots on target count next to goals: each side's goals are mixed with its shots on target times the league's goals per shot on target. Shots are steadier than goals, so a team that creates chances but finishes badly is rated on what it creates. Each rating also carries a standard error, from how much evidence is behind it.</p>
+      <p><b>Shot quality from the commentary.</b> For the eight leagues where ESPN's play-by-play lists every shot with its spot on the pitch (the Premier League, the Championship, La Liga, the Bundesliga, Serie A, Ligue 1, the Eredivisie and the Primeira Liga), Statpad turns each shot into the chance it was a goal: distance, the angle of the goal mouth, and the commentary's own words (header, free kick, penalty, fast break, cross, through ball, corner). That model was fitted on 368,847 shots from 2021/22 to 2026/27; on seasons it wasn't fitted on it scored 0.280 per shot (log loss), against 0.345 for knowing only how often shots go in. A side's expected goals (xG) is the sum. The workflow collects a few dozen games a run. Once most of a league's games have it, the monthly tuning gives those eight leagues their own settings with xG mixed into the goals, and keeps them only if they beat the common settings on the latest season there. In the two tests so far it helped on 2024/25 (error 1.665 → 1.659) and not on 2025/26 (1.686 → 1.687), so expect it to come and go.</p>
       <p>A second, independent read of each team comes from Elo ratings, updated game by game, with bigger swings for bigger wins (the World Football Elo method). The gap between two teams' Elo is turned into expected goals around the league's own scoring rate and mixed with the model above, in log space. The monthly tuning fits the mix on two past seasons and keeps it only while it lowers the error on the latest completed season, which it never saw. On 19 leagues it did: the model's error fell from 1.712 to 1.709 (1X2 plus over/under log loss, 2025/26). It matters most for games without bookmaker prices, which rest on the model alone; where prices exist, the tuned blend leans mostly or wholly on them (the Lab shows the current share), because over past seasons they have been the sharpest single source.</p>
+      <p>A third read is tested too: <b>game-by-game ratings</b>, a Kalman filter in which each side's attack and defence drift a little every day and each result moves them by how surprising it was, weighed by how sure the ratings were. On its own it beat the season-long ratings on 2025/26, but next to Elo it added too little (1.7070 → 1.7063, under the bar of 0.001) and was slightly worse on 2024/25, so it stays off until a monthly check says otherwise.</p>
       <p>National teams in the Nations League and friendlies are rated the same way, from every international result of the last six years. Neutral venues get no home bonus, and friendlies count 60% because line-ups are rotated. Friendly picks lose an extra 3 points and are kept out of the two safest slip tiers.</p>
-      <p>When a match has prices, each bookmaker's margin is removed by the <b>power method</b> (each 1/price raised to one power so they add to 1), which leaves favourites more of their chance than dividing the margin out evenly: bookmakers load more margin onto long shots. On five seasons of the main leagues (30,000 games) this read results better, and lifting Pinnacle to three times the weight of any other bookmaker helped again; exchanges, whose prices before kick-off were the least reliable, count like any bookmaker. Where The Odds API's prices are more than six hours old, DraftKings' prices from ESPN (fresher, and free) are averaged in, because prices closer to kick-off predict better. Statpad fits the two expected-goals numbers that reproduce the consensus, including the goals line where available (2.5, or the line DraftKings offers), and blends them with the model in log space: 80/20 by default, or the share tuned on past seasons (see Tuning). The market is sharper than any table-based model, so it gets the larger share. Every market comes from a Dixon–Coles scoreline grid, which corrects the 0-0, 1-0, 0-1 and 1-1 cells that a plain Poisson model gets wrong.</p>
+      <p>When a match has prices, each bookmaker's margin is removed by the <b>power method</b> (each 1/price raised to one power so they add to 1), which leaves favourites more of their chance than dividing the margin out evenly: bookmakers load more margin onto long shots. On five seasons of the main leagues (30,000 games) this read results better, and lifting Pinnacle to three times the weight of any other bookmaker helped again; exchanges, whose prices before kick-off were the least reliable, count like any bookmaker. Where The Odds API's prices are more than six hours old, DraftKings' prices from ESPN (fresher, and free) are averaged in, because prices closer to kick-off predict better. Statpad fits the two expected-goals numbers that reproduce the consensus, including the goals line where available (2.5, or the line DraftKings offers), and blends them with the model in log space: 80/20 by default, or the share tuned on past seasons (see Tuning). The market is sharper than any table-based model, so it gets the larger share.</p>
+      <p><b>The learned blend.</b> Instead of one fixed share, the monthly tuning can learn how far to lean, game by game, from the bookmakers' numbers towards the model's or away from them: by how thin the ratings' data is, the time of season, the kind of league, and short rest. It is fitted on the prediction error itself, and how strongly it is held back is chosen walk-forward (fitted on the older training season, measured on the newer one). What it learned is a surprise worth knowing: when the model and the bookmakers disagree, leaning slightly further towards the bookmakers is better, by about a tenth of the gap. Their prices move on news the ratings can't see, and they move a little less than they should. This held with closing prices too.</p>
+      <p>Every market comes from a Dixon–Coles scoreline grid, which corrects the 0-0, 1-0, 0-1 and 1-1 cells that a plain Poisson model gets wrong. The size of that correction used to be one fixed value (−0.07) for every league; the tuning now fits it per league, pulled towards the value that's best over all leagues when a league has few games, on the latest tuning from −0.07 (League One) to −0.20 (Serie A and Serie B); the Lab shows the current range. With the learned blend, on seasons the tuning never saw, Statpad's error on results fell below the bookmakers' own: 1.0020 → 1.0009 on 2025/26 and 0.9942 → 0.9937 on 2024/25 (log loss; before, Statpad leaned entirely on the bookmakers there and matched them exactly). Both teams to score got a little sharper too; exact scores a little less.</p>
       <p><b>Per-market correction.</b> Every week the site replays two past seasons through the engine and checks, for each kind of market (home or away win, draw, double chance, goals lines, both teams to score, team goals), whether the stated chances came true as often as stated. A correction fitted on the older season is kept only for the kinds where it predicts the newer season, which it never saw, better. On the last replay this lifted chances above about 75% slightly (they had been coming true a little more often than stated) and nudged draws up.</p>
       <p><b>More of the world.</b> Women's football (the Women's Super League, Liga F, Première Ligue, Frauen-Bundesliga, NWSL and the Women's Champions League), the A-League, K League 1, Brazil's Série B, Chile, Colombia, South Africa, the Libertadores and the Sudamericana. Where ESPN has them, the last two seasons of results build the ratings, and fixtures come with DraftKings' prices. Women's sides carry "Women" in their names and are only ever matched with other women's sides. Competitions with fewer than 150 games behind their ratings, or a game priced by one bookmaker alone, take a 2-point safety haircut.</p>
       <h3>Confidence tiers</h3>
@@ -3369,12 +3425,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Self-tuning</h3>
       <p>${d.calib && d.calib.on ? `On, from ${d.calib.n} graded top picks.` : `Learning: ${(d.calib && d.calib.n) || 0} of ${(d.calib && d.calib.need) || 150} graded top picks.`} Every update compares the chances Statpad stated (before any correction) with what landed over the last 90 days, and fits a small correction on the log-odds scale. A prior centred on “no change” keeps the correction modest until there is plenty of evidence. The correction applies to stated chances, tiers and slips.</p>
       <h3>Tuning</h3>
-      <p>Once a month Statpad tunes its settings on the main European leagues: how fast old games fade, how much last season counts, how hard teams are pulled towards average, how much shots on target count, and the bookmakers' share of the blend. It searches on two past seasons, then checks on the last full season, which the search never saw, after blending with the market as the site does. New settings are switched on only if they beat the old ones there. Leagues without shot counts get their own goals-only settings. The Lab shows the settings and the before-and-after error.</p>
+      <p>Once a month Statpad tunes its settings on the main European leagues: how fast old games fade, how much last season counts, how hard teams are pulled towards average, how much shots on target count, how far below average promoted sides start, and the bookmakers' share of the blend. It searches on two past seasons, then checks on the last full season and this season's games so far, which the search never saw, after blending with the market as the site does; including this season means a change that helped last year but hurts now stays off. New settings are switched on only if they beat the old ones there. Leagues without shot counts get their own goals-only settings. Then, one at a time and each on top of the last: Elo, the game-by-game ratings, the draw correction per league, the learned blend, and fatigue and motivation, each switched on only if it also lowers the error on the unseen season. The Lab shows the settings and the before-and-after error.</p>
+      <p>The search is Bayesian: it fits a smooth stand-in for the error over all the settings at once from every setting tried so far, and tries next wherever the expected improvement is largest, stopping when nothing is expected to help. The fits themselves run as vector maths (NumPy, fetched on the runs that need it; plain Python if that fails), the same fits to the fifth decimal, about five times faster. A month's tuning now tries around 160 settings in about a minute, where it used to manage 47 in a minute and a half; on its own that found settings about as good as before, and the time it frees is what the newer stages run in.</p>
       <h3>Last season, replayed</h3>
       <p>Once a week Statpad replays the last full season of the main European leagues that football-data.co.uk covers. Each week's ratings are rebuilt from earlier games only, every game is priced from the bookmakers' average odds before kick-off, the first four weeks are skipped while ratings settle, and self-tuning is switched off. The Lab shows how the tiers, slips and value bets would have done. It is a check on the method, not a promise: the live record is the one that counts.</p>
       <h3>Performance lab</h3>
       <p>The Lab answers three questions. <b>Is Statpad right?</b> Under Accuracy: log loss and Brier score on home, draw and away against the bookmakers' consensus and against Statpad's model on its own, a calibration chart, and the same numbers for each engine version, because every prediction is stamped with the engine that made it. <b>Do the levels hold up?</b> Under Levels: each entry level's picks, landed against stated, with its slips. <b>Do the value bets pay?</b> Under Value bets: every bet the Value board shows is taken once, 1 unit at the best price the moment it first appears, and graded after the game. Each result comes with its 95% range, because over a few hundred bets luck alone moves the return by several percent either way; with closing-line value (the price taken against the fair price at kick-off, a faster and steadier test than profit); and with the worst run from a peak, so you can see the swings a bankroll has to survive.</p>
       <p>Next to the live record sits the same value rule run on the last five full seasons of football-data.co.uk's main leagues (about 5,000 bets): best listed price against the consensus before kick-off, closing-line value against its closing prices. It needs no model, so nothing was fitted to those seasons. Read it as an upper bound: best prices often come from bookmakers that limit winning accounts, and some last only minutes.</p>
+      <p><b>Live check.</b> Every graded game keeps three home, draw and away forecasts: Statpad's, the bookmakers' and the model's alone. The Lab compares them on the games graded since the last tuning, by kind of league, with a 95% range on Statpad's error minus the bookmakers', worked out game by game (so it narrows much faster than either error alone). It is the early warning for drift: the tuning tests on past seasons, this watches the games being played now. If, on 300 or more games in a kind of league, the learned blend is clearly behind the bookmakers' own prices, it is switched off there until the next monthly tuning has looked again.</p>
+      <p><b>Model autopsy.</b> Each week, every chance Statpad gave on the replayed season (all markets, before any correction) is grouped by kind of market and league, chance band and side, and each group with 300 or more chances is checked: did what landed stay within 2.5 standard errors of what was stated? The Lab lists any group that didn't, and whether the weekly corrections bring it back in line; corrections are now also fitted for each kind of market in each kind of league (top leagues, second tiers), held towards the market's own correction and kept only where they predict the unseen season better. On the first run, none of the 40 groups was off by that much. The live record's top picks get the same check once there are enough of them.</p>
       <p>Every graded prediction and value bet is also written to a ledger: one spreadsheet file (CSV) a month in the site's GitHub repository, with the engine version, the first prediction and the last before kick-off, the price, the closing fair chance and the result. Rows are only ever added, never changed, and the Lab links to each month.</p>
       <h3>Combos, draw no bet &amp; handicaps</h3>
       <p>Each match page also prices same-game combos (win and over 1.5, win and both teams score, win to nil, double chance and under 3.5, and more), draw no bet and ±1.5 handicaps, straight from the scoreline grid, so the link between the two parts of a combo is priced in. Their prices are estimates with a typical bet-builder margin; compare them with your bookmaker's price. They can be added to a coupon and saved to My bets, which settles them, but they are kept out of the top picks, the slips and the Value board.</p>
@@ -6958,7 +7017,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     let g = GR.get(p[0]); if (g && g.src === p) return g;
     let lh = p[19], la = p[20];
     if (!(lh > 0 && la > 0)) [lh, la] = p[15] > 0 && p[17] > 0 ? lamFrom1x2(p[15], p[17]) : [1.35, 1.1];
-    const ko = Date.parse(p[2]), M = ENGINE.matrix(lh, la);
+    const ko = Date.parse(p[2]), M = ENGINE.matrix(lh, la, ENGINE.rhoFor ? ENGINE.rhoFor(p[1]) : undefined);
     g = { src: p, m: { id: p[0], lk: p[1], ko: p[2], h: p[3], a: p[4] }, ko, day: dayKey(ko), started: true, past: true, fin: [p[5], p[6]],
       goals: Array.isArray(p[21]) ? p[21] : null, a: { lh, la, M, p: { H: p[15], D: p[16], A: p[17] }, sels: [] } };
     GR.set(p[0], g); return g;
@@ -10622,6 +10681,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     [/\b(edge)\b/, ['Edge is how much a price beats Statpad\'s fair odds: price × chance − 1. A 2.20 price on a 50% chance is a 10% edge.', 'Edge ni kiasi ambacho bei inazidi odds za haki za Statpad: bei × nafasi − 1.']],
     [/\b(cautious chance|caution)\b/, ['The cautious chance is Statpad\'s chance minus one standard deviation of its uncertainty (thin data, model and market disagreeing, old prices). Tiers and slips use it, so a pick resting on shaky numbers drops a level.', 'Nafasi ya tahadhari ni nafasi ya Statpad ukitoa kipimo kimoja cha kutokuwa na uhakika. Viwango na mikeka vinaitumia.']],
     [/\b(tiers?|levels?|nearly definite|highly possible|what does possible mean|viwango)\b/, ['Every pick has a level from its cautious chance: Nearly definite (the surest), Highly possible, and Possible. The Lab tracks each level\'s real hit rate against what was stated.', 'Kila chaguo lina kiwango: Uhakika mkubwa, Inawezekana sana, na Inawezekana. Lab inafuatilia kila kiwango.']],
+    [/\b(commentary xg|shot quality|xg from (the )?commentary|play.?by.?play)\b/, ['For eight leagues ESPN lists every shot with its spot on the pitch. Statpad turns each into the chance it was a goal (distance, angle, header, free kick, penalty, fast break, cross, through ball, corner) and adds them up into expected goals per side. The monthly tuning uses them in the ratings only when they beat the usual settings on the latest season.', 'Kwa ligi nane, kila shuti linapimwa uwezekano wa kuwa goli, na kujumlishwa kuwa magoli yanayotarajiwa.']],
     [/\b(expected goals|xg)\b/, ['Expected goals are how many goals each side is likely to score in this game, from Statpad\'s attack and defence ratings (goals and shots on target, recent games counting most), home advantage and the bookmakers\' prices.', 'Magoli yanayotarajiwa ni idadi ya magoli kila timu inatarajiwa kufunga, kutoka viwango vya Statpad na bei za wabeti.']],
     [/\b(double chance)\b/, ['Double chance covers two of the three results: home or draw (1X), away or draw (X2), or either side to win (12). Safer, so lower odds.', 'Double chance inafunika matokeo mawili kati ya matatu: nyumbani au sare (1X), ugenini au sare (X2), au yeyote kushinda (12).']],
     [/\b(draw no bet)\b/, ['Draw no bet: you win if your side wins and get your stake back if it\'s a draw.', 'Draw no bet: unashinda timu yako ikishinda, na unarudishiwa dau ikiwa sare.']],
@@ -10632,6 +10692,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     [/\b(cash ?out|kutoa pesa)\b/, ['Cash-out is the bookmaker buying your bet back before it ends. Under Bets → My bets, Statpad shows what a running bet is worth on average from the live chances, so you can tell a fair offer from a poor one.', 'Cash-out ni mbeti kununua bet yako kabla haijaisha. Kwenye Bets → My bets, Statpad inaonyesha thamani ya bet yako sasa.']],
     [/\b(tax|kodi)\b/, ['Statpad takes off the tax on winnings you set under Bets (15% by default, Uganda\'s rate on winnings) when it works out returns and break-even odds.', 'Statpad inatoa kodi ya ushindi uliyoweka kwenye Bets (15% kwa kawaida) inapohesabu mapato.']],
     [/\b(log loss|brier)\b/, ['Log loss and the Brier score measure how good stated chances were: lower is better. Log loss punishes confident misses hardest. The Lab compares Statpad with the bookmakers on both.', 'Log loss na Brier zinapima ubora wa nafasi zilizotajwa: chini ni bora.']],
+    [/\b(learned blend|stacking|meta.?model|how much (do you|does statpad) (trust|lean on) (the )?(bookmakers|market|odds))\b/, ['Statpad learns, game by game, how far to lean from the bookmakers\' numbers towards its own model or away from it, by how thin the data is, the time of season, the kind of league and short rest. On past seasons it learned that when the two disagree, leaning slightly further towards the bookmakers is better: their prices move on news the ratings can\'t see. It is only switched on when it beats the plain blend on a season it never saw, and a live check switches it off in any kind of league where it falls behind.', 'Statpad inajifunza, mechi kwa mechi, kiasi cha kutegemea bei za wabeti au modeli yake. Inawashwa tu pale inaposhinda kwenye msimu ambao haijauona.']],
+    [/\b(draw correction|dixon.?coles|rho)\b/, ['Every price comes from a grid of scorelines with a correction for low scores (0-0, 1-0, 0-1, 1-1). That correction is now fitted for each league by the monthly tuning, from about −0.07 to −0.20, instead of one value for all, which made the results sharper on seasons the tuning never saw.', 'Kila bei inatoka kwenye jedwali la matokeo lenye marekebisho ya magoli machache, sasa yanayopimwa kwa kila ligi.']],
+    [/\b(model autopsy|autopsy of the model|where (are|is) (you|statpad) (wrong|off|biased)|bias(es)?|live check|drift)\b/, ['Two checks watch Statpad. The model autopsy groups every chance from the replayed season by market, league, chance band and side and flags any group that landed more than 2.5 standard errors away from what was stated. The live check compares Statpad with the bookmakers on games graded since the last tuning. Both are in the Lab.', 'Ukaguzi wa modeli na ukaguzi wa moja kwa moja vinaangalia makosa ya kimfumo; vyote viko kwenye Lab.']],
     [/\b(elo)\b/, ['Elo ratings move after every result (more for bigger wins). Statpad mixes an Elo view into expected goals only when the monthly tuning shows it predicts better on a season it never saw.', 'Viwango vya Elo vinabadilika baada ya kila matokeo. Statpad inavichanganya pale tu vinapoboresha utabiri.']],
     [/\b(how (do|does) (you|statpad) (predict|work|make)|where do (your|the) (numbers|predictions) come from|how are (the )?predictions made|mnatabiri vipi|inafanya kazi vipi)\b/, ['Statpad rates every team\'s attack and defence from results and shots on target (recent games count most), turns that into expected goals and a grid of every scoreline, then blends it with the bookmakers\' prices, which carry most of the weight. Every market\'s chance comes from that grid, and a tuning checks the settings on past seasons.', 'Statpad inakadiria mashambulizi na ulinzi wa kila timu kutoka matokeo, inazigeuza kuwa magoli yanayotarajiwa na jedwali la matokeo yote, kisha inachanganya na bei za wabeti.']],
     [/\b(how often|when) (do|does|are) (you|statpad|the (numbers|prices|predictions)) (update|updated|refresh)|\bupdate\b.*\boften\b/, ['The site updates about every hour from the workflow (prices, ratings, results); while the page is open, live scores refresh every 30 seconds to a minute from ESPN.', 'Tovuti inasasishwa karibu kila saa; ukurasa ukiwa wazi, matokeo ya moja kwa moja yanasasishwa kila sekunde 30 hadi dakika moja.']],
@@ -12228,8 +12291,8 @@ void main() {
     try {
       if (!doc || !Array.isArray(doc.matches)) throw new Error('matches.json has no match list');
       S.data = doc; S.err = null; S.now = Date.now();
-      const cal = doc.calib && doc.calib.on ? { a: doc.calib.a, b: doc.calib.b } : null, mc = doc.mcal || null, cs = JSON.stringify([cal, mc]);
-      if (cs !== S.calSig) { S.calSig = cs; ENGINE.setCalib(cal); if (ENGINE.setMcal) ENGINE.setMcal(mc); S.cache.clear(); }
+      const cal = doc.calib && doc.calib.on ? { a: doc.calib.a, b: doc.calib.b } : null, mc = doc.mcal || null, rl = doc.rho || null, cs = JSON.stringify([cal, mc, rl]);
+      if (cs !== S.calSig) { S.calSig = cs; ENGINE.setCalib(cal); if (ENGINE.setMcal) ENGINE.setMcal(mc); if (ENGINE.setRho) ENGINE.setRho(rl); S.cache.clear(); GR.clear(); }
       if (!(await analyseAll(token))) return;
       if (!S.day || (S.day !== 'all' && !days().some((d) => d.key === S.day))) S.day = pickDefaultDay();
       const first = !S.introDone; S.introDone = true;

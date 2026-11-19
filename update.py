@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Statpad data pipeline. Python 3.9+ standard library only, so GitHub Actions needs no installs.
+Statpad data pipeline. Python 3.9+ standard library; NumPy speeds up the heavy fits when it's there (the run installs it
+on demand into a scratch folder, and carries on in plain Python if it can't), so GitHub Actions needs no setup.
 
 Each run it:
   1. results   football-data.co.uk results (every RESULTS_EVERY hours) -> league tables and team
@@ -12,6 +13,8 @@ Each run it:
   4. odds      The Odds API /odds, paced so the monthly credit allowance lasts the month
   5. builds    matches.json for the next DAYS days: expected goals per side from the ratings, market
                 consensus (sharp books weighted up), best available prices and price history.
+  6. xG        ESPN's play-by-play for the 8 leagues it lists shot by shot, turned into commentary xG a few
+                dozen games a run (kept in .statpad/xg.json)
 
 The browser (index.html) turns that into probabilities for every market, value picks and slips.
 
@@ -515,9 +518,23 @@ K_SHRINK = 6.0      # pseudo-games of prior per team
 NEW_TEAM_PRIOR = (-0.12, 0.12)   # newcomers start a bit below average
 # the settings above, plus how much shots on target count next to goals. Replaced by settings tuned on
 # past seasons when those beat the defaults on a season the tuning never saw (see "Tuning" below).
-DEFAULT_MODEL = {'hl': HALF_LIFE, 'pw': PREV_W, 'k': K_SHRINK, 'sw': 0.0}
+DEFAULT_MODEL = {'hl': HALF_LIFE, 'pw': PREV_W, 'k': K_SHRINK, 'sw': 0.0, 'nt': NEW_TEAM_PRIOR[1]}
 MODEL = dict(DEFAULT_MODEL)
 MODEL0 = dict(DEFAULT_MODEL)   # for leagues without shot counts: goals only, so they need their own shrinkage
+MODEL_X = None      # for leagues with commentary xG, when the tuning found their own settings beat the common ones
+XG_COVER_LIVE = 0.8     # the share of a league's games with xG before it uses those settings
+
+
+def model_for(lk, games, shots_ok):
+    """The settings a league's ratings use: its own with commentary xG (when tuned and most of its games have xG),
+    the common ones with shot counts, or the goals-only ones."""
+    if not shots_ok:
+        return MODEL0
+    if MODEL_X and lk in XG_SLUGS and games:
+        n_x = sum(1 for g in games if len(g) > 8 and g[8])
+        if n_x >= XG_COVER_LIVE * len(games):
+            return MODEL_X
+    return MODEL
 MODEL_W = None      # the market's share in the blend when tuned; the engine's own default is 0.8
 
 # ----------------------------------------------------------------------------------------------
@@ -564,26 +581,102 @@ def elo_mix(lh, la, el, v):
     return math.exp(v * math.log(lh) + (1 - v) * math.log(el[0])), math.exp(v * math.log(la) + (1 - v) * math.log(el[1]))
 
 
+# ----------------------------------------------------------------------------------------------
+# Game-by-game ratings (a Kalman filter). Each side's attack and defence drift a little every day; each result
+# pulls them by how surprising it was, weighed by how sure the ratings were, so a team that changes mid-season is
+# picked up faster than by the season-long fit above, and each rating carries its own uncertainty. Mixed with the
+# ratings in log space, like Elo, and only when the monthly tuning finds it lowers the error on a season it never saw.
+# ----------------------------------------------------------------------------------------------
+KAL_DEF = {'q': 0.0001, 'p0': 0.05, 'ps': 0.8, 'qs': 0.01}   # daily drift, starting spread, carry-over between seasons, extra spread then
+KAL_SPACE = [('q', 0.000005, 0.002, True), ('p0', 0.005, 0.25, True), ('ps', 0.3, 1.0, False), ('qs', 0.0005, 0.1, True)]
+KAL = None   # {'q', 'p0', 'ps', 'qs', 'v'} when the tuning switched the mix on
+
+
+def kalman_run(games, K, sw=0.0, nt=0.12, sx=0.0):
+    """games: (date, home, away, home goals, away goals, this season?, home SoT, away SoT), in any order.
+    Returns ({(date, home, away): (home xg, away xg, spread of log home xg, of log away xg)} as each stood before
+    kick-off, the final ratings {team: [attack, defence, attack variance, defence variance, last game]}, baseline)."""
+    gs = sorted(games, key=lambda g: g[0])
+    if len(gs) < 20:
+        return {}, {}, None
+    q, p0, ps, qs = K['q'], K['p0'], K['ps'], K['qs']
+    prev_any = any(not g[5] for g in gs)
+    first = [g for g in gs if not g[5]] or gs
+    first = first[:min(len(first), 200)]
+    mh = sum(g[3] for g in first) / len(first)
+    ma = sum(g[4] for g in first) / len(first)
+    conv0, cx0 = shot_scales(gs, sw, sx)
+    S, pre, n_g = {}, {}, 0
+    alpha = 1 / 400   # the league's scoring rate: a running average over roughly a season
+    for g in gs:
+        d, h, a, hg, ag, cur = g[:6]
+        for t in (h, a):
+            st = S.get(t)
+            if st is None:
+                x = nt if cur and prev_any else 0.0
+                S[t] = st = [-x, x, p0, p0, d, cur]
+            elif cur and not st[5]:   # a new season: ratings drift back a little and grow less sure
+                st[0] *= ps
+                st[1] *= ps
+                st[2] += qs
+                st[3] += qs
+                st[5] = True
+            dt = max(0.0, (d - st[4]).total_seconds() / 86400)
+            st[2] += q * dt
+            st[3] += q * dt
+            st[4] = d
+        H, A = S[h], S[a]
+        mu, hm = math.log(ma), math.log(mh / ma)
+        eh, ea = mu + hm + H[0] + A[1], mu + A[0] + H[1]
+        lh, la = math.exp(eh), math.exp(ea)
+        pre[(d, h, a)] = (lh, la, math.sqrt(H[2] + A[3]), math.sqrt(A[2] + H[3]))
+        yh, ya = goal_mix(g, sw, sx, conv0, cx0) if conv0 or cx0 else (hg, ag)
+        # one Newton step from the prior for each side's goals (Poisson, log link), uncertainty kept per rating
+        sh_, sa_ = H[2] + A[3], A[2] + H[3]
+        gh, ga = (yh - lh) / (1 + lh * sh_), (ya - la) / (1 + la * sa_)
+        H0, H1, H2, H3 = H[0], H[1], H[2], H[3]
+        A0, A1, A2, A3 = A[0], A[1], A[2], A[3]
+        H[0], A[1] = H0 + H2 * gh, A1 + A3 * gh
+        A[0], H[1] = A0 + A2 * ga, H1 + H3 * ga
+        H[2] = H2 - lh * H2 * H2 / (1 + lh * sh_)
+        A[3] = A3 - lh * A3 * A3 / (1 + lh * sh_)
+        A[2] = A2 - la * A2 * A2 / (1 + la * sa_)
+        H[3] = H3 - la * H3 * H3 / (1 + la * sa_)
+        mh += alpha * (yh - mh)
+        ma += alpha * (ya - ma)
+        n_g += 1
+        if n_g % 30 == 0:   # the baseline follows the league's scoring; the ratings stay centred on it
+            live = [st for st in S.values() if st[5] == cur]
+            ca = sum(st[0] for st in live) / len(live)
+            cd = sum(st[1] for st in live) / len(live)
+            for st in S.values():
+                st[0] -= ca
+                st[1] -= cd
+    # centre on this season's sides (the baseline carries the league's level)
+    cur_t = [t for t, st in S.items() if st[5]] or list(S)
+    ca = sum(S[t][0] for t in cur_t) / len(cur_t)
+    cd = sum(S[t][1] for t in cur_t) / len(cur_t)
+    final = {t: [st[0] - ca, st[1] - cd, st[2], st[3], st[4]] for t, st in S.items()}
+    return pre, final, (math.log(ma) + ca + cd, math.log(mh / ma))
+
+
+def kal_lams(st_h, st_a, base, q, now):
+    """Expected goals (home, away) and the spread of their logs from the filter's final ratings, for a game ahead."""
+    mu, hm = base
+    ph = [st_h[2] + q * max(0.0, (now - st_h[4]).total_seconds() / 86400), st_h[3] + q * max(0.0, (now - st_h[4]).total_seconds() / 86400)]
+    pa = [st_a[2] + q * max(0.0, (now - st_a[4]).total_seconds() / 86400), st_a[3] + q * max(0.0, (now - st_a[4]).total_seconds() / 86400)]
+    return (math.exp(mu + hm + st_h[0] + st_a[1]), math.exp(mu + st_a[0] + st_h[1]), math.sqrt(ph[0] + pa[1]), math.sqrt(pa[0] + ph[1]))
+
+
 def goal_means(games, n=500):
     g = sorted(games, key=lambda g: g[0])[-n:]
     return (sum(x[3] for x in g) / len(g), sum(x[4] for x in g) / len(g)) if len(g) >= 40 else (1.45, 1.15)
 
 
-def fit_ratings(games, current_teams, asof=None, init=None, P=None):
-    """games: (date, home, away, home goals, away goals, this season?, home shots on target, away shots on target).
-    With a shot weight, each side's goals count as (1 - w) x goals + w x shots on target x the league's
-    goals-per-shot-on-target, which is steadier than goals alone. Returns ratings plus standard errors."""
-    if len(games) < 20:
-        return None
-    P = P or MODEL
-    ref = asof or NOW
-    xi = math.log(2) / P['hl']
-    K = P['k']
-    sw = P.get('sw') or 0.0
-    teams = sorted({g[1] for g in games} | {g[2] for g in games})
-    ix = {t: i for i, t in enumerate(teams)}
-    prev_teams = {g[1] for g in games if not g[5]} | {g[2] for g in games if not g[5]}
-    conv = None
+def shot_scales(games, sw, sx):
+    """The league's goals per shot on target and goals per expected goal (commentary xG), each over the games that
+    have them; None where the setting is off or there are too few."""
+    conv = cx = None
     if sw > 0:
         gs = ss = 0
         for g in games:
@@ -591,12 +684,54 @@ def fit_ratings(games, current_teams, asof=None, init=None, P=None):
                 gs += g[3] + g[4]
                 ss += g[6] + g[7]
         conv = gs / ss if ss > 100 else None
+    if sx > 0:
+        gs = xs = 0.0
+        for g in games:
+            if len(g) > 8 and g[8]:
+                gs += g[3] + g[4]
+                xs += g[8][0] + g[8][1]
+        cx = gs / xs if xs > 100 else None
+    return conv, cx
+
+
+def goal_mix(g, sw, sx, conv, cx):
+    """One game's goals as the ratings count them: (1 - shares) x goals + share x shots on target x goals per shot
+    on target + share x expected goals from the commentary (x goals per expected goal). A game without shots or
+    xG gives that share back to its goals."""
+    hg, ag = g[3], g[4]
+    a_s = sw if conv and len(g) > 7 and g[6] is not None and g[7] is not None else 0.0
+    a_x = sx if cx and len(g) > 8 and g[8] else 0.0
+    if not a_s and not a_x:
+        return hg, ag
+    t = a_s + a_x
+    if t > 1:
+        a_s, a_x = a_s / t, a_x / t
+    h2 = (1 - a_s - a_x) * hg + (a_s * conv * g[6] if a_s else 0.0) + (a_x * cx * g[8][0] if a_x else 0.0)
+    a2 = (1 - a_s - a_x) * ag + (a_s * conv * g[7] if a_s else 0.0) + (a_x * cx * g[8][1] if a_x else 0.0)
+    return h2, a2
+
+
+def fit_ratings(games, current_teams, asof=None, init=None, P=None):
+    """games: (date, home, away, home goals, away goals, this season?, home shots on target, away shots on target,
+    [expected goals home, away] from the commentary or None). With a shot weight, each side's goals count as
+    (1 - w) x goals + w x shots on target x the league's goals-per-shot-on-target, which is steadier than goals
+    alone; the commentary's expected goals can take a share the same way. Returns ratings plus standard errors."""
+    if len(games) < 20:
+        return None
+    P = P or MODEL
+    ref = asof or NOW
+    xi = math.log(2) / P['hl']
+    K = P['k']
+    sw, sx = P.get('sw') or 0.0, P.get('sx') or 0.0
+    teams = sorted({g[1] for g in games} | {g[2] for g in games})
+    ix = {t: i for i, t in enumerate(teams)}
+    prev_teams = {g[1] for g in games if not g[5]} | {g[2] for g in games if not g[5]}
+    conv, cx = shot_scales(games, sw, sx)
     W = []
     for g in games:
         d, h, a, hg, ag, cur = g[:6]
-        if conv and len(g) > 7 and g[6] is not None and g[7] is not None:
-            hg = (1 - sw) * hg + sw * conv * g[6]
-            ag = (1 - sw) * ag + sw * conv * g[7]
+        if conv or cx:
+            hg, ag = goal_mix(g, sw, sx, conv, cx)
         age = max(0.0, (ref - d).total_seconds() / 86400)
         W.append((ix[h], ix[a], hg, ag, math.exp(-xi * age) * (1.0 if cur else P['pw'])))
     n = len(teams)
@@ -604,7 +739,7 @@ def fit_ratings(games, current_teams, asof=None, init=None, P=None):
     pd = [0.0] * n
     for t, i in ix.items():
         if prev_teams and t not in prev_teams:
-            pa[i], pd[i] = NEW_TEAM_PRIOR
+            pa[i], pd[i] = -P.get('nt', NEW_TEAM_PRIOR[1]), P.get('nt', NEW_TEAM_PRIOR[1])
     sh = sum(w * hg for _, _, hg, _, w in W)
     sa = sum(w * ag for _, _, _, ag, w in W)
     sw_ = sum(w for *_, w in W)
@@ -618,6 +753,13 @@ def fit_ratings(games, current_teams, asof=None, init=None, P=None):
             if t in ix:
                 att[ix[t]], dfn[ix[t]] = a_, d_
     cur_ix = [ix[t] for t in current_teams if t in ix] or list(range(n))
+    np = numpy_lib()
+    if np:   # the same fit as below, with vector maths
+        mu, home, att, dfn, ia, idf = _scale_np(np, np.array(W, dtype=float).reshape(-1, 5), n, pa, pd, att, dfn, mu, home, K, cur_ix, sh, sa)
+        return {'mu': round(mu, 5), 'home': round(home, 5), 'games': len(games),
+                'teams': {t: [round(float(att[ix[t]]), 5), round(float(dfn[ix[t]]), 5)] for t in teams},
+                'se': {t: [round(1 / math.sqrt(ia[ix[t]] + K * math.exp(mu + home / 2)), 4),
+                           round(1 / math.sqrt(idf[ix[t]] + K * math.exp(mu + home / 2)), 4)] for t in teams}}
     for _ in range(200):
         g0 = math.exp(mu + home / 2)
         emh, em = math.exp(mu + home), math.exp(mu)
@@ -669,6 +811,175 @@ def fit_ratings(games, current_teams, asof=None, init=None, P=None):
             'se': {t: [round(1 / math.sqrt(ia[ix[t]] + K * g0), 4), round(1 / math.sqrt(idf[ix[t]] + K * g0), 4)] for t in teams}}
 
 
+# ----------------------------------------------------------------------------------------------
+# Fast maths. With NumPy the fits above run as vector maths: the very same fits (the same steps in the same
+# order, so the same ratings to the 5th decimal), 10-30 times faster, which lets the monthly tuning try far more
+# settings. The heavy jobs (tuning, replay, team pages) install it on demand into a scratch folder that isn't
+# kept between runs; when that fails, everything still runs in plain Python, only slower.
+# ----------------------------------------------------------------------------------------------
+_NP = None             # None: not looked for yet; False: not available
+_NP_INSTALL = [False]  # an install was tried this run
+
+
+def numpy_lib(install=False):
+    """NumPy, or None. install=True: the run has heavy fitting to do, so fetch it if the runner lacks it (once a run)."""
+    global _NP
+    if _NP:
+        return _NP
+    if ENV('STATPAD_NO_NUMPY') == '1':
+        _NP = False
+        return None
+    if _NP is None:
+        for v in ('OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS', 'MKL_NUM_THREADS'):   # small matrices, and worker processes fork
+            os.environ.setdefault(v, '1')
+        try:
+            import numpy
+            _NP = numpy
+            return numpy
+        except Exception:
+            _NP = False
+    if not install or _NP_INSTALL[0]:
+        return None
+    _NP_INSTALL[0] = True
+    import tempfile
+    lib = Path(ENV('STATPAD_PYLIB') or Path(tempfile.gettempdir()) / 'statpad-pylib')
+    try:
+        import importlib
+        import subprocess
+        t0 = time.time()
+        subprocess.run([sys.executable, '-m', 'pip', 'install', '--quiet', '--disable-pip-version-check', '--no-warn-script-location',
+                        '--target', str(lib), 'numpy'], timeout=180, capture_output=True)
+        if str(lib) not in sys.path:
+            sys.path.insert(0, str(lib))
+        importlib.invalidate_caches()
+        import numpy
+        _NP = numpy
+        log(f'fast maths: NumPy {numpy.__version__} installed in {time.time() - t0:.0f} s')
+        return numpy
+    except Exception as e:
+        _NP = False
+        log('fast maths: NumPy unavailable, plain Python instead', repr(e)[:120])
+        return None
+
+
+def _scale_np(np, Wa, n, pa, pd, att, dfn, mu, home, K, cur_ix, sh, sa):
+    """fit_ratings' iterative scaling and standard errors on arrays. Wa: rows of (home, away, home goals, away goals, weight)."""
+    H, A = Wa[:, 0].astype(np.intp), Wa[:, 1].astype(np.intp)
+    hg, ag, w = Wa[:, 2], Wa[:, 3], Wa[:, 4]
+    bc = np.bincount
+    num_a = bc(H, w * hg, n) + bc(A, w * ag, n)   # goals each side scored (weighted): fixed through the fit
+    num_d = bc(A, w * hg, n) + bc(H, w * ag, n)   # and conceded
+    epa, epd = K * np.exp(np.array(pa)), K * np.exp(np.array(pd))
+    att, dfn = np.array(att, dtype=float), np.array(dfn, dtype=float)
+    cur = np.array(cur_ix, dtype=np.intp)
+    for _ in range(200):
+        g0 = math.exp(mu + home / 2)
+        emh, em = math.exp(mu + home), math.exp(mu)
+        ed = np.exp(dfn)
+        den = bc(H, w * emh * ed[A], n) + bc(A, w * em * ed[H], n)
+        new_att = np.log((num_a + g0 * epa) / (den + K * g0))
+        ea_ = np.exp(new_att)
+        den = bc(A, w * emh * ea_[H], n) + bc(H, w * em * ea_[A], n)
+        new_dfn = np.log((num_d + g0 * epd) / (den + K * g0))
+        new_att -= new_att[cur].mean()
+        new_dfn -= new_dfn[cur].mean()
+        eh = float((w * np.exp(new_att[H] + new_dfn[A])).sum())
+        ea = float((w * np.exp(new_att[A] + new_dfn[H])).sum())
+        new_mu = math.log(sa / ea)
+        new_home = math.log(sh / eh) - new_mu
+        delta = max(float(np.abs(new_att - att).max()), float(np.abs(new_dfn - dfn).max()), abs(new_mu - mu), abs(new_home - home))
+        att, dfn, mu, home = new_att, new_dfn, new_mu, new_home
+        if delta < 1e-7:
+            break
+    emh, em = math.exp(mu + home), math.exp(mu)
+    lh = w * emh * np.exp(att[H] + dfn[A])
+    la = w * em * np.exp(att[A] + dfn[H])
+    ia = bc(H, lh, n) + bc(A, la, n)
+    idf = bc(A, lh, n) + bc(H, la, n)
+    return mu, home, att, dfn, ia.tolist(), idf.tolist()
+
+
+def fit_series(games, teams, cuts, P):
+    """The ratings as they stood at each cut-off (a datetime), each from earlier games only, each fit starting from the
+    previous one. {index of the cut: ratings}. With NumPy the games are laid out once and each fit takes the ones
+    before its cut; the result is the same as calling fit_ratings for each cut."""
+    np = numpy_lib()
+    out, init = {}, None
+    if not np:
+        for i, cut in enumerate(cuts):
+            rt = fit_ratings([g for g in games if g[0] < cut], teams, asof=cut, init=init, P=P)
+            if rt:
+                out[i], init = rt, rt
+        return out
+    gs = sorted(games, key=lambda g: g[0])
+    if len(gs) < 20:
+        return out
+    names = sorted({g[1] for g in gs} | {g[2] for g in gs})
+    ix = {t: i for i, t in enumerate(names)}
+    n = len(names)
+    t_ref = gs[0][0]
+    day = np.array([(g[0] - t_ref).total_seconds() / 86400 for g in gs])
+    H = np.array([ix[g[1]] for g in gs], dtype=np.intp)
+    A = np.array([ix[g[2]] for g in gs], dtype=np.intp)
+    HG = np.array([g[3] for g in gs], dtype=float)
+    AG = np.array([g[4] for g in gs], dtype=float)
+    CUR = np.array([bool(g[5]) for g in gs])
+    has = np.array([len(g) > 7 and g[6] is not None and g[7] is not None for g in gs])
+    HS = np.array([g[6] if h_ else 0.0 for g, h_ in zip(gs, has)], dtype=float)
+    AS = np.array([g[7] if h_ else 0.0 for g, h_ in zip(gs, has)], dtype=float)
+    cum_g = np.cumsum(np.where(has, HG + AG, 0.0))
+    cum_s = np.cumsum(HS + AS)
+    hasx = np.array([len(g) > 8 and bool(g[8]) for g in gs])
+    HX = np.array([g[8][0] if h_ else 0.0 for g, h_ in zip(gs, hasx)], dtype=float)
+    AX = np.array([g[8][1] if h_ else 0.0 for g, h_ in zip(gs, hasx)], dtype=float)
+    cum_gx = np.cumsum(np.where(hasx, HG + AG, 0.0))
+    cum_x = np.cumsum(HX + AX)
+    xi, K, sw, sx = math.log(2) / P['hl'], P['k'], P.get('sw') or 0.0, P.get('sx') or 0.0
+    cur_set = [ix[t] for t in teams if t in ix]
+    for i, cut in enumerate(cuts):
+        m = int(np.searchsorted(day, (cut - t_ref).total_seconds() / 86400, 'left'))
+        if m < 20:
+            continue
+        h, a, cur = H[:m], A[:m], CUR[:m]
+        seen = (np.bincount(h, minlength=n) + np.bincount(a, minlength=n)) > 0
+        prev_seen = (np.bincount(h[~cur], minlength=n) + np.bincount(a[~cur], minlength=n)) > 0
+        hg, ag = HG[:m], AG[:m]
+        conv = cum_g[m - 1] / cum_s[m - 1] if sw > 0 and cum_s[m - 1] > 100 else None
+        cx = cum_gx[m - 1] / cum_x[m - 1] if sx > 0 and cum_x[m - 1] > 100 else None
+        if conv or cx:   # as goal_mix, on arrays
+            a_s = np.where(has[:m], sw, 0.0) if conv else np.zeros(m)
+            a_x = np.where(hasx[:m], sx, 0.0) if cx else np.zeros(m)
+            t_ = np.maximum(1.0, a_s + a_x)
+            a_s, a_x = a_s / t_, a_x / t_
+            hg = (1 - a_s - a_x) * hg + a_s * (conv or 0.0) * HS[:m] + a_x * (cx or 0.0) * HX[:m]
+            ag = (1 - a_s - a_x) * ag + a_s * (conv or 0.0) * AS[:m] + a_x * (cx or 0.0) * AX[:m]
+        ref = (cut - t_ref).total_seconds() / 86400
+        w = np.exp(-xi * np.maximum(0.0, ref - day[:m])) * np.where(cur, 1.0, P['pw'])
+        pa, pd = np.zeros(n), np.zeros(n)
+        if prev_seen.any():
+            newc = seen & ~prev_seen
+            pa[newc], pd[newc] = -P.get('nt', NEW_TEAM_PRIOR[1]), P.get('nt', NEW_TEAM_PRIOR[1])
+        sh, sa, s_w = float((w * hg).sum()), float((w * ag).sum()), float(w.sum())
+        mu = math.log(max(0.3, sa / s_w))
+        home = math.log(max(0.3, sh / s_w)) - mu
+        att, dfn = pa.copy(), pd.copy()
+        if init:
+            mu, home = init['mu'], init['home']
+            for t, (a_, d_) in init['teams'].items():
+                if t in ix:
+                    att[ix[t]], dfn[ix[t]] = a_, d_
+        cur_ix = [j for j in cur_set if seen[j]] or [j for j in range(n) if seen[j]]
+        Wa = np.column_stack((h, a, hg, ag, w))
+        mu, home, att, dfn, ia, idf = _scale_np(np, Wa, n, pa, pd, att, dfn, mu, home, K, cur_ix, sh, sa)
+        g0 = math.exp(mu + home / 2)
+        present = [t for t in names if seen[ix[t]]]
+        rt = {'mu': round(mu, 5), 'home': round(home, 5), 'games': m,
+              'teams': {t: [round(float(att[ix[t]]), 5), round(float(dfn[ix[t]]), 5)] for t in present},
+              'se': {t: [round(1 / math.sqrt(ia[ix[t]] + K * g0), 4), round(1 / math.sqrt(idf[ix[t]] + K * g0), 4)] for t in present}}
+        out[i], init = rt, rt
+    return out
+
+
 def build_table(games):
     T = {}
     for g in sorted(games, key=lambda g: g[0]):
@@ -718,7 +1029,7 @@ def load_results():
                 hg, ag = fnum(col(row, 'FTHG', 'HG')), fnum(col(row, 'FTAG', 'AG'))
                 hst, ast = fnum(col(row, 'HST')), fnum(col(row, 'AST'))
                 if d and h and a and hg is not None and ag is not None:
-                    games.append((d, h, a, int(hg), int(ag), cur, hst, ast))
+                    games.append((d, h, a, int(hg), int(ag), cur, hst, ast, xg_for(lk, d, h, a)))
         if games:
             out[lk] = (games, season_label)
         else:
@@ -754,9 +1065,15 @@ def compute_leagues(results, teams):
         cur_teams = [t for t, _ in table]
         cur_n = sum(1 for g in games if g[5])
         with_shots = sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None)
-        rt = fit_ratings(games, cur_teams, P=MODEL if cur_n and with_shots >= 0.8 * cur_n else MODEL0)
+        P_ = model_for(lk, games, cur_n and with_shots >= 0.8 * cur_n)
+        rt = fit_ratings(games, cur_teams, P=P_)
         for t in cur_teams:
             teams.add(lk, t)
+        kal = kbase = None
+        if KAL:   # the game-by-game ratings, when the tuning switched their mix on
+            _, fin, kbase = kalman_run(games, KAL, P_.get('sw') or 0.0, P_.get('nt', NEW_TEAM_PRIOR[1]), P_.get('sx') or 0.0)
+            kal = {t: [round(v[0], 4), round(v[1], 4), round(v[2], 5), round(v[3], 5), v[4].strftime('%Y-%m-%d')] for t, v in fin.items() if t in cur_teams}
+        cur_d = [g[0] for g in games if g[5]]
         rows = []
         for pos, (t, r) in enumerate(table, 1):
             ar = (rt or {}).get('teams', {}).get(t)
@@ -770,7 +1087,9 @@ def compute_leagues(results, teams):
                        'ratings': {t: v for t, v in (rt or {}).get('teams', {}).items() if t in cur_teams},
                        'se': {t: v for t, v in (rt or {}).get('se', {}).items() if t in cur_teams},
                        'shots': sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None),
-                       'games': len(games)}
+                       'games': len(games), 'start': min(cur_d).strftime('%Y-%m-%d') if cur_d else None}
+        if kal:
+            leagues[lk]['kal'], leagues[lk]['kbase'] = kal, [round(kbase[0], 5), round(kbase[1], 5)]
     return leagues
 
 
@@ -789,19 +1108,15 @@ def team_file(lk, games, season):
     if len(cur) < 6:
         return None
     shots = sum(1 for g in cur if len(g) > 7 and g[6] is not None)
-    P = MODEL if shots >= 0.8 * len(cur) else MODEL0
+    P = model_for(lk, games, shots >= 0.8 * len(cur))
     teams = sorted({g[1] for g in cur} | {g[2] for g in cur})
     start = cur[0][0].replace(hour=0, minute=0, second=0, microsecond=0)
-    init, fits = None, {}
-    w = 0
+    cuts = []
     while True:   # the ratings at the start of each week of the season, from earlier games only
-        cut = min(NOW, start + timedelta(days=7 * w))
-        rt = fit_ratings([g for g in games if g[0] < cut], teams, asof=cut, init=init, P=P)
-        if rt:
-            fits[w], init = rt, rt
-        if cut >= NOW:
+        cuts.append(min(NOW, start + timedelta(days=7 * len(cuts))))
+        if cuts[-1] >= NOW:
             break
-        w += 1
+    fits = fit_series(games, teams, cuts, P)
     series = {t: [] for t in teams}
     for w, rt in sorted(fits.items()):
         d = min(NOW, start + timedelta(days=7 * w)).strftime('%Y-%m-%d')
@@ -816,13 +1131,13 @@ def team_file(lk, games, season):
         pH = pD = pA = None
         if rt and h in rt['teams'] and a in rt['teams']:
             (ah, dh), (aa, da) = rt['teams'][h], rt['teams'][a]
-            pH, pD, pA, _ = dc_probs(math.exp(rt['mu'] + rt['home'] + ah + da), math.exp(rt['mu'] + aa + dh))
+            pH, pD, pA, _ = dc_probs(math.exp(rt['mu'] + rt['home'] + ah + da), math.exp(rt['mu'] + aa + dh), rho=rho_for(lk))
         hs, as_ = (g[6], g[7]) if len(g) > 7 else (None, None)
         hs, as_ = (None if hs is None else int(hs)), (None if as_ is None else int(as_))
         ds = d.strftime('%Y-%m-%d')
         rows[h].append([ds, disp(lk, a), 1, hg, ag, r3(pH), r3(pD), r3(pA), hs, as_])
         rows[a].append([ds, disp(lk, h), 0, ag, hg, r3(pA), r3(pD), r3(pH), as_, hs])
-    out = {'app': 'Statpad', 'lk': lk, 'season': season, 'gen': iso(NOW), 'sh': 1 if P is MODEL and shots else 0,
+    out = {'app': 'Statpad', 'lk': lk, 'season': season, 'gen': iso(NOW), 'sh': 1 if P is not MODEL0 and shots else 0,
            't': {disp(lk, t): {'s': series[t], 'r': rows[t]} for t in teams}}
     if lk in SIM_LEAGUES:
         played = {(g[1], g[2]) for g in cur}
@@ -835,6 +1150,7 @@ def team_file(lk, games, season):
 
 
 def team_files(res):
+    numpy_lib(True)   # heavy fitting ahead: fast maths if it can be had
     t0, out = time.time(), {}
     for lk, (games, season) in res.items():
         if knockout(lk):
@@ -1048,6 +1364,43 @@ def refresh_stakes(state, doc):
         if c and parse_iso(m['ko']) > NOW:
             m['sk'] = c['sk']
     return cache
+
+
+def stack_ok(m):
+    """Games the learned blend was fitted on the like of: league games, both sides rated in the league, several bookmakers' prices."""
+    mk = m.get('mkt') or {}
+    return bool(STACK and m.get('lm') and mk.get('p') and not m.get('xl') and not m.get('fr') and not knockout(m['lk'])
+                and L.get(m['lk'], {}).get('group') in ('big', 'second', 'more') and (mk.get('n') or 0) != 1)
+
+
+def apply_stack(state, doc):
+    """The learned blend for the coming games, when the tuning switched it on: per side, the weight on the model's
+    log expected goals against the bookmakers' and a shift, from how thin the ratings are, the time of season, the
+    kind of league and short rest. The engine applies them."""
+    if not STACK:
+        return 0
+    lp, lgs, n = state.get('last_played') or {}, state.get('leagues') or {}, 0
+    for m in doc['matches']:
+        m.pop('st', None)
+        if not stack_ok(m) or parse_iso(m['ko']) <= NOW or (state.get('guard') or {}).get(lc_group(m['lk'])):
+            continue
+        ko, d = datetime.strptime(m['ko'][:10], '%Y-%m-%d'), lp.get(m['lk']) or {}
+
+        def rest(t):
+            x = d.get(t)
+            r = (ko - datetime.strptime(x, '%Y-%m-%d')).days if x else None
+            return r if r and r > 0 else None
+        st = (lgs.get(m['lk']) or {}).get('start')
+        week = (ko - datetime.strptime(st, '%Y-%m-%d')).days // 7 if st else None
+        ls = m.get('ls') or [None, None]
+        grp = L[m['lk']]['group']
+        rh, ra = rest(m['h']), rest(m['a'])
+        bh, ch = stack_coefs(STACK['b'], ls[0], week, grp, rh, ra)
+        ba, ca = stack_coefs(STACK['b'], ls[1], week, grp, ra, rh)
+        m['st'] = [round(bh, 4), round(ch, 4), round(ba, 4), round(ca, 4)]
+        m.pop('wm', None)
+        n += 1
+    return n
 
 
 def apply_fx(state, doc):
@@ -1661,6 +2014,205 @@ def refresh_espn(state, matches):
         lv['at'] = iso(NOW)
         lv['src'] = 'ESPN'
     return {'live': n_live, 'results': n_res, 'calls': calls, 'boards': boards}
+
+
+# ----------------------------------------------------------------------------------------------
+# Commentary xG. ESPN's play-by-play (Opta's feed) gives every shot's spot on the pitch and the commentary's words
+# (header, free kick, fast break, cross, through ball, corner, set piece). A shot-quality model (logistic regression
+# on distance, the angle of the goal mouth and those words) turns each shot into the chance it was a goal; a side's
+# expected goals are the sum. Fitted offline on 368,847 shots from the 8 leagues below, 2021/22 to 2026/27: on the
+# seasons it wasn't fitted on its log loss per shot was 0.280 (0.345 knowing only the average). ESPN lists shots
+# this way only for these leagues (elsewhere just the goals). Collected a few dozen games a run, newest first, back
+# to the seasons the monthly tuning trains on; the tuning decides whether the ratings use them (setting 'sx').
+# ----------------------------------------------------------------------------------------------
+XG_SLUGS = {'EPL': 'eng.1', 'ENG2': 'eng.2', 'LaLiga': 'esp.1', 'BUN': 'ger.1', 'SA': 'ita.1', 'L1': 'fra.1', 'ERE': 'ned.1', 'POR': 'por.1'}
+XG_COEF = [-5.4477, 2.6147, -0.1742, 1.7543, -0.0141, -0.111, 3.0893, 1.625, -0.3691, 1.0148, 0.3231, 0.5702, 2.9029]
+XG_WORDS = ('header', 'free kick', 'fast break', 'with a cross', 'through ball', 'following a corner', 'set piece')
+XG_PER_RUN = int(ENV('STATPAD_XG_PER_RUN') or 40)   # games fetched a run (about 350 KB each)
+XG_BUDGET_S = 45
+XG_BACK = 4             # seasons back from the current one (the tuning's oldest season needs the one before it)
+ESPN_PLAYS = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/{0}/events/{1}/competitions/{1}/plays'
+_XG = None
+
+
+def xg_zone(txt):
+    """A spot (fraction of half the pitch's length from goal, fraction of its width) from the commentary's words,
+    for shots the feed gave no spot for."""
+    t = txt.lower()
+    side = 0.32 if 'left side' in t else 0.68 if 'right side' in t else 0.5
+    if 'very close range' in t:
+        return 0.06, 0.5
+    if 'six yard box' in t:
+        return 0.085, 0.5 + (side - 0.5) * 0.25
+    if 'difficult angle' in t:
+        return 0.12, 0.2 if 'left' in t else 0.8
+    if 'more than 35 yards' in t or 'long range' in t:
+        return 0.68, 0.5
+    if 'outside the box' in t:
+        return 0.42, 0.5
+    if 'centre of the box' in t:
+        return 0.2, 0.5
+    if 'side of the box' in t:
+        return 0.24, side
+    return None
+
+
+def shot_xg(kind, X, Y, pen_flag, txt):
+    """(the chance a shot was a goal, was it one), or None for plays that aren't shots (own goals aren't)."""
+    tl = (kind or '').lower()
+    if 'own goal' in tl or tl == 'goal kick' or not (tl.startswith('shot') or tl.startswith('goal') or tl.startswith('penalty')):
+        return None
+    goal = tl.startswith('goal') or tl == 'penalty - scored'
+    pen = tl.startswith('penalty') or bool(pen_flag)
+    if X and (X > 1.5 or (Y or 0) > 1.5):   # from August 2026 the feed gives percentages along the pitch, attacking towards 100
+        X, Y = (100 - X) / 50, (Y if Y else 50) / 100
+    if not X:
+        z = xg_zone(txt or '')
+        if not z and not pen:
+            return None
+        X, Y = z if z else (0.105, 0.5)
+    x, y = X * 52.5, ((Y if Y else 0.5) - 0.5) * 68
+    d = math.hypot(x, y)
+    a = math.atan2(7.32 * x, x * x + y * y - 3.66 ** 2)
+    if a < 0:
+        a += math.pi
+    t = (txt or '').lower()
+    f = [1.0 if w in t else 0.0 for w in XG_WORDS]
+    v = [1.0, a, d, math.log(max(1.0, d)), f[0], f[0] * d, f[1], f[2], f[3], f[4], f[5], f[6], 1.0 if pen else 0.0]
+    z = sum(c * u for c, u in zip(XG_COEF, v))
+    return 1 / (1 + math.exp(-max(-30.0, min(30.0, z)))), goal
+
+
+def plays_xg(items, hid, aid):
+    """(home xG, away xG, shots) from a game's plays, or None when the feed lists no shots for it."""
+    xh = xa = 0.0
+    n = 0
+    for p in items or []:
+        if p.get('shootout'):
+            continue
+        tid = re.search(r'/teams/(\d+)', ((p.get('team') or {}).get('$ref')) or '')
+        tid = tid.group(1) if tid else None
+        r = shot_xg((p.get('type') or {}).get('text'), p.get('fieldPositionX'), p.get('fieldPositionY'), p.get('penaltyKick'), p.get('text'))
+        if not r or tid not in (hid, aid):
+            continue
+        n += 1
+        if tid == hid:
+            xh += r[0]
+        else:
+            xa += r[0]
+    return (round(xh, 3), round(xa, 3), n) if n >= 6 else None
+
+
+def xg_state():
+    global _XG
+    if _XG is None:
+        _XG = load_json(STATE_DIR / 'xg.json') or {}
+        _XG.setdefault('g', {})    # ESPN game id -> [slug, date, home names, away names, home xG, away xG, shots]
+        _XG.setdefault('ev', {})   # slug -> month -> [[id, date, home id, away id, home names, away names], ...] (finished games)
+        _XG.setdefault('at', {})   # slug -> month -> when it was listed
+        _XG.setdefault('miss', {})  # ESPN game id -> tries without shots
+    return _XG
+
+
+def refresh_xg(state):
+    """Collect commentary xG: list each league's finished games month by month (past months once), then fetch the
+    play-by-play of up to XG_PER_RUN games not yet read, newest first."""
+    X = xg_state()
+    t0, listed, got = time.time(), 0, 0
+    first = season_code(NOW, XG_BACK)
+    start = datetime(2000 + int(first[:2]), 7, 1, tzinfo=UTC)
+    cur_ym = NOW.strftime('%Y%m')
+    for ym, slug in sorted(((ym, slug) for slug in XG_SLUGS.values() for ym in months_between(start, NOW)), reverse=True):
+        if time.time() - t0 > XG_BUDGET_S / 3:
+            break
+        evm, atm = X['ev'].setdefault(slug, {}), X['at'].setdefault(slug, {})
+        last = atm.get(ym)
+        past = ym < cur_ym and last and last[:7].replace('-', '') > ym   # listed after the month ended
+        if past or (last and NOW - parse_iso(last) < timedelta(hours=6)):
+            continue
+        evs, ok = espn_month(slug, ym)
+        listed += 1
+        if not ok:
+            continue
+        rows = []
+        for e in evs:
+            r = espn_row(e)
+            if r and r['done'] and r['ko']:
+                rows.append([r['id'], r['ko'].strftime('%Y-%m-%d'), r['hid'], r['aid'], r['h'], r['a']])
+        evm[ym] = rows
+        atm[ym] = iso(NOW)
+    queue = []
+    for slug, evm in X['ev'].items():
+        for ym, rows in evm.items():
+            for r in rows:
+                if r[0] not in X['g'] and X['miss'].get(r[0], 0) < 3:
+                    queue.append((r[1], slug, r))
+    queue.sort(key=lambda q: q[0], reverse=True)
+    queue = queue[:XG_PER_RUN]
+
+    def one(q):
+        _, slug, r = q
+        f = fetch(ESPN_PLAYS.format(slug, r[0]), {'limit': 600}, tries=1, timeout=25, headers={'Accept-Encoding': 'gzip'})
+        if f.status != 200 or not f.body:
+            return q, None
+        try:
+            body = gzip.decompress(f.body) if f.body[:2] == b'\x1f\x8b' else f.body
+            return q, plays_xg(json.loads(text_of(body)).get('items'), r[2], r[3])
+        except Exception:
+            return q, None
+    if queue and time.time() - t0 < XG_BUDGET_S:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            for q, res in ex.map(one, queue):
+                _, slug, r = q
+                if res:
+                    X['g'][r[0]] = [slug, r[1], r[4], r[5], res[0], res[1], res[2]]
+                    got += 1
+                else:
+                    X['miss'][r[0]] = X['miss'].get(r[0], 0) + 1
+    if listed or got:
+        (STATE_DIR / 'xg.json').write_text(json.dumps(X, ensure_ascii=False, separators=(',', ':')))
+        _XG_IX.clear()
+        _XG_NM.clear()
+    left = sum(1 for evm in X['ev'].values() for rows in evm.values() for r in rows if r[0] not in X['g'] and X['miss'].get(r[0], 0) < 3)
+    return f"{got} games read, {len(X['g'])} kept, {left} to go"
+
+
+_XG_IX, _XG_NM = {}, {}
+
+
+def xg_for(lk, d, h, a):
+    """The commentary's expected goals (home, away) for one of football-data's games, or None. Same day (a day
+    either side for late kick-offs) and both names matching ESPN's."""
+    slug = XG_SLUGS.get(lk)
+    if not slug:
+        return None
+    X = xg_state()
+    if not X['g']:
+        return None
+    if slug not in _XG_IX:
+        ix, names = {}, {}
+        for v in X['g'].values():
+            if v[0] == slug:
+                ix.setdefault(v[1], []).append(v)
+                names[v[2][0]], names[v[3][0]] = v[2], v[3]
+        _XG_IX[slug] = (ix, names)
+    ix, names = _XG_IX[slug]
+
+    def sims(t):   # each ESPN name's likeness to ours, worked out once per team
+        k = (slug, t)
+        if k not in _XG_NM:
+            b_ = base_name(t)
+            _XG_NM[k] = {key: max((team_sim(b_, n) for n in ns), default=0) for key, ns in names.items()}
+        return _XG_NM[k]
+    sh_, sa_ = sims(h), sims(a)
+    best, bs = None, 0.0
+    for dd in (0, -1, 1):
+        for v in ix.get((d + timedelta(days=dd)).strftime('%Y-%m-%d'), ()):
+            x, y = sh_.get(v[2][0], 0), sa_.get(v[3][0], 0)
+            if x >= 0.75 and y >= 0.75 and x + y - abs(dd) * 0.1 > bs:
+                best, bs = v, x + y - abs(dd) * 0.1
+    return (best[4], best[5]) if best else None
 
 
 def espn_lineup(slug, eid):
@@ -2508,6 +3060,12 @@ def expected_goals(lk, h, a, leagues, teams):
         el = lg.get('elo') or {}
         if ELO and h in el and a in el and lg.get('gm'):   # the tuned mix with Elo, same league only
             lh, la = elo_mix(lh, la, elo_lams(el[h] + ELO['hfa'] - el[a], lg['gm'][0], lg['gm'][1], ELO), ELO['v'])
+        kl = lg.get('kal') or {}
+        if KAL and h in kl and a in kl and lg.get('kbase'):   # and with the game-by-game ratings
+            st_h = kl[h][:4] + [datetime.strptime(kl[h][4], '%Y-%m-%d').replace(tzinfo=UTC)]
+            st_a = kl[a][:4] + [datetime.strptime(kl[a][4], '%Y-%m-%d').replace(tzinfo=UTC)]
+            kh, ka, _, _ = kal_lams(st_h, st_a, lg['kbase'], KAL['q'], NOW)
+            lh, la = elo_mix(lh, la, (kh, ka), KAL['v'])
         return [round(lh, 4), round(la, 4)], False
     # cross-league: each side's own league ratings plus a league-strength offset
     rh = teams.resolve_global(h, pool_=pool(lk))
@@ -3663,6 +4221,8 @@ def build(state, prev, seed=None):
             matches[-1]['ls'] = ls
         if MODEL_W and not knockout(f['lk']) and not cross and not (mkt and (mkt.get('n') or 0) == 1):
             matches[-1]['wm'] = MODEL_W   # tuned where many bookmakers price the games; one bookmaker alone keeps the default blend
+        if RHO_L:
+            matches[-1]['rho'] = rho_for(f['lk'])   # the draw correction fitted for this league
         lgr = leagues.get(f['lk']) or {}
         if (L[f['lk']].get('hist') and (lgr.get('games') or 0) < 150) or (not lam and (not mkt or mkt.get('src') == 'espn')):
             matches[-1]['thin'] = 1   # few games behind the ratings, or one bookmaker's prices alone
@@ -4149,6 +4709,66 @@ def goal_times(state, mid, hs, as_):
     return [] if hs == 0 and as_ == 0 else None
 
 
+# ----------------------------------------------------------------------------------------------
+# The live check. Every graded game keeps Statpad's, the bookmakers' and the model's home/draw/away chances. Each
+# update compares them on the games graded since the last tuning and over the last 90 days, per kind of league,
+# with a 95% range on the difference (paired game by game, so it is far tighter than either error alone). It is the
+# early warning for drift: if, on enough games, Statpad's learned blend is clearly worse than the bookmakers' own
+# prices in a kind of league, the blend is switched off there until the next monthly tuning has looked again.
+# ----------------------------------------------------------------------------------------------
+MON_KEEP_D = 400
+GUARD_MIN_N = 300
+LC_GROUPS = (('big', 'Top leagues'), ('second', 'Second tiers'), ('more', 'Other leagues'), ('other', 'Cups, Europe, women, internationals'))
+
+
+def lc_group(lk):
+    g = (L.get(lk) or {}).get('group')
+    return g if g in ('big', 'second', 'more') and not knockout(lk) and not (L.get(lk) or {}).get('w') else 'other'
+
+
+def lc_stats(rows):
+    """[games, Statpad's log loss, the bookmakers', the model's, Statpad minus bookmakers: mean, low, high (95%)]."""
+    n = len(rows)
+    if not n:
+        return None
+    lp = [-math.log(max(1e-6, r[3][r[2]])) for r in rows]
+    lm = [-math.log(max(1e-6, r[4][r[2]])) for r in rows]
+    lo = [-math.log(max(1e-6, r[5][r[2]])) for r in rows]
+    d = [a - b for a, b in zip(lp, lm)]
+    md = sum(d) / n
+    sd = math.sqrt(sum((x - md) ** 2 for x in d) / max(1, n - 1))
+    se = sd / math.sqrt(n)
+    r5 = lambda x: round(x, 5)
+    return [n, r5(sum(lp) / n), r5(sum(lm) / n), r5(sum(lo) / n), r5(md), r5(md - 1.96 * se), r5(md + 1.96 * se)]
+
+
+def live_check(state):
+    mon = state.get('mon') or []
+    cut = (NOW - timedelta(days=MON_KEEP_D)).strftime('%Y-%m-%d')
+    mon[:] = [r for r in mon if r[0] >= cut]
+    since = ((state.get('tune') or {}).get('at') or '')[:10]
+    d90 = (NOW - timedelta(days=90)).strftime('%Y-%m-%d')
+    out = {'at': iso(NOW), 'since': since or None, 'groups': {}}
+    guard = {}
+    for g, name in LC_GROUPS:
+        rows = [r for r in mon if lc_group(r[1]) == g]
+        rs = [r for r in rows if since and r[0] >= since]
+        st_rows = [r for r in rs if r[7]]
+        e = {'name': name, 'since': lc_stats(rs), 'd90': lc_stats([r for r in rows if r[0] >= d90]), 'blend': lc_stats(st_rows)}
+        b = e['blend']
+        if b and b[0] >= GUARD_MIN_N and b[5] > 0:   # the learned blend's games: Statpad clearly behind the bookmakers
+            guard[g] = True
+            e['guard'] = True
+        out['groups'][g] = {k: v for k, v in e.items() if v is not None}
+    out['all'] = lc_stats([r for r in mon if since and r[0] >= since])
+    out['all90'] = lc_stats([r for r in mon if r[0] >= d90])
+    if guard != (state.get('guard') or {}):
+        log('live check: learned blend switched off for', ', '.join(guard) or 'no league kind')
+    state['guard'] = guard
+    state['live_check'] = out
+    return out
+
+
 def track_update(doc, state):
     tr, repo = load_track(state)
     agg = tr['agg']
@@ -4179,6 +4799,7 @@ def track_update(doc, state):
                 rec['op'] = best
             if ver:
                 rec['v'] = ver
+            rec['st'] = 1 if m.get('st') else 0   # the learned blend was used (for the live check)
             if 'f' not in rec:   # the first prediction, kept as it was: time, pick, chance, price
                 rec['f'] = [iso(NOW), e['k'], round(e['pp'], 4), e['pr']]
             # the consensus now; at kick-off this is the closing consensus that value bets are measured against
@@ -4242,6 +4863,8 @@ def track_update(doc, state):
             b = agg['cal'][min(9, int(rec['p'][i] * 10))]
             b[0] += 1; b[1] = round(b[1] + rec['p'][i], 4); b[2] += int(i == oc)
         if rec.get('m') and rec.get('pm'):
+            mon = state.setdefault('mon', [])   # every graded game's three 1X2 forecasts, for the live check
+            mon.append([rec['ko'][:10], rec['lk'], oc, rec['p'], rec['m'], rec['pm'], rec.get('v') or '', rec.get('st', 0)])
             ll = agg['ll']
             ll[0] += 1
             ll[1] = round(ll[1] - math.log(max(1e-6, rec['p'][oc])), 5)
@@ -4449,7 +5072,8 @@ _FD_SEASONS = {}
 
 
 def fd_season(lk, code):
-    """(date, home, away, home goals, away goals, home shots on target, away SoT, prices, kick-off) for one season."""
+    """(date, home, away, home goals, away goals, home shots on target, away SoT, prices, kick-off, commentary xG or
+    None) for one season."""
     key = (lk, code)
     if key not in _FD_SEASONS:
         rows = []
@@ -4464,7 +5088,7 @@ def fd_season(lk, code):
                     if mk:
                         mk['cl'] = fd_close(row)   # closing consensus, for closing-line value in the replay
                     rows.append((d, h, a, int(hg), int(ag), fnum(col(row, 'HST')), fnum(col(row, 'AST')),
-                                 mk, uk_to_utc(d, col(row, 'Time'))))   # football-data times are UK time
+                                 mk, uk_to_utc(d, col(row, 'Time')), xg_for(lk, d, h, a)))   # football-data times are UK time
         _FD_SEASONS[key] = rows
     return _FD_SEASONS[key]
 
@@ -4479,19 +5103,13 @@ def season_fits(cur_rows, prev_rows, P, skip=None):
     cur = sorted(cur_rows, key=lambda r: r[0])
     if len(cur) < 60:
         return None
-    games = [(r[0], r[1], r[2], r[3], r[4], False, r[5], r[6]) for r in prev_rows] + \
-            [(r[0], r[1], r[2], r[3], r[4], True, r[5], r[6]) for r in cur]
+    games = [(r[0], r[1], r[2], r[3], r[4], False, r[5], r[6], r[9] if len(r) > 9 else None) for r in prev_rows] + \
+            [(r[0], r[1], r[2], r[3], r[4], True, r[5], r[6], r[9] if len(r) > 9 else None) for r in cur]
     start = cur[0][0]
     teams = sorted({r[1] for r in cur} | {r[2] for r in cur})
-    init, fits = None, {}
-    for w in sorted({(r[0] - start).days // 7 for r in cur}):
-        if w < skip:
-            continue
-        cut = start + timedelta(days=7 * w)
-        rt = fit_ratings([g for g in games if g[0] < cut], teams, asof=cut, init=init, P=P)
-        if rt:
-            fits[w], init = rt, rt
-    return cur, start, fits
+    weeks = [w for w in sorted({(r[0] - start).days // 7 for r in cur}) if w >= skip]
+    got = fit_series(games, teams, [start + timedelta(days=7 * w) for w in weeks], P)
+    return cur, start, {weeks[i]: rt for i, rt in got.items()}
 
 
 def season_preds(cur_rows, prev_rows, P, skip=None, sf=None):
@@ -4513,16 +5131,26 @@ def season_preds(cur_rows, prev_rows, P, skip=None, sf=None):
     return out
 
 
-RHO_DC = -0.07   # the engine's Dixon-Coles correction
+RHO_DC = -0.07   # the engine's Dixon-Coles correction (its default)
+# The draw correction fitted per league by the monthly tuning (see fit_rho): {'_': pooled value, league: value}, or None
+RHO_L = None
 
 
-def dc_probs(lh, la, n=11):
+def rho_for(lk):
+    """The draw correction the engine uses for a league's games."""
+    if not RHO_L:
+        return RHO_DC
+    return RHO_L.get(lk, RHO_L.get('_', RHO_DC))
+
+
+def dc_probs(lh, la, n=11, rho=None):
     """Home, draw, away and over 2.5 from the Dixon-Coles scoreline grid (as the engine builds it)."""
+    rho = RHO_DC if rho is None else rho
     ph, pa = [math.exp(-lh)], [math.exp(-la)]
     for k in range(1, n):
         ph.append(ph[-1] * lh / k)
         pa.append(pa[-1] * la / k)
-    c00, c01, c10, c11 = 1 - lh * la * RHO_DC, 1 + lh * RHO_DC, 1 + la * RHO_DC, 1 - RHO_DC
+    c00, c01, c10, c11 = 1 - lh * la * rho, 1 + lh * rho, 1 + la * rho, 1 - rho
     H = D = A = U = 0.0
     for i in range(n):
         pi = ph[i]
@@ -4542,12 +5170,13 @@ def dc_probs(lh, la, n=11):
     return H / t, D / t, A / t, 1 - U / t
 
 
-def dc_exact(lh, la, hg, ag, n=11):
+def dc_exact(lh, la, hg, ag, n=11, rho=None):
     """The chance of one exact score on the engine's grid (past its edge, plain Poisson)."""
+    rho = RHO_DC if rho is None else rho
     po = lambda l, k: math.exp(-l) * l ** k / math.factorial(k)
     if hg >= n or ag >= n:
         return po(lh, hg) * po(la, ag)
-    c00, c01, c10, c11 = 1 - lh * la * RHO_DC, 1 + lh * RHO_DC, 1 + la * RHO_DC, 1 - RHO_DC
+    c00, c01, c10, c11 = 1 - lh * la * rho, 1 + lh * rho, 1 + la * rho, 1 - rho
     tot = 0.0
     for i in range(n):
         for j in range(n):
@@ -4606,7 +5235,7 @@ def publish_miracles(tr):
         lh, la = (p[19], p[20]) if len(p) > 20 and p[19] and p[20] else lam_from_1x2(p[15], p[17])
         o = 0 if hs > as_ else 1 if hs == as_ else 2
         goals = p[21] if len(p) > 21 and isinstance(p[21], list) else None
-        items.append([p[0], p[1], p[2], p[3], p[4], hs, as_, round(dc_exact(lh, la, hs, as_), 6), round(p[15 + o], 4), round(lh, 3), round(la, 3), goals])
+        items.append([p[0], p[1], p[2], p[3], p[4], hs, as_, round(dc_exact(lh, la, hs, as_, rho=rho_for(p[1])), 6), round(p[15 + o], 4), round(lh, 3), round(la, 3), goals])
     if not items:
         return None
     items.sort(key=lambda x: x[7])
@@ -4619,12 +5248,82 @@ def publish_miracles(tr):
             'items': keep}
 
 
-def game_loss(lh, la, hg, ag):
+def game_loss(lh, la, hg, ag, rho=None):
     """Log loss on the result (1X2) and on over/under 2.5 for one game."""
-    H, D, A, O = dc_probs(lh, la)
+    H, D, A, O = dc_probs(lh, la, rho=rho)
     r = H if hg > ag else D if hg == ag else A
     o = O if hg + ag > 2 else 1 - O
     return -math.log(max(1e-9, r)), -math.log(max(1e-9, o))
+
+
+_GRID_NP = {}
+
+
+def dc_grid_np(np, lh, la, rho=None, n=11):
+    """The engine's scoreline grid for many games at once: (games, home goals, away goals), each grid adding up to 1."""
+    rho = RHO_DC if rho is None else rho
+    if n not in _GRID_NP:
+        k = np.arange(n)
+        _GRID_NP[n] = (k, np.array([math.lgamma(i + 1) for i in range(n)]), np.subtract.outer(k, k), np.add.outer(k, k))
+    k, lgf, df, sm = _GRID_NP[n]
+    lh, la = np.atleast_1d(np.asarray(lh, dtype=float)), np.atleast_1d(np.asarray(la, dtype=float))
+    ph = np.exp(-lh[:, None] + np.log(lh)[:, None] * k - lgf)
+    pa = np.exp(-la[:, None] + np.log(la)[:, None] * k - lgf)
+    G = ph[:, :, None] * pa[:, None, :]
+    G[:, 0, 0] *= 1 - lh * la * rho
+    G[:, 0, 1] *= 1 + lh * rho
+    G[:, 1, 0] *= 1 + la * rho
+    G[:, 1, 1] *= 1 - rho
+    return G / G.sum(axis=(1, 2))[:, None, None]
+
+
+def dc_probs_np(np, lh, la, rho=None, n=11):
+    """dc_probs for many games at once (arrays of expected goals; rho a number or an array). (H, D, A, over 2.5)."""
+    G = dc_grid_np(np, lh, la, rho, n)
+    _, _, df, sm = _GRID_NP[n]
+    H = (G * (df > 0)).sum(axis=(1, 2))
+    D = (G * (df == 0)).sum(axis=(1, 2))
+    U = (G * (sm < 3)).sum(axis=(1, 2))
+    return H, D, 1 - H - D, 1 - U
+
+
+def fit_market_np(np, pH, pA, pO=None, rho=None, iters=14, start=None):
+    """The engine's fit (expected goals that give the market's home, away and over 2.5 chances on the grid, the
+    over/under counting half) for many games at once, by Gauss-Newton steps. Arrays of (home, away) expected goals."""
+    pH, pA = np.asarray(pH, dtype=float), np.asarray(pA, dtype=float)
+    hasO = None if pO is None else np.array([o is not None for o in pO])
+    tO = None if pO is None else np.array([o if o is not None else 0.0 for o in pO], dtype=float)
+    u, v = np.full(len(pH), math.log(1.4)), np.full(len(pH), math.log(1.1))
+    if start is not None:
+        u, v = np.log(start[0]), np.log(start[1])
+
+    def res(u_, v_):
+        H, _, A, O = dc_probs_np(np, np.exp(u_), np.exp(v_), rho)
+        r = [H - pH, A - pA]
+        r.append(np.where(hasO, math.sqrt(0.5) * (O - tO), 0.0) if hasO is not None else np.zeros(len(pH)))
+        return np.stack(r, 1)
+    e = 1e-5
+    for _ in range(iters):
+        r0 = res(u, v)
+        Ju, Jv = (res(u + e, v) - r0) / e, (res(u, v + e) - r0) / e
+        a, b, c = (Ju * Ju).sum(1) + 1e-12, (Ju * Jv).sum(1), (Jv * Jv).sum(1) + 1e-12
+        gu, gv = (Ju * r0).sum(1), (Jv * r0).sum(1)
+        det = a * c - b * b
+        du, dv = -(c * gu - b * gv) / det, -(a * gv - b * gu) / det
+        u = np.clip(u + np.clip(du, -1, 1), -3, 1.9)
+        v = np.clip(v + np.clip(dv, -1, 1), -3, 1.9)
+        if float(np.abs(du).max() + np.abs(dv).max()) < 1e-9:
+            break
+    return np.exp(u), np.exp(v)
+
+
+def losses_np(np, lh, la, hg, ag, rho=None):
+    """game_loss for many games at once: arrays of the 1X2 and the over/under 2.5 log losses."""
+    H, D, A, O = dc_probs_np(np, lh, la, rho)
+    hg, ag = np.asarray(hg), np.asarray(ag)
+    r = np.where(hg > ag, H, np.where(hg == ag, D, A))
+    o = np.where(hg + ag > 2, O, 1 - O)
+    return -np.log(np.maximum(1e-9, r)), -np.log(np.maximum(1e-9, o))
 
 
 # ----------------------------------------------------------------------------------------------
@@ -4745,6 +5444,7 @@ def run_past_stakes(jobs, keys):
 # only if they beat the defaults there, after blending with the market as the site does.
 # ----------------------------------------------------------------------------------------------
 TUNE_EVERY_D = 30
+TUNE_NOW = ENV('STATPAD_TUNE_NOW') != '0'   # include this season's games so far in the check (testing can turn it off)
 TUNE_V = 2          # 2: prices read by the power method, market share up to 100%
 TUNE_BUDGET_S = float(ENV('STATPAD_TUNE_BUDGET') or 420)
 TUNE_GRID = {'sw': [0.0, 0.15, 0.3, 0.45, 0.6, 0.75], 'hl': [120.0, 180.0, 270.0, 365.0, 540.0],
@@ -4767,14 +5467,25 @@ def _tune_job(arg):
         both = list(prev_rows) + list(cur_rows)
         eg = [elo_run(both, hfa, k)[1] for hfa, k in ELO_GRID]
         gm = goal_means(prev_rows) if prev_rows else goal_means(cur_rows)
+    np = numpy_lib()
+    if np and not full:
+        pr = season_preds(cur_rows, prev_rows, P, sf=sf)
+        if not pr:
+            return (0, 0.0, 0.0)
+        x, y = losses_np(np, [p[1] for p in pr], [p[2] for p in pr], [p[0][3] for p in pr], [p[0][4] for p in pr])
+        return (len(pr), float(x.sum()), float(y.sum()))
+    start = sf[1] if sf else None
     for r, lh, la, _sh, _sa in season_preds(cur_rows, prev_rows, P, sf=sf):
         if full:
             mk = r[7]
             if mk and mk.get('p'):
                 rh, ra = rd.get((r[0], r[1], r[2]), (None, None))
                 key = (r[0], r[1], r[2])
+                # 12: the ratings' spread (log expected goals), 13: the market's draw chance, 14: the season's week,
+                # 15: home and away shots on target, 16: the closing consensus (measuring only, never a feature)
                 rows.append((lh, la, r[3], r[4], mk['p'][0], mk['p'][2], (mk.get('ou') or {}).get('pO'),
-                             rh, ra, (lk, r[0].strftime('%Y-%m-%d'), r[1], r[2]), [g.get(key) for g in eg], gm))
+                             rh, ra, (lk, r[0].strftime('%Y-%m-%d'), r[1], r[2]), [g.get(key) for g in eg], gm,
+                             (_sh, _sa), mk['p'][1], (r[0] - start).days // 7, (r[5], r[6]), mk.get('cl')))
             continue
         x, y = game_loss(lh, la, r[3], r[4])
         n += 1
@@ -4807,6 +5518,142 @@ def _pmap(pool, fn, args):
     return [fn(x) for x in args]
 
 
+# The search itself. With NumPy: a Bayesian search over all the settings at once. A Gaussian-process stand-in for the
+# error surface is fitted to every setting tried so far, and the next one tried is where the expected improvement
+# is largest; it stops when nothing is expected to improve or the time is up. Without NumPy: the old search, one
+# setting at a time over a fixed grid.
+TUNE_SPACE = [('sw', 0.0, 0.85, False), ('hl', 90.0, 1600.0, True), ('pw', 0.2, 1.0, False), ('k', 0.8, 20.0, True), ('nt', 0.0, 0.35, False)]
+TUNE_ROUND = {'sw': 3, 'hl': 0, 'pw': 3, 'k': 2, 'nt': 3, 'sx': 3, 'q': 7, 'p0': 4, 'ps': 3, 'qs': 4}
+XG_MIN_COVER = 0.8      # share of the xG leagues' training games with commentary xG before the search tries it
+XG_MIN_GAIN = 2e-4      # model alone, a game, on the check season's xG leagues
+TUNE_MAX_EVALS = 110
+TUNE_EI_STOP = 4e-7     # stop when the best expected improvement (log loss a game) stays below this
+
+
+def _unit(np, P, space):
+    return np.array([(math.log(P[k]) - math.log(lo)) / (math.log(hi) - math.log(lo)) if lg else (P[k] - lo) / (hi - lo)
+                     for k, lo, hi, lg in space]).clip(0, 1)
+
+
+def _from_unit(u, space, base):
+    P = dict(base)
+    for x, (k, lo, hi, lg) in zip(u, space):
+        v = math.exp(math.log(lo) + float(x) * (math.log(hi) - math.log(lo))) if lg else lo + float(x) * (hi - lo)
+        P[k] = round(v, TUNE_ROUND[k]) if TUNE_ROUND[k] else float(round(v))
+    return P
+
+
+def _ncdf(np, z):
+    """The normal distribution's CDF (Abramowitz and Stegun 7.1.26: error below 2e-7)."""
+    x = np.abs(z) / math.sqrt(2)
+    t = 1 / (1 + 0.3275911 * x)
+    e = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * np.exp(-x * x)
+    return 0.5 * (1 + np.sign(z) * e)
+
+
+def _matern(np, A, B, ls):
+    d = np.sqrt((((A[:, None, :] - B[None, :, :]) / ls) ** 2).sum(-1))
+    s = math.sqrt(5) * d
+    return (1 + s + s * s / 3) * np.exp(-s)
+
+
+def _gp(np, X, y):
+    """A Gaussian process fitted to the settings tried: Matérn 5/2, one length scale per setting, chosen by the
+    marginal likelihood. Returns predict(points) -> (mean, sd), in log loss."""
+    ym, ys = float(y.mean()), float(y.std()) or 1.0
+    z = (y - ym) / ys
+    d = X.shape[1]
+
+    def nll(ls, nz):
+        K = _matern(np, X, X, ls) + nz * np.eye(len(X))
+        try:
+            Lc = np.linalg.cholesky(K)
+        except np.linalg.LinAlgError:
+            return None
+        al = np.linalg.solve(Lc.T, np.linalg.solve(Lc, z))
+        return 0.5 * float(z @ al) + float(np.log(np.diag(Lc)).sum()), Lc, al
+    best = None
+    for l0 in (0.1, 0.16, 0.25, 0.4, 0.65, 1.0):
+        for nz in (1e-6, 1e-4, 1e-2):
+            r = nll(np.full(d, l0), nz)
+            if r and (best is None or r[0] < best[0]):
+                best = (r[0], np.full(d, l0), nz, r[1], r[2])
+    for _ in range(2):   # then each setting's own length scale
+        for j in range(d):
+            for f in (0.5, 2.0, 4.0):
+                ls = best[1].copy()
+                ls[j] = min(8.0, ls[j] * f)
+                r = nll(ls, best[2])
+                if r and r[0] < best[0] - 1e-9:
+                    best = (r[0], ls, best[2], r[1], r[2])
+    _, ls, nz, Lc, al = best
+
+    def predict(P):
+        Ks = _matern(np, P, X, ls)
+        mu = Ks @ al
+        v = np.linalg.solve(Lc, Ks.T)
+        var = np.maximum(1e-12, 1 - (v * v).sum(0))
+        return ym + ys * mu, ys * np.sqrt(var)
+    return predict
+
+
+def bayes_search(np, score, starts, space, base, t0, budget, max_evals, seed, tag):
+    """Minimise score(settings) over the space; starts are tried first. Returns (best settings, its score, evals, finished)."""
+    rng = np.random.default_rng(seed)
+    d = len(space)
+    X, y, Ps, seen = [], [], [], set()
+
+    def run(P):
+        key = json.dumps(P, sort_keys=True)
+        if key in seen:
+            return
+        seen.add(key)
+        X.append(_unit(np, P, space))
+        y.append(score(P))
+        Ps.append(P)
+    for P in starts:
+        run(dict(base, **{k: P.get(k, base[k]) for k, *_ in space}))
+    # a spread of first guesses (Latin hypercube), so the stand-in sees the whole space
+    n0 = max(6, 2 * d)
+    lhs = (np.argsort(rng.random((d, n0)), axis=1).T + rng.random((n0, d))) / n0
+    for u in lhs:
+        if time.time() - t0 > budget:
+            i = int(np.argmin(y))
+            return Ps[i], y[i], len(y), False
+        run(_from_unit(u, space, base))
+    quiet, finished = 0, True
+    while len(y) < max_evals:
+        if time.time() - t0 > budget:
+            finished = False
+            break
+        Xa, ya = np.array(X), np.array(y)
+        pred = _gp(np, Xa, ya)
+        b = int(ya.argmin())
+        top = np.argsort(ya)[:3]
+        cand = np.vstack([rng.random((3000, d))] + [np.clip(Xa[i] + rng.normal(0, s, (400, d)), 0, 1) for i in top for s in (0.03, 0.1)])
+        mu, sd = pred(cand)
+        imp = ya[b] - mu
+        zz = imp / sd
+        ei = imp * _ncdf(np, zz) + sd * np.exp(-0.5 * zz * zz) / math.sqrt(2 * math.pi)
+        order = np.argsort(-ei)
+        picked = None
+        for i in order[:50]:
+            P = _from_unit(cand[i], space, base)
+            if json.dumps(P, sort_keys=True) not in seen:
+                picked = (P, float(ei[i]))
+                break
+        if not picked:
+            break
+        quiet = quiet + 1 if picked[1] < TUNE_EI_STOP else 0
+        if quiet >= 3 and len(y) >= n0 + len(starts) + 8:
+            break   # nothing left that's expected to help
+        run(picked[0])
+    i = int(np.argmin(y))
+    why = 'out of time' if not finished else 'tried the most it may' if len(y) >= max_evals else 'stopped: nothing left to gain'
+    log(f'tuning ({tag}): {len(y)} settings tried, best {Ps[i]} ({y[i]:.5f}), {why}')
+    return Ps[i], y[i], len(y), finished
+
+
 def blend_loss(rows, lams, w):
     """Average 1X2 + over/under log loss after blending model and market as the engine does."""
     n = l1 = l2 = 0.0
@@ -4822,9 +5669,11 @@ def blend_loss(rows, lams, w):
 def run_tuning(state):
     global _TUNE_JOBS
     t0 = time.time()
-    c1, c2, c3, c4 = (season_code(NOW, i) for i in (1, 2, 3, 4))
+    numpy_lib(True)   # before the worker processes are made, so they have it too
+    c0, c1, c2, c3, c4 = (season_code(NOW, i) for i in (0, 1, 2, 3, 4))
     global _TUNE_LKS
     train, check, tl, cl = [], [], [], []
+    n_now = 0
     for lk, c in L.items():
         if not c['fd']:
             continue
@@ -4835,6 +5684,12 @@ def run_tuning(state):
             train.append((s3, s4)); tl.append(lk)
         if len(s1) >= 60 and s2:
             check.append((s1, s2)); cl.append(lk)
+            # this season's games so far join the check, so every switch-on decision also answers to the most
+            # recent football: a change that helped last season but hurts now stays off (drift)
+            s0 = fd_season(lk, c0) if TUNE_NOW else []
+            if len(s0) >= 60:
+                check.append((s0, s1)); cl.append(lk)
+                n_now += len(s0)
     if len(train) < 6 or len(check) < 3:
         log('tuning: not enough past seasons', len(train), len(check))
         return None
@@ -4857,7 +5712,45 @@ def run_tuning(state):
         best = dict(DEFAULT_MODEL)
         bs = score(best)
         finished = True
-        for _round in range(2):
+        np = numpy_lib()
+        prev_t = (state or {}).get('tune') or {}
+        # commentary xG: tried only once most of the covered leagues' training games have it
+        xl = [i for i in ti if _TUNE_LKS[i] in XG_SLUGS]
+        n_x = sum(1 for i in xl for rows in _TUNE_JOBS[i] for r in rows if len(r) > 9 and r[9])
+        n_a = sum(len(rows) for i in xl for rows in _TUNE_JOBS[i])
+        xg_cover = n_x / n_a if n_a else 0.0
+        if np:
+            seed = int(c1) * 7 + 1
+            starts = [DEFAULT_MODEL] + ([dict(DEFAULT_MODEL, **{k: v for k, v in prev_t['params'].items() if k != 'sx'})] if prev_t.get('params') else [])
+            best, bs, _, f1 = bayes_search(np, score, starts, TUNE_SPACE, DEFAULT_MODEL, t0, TUNE_BUDGET_S * 0.7, TUNE_MAX_EVALS, seed, 'shots and goals')
+            sp0 = [s_ for s_ in TUNE_SPACE if s_[0] != 'sw']
+            starts0 = [dict(best, sw=0.0), dict(DEFAULT_MODEL)] + ([dict(DEFAULT_MODEL, **dict(prev_t['params0'], sw=0.0))] if prev_t.get('params0') else [])
+            best0, bs0, _, f2 = bayes_search(np, score, starts0, sp0, dict(best, sw=0.0), t0, TUNE_BUDGET_S, TUNE_MAX_EVALS // 2, seed + 1, 'goals only')
+            finished = f1 and f2
+        # commentary xG: the leagues it covers get their own settings, searched with its share on their games alone (so
+        # the other leagues are untouched), and kept only if they also beat the common ones on the check season there
+        xg = {'cover': round(xg_cover, 3), 'on': False}
+        best_x = None
+        xc = [i for i in ci if _TUNE_LKS[i] in XG_SLUGS]
+        if np and xg_cover >= XG_MIN_COVER and xl and xc:
+            def on_jobs(idx, P):
+                res = _pmap(pool, _tune_job, [(i, P, False) for i in idx])
+                n_ = sum(r[0] for r in res)
+                return (sum(r[1] for r in res) + sum(r[2] for r in res)) / max(1, n_), n_
+            sp_x = TUNE_SPACE + [('sx', 0.0, 0.9, False)]
+            bx, sx_tr, _, _ = bayes_search(np, lambda P: on_jobs(xl, P)[0], [dict(best, sx=0.15), dict(best, sx=0.5)], sp_x, dict(best, sx=0.0),
+                                           time.time(), TUNE_BUDGET_S * 0.25, TUNE_MAX_EVALS // 2, seed + 2, 'with commentary xG')
+            l_tr0 = on_jobs(xl, best)[0]
+            l_x, n_ck = on_jobs(xc, bx)
+            l_0, _ = on_jobs(xc, best)
+            on_x = bool(bx.get('sx')) and sx_tr < l_tr0 and l_x < l_0 - XG_MIN_GAIN
+            xg.update({'sx': bx.get('sx'), 'on': on_x, 'params': bx, 'll': [round(l_0, 5), round(l_x, 5)], 'train': [round(l_tr0, 5), round(sx_tr, 5)],
+                       'games': n_ck, 'leagues': sorted({_TUNE_LKS[i] for i in xc})})
+            log(f"tuning: the {len(xg['leagues'])} leagues with commentary xG, own settings {bx}: model {l_0:.4f} -> {l_x:.4f} on the check season there "
+                f"({n_ck} games; training {l_tr0:.4f} -> {sx_tr:.4f}); {'on' if on_x else 'kept off'}")
+            if on_x:
+                best_x = bx
+        for _round in range(2 if not np else 0):
             moved = False
             for name in ('sw', 'hl', 'pw', 'k'):
                 for v in TUNE_GRID[name]:
@@ -4871,9 +5764,10 @@ def run_tuning(state):
             if not moved or not finished:
                 break
         # leagues without shot counts: the same search with goals only
-        best0 = dict(best, sw=0.0)
-        bs0 = score(best0)
-        for name in ('k', 'hl', 'pw'):
+        if not np:
+            best0 = dict(best, sw=0.0)
+            bs0 = score(best0)
+        for name in (('k', 'hl', 'pw') if not np else ()):
             for v in TUNE_GRID[name]:
                 if time.time() - t0 > TUNE_BUDGET_S * 1.25:
                     finished = False
@@ -4885,9 +5779,10 @@ def run_tuning(state):
         t_search = time.time() - t0
         # the market's share: model expected goals from the tuned settings, market expected goals fitted by the engine
         flat = lambda res: ([r for x in res for r in x[0]], [j for x in res for j in x[1]], [k for x in res for k in x[2]])
-        tr_rows, tr_jobs, tr_keys = flat(_pmap(pool, _tune_job, [(i, best, True) for i in ti]))
+        Pj = lambda i: best_x if best_x and _TUNE_LKS[i] in XG_SLUGS else best   # the settings each league uses
+        tr_rows, tr_jobs, tr_keys = flat(_pmap(pool, _tune_job, [(i, Pj(i), True) for i in ti]))
         ck_def, cd_jobs, cd_keys = flat(_pmap(pool, _tune_job, [(i, DEFAULT_MODEL, True) for i in ci]))
-        ck_new, cn_jobs, cn_keys = flat(_pmap(pool, _tune_job, [(i, best, True) for i in ci]))
+        ck_new, cn_jobs, cn_keys = flat(_pmap(pool, _tune_job, [(i, Pj(i), True) for i in ci]))
         ck_0 = flat(_pmap(pool, _tune_job, [(i, best0, True) for i in ci]))[0]
     finally:
         if pool:
@@ -4897,6 +5792,11 @@ def run_tuning(state):
     if not lam_tr or not lam_ck or len(ck_def) != len(ck_new):
         log('tuning: market fit failed')
         return None
+    if ENV('STATPAD_TUNE_DUMP'):   # testing: keep the rows for experiments
+        import pickle
+        with open(ENV('STATPAD_TUNE_DUMP'), 'wb') as fh:
+            pickle.dump({'tr': tr_rows, 'lam_tr': lam_tr, 'ck_new': ck_new, 'ck_def': ck_def, 'ck_0': ck_0, 'lam_ck': lam_ck,
+                         'best': best, 'best0': best0, 'train_lks': _TUNE_LKS, 'c': [c1, c2, c3, c4]}, fh)
     w_scores = {w: sum(blend_loss(tr_rows, lam_tr, w)) for w in W_GRID}
     w_best = min(w_scores, key=w_scores.get)
     # the check season: never seen by the search
@@ -4919,20 +5819,55 @@ def run_tuning(state):
     except Exception as e:
         log('tuning: Elo fit failed', repr(e))
         elo = None
-    fx = safe_fx(tr_rows, lam_tr, tr_jobs, tr_keys, rows_on, lam_ck, (cn_jobs, cn_keys) if p_on else (cd_jobs, cd_keys), w_live, t0)
+    # the newer stages, each on top of the ones before it
+    P_live = best if p_on else DEFAULT_MODEL
+    mod_tr, mod_ck = elo_rows(tr_rows, elo), elo_rows(rows_on, elo)
+    kal = rho = stack = None
+    rho_tr, rho_ck = [RHO_DC] * len(tr_rows), [RHO_DC] * len(rows_on)
+    try:
+        kal, mod_tr, mod_ck = fit_kalman(ti, ci, P_live, tr_rows, rows_on, lam_ck, w_live, mod_tr, mod_ck, best_x if p_on else None)
+    except Exception as e:
+        log('tuning: game-by-game ratings failed', repr(e))
+    try:
+        rho, rt_, rc_ = fit_rho(tr_rows, rows_on, mod_tr, mod_ck, w_live)
+        if rho and rho['on']:
+            rho_tr, rho_ck = rt_, rc_
+    except Exception as e:
+        log('tuning: draw correction failed', repr(e))
+    site_tr, site_ck = blend_lams(mod_tr, lam_tr, w_live), blend_lams(mod_ck, lam_ck, w_live)
+    try:
+        st_ = fit_stack(tr_rows, rows_on, mod_tr, mod_ck, rho_tr, rho_ck, w_live)
+        if st_:
+            stack, site_tr, site_ck = st_
+    except Exception as e:
+        log('tuning: learned blend failed', repr(e))
+    fin = split_loss(site_ck, rows_on, rho_ck)
+    fx = safe_fx(site_tr, tr_rows, tr_jobs, tr_keys, site_ck, rows_on, (cn_jobs, cn_keys) if p_on else (cd_jobs, cd_keys),
+                 rho_tr, rho_ck, bool(stack and stack['on']), t0)
     r5 = lambda x: round(x, 5)
-    out = {'at': iso(NOW), 'v': TUNE_V, 'train': [season_name(c3), season_name(c2)], 'check': season_name(c1), 'check_code': c1,
+    out = {'at': iso(NOW), 'v': TUNE_V, 'train': [season_name(c3), season_name(c2)],
+           'check': season_name(c1) + (f' and {season_name(c0)} so far' if n_now else ''), 'check_code': c1, 'check_now': n_now,
            'leagues': len(check), 'games': len(ck_new), 'evals': evals, 'secs': round(time.time() - t0),
-           'search_secs': round(t_search), 'finished': finished,
+           'search_secs': round(t_search), 'finished': finished, 'search': 'bayes' if numpy_lib() else 'grid',
            'default': DEFAULT_MODEL, 'params': best, 'on': p_on, 'w': w_best, 'w_on': w_on,
-           'params0': best0, 'on0': on0, 'fx': fx, 'elo': elo,
-           'll': {'model': [r5(m_def[0]), r5(m_new[0])], 'model_ou': [r5(m_def[1]), r5(m_new[1])],
+           'params0': best0, 'on0': on0, 'params_x': best_x, 'fx': fx, 'elo': elo, 'kal': kal, 'rho': rho, 'stack': stack, 'xg': xg,
+           'll': {'model': [r5(m_def[0]), r5(m_new[0])], 'model_ou': [r5(m_def[1]), r5(m_new[1])], 'final': [r5(fin[0]), r5(fin[1])],
                   'site': [r5(b_old[0]), r5(b_after[0])], 'site_ou': [r5(b_old[1]), r5(b_after[1])],
                   'market': [r5(mkt[0]), r5(mkt[1])], 'model0': [r5(m_0[0]), r5(m_0[1])]}}
     log(f"tuning: {evals} settings tried in {out['search_secs']} s on {season_name(c3)}-{season_name(c2)}; best {best}, market share {w_best}. "
-        f"Checked on {season_name(c1)}: model {m_def[0]:.4f} -> {m_new[0]:.4f}, site {b_old[0]:.4f} -> {b_after[0]:.4f} (1X2 log loss); "
-        f"settings {'on' if p_on else 'kept old'}, market share {'on' if w_on else 'kept 0.8'}")
+        f"Checked on {out['check']}: model {m_def[0]:.4f} -> {m_new[0]:.4f}, site {b_old[0]:.4f} -> {b_after[0]:.4f} (1X2 log loss); "
+        f"settings {'on' if p_on else 'kept old'}, market share {'on' if w_on else 'kept 0.8'}; after the newer stages {fin[0]:.4f} (1X2), {fin[1]:.4f} (over/under)")
     return out
+
+
+def split_loss(lams, rows, rhos):
+    """(1X2, over/under 2.5) average log losses."""
+    np = numpy_lib()
+    if np:
+        x, y = losses_np(np, [l[0] for l in lams], [l[1] for l in lams], [r[2] for r in rows], [r[3] for r in rows], np.array(rhos))
+        return float(x.mean()), float(y.mean())
+    L_ = [game_loss(l[0], l[1], r[2], r[3], rh) for l, r, rh in zip(lams, rows, rhos)]
+    return sum(x for x, _ in L_) / len(L_), sum(y for _, y in L_) / len(L_)
 
 
 def fit_elo(tr_rows, ck_rows, lam_ck, w):
@@ -4989,18 +5924,294 @@ def fit_elo(tr_rows, ck_rows, lam_ck, w):
     return E
 
 
+# ----------------------------------------------------------------------------------------------
+# Three newer stages of the monthly tuning, run after the settings, the market's share and Elo. Each is fitted on
+# the training seasons and switched on only if it also lowers the error on the check season, which it never saw:
+#  1. game-by-game ratings (kalman_run) mixed with the model's;
+#  2. the draw correction per league (the engine used one fixed value for every league);
+#  3. the learned blend: how far to lean from the bookmakers' numbers towards (or away from) the model's, depending
+#     on how thin the model's data is, the time of season, the kind of league and short rest. Fitted on the error
+#     itself (1X2 and over/under 2.5 log loss), with its strength chosen walk-forward: fitted on the older training
+#     season, measured on the newer one.
+# ----------------------------------------------------------------------------------------------
+KAL_MIN_GAIN = 1e-3     # model alone, 1X2 + over/under log loss a game, as for Elo
+RHO_MIN_GAIN = 1e-4     # Statpad's numbers, a game
+STACK_MIN_GAIN = 1e-4
+RHO_GRID = [round(-0.20 + 0.01 * i, 2) for i in range(24)]   # -0.20 .. +0.03
+RHO_TAU = 1000          # a league's own games weigh against this many games of the pooled value
+STACK_RIDGES = (0.003, 0.01, 0.03, 0.1)
+STACK_NAMES = ['model', 'model x thin data', 'model x early season', 'model x second tier', 'model x other leagues', 'short rest', 'goals level']
+STACK = None            # {'b': [...]} when the learned blend is on
+KAL_SHARES = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+
+def elo_rows(rows, E):
+    """The model's expected goals for tuning rows after the Elo mix, when it's on."""
+    if not E or not E.get('on') or (E['hfa'], E['k']) not in ELO_GRID:
+        return [(r[0], r[1]) for r in rows]
+    gi = ELO_GRID.index((E['hfa'], E['k']))
+    return [elo_mix(r[0], r[1], elo_lams(r[10][gi], r[11][0], r[11][1], E), E['v']) if r[10][gi] is not None else (r[0], r[1]) for r in rows]
+
+
+def _kal_job(i, K, sw, nt, sx=0.0):
+    cur_rows, prev_rows = _TUNE_JOBS[i]
+    lk = _TUNE_LKS[i] if i < len(_TUNE_LKS) else None
+    games = [(r[0], r[1], r[2], r[3], r[4], False, r[5], r[6], r[9] if len(r) > 9 else None) for r in prev_rows] + \
+            [(r[0], r[1], r[2], r[3], r[4], True, r[5], r[6], r[9] if len(r) > 9 else None) for r in cur_rows]
+    pre = kalman_run(games, K, sw, nt, sx)[0]
+    return {(lk, d.strftime('%Y-%m-%d'), h, a): v for (d, h, a), v in pre.items()}
+
+
+def mean_loss(lams, rows, rhos=None):
+    """Average 1X2 + over/under 2.5 log loss of expected goals [(home, away)] against the rows' results."""
+    np = numpy_lib()
+    if not lams:
+        return None
+    if np:
+        x, y = losses_np(np, [l[0] for l in lams], [l[1] for l in lams], [r[2] for r in rows], [r[3] for r in rows], None if rhos is None else np.array(rhos))
+        return float((x + y).mean())
+    return sum(sum(game_loss(l[0], l[1], r[2], r[3], None if rhos is None else rhos[k])) for k, (l, r) in enumerate(zip(lams, rows))) / len(rows)
+
+
+def blend_lams(mod, lam_mkt, w):
+    return [(math.exp(w * math.log(mh) + (1 - w) * math.log(lh)), math.exp(w * math.log(ma) + (1 - w) * math.log(la))) for (lh, la), (mh, ma) in zip(mod, lam_mkt)]
+
+
+def fit_kalman(ti, ci, P, tr_rows, ck_rows, lam_ck, w, mod_tr, mod_ck, P_x=None):
+    """Fit the filter's settings by how well it predicts each next game's goals on the training seasons, then the
+    share it gets next to the model by the error on them. mod_tr / mod_ck: the model's numbers so far (after Elo)."""
+    t0 = time.time()
+    keys_t = [r[9] for r in tr_rows]
+
+    def preds(idx, K):
+        out = {}
+        for i in idx:
+            Q = P_x if P_x and _TUNE_LKS[i] in XG_SLUGS else P
+            out.update(_kal_job(i, K, Q.get('sw') or 0.0, Q.get('nt', NEW_TEAM_PRIOR[1]), Q.get('sx') or 0.0))
+        return out
+
+    def score(K):
+        kp = preds(ti, K)
+        tot = n = 0
+        for k, r in zip(keys_t, tr_rows):
+            v = kp.get(k)
+            if v:
+                tot += v[0] - r[2] * math.log(v[0]) + v[1] - r[3] * math.log(v[1])
+                n += 1
+        return tot / max(1, n)
+    np = numpy_lib()
+    if np:
+        K, _, evals, _ = bayes_search(np, score, [KAL_DEF], KAL_SPACE, KAL_DEF, t0, 90, 40, 11, 'game-by-game ratings')
+    else:
+        cands = [dict(KAL_DEF, q=q, p0=p0, ps=ps) for q in (0.00005, 0.0001, 0.0002) for p0 in (0.05, 0.1) for ps in (0.8, 1.0)]
+        sc = [score(K_) for K_ in cands]
+        K, evals = cands[sc.index(min(sc))], len(cands)
+    kt, kc = preds(ti, K), preds(ci, K)
+
+    def mixed(mod, rows, kp, v):
+        out = []
+        for (lh, la), r in zip(mod, rows):
+            x = kp.get(r[9])
+            out.append(elo_mix(lh, la, x[:2], v) if x else (lh, la))
+        return out
+    tr_l = {v: mean_loss(mixed(mod_tr, tr_rows, kt, v), tr_rows) for v in KAL_SHARES}
+    v = min(tr_l, key=tr_l.get)
+    m0, m1 = mean_loss(mod_ck, ck_rows), mean_loss(mixed(mod_ck, ck_rows, kc, v), ck_rows)
+    s0, s1 = mean_loss(blend_lams(mod_ck, lam_ck, w), ck_rows), mean_loss(blend_lams(mixed(mod_ck, ck_rows, kc, v), lam_ck, w), ck_rows)
+    on = v < 1.0 and m1 < m0 - KAL_MIN_GAIN and s1 <= s0 + 1e-4
+    out = dict(K, v=v, on=on, evals=evals, ll={'model': [round(m0, 5), round(m1, 5)], 'site': [round(s0, 5), round(s1, 5)]})
+    log(f"tuning: game-by-game ratings {K}, model's share {v}: model {m0:.4f} -> {m1:.4f}, site {s0:.4f} -> {s1:.4f} on the check season; "
+        f"{'on' if on else 'kept off'} ({time.time() - t0:.0f} s)")
+    return out, (mixed(mod_tr, tr_rows, kt, v) if on else mod_tr), (mixed(mod_ck, ck_rows, kc, v) if on else mod_ck)
+
+
+def _mkt_arrays(np, rows):
+    return np.array([r[4] for r in rows]), np.array([r[5] for r in rows]), [r[6] for r in rows]
+
+
+def fit_rho(tr_rows, ck_rows, mod_tr, mod_ck, w):
+    """The draw correction per league: for each value, the bookmakers' expected goals are refitted on the engine's
+    grid and blended with the model's as the site does; each league takes the value with the lowest error on the
+    training seasons, pulled towards the value that's best over all leagues when it has few games."""
+    np = numpy_lib()
+    if not np or not tr_rows or not ck_rows:
+        return None, None, None
+    t0 = time.time()
+    hg_t, ag_t = np.array([r[2] for r in tr_rows]), np.array([r[3] for r in tr_rows])
+    hg_c, ag_c = np.array([r[2] for r in ck_rows]), np.array([r[3] for r in ck_rows])
+    lk_t, lk_c = [r[9][0] for r in tr_rows], [r[9][0] for r in ck_rows]
+    mt, mc = np.array(mod_tr), np.array(mod_ck)
+    Tm, Cm = _mkt_arrays(np, tr_rows), _mkt_arrays(np, ck_rows)
+    LT, LC, st_t, st_c = {}, {}, None, None
+    for rho in sorted(RHO_GRID, key=lambda x: abs(x - RHO_DC)):   # nearest first, each fit starting from the last
+        fh, fa = fit_market_np(np, *Tm, rho, start=st_t)
+        st_t = (fh, fa)
+        bh, ba = np.exp(w * np.log(fh) + (1 - w) * np.log(mt[:, 0])), np.exp(w * np.log(fa) + (1 - w) * np.log(mt[:, 1]))
+        x, y = losses_np(np, bh, ba, hg_t, ag_t, rho)
+        LT[rho] = x + y
+        fh, fa = fit_market_np(np, *Cm, rho, start=st_c)
+        st_c = (fh, fa)
+        bh, ba = np.exp(w * np.log(fh) + (1 - w) * np.log(mc[:, 0])), np.exp(w * np.log(fa) + (1 - w) * np.log(mc[:, 1]))
+        x, y = losses_np(np, bh, ba, hg_c, ag_c, rho)
+        LC[rho] = x + y
+    pooled = min(RHO_GRID, key=lambda r: float(LT[r].mean()))
+    lks = sorted(set(lk_t))
+    per = {}
+    for lk in lks:
+        m = np.array([x == lk for x in lk_t])
+        per[lk] = min(RHO_GRID, key=lambda r: float(LT[r][m].sum()) + RHO_TAU * float(LT[r].mean()))
+    rc = [per.get(lk, pooled) for lk in lk_c]
+    base = float(LC[RHO_DC].mean()) if RHO_DC in LC else None
+    new = float(np.array([LC[r][i] for i, r in enumerate(rc)]).mean())
+    on = base is not None and new < base - RHO_MIN_GAIN
+    # what it does to both teams to score and exact scores (not in the switch-on test: the record's reading only)
+    fh, fa = fit_market_np(np, *Cm, np.array(rc))
+    bh, ba = np.exp(w * np.log(fh) + (1 - w) * np.log(mc[:, 0])), np.exp(w * np.log(fa) + (1 - w) * np.log(mc[:, 1]))
+    f0h, f0a = fit_market_np(np, *Cm, RHO_DC)
+    b0h, b0a = np.exp(w * np.log(f0h) + (1 - w) * np.log(mc[:, 0])), np.exp(w * np.log(f0a) + (1 - w) * np.log(mc[:, 1]))
+    def side(G, hg, ag):
+        n = G.shape[1]
+        B = G[:, 1:, 1:].sum((1, 2))
+        bt = -np.log(np.maximum(1e-9, np.where((hg > 0) & (ag > 0), B, 1 - B))).mean()
+        cs = -np.log(np.maximum(1e-12, G[np.arange(len(hg)), np.minimum(hg, n - 1), np.minimum(ag, n - 1)])).mean()
+        return float(bt), float(cs)
+    bt0, cs0 = side(dc_grid_np(np, b0h, b0a, RHO_DC), hg_c, ag_c)
+    bt1, cs1 = side(dc_grid_np(np, bh, ba, np.array(rc)), hg_c, ag_c)
+    out = {'on': on, 'pooled': pooled, 'lk': per, 'll': [round(base, 5), round(new, 5)], 'btts': [round(bt0, 5), round(bt1, 5)],
+           'cs': [round(cs0, 5), round(cs1, 5)], 'train': [round(float(LT[RHO_DC].mean()), 5), round(float(LT[pooled].mean()), 5)]}
+    log(f"tuning: draw correction, best over all leagues {pooled:+.2f} (was {RHO_DC:+.2f}), per league {per}: site {base:.4f} -> {new:.4f} "
+        f"on the check season (both teams to score {bt0:.4f} -> {bt1:.4f}, exact score {cs0:.4f} -> {cs1:.4f}); {'on' if on else 'kept off'} ({time.time() - t0:.0f} s)")
+    rt = [per.get(lk, pooled) for lk in lk_t] if on else [RHO_DC] * len(tr_rows)
+    return out, rt, (rc if on else [RHO_DC] * len(ck_rows))
+
+
+def tired4(rest):
+    return tired(rest, 4)
+
+
+def stack_coefs(b, se, week, group, rest_own, rest_opp):
+    """The learned blend for one side of one game: (weight on log(model / market), shift in log expected goals)."""
+    th = (se - 0.2) * 5 if se is not None else 0.0
+    beta = b[0] + b[1] * th + b[2] * (1.0 if week is not None and week < 8 else 0.0) + b[3] * (group == 'second') + b[4] * (group == 'more')
+    return beta, b[5] * (tired4(rest_own) - tired4(rest_opp)) + b[6]
+
+
+def _stack_data(np, rows, mod, rhos):
+    fh, fa = fit_market_np(np, *_mkt_arrays(np, rows), np.array(rhos))
+    md = np.array(mod)
+    oh, oa = np.log(fh), np.log(fa)
+    dh, da = np.log(md[:, 0]) - oh, np.log(md[:, 1]) - oa
+    seh = np.array([r[12][0] if r[12][0] is not None else 0.2 for r in rows])
+    sea = np.array([r[12][1] if r[12][1] is not None else 0.2 for r in rows])
+    early = np.array([1.0 if r[14] < 8 else 0.0 for r in rows])
+    sec = np.array([1.0 if L[r[9][0]]['group'] == 'second' else 0.0 for r in rows])
+    mor = np.array([1.0 if L[r[9][0]]['group'] == 'more' else 0.0 for r in rows])
+    rest = np.array([tired4(r[7]) - tired4(r[8]) for r in rows])
+    one = np.ones(len(rows))
+    Zh = np.stack([dh, dh * (seh - 0.2) * 5, dh * early, dh * sec, dh * mor, rest, one], 1)
+    Za = np.stack([da, da * (sea - 0.2) * 5, da * early, da * sec, da * mor, -rest, one], 1)
+    return {'oh': oh, 'oa': oa, 'Zh': Zh, 'Za': Za, 'hg': np.array([r[2] for r in rows]), 'ag': np.array([r[3] for r in rows]), 'rho': np.array(rhos)}
+
+
+def _stack_eval(np, F, b, idx=None):
+    sl = slice(None) if idx is None else idx
+    lh, la = np.exp(F['oh'][sl] + F['Zh'][sl] @ b), np.exp(F['oa'][sl] + F['Za'][sl] @ b)
+    x, y = losses_np(np, lh, la, F['hg'][sl], F['ag'][sl], F['rho'][sl])
+    return lh, la, x + y
+
+
+def _stack_fit(np, F, idx, ridge, b0):
+    """BFGS on the mean log loss plus ridge * |b - b0|^2. The gradient comes from each game's sensitivity to its own
+    two expected goals, so it costs three grid evaluations whatever the number of weights."""
+    Zh, Za = F['Zh'][idx], F['Za'][idx]
+    hg, ag, rh = F['hg'][idx], F['ag'][idx], F['rho'][idx]
+    n = len(hg)
+
+    def fg(b):
+        lh, la, l0 = _stack_eval(np, F, b, idx)
+        e = 1e-5
+        x, y = losses_np(np, lh * math.exp(e), la, hg, ag, rh)
+        gh = (x + y - l0) / e
+        x, y = losses_np(np, lh, la * math.exp(e), hg, ag, rh)
+        ga = (x + y - l0) / e
+        d = b - b0
+        return float(l0.mean()) + ridge * float(d @ d), (Zh.T @ gh + Za.T @ ga) / n + 2 * ridge * d
+    b = b0.copy()
+    f, g = fg(b)
+    Hi = np.eye(len(b))
+    for _ in range(80):
+        p = -Hi @ g
+        t = 1.0
+        while True:
+            fn, gn = fg(b + t * p)
+            if fn <= f + 1e-4 * t * float(g @ p) or t < 1e-4:
+                break
+            t *= 0.5
+        s_, yv = t * p, gn - g
+        b, f_old, f, g = b + s_, f, fn, gn
+        sy = float(s_ @ yv)
+        if sy > 1e-12:
+            r_ = 1 / sy
+            I = np.eye(len(b))
+            Hi = (I - r_ * np.outer(s_, yv)) @ Hi @ (I - r_ * np.outer(yv, s_)) + r_ * np.outer(s_, s_)
+        if abs(f_old - f) < 1e-9 or float(np.abs(g).max()) < 1e-7:
+            break
+    return b
+
+
+def fit_stack(tr_rows, ck_rows, mod_tr, mod_ck, rho_tr, rho_ck, w):
+    np = numpy_lib()
+    if not np or len(tr_rows) < 3000 or not ck_rows:
+        return None
+    t0 = time.time()
+    Ft, Fc = _stack_data(np, tr_rows, mod_tr, rho_tr), _stack_data(np, ck_rows, mod_ck, rho_ck)
+    b0 = np.zeros(len(STACK_NAMES))
+    b0[0] = 1 - w   # the plain blend: the starting point, and what the ridge pulls towards
+    seas = np.array([season_code(datetime.strptime(r[9][1], '%Y-%m-%d')) for r in tr_rows])
+    older, newer = np.nonzero(seas == min(seas))[0], np.nonzero(seas != min(seas))[0]
+    wf = {}
+    if len(older) > 1500 and len(newer) > 1500:   # walk forward: fitted on the older season, measured on the newer one
+        for rg in STACK_RIDGES:
+            b = _stack_fit(np, Ft, older, rg, b0)
+            wf[rg] = float(_stack_eval(np, Ft, b, newer)[2].mean())
+        ridge = min(wf, key=wf.get)
+    else:
+        ridge = 0.01
+    b = _stack_fit(np, Ft, np.arange(len(tr_rows)), ridge, b0)
+    base = float(_stack_eval(np, Fc, b0)[2].mean())
+    new = float(_stack_eval(np, Fc, b)[2].mean())
+    tr0, tr1 = float(_stack_eval(np, Ft, b0)[2].mean()), float(_stack_eval(np, Ft, b)[2].mean())
+    on = new < base - STACK_MIN_GAIN
+    out = {'on': on, 'b': [round(float(x), 4) for x in b], 'names': STACK_NAMES, 'ridge': ridge, 'wf': {str(k): round(v, 5) for k, v in wf.items()},
+           'll': [round(base, 5), round(new, 5)], 'train': [round(tr0, 5), round(tr1, 5)]}
+    log(f"tuning: learned blend {dict(zip(STACK_NAMES, out['b']))} (strength {ridge}, chosen walk-forward {out['wf']}): site {base:.4f} -> {new:.4f} "
+        f"on the check season; {'on' if on else 'kept off'} ({time.time() - t0:.0f} s)")
+    lh, la, _ = _stack_eval(np, Fc, b if on else b0)
+    lh_t, la_t, _ = _stack_eval(np, Ft, b if on else b0)
+    return out, list(zip(lh_t.tolist(), la_t.tolist())), list(zip(lh.tolist(), la.tolist()))
+
+
 def apply_tuning(state):
-    global MODEL, MODEL0, MODEL_W, ELO
+    global MODEL, MODEL0, MODEL_X, MODEL_W, ELO, KAL, RHO_L, STACK
     t = state.get('tune') or {}
     e = t.get('elo') or {}
     ELO = {k: e[k] for k in ('hfa', 'k', 'b', 'c', 'v')} if e.get('on') and all(k in e for k in ('hfa', 'k', 'b', 'c', 'v')) else None
     MODEL = dict(t['params']) if t.get('on') and t.get('params') else dict(DEFAULT_MODEL)
     MODEL0 = dict(t['params0']) if t.get('on0') and t.get('params0') else dict(DEFAULT_MODEL)
+    MODEL_X = dict(t['params_x']) if t.get('on') and t.get('params_x') and (t.get('xg') or {}).get('on') else None
     MODEL_W = t.get('w') if t.get('w_on') else None
     f = t.get('fx') or {}
     FX['rest'] = tuple(f['rest']['p']) if (f.get('rest') or {}).get('on') else None
     FX['dead'] = tuple(f['dead']['p']) if (f.get('dead') or {}).get('on') else None
     FX['open'] = tuple(f['open']['p']) if (f.get('open') or {}).get('on') else None
+    k = t.get('kal') or {}
+    KAL = {x: k[x] for x in ('q', 'p0', 'ps', 'qs', 'v')} if k.get('on') and all(x in k for x in ('q', 'p0', 'ps', 'qs', 'v')) else None
+    r = t.get('rho') or {}
+    RHO_L = dict(r.get('lk') or {}, _=r['pooled']) if r.get('on') and r.get('pooled') is not None else None
+    sk = t.get('stack') or {}
+    STACK = {'b': list(sk['b'])} if sk.get('on') and len(sk.get('b') or []) == len(STACK_NAMES) else None
+    if STACK:
+        FX['rest'] = None   # short rest is part of the learned blend
 
 
 def safe_fx(*a):
@@ -5011,31 +6222,31 @@ def safe_fx(*a):
         return None
 
 
-def fit_fx(tr_rows, lam_tr, tr_jobs, tr_keys, ck_rows, lam_ck, ck_sj, w, t_start):
-    """Fit fatigue and motivation on the training seasons, after blending with the market as the site does;
-    each goes on only if it also lowers the error on the check season."""
+def fit_fx(site_tr, tr_rows, tr_jobs, tr_keys, site_ck, ck_rows, ck_sj, rho_tr, rho_ck, skip_rest, t_start):
+    """Fit fatigue and motivation on the training seasons, on top of Statpad's own numbers (site_*: expected goals
+    after the blend with the market and the newer stages); each goes on only if it also lowers the error on the
+    check season. With the learned blend on, short rest is part of it and isn't fitted again here."""
     t0 = time.time()
     late = time.time() - t_start > TUNE_BUDGET_S * 1.4   # the run is long already: motivation waits for next month
     st_tr = {} if late else run_past_stakes(tr_jobs, tr_keys) or {}
     st_ck = {} if late or not st_tr else run_past_stakes(*ck_sj) or {}
 
-    def pre(rows, lams, st):
+    def pre(rows, lams, st, rhos):
         out = []
-        for row, (mh, ma) in zip(rows, lams):
-            lh, la, hg, ag = row[:4]
+        for row, (bh, ba), rho in zip(rows, lams, rhos):
+            hg, ag = row[2], row[3]
             rh, ra, key = row[7], row[8], row[9]
             dh, da = st.get(key, (None, None))
-            bh, ba = math.exp(w * math.log(mh) + (1 - w) * math.log(lh)), math.exp(w * math.log(ma) + (1 - w) * math.log(la))
-            out.append((bh, ba, hg, ag, rh, ra, dh, da, sum(game_loss(bh, ba, hg, ag))))
+            out.append((bh, ba, hg, ag, rh, ra, dh, da, sum(game_loss(bh, ba, hg, ag, rho)), rho))
         return out
-    P_tr, P_ck = pre(tr_rows, lam_tr, st_tr), pre(ck_rows, lam_ck, st_ck)
+    P_tr, P_ck = pre(tr_rows, site_tr, st_tr, rho_tr), pre(ck_rows, site_ck, st_ck, rho_ck)
 
     def loss(P, F):
         tot, n_aff = 0.0, 0
-        for bh, ba, hg, ag, rh, ra, dh, da, base in P:
+        for bh, ba, hg, ag, rh, ra, dh, da, base, rho in P:
             xh, xa = fx_shift(rh, ra, dh, da, F)
             if xh or xa:
-                tot += sum(game_loss(bh * math.exp(xh), ba * math.exp(xa), hg, ag))
+                tot += sum(game_loss(bh * math.exp(xh), ba * math.exp(xa), hg, ag, rho))
                 n_aff += 1
             else:
                 tot += base
@@ -5044,6 +6255,9 @@ def fit_fx(tr_rows, lam_tr, tr_jobs, tr_keys, ck_rows, lam_ck, ck_sj, w, t_start
     out, F = {'games': [len(P_tr), len(P_ck)], 'measured': [len(st_tr), len(st_ck)]}, {}
     for name, grid in (('rest', FX_REST_GRID), ('dead', FX_DEAD_GRID), ('open', FX_OPEN_GRID)):
         if name != 'rest' and not st_tr:
+            continue
+        if name == 'rest' and skip_rest:
+            out['rest'] = {'p': None, 'on': False, 'in_blend': True}
             continue
         base_tr, base_ck = loss(P_tr, F)[0], loss(P_ck, F)[0]
         best, best_l = None, base_tr
@@ -5077,7 +6291,8 @@ def public_tune(state):
     t = state.get('tune')
     if not t:
         return None
-    return {k: t[k] for k in ('at', 'train', 'check', 'leagues', 'games', 'default', 'params', 'on', 'params0', 'on0', 'w', 'w_on', 'll', 'fx', 'elo') if k in t}
+    return {k: t[k] for k in ('at', 'train', 'check', 'leagues', 'games', 'default', 'params', 'on', 'params0', 'on0', 'w', 'w_on', 'll', 'fx', 'elo',
+                              'kal', 'rho', 'stack', 'xg', 'params_x', 'evals', 'search_secs', 'search', 'check_now') if k in t}
 
 
 # ----------------------------------------------------------------------------------------------
@@ -5100,18 +6315,27 @@ def bt_matches(seasons):
     ms, res, pend, jobs, keys = [], {}, [], [], []
     use_fx = bool(FX['rest'] or FX['dead'] or FX['open'])
     for lk, (cur_rows, prev_rows) in seasons.items():
-        sf = season_fits(cur_rows, prev_rows, MODEL)
-        rd = rest_days(cur_rows, prev_rows) if use_fx else {}
+        games = [(r[0], r[1], r[2], r[3], r[4], False, r[5], r[6], r[9] if len(r) > 9 else None) for r in prev_rows] + \
+                [(r[0], r[1], r[2], r[3], r[4], True, r[5], r[6], r[9] if len(r) > 9 else None) for r in cur_rows]
+        P = model_for(lk, games, True)
+        sf = season_fits(cur_rows, prev_rows, P)
+        rd = rest_days(cur_rows, prev_rows) if use_fx or STACK else {}
+        kp = {}
+        if KAL:
+            kp = kalman_run(games, KAL, P.get('sw') or 0.0, P.get('nt', NEW_TEAM_PRIOR[1]), P.get('sx') or 0.0)[0]
+        start = sf[1] if sf else None
         if FX['dead'] or FX['open']:
             j, k = past_stakes_jobs(lk, sf)
             jobs += j
             keys += k
         eg = elo_run(list(prev_rows) + list(cur_rows), ELO['hfa'], ELO['k'])[1] if ELO else {}
         gm = goal_means(prev_rows or cur_rows) if ELO else None
-        for r, lh, la, sh, sa in season_preds(cur_rows, prev_rows, MODEL, sf=sf):
-            d, h, a, hg, ag, _hs, _as, mkt, ko = r
+        for r, lh, la, sh, sa in season_preds(cur_rows, prev_rows, P, sf=sf):
+            d, h, a, hg, ag, _hs, _as, mkt, ko = r[:9]
             if ELO and (d, h, a) in eg:
                 lh, la = elo_mix(lh, la, elo_lams(eg[(d, h, a)], gm[0], gm[1], ELO), ELO['v'])
+            if KAL and (d, h, a) in kp:
+                lh, la = elo_mix(lh, la, kp[(d, h, a)][:2], KAL['v'])
             if not mkt:
                 continue
             mid = f"{lk}-{ko:%Y%m%d}-{slug(h)}-{slug(a)}"
@@ -5119,6 +6343,15 @@ def bt_matches(seasons):
                  'ls': [round(sh, 3), round(sa, 3)], 'mkt': mkt, 'xl': False, 'fr': False, 'clash': False}
             if MODEL_W:
                 m['wm'] = MODEL_W
+            if RHO_L:
+                m['rho'] = rho_for(lk)
+            if stack_ok(m):
+                rh_, ra_ = rd.get((d, h, a), (None, None))
+                wk = (d - start).days // 7 if start else None
+                bh_, ch_ = stack_coefs(STACK['b'], sh, wk, L[lk]['group'], rh_, ra_)
+                ba_, ca_ = stack_coefs(STACK['b'], sa, wk, L[lk]['group'], ra_, rh_)
+                m['st'] = [round(bh_, 4), round(ch_, 4), round(ba_, 4), round(ca_, 4)]
+                m.pop('wm', None)
             if use_fx:
                 pend.append((m, rd.get((d, h, a), (None, None)), (lk, d.strftime('%Y-%m-%d'), h, a)))
             ms.append(m)
@@ -5140,6 +6373,7 @@ def value_history():
     main leagues: the best listed price at least 2% above the consensus's fair price (margin taken off, Pinnacle
     weighted three times), chance 18% or more, on home, draw, away and over/under 2.5. 1 unit each, in kick-off
     order, with closing-line value against the closing consensus. Needs no model, so it covers every game."""
+    numpy_lib(True)   # heavy fitting ahead: fast maths if it can be had
     t0 = time.time()
     bets, seasons = [], []
     for k in range(1, VH_SEASONS + 1):
@@ -5148,7 +6382,7 @@ def value_history():
         for lk, c in L.items():
             if not c['fd']:
                 continue
-            for d, h, a, hg, ag, _hs, _as, mk, ko in fd_season(lk, code):
+            for d, h, a, hg, ag, _hs, _as, mk, ko in (r[:9] for r in fd_season(lk, code)):
                 if not mk:
                     continue
                 cand = [(key, mk['p'][i], mk['best'][i]) for i, key in enumerate(('H', 'D', 'A'))]
@@ -5179,6 +6413,7 @@ def value_history():
 
 
 def run_backtest(state):
+    numpy_lib(True)   # heavy fitting ahead: fast maths if it can be had
     t0 = time.time()
     seasons, label = load_bt_season()
     ms, res = bt_matches(seasons)
@@ -5276,11 +6511,12 @@ def mcal_group(k):
             else 'BTTS' if k in ('BTTS', 'BTTS_N') else 'TG' if re.match(r'^[HA]_O\d5$', k) else 'CB')
 
 
-def fit_logit(xs):
-    """Maximum-likelihood a, b in P(landed) = 1 / (1 + exp(-(a + b x))), held a little towards (0, 1)."""
-    a, b = 0.0, 1.0
+def fit_logit(xs, a0=0.0, b0=1.0, va=4.0, vb=1.0):
+    """Maximum-likelihood a, b in P(landed) = 1 / (1 + exp(-(a + b x))), held a little towards (a0, b0)
+    (prior variances va, vb)."""
+    a, b = a0, b0
     for _ in range(40):
-        ga, gb, haa, hab, hbb = -a / 4, -(b - 1) / 1, -1 / 4, 0.0, -1.0
+        ga, gb, haa, hab, hbb = -(a - a0) / va, -(b - b0) / vb, -1 / va, 0.0, -1.0 / vb
         for x, y in xs:
             p = 1 / (1 + math.exp(-(a + b * x)))
             w = p * (1 - p)
@@ -5309,7 +6545,7 @@ def logit_ll(xs, a=0.0, b=1.0):
 
 def fit_mcal(state):
     t0 = time.time()
-    data = {}
+    data, seg = {}, {}
     labels = []
     for back, tag in ((2, 'fit'), (1, 'check')):
         code, prev = season_code(NOW, back), season_code(NOW, back + 1)
@@ -5326,6 +6562,7 @@ def fit_mcal(state):
         out = run_node(NODE_SELS, {'matches': ms})
         if not out:
             return None
+        lk_of = {m['id']: m['lk'] for m in ms}
         for mid, sels in out:
             hs, as_ = res[mid]
             for k, p in sels:
@@ -5334,6 +6571,7 @@ def fit_mcal(state):
                     continue
                 q = min(0.995, max(0.005, p))
                 data.setdefault(mcal_group(k), {}).setdefault(tag, []).append((math.log(q / (1 - q)), 1 if w else 0))
+                seg.setdefault(tag, []).append((mcal_group(k), k, lc_group(lk_of.get(mid)), q, 1 if w else 0))
         labels.append(season_name(code))
     groups = {}
     for g, d in sorted(data.items()):
@@ -5349,12 +6587,107 @@ def fit_mcal(state):
         groups[g] = {'on': on, 'a': round(a, 4), 'b': round(b, 4), 'n': len(fit_rows) + len(ck), 'll': [round(l0, 5), round(l1, 5)]}
     log(f"market correction: fitted on {labels[0]}, checked on {labels[1]} in {time.time() - t0:.0f} s: "
         + ', '.join(f"{g} {'on' if v['on'] else 'off'} ({v['ll'][0]:.4f} -> {v['ll'][1]:.4f})" for g, v in groups.items()))
+    # the same for each kind of market in each kind of league, held towards the market's own correction, and kept
+    # only where it beats that on the unseen season
+    for (g, tier), rows in sorted(_by(seg.get('fit') or [], lambda r: (r[0], r[2])).items()):
+        ck = [r for r in seg.get('check') or [] if r[0] == g and r[2] == tier]
+        if tier == 'other' or g not in groups or len(rows) < 3000 or len(ck) < 1500:
+            continue
+        base = groups[g]
+        a0, b0 = (base['a'], base['b']) if base['on'] else (0.0, 1.0)
+        xs = [(math.log(r[3] / (1 - r[3])), r[4]) for r in rows]
+        xc = [(math.log(r[3] / (1 - r[3])), r[4]) for r in ck]
+        a, b = fit_logit(xs, a0, b0, 0.05, 0.02)
+        l0, l1 = logit_ll(xc, a0, b0), logit_ll(xc, a, b)
+        on = l1 < l0 - MCAL_MIN_GAIN
+        if on:
+            a, b = fit_logit(xs + xc, a0, b0, 0.05, 0.02)
+        a, b = max(-0.3, min(0.3, a)), max(0.85, min(1.25, b))
+        groups[f'{g}|{tier}'] = {'on': on, 'a': round(a, 4), 'b': round(b, 4), 'n': len(rows) + len(ck), 'll': [round(l0, 5), round(l1, 5)]}
+    log('market correction by kind of league: ' + ', '.join(f"{g} {'on' if v['on'] else 'off'} ({v['ll'][0]:.4f} -> {v['ll'][1]:.4f})"
+                                                           for g, v in groups.items() if '|' in g))
+    state['autopsy'] = autopsy(seg.get('check') or [], groups, labels[1], state)
     return {'at': iso(NOW), 'fit': labels[0], 'check': labels[1], 'groups': groups}
+
+
+def _by(rows, key):
+    out = {}
+    for r in rows:
+        out.setdefault(key(r), []).append(r)
+    return out
+
+
+AU_MIN_N = 300
+AU_Z = 2.5
+AU_NAMES = {'HA': 'Home or away win', 'D': 'Draw', 'DC': 'Double chance', 'OU': 'Goals over/under', 'BTTS': 'Both teams to score',
+            'TG': 'Team goals', 'CB': 'Combos'}
+AU_TIER = {'big': 'top leagues', 'second': 'second tiers', 'more': 'other leagues', 'other': 'cups and others'}
+
+
+def _corr(groups, g, tier):
+    c = groups.get(f'{g}|{tier}')
+    c = c if c and c.get('on') else groups.get(g)
+    return (c['a'], c['b']) if c and c.get('on') else None
+
+
+def au_rows(rows, groups, label_of):
+    """For each segment: [label, selections, stated, landed, z before, stated after the corrections, z after]."""
+    out = []
+    for key, rs in _by(rows, label_of).items():
+        if key is None or len(rs) < AU_MIN_N:
+            continue
+        n = len(rs)
+        st = sum(r[3] for r in rs) / n
+        ld = sum(r[4] for r in rs) / n
+        v = sum(r[3] * (1 - r[3]) for r in rs)
+        z = (ld - st) * n / math.sqrt(v) if v else 0.0
+        adj = []
+        for r in rs:
+            c = _corr(groups, r[0], r[2])
+            if c:
+                x = math.log(r[3] / (1 - r[3]))
+                adj.append(1 / (1 + math.exp(-(c[0] + c[1] * x))))
+            else:
+                adj.append(r[3])
+        st2 = sum(adj) / n
+        v2 = sum(q * (1 - q) for q in adj)
+        z2 = (ld - st2) * n / math.sqrt(v2) if v2 else 0.0
+        out.append([key, n, round(st, 4), round(ld, 4), round(z, 2), round(st2, 4), round(z2, 2)])
+    return out
+
+
+def autopsy(rows, groups, label, state):
+    """Where Statpad's chances have been systematically off: on the replayed season the corrections never saw, every
+    market by kind of market, kind of league, chance band and side; and on the live record's graded top picks.
+    Segments with at least AU_MIN_N selections whose landed rate is more than AU_Z standard errors from what was stated."""
+    band = lambda q: None if q < 0.5 else f'{int(q * 10) * 10}–{int(q * 10) * 10 + 10}%' if q < 0.9 else '90%+'
+    segs = []
+    segs += au_rows(rows, groups, lambda r: f"{AU_NAMES.get(r[0], r[0])}, {AU_TIER[r[2]]}")
+    segs += au_rows(rows, groups, lambda r: (f"Chances of {band(r[3])}" if band(r[3]) else None))
+    segs += au_rows(rows, groups, lambda r: {'H': 'Home wins', 'A': 'Away wins', 'D': 'Draws'}.get(r[1]))
+    segs += au_rows(rows, groups, lambda r: (f"{AU_NAMES.get(r[0], r[0])}, chances of {band(r[3])}" if band(r[3]) and r[0] in ('HA', 'OU', 'BTTS', 'DC') else None))
+    flagged = sorted([x for x in segs if abs(x[4]) >= AU_Z], key=lambda x: -abs(x[4]))
+    # the live record: graded top picks (chance as stated before any correction, and whether it landed)
+    live = []
+    try:
+        tr = load_track(state)[0]
+        picks = [p for p in tr.get('picks') or [] if p[13] is not None and p[9]]
+        lrows = [(mcal_group(p[8]), p[8], lc_group(p[1]), min(0.995, max(0.005, p[18] if len(p) > 18 and p[18] else p[9])), 1 if p[13] else 0) for p in picks]
+        live = au_rows(lrows, {}, lambda r: f"{AU_NAMES.get(r[0], r[0])}, {AU_TIER[r[2]]}") + au_rows(lrows, {}, lambda r: (f"Chances of {band(r[3])}" if band(r[3]) else None))
+        live = sorted(live, key=lambda x: -abs(x[4]))[:8]
+    except Exception as e:
+        log('autopsy: live record unreadable', repr(e)[:80])
+    fixed = sum(1 for x in flagged if abs(x[6]) < AU_Z)
+    log(f'autopsy: {len(segs)} segments of {label}, {len(flagged)} off by more than {AU_Z} standard errors, {fixed} of them back in line after the corrections')
+    top = sorted(segs, key=lambda x: -abs(x[4]))[:6]
+    return {'at': iso(NOW), 'season': label, 'n': len(rows), 'segs': len(segs), 'flagged': flagged[:14], 'top': top, 'live': live, 'z': AU_Z, 'min_n': AU_MIN_N}
 
 
 def public_mcal(state):
     g = ((state.get('mcal') or {}).get('groups')) or {}
     out = {k: [v['a'], v['b']] for k, v in g.items() if v.get('on')}
+    if any('|' in k for k in out):   # which kind each league is, for the corrections by kind of league
+        out['_g'] = {lk: lc_group(lk) for lk in L if lc_group(lk) != 'other'}
     return out or None
 
 
@@ -5408,11 +6741,14 @@ def main():
         elif not state.get('tune'):
             src['tuning'] = {'ok': False, 'at': iso(NOW), 'note': 'past seasons not available yet'}
     apply_tuning(state)
-    model_sig = json.dumps([MODEL, MODEL0, MODEL_W, FX], sort_keys=True)
+    model_sig = json.dumps([MODEL, MODEL0, MODEL_W, FX] + ([MODEL_X, KAL, RHO_L, STACK] if MODEL_X or KAL or RHO_L or STACK else []), sort_keys=True)
     if model_sig != state.get('model_sig'):
         state['model_sig'] = model_sig
         retuned = True
 
+    xg_note = safe(lambda: refresh_xg(state), 'error')
+    src['xg'] = {'ok': xg_note != 'error', 'at': iso(NOW), 'note': xg_note}
+    log('commentary xG:', xg_note)
     es_note = safe(lambda: refresh_espn_data(state), 'error')
     n_px = safe(lambda: refresh_espn_prices(state, (prev or {}).get('matches') or []), None)
     if n_px is not None:
@@ -5490,6 +6826,8 @@ def main():
     log('odds:', msg, '| credits left:', (state.get('quota') or {}).get('remaining'))
 
     doc = build(state, prev, seed)
+    if RHO_L:
+        doc['rho'] = RHO_L   # the draw correction per league, for the page's record of finished games
     safe(lambda: espn_publish(state, doc), None)
     safe(lambda: refresh_crests(state, doc), 0)
     safe(lambda: globe_textures(state), 0)
@@ -5497,6 +6835,9 @@ def main():
     n_fx = safe(lambda: apply_fx(state, doc), 0)
     if n_fx:
         log(f'fatigue and motivation: {n_fx} games adjusted')
+    n_st = safe(lambda: apply_stack(state, doc), 0)
+    if n_st:
+        log(f'learned blend: {n_st} games')
     doc['calib'] = safe(lambda: fit_calib(load_track(state)[0]['picks']), {'on': False, 'n': 0, 'need': CAL_MIN})
     if public_mcal(state):
         doc['mcal'] = public_mcal(state)
@@ -5510,6 +6851,7 @@ def main():
     if n_sc:
         log('results from The Odds API for', n_sc, 'competitions')
     track = safe(lambda: track_update(doc, state), None)
+    safe(lambda: live_check(state), None)
     if due(state, 'backtest', BT_EVERY_H) or not state.get('backtest') or retuned or 'mcal' not in state:
         last['backtest'] = iso(NOW)
         mc = safe(lambda: fit_mcal(state), None)
@@ -5529,7 +6871,8 @@ def main():
             state['vhist'] = vh
             changed = True
     if state.get('backtest'):
-        (OUT_DIR / 'backtest.json').write_text(json.dumps(dict(state['backtest'], tune=public_tune(state), vh=state.get('vhist')),
+        (OUT_DIR / 'backtest.json').write_text(json.dumps(dict(state['backtest'], tune=public_tune(state), vh=state.get('vhist'),
+                                                               lc=state.get('live_check'), au=state.get('autopsy')),
                                                           ensure_ascii=False, separators=(',', ':')))
     # team pages and the season simulator read one small file per league
     if state.get('teamfiles'):
