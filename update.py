@@ -24,7 +24,7 @@ Environment (all optional):
   ODDS_MARKETS          markets, default "h2h"  (add ",totals" for over/under; doubles the cost)
   ODDS_MIN_INTERVAL     fastest refresh per competition in minutes, default 5 (the credit budget
                         decides the real pace; games kicking off soonest are refreshed first)
-  ODDS_MONTHLY_CREDITS  your plan's monthly credits, default 500 (the free plan)
+  ODDS_MONTHLY_CREDITS  your plan's monthly credits, default 500 (the free plan); 2% are always kept back
   ODDS_RESET_DAY        day of month the credits reset, default 1
   ODDS_SPORTS           "mapped" (default: listed leagues + any UEFA/cup competition) or "all"
   STATPAD_DAYS          days ahead to publish, default 7
@@ -1685,6 +1685,40 @@ def api_market(e):
     return m
 
 
+# How often each competition's prices are refreshed, by how close its next game is (hours ahead, minutes between
+# refreshes), as they would be with credits to spare. Prices move most in the last hours (team news, line-ups, big
+# money), so those get the most refreshes; a game a week away barely moves. With fewer credits every interval is
+# stretched by the same factor until the day's budget covers it, so the shape holds on any plan.
+ODDS_TIERS = ((2, 30), (6, 60), (24, 180), (72, 360), (168, 720), (1e9, 1440))
+ODDS_FINAL_H = 1.5      # one last refresh this close to a competition's next kick-off: its closing price
+ODDS_RESERVE = 0.02     # the share of the month's credits never spent, so the key is never run dry
+ODDS_FASTEST = 1 / 3    # with credits to spare, intervals shrink to a third of the table's (never below ODDS_MIN_INTERVAL)
+ODDS_IMP = {'big': 1.5, 'cups': 1.3, 'intl': 1.25, 'second': 1.0, 'more': 0.85, 'women': 0.85}   # bigger competitions refresh more often
+
+
+def fmt_min(m):
+    return f'{m:.0f} min' if m < 90 else f'{m / 60:.1f} h'.replace('.0 h', ' h')
+
+
+def odds_plan(active, plan, api, daily, cost, state):
+    """Each competition's refresh interval right now: the tier for its next kick-off, shortened for bigger
+    competitions, then stretched by one factor so the expected spend over a day fits the day's budget."""
+    imp, base = {}, {}
+    for key, nxt in active:
+        lk = plan.get(key)
+        imp[key] = ODDS_IMP.get((L.get(lk) or {}).get('group'), 1.0)
+        h = (nxt - NOW).total_seconds() / 3600
+        base[key] = next(m for lim, m in ODDS_TIERS if h <= lim) / imp[key]
+    need = sum(cost * 1440 / v for v in base.values())   # credits a day at full speed
+    # stretched to fit the budget; with credits to spare (paid plans), up to three times faster than the table
+    scale = max(ODDS_FASTEST, need / daily) if daily > 0 else 1e6
+    by = {k: max(MIN_INTERVAL, v * scale) for k, v in base.items()}
+    iv = [round(max(MIN_INTERVAL, m * scale), 1) for _, m in ODDS_TIERS]   # each tier, for an average competition
+    state['odds_plan'] = {'at': iso(NOW), 'scale': round(scale, 1), 'iv': iv, 'tiers': [t[0] for t in ODDS_TIERS], 'budget': round(daily, 1),
+                          'need': round(need, 1), 'n': len(active)}
+    return {'by': by, 'imp': imp, 'iv': iv, 'scale': scale}
+
+
 def refresh_odds_api(state):
     if not API_KEY:
         return 'no key'
@@ -1711,8 +1745,9 @@ def refresh_odds_api(state):
             api.setdefault(key, {})['events'] = [parse_api_event(e, old.get(e.get('id'))) for e in evs]
         last['events'] = iso(NOW)
 
-    # paid price refreshes: an even daily budget (unused credits roll forward), spent on the
-    # competitions whose next game is closest; nothing refreshes more often than ODDS_MIN_INTERVAL
+    # paid price refreshes: a daily budget weighted by each day's games (unused credits roll forward), spent by the
+    # refresh plan (odds_plan): each competition is due by how close its next game is, scaled to the budget, most
+    # overdue first, with one last refresh in the final 90 minutes before each kick-off
     cost = len(MARKETS) * len(REGIONS)
     active = []
     for key in plan:
@@ -1750,40 +1785,59 @@ def refresh_odds_api(state):
     total_w = sum(known) + avg_w * max(0.0, days_left - len(known))
     share = weight(today) / total_w if total_w > 0 else 1 / days_left
     share = min(1.0, max(share, 0.25 / days_left))
-    daily = max(0.0, remaining - 5 + spent) * min(share, 3.0 / days_left)   # never more than 3x an even day
+    daily = max(0.0, remaining - max(5.0, ODDS_RESERVE * MONTHLY) + spent) * min(share, 3.0 / days_left)   # never more than 3x an even day
+    if spend.get('budget') is not None and spend.get(today) is not None:
+        daily = min(float(spend['budget']), max(0.0, remaining - max(5.0, ODDS_RESERVE * MONTHLY) + spent))   # fixed for the day once set
     elapsed = ((NOW - day0).total_seconds() / 60 + 90) / 1440          # pro-rata through the day
     allowed = daily * min(1.0, elapsed) - spent
 
-    def tier(nxt):   # how much less often than the base interval
-        h = (nxt - NOW).total_seconds() / 3600
-        return 1 if h <= 6 else 3 if h <= 24 else 6 if h <= 48 else 18
-
-    near = sum(1 for _, nxt in active if tier(nxt) == 1)
-    state['odds_interval'] = round(max(MIN_INTERVAL, 1440 * max(1, near) * cost / daily), 1) if daily > 0 else None
-    if remaining < cost + 5 and not FORCE:
+    reserve = max(5.0, ODDS_RESERVE * MONTHLY)
+    if remaining < cost + reserve and not FORCE:
+        state['odds_plan'] = None
         return 'out of credits'
-    cands = []
+    plan_now = odds_plan(active, plan, api, daily, cost, state)
+    state['odds_interval'] = plan_now['iv'][0]
+    allowed_final = daily * min(1.0, elapsed + 0.5) - spent   # the last call before a kick-off may run ahead of the day's pace
+    # and the routine refreshes leave room for the last calls still to come today
+    end_day = day0 + timedelta(days=1, hours=ODDS_FINAL_H)   # games just after midnight get their last call today
+    to_come = 0
+    for key, _ in active:   # every kick-off time whose last call falls today, one call each
+        blob = api.get(key) or {}
+        kos = {e['ko'] for e in blob.get('events') or [] if e.get('ko') and NOW < parse_iso(e['ko']) < end_day}
+        to_come += sum(1 for k in kos if blob.get('final') != iso(parse_iso(k)))
+    allowed -= cost * to_come
     news = state.get('lineup_lk') or {}
+    cands = []
     for key, nxt in active:
-        last = (api.get(key) or {}).get('odds_at')
-        age = (NOW - parse_iso(last)).total_seconds() / 60 if last else 1e9
+        blob = api.get(key) or {}
+        last = blob.get('odds_at')
+        age = (NOW - parse_iso(last)).total_seconds() / 60 if last else None
+        h = (nxt - NOW).total_seconds() / 3600
+        iv = plan_now['by'][key]
         lu = news.get(plan.get(key))
-        fresh_news = lu and (not last or parse_iso(last) < parse_iso(lu)) and (nxt - NOW) <= timedelta(hours=2) and age >= MIN_INTERVAL - 1
-        if fresh_news:
-            cands.append((0, nxt, -age, key))   # line-ups just landed: prices move on team news
-        elif FORCE or age >= MIN_INTERVAL * tier(nxt) - 1:
-            cands.append((tier(nxt), nxt, -age, key))
+        final = h <= ODDS_FINAL_H and (age is None or age >= 55) and blob.get('final') != iso(nxt)
+        if lu and (not last or parse_iso(last) < parse_iso(lu)) and h <= 2 and (age is None or age >= MIN_INTERVAL - 1):
+            cands.append((0, -9.0, nxt, key, 'news'))   # line-ups just landed: prices move on team news
+        elif final:
+            cands.append((1, -plan_now['imp'][key], nxt, key, 'final'))   # the closing price: the sharpest, and what value bets are measured against
+        elif FORCE or age is None or age >= iv - 1:
+            due = (3.0 if h <= 72 else 1.2) if age is None else age / iv   # how overdue, as a share of its interval
+            cands.append((2, -due * plan_now['imp'][key], nxt, key, 'due'))
     cands.sort()
-    done = 0
-    for _, nxt, _, key in cands:
-        if not FORCE and allowed < cost:
+    done, kinds = 0, {}
+    to_ = to
+    for _, _, nxt, key, why in cands:
+        room = allowed_final if why in ('final', 'news') else allowed
+        if not FORCE and room < cost:
+            continue
+        if (state.get('quota') or {}).get('remaining') is not None and state['quota']['remaining'] < cost + reserve:
             break
-        if (state.get('quota') or {}).get('remaining') is not None and state['quota']['remaining'] < cost + 5:
-            break
+        # games already under way aren't asked for again: their last price before kick-off stays as the closing price
         data = oa_get(f'/sports/{key}/odds', {'regions': ','.join(REGIONS), 'markets': ','.join(MARKETS),
                                               'oddsFormat': 'decimal', 'dateFormat': 'iso',
-                                              'commenceTimeFrom': frm, 'commenceTimeTo': to}, state)
+                                              'commenceTimeFrom': NOW.strftime('%Y-%m-%dT%H:%M:%SZ'), 'commenceTimeTo': to_}, state)
         allowed -= cost
+        allowed_final -= cost
         spent += cost
         if not isinstance(data, list):
             continue
@@ -1793,9 +1847,16 @@ def refresh_odds_api(state):
         blob = api.setdefault(key, {})
         blob['events'] = list(cur.values())
         blob['odds_at'] = iso(NOW)
+        if why == 'final' or (nxt - NOW).total_seconds() / 3600 <= ODDS_FINAL_H:
+            blob['final'] = iso(nxt)
         done += 1
-    state['spend'] = {today: spent}
-    return f'{done} competitions priced'
+        kinds[why] = kinds.get(why, 0) + 1
+    state['spend'] = {today: spent, 'budget': round(daily, 2)}   # the day's budget stays as set at its first run
+    pl = state.get('odds_plan') or {}
+    note = f"{done} competitions priced" + (f" ({', '.join(f'{v} {k}' for k, v in kinds.items())})" if kinds else '')
+    if pl.get('scale'):
+        note += f"; plan x{pl['scale']}: games within 2 h every {fmt_min(pl['iv'][0])}, within a day every {fmt_min(pl['iv'][2])}"
+    return note
 
 
 # ----------------------------------------------------------------------------------------------
@@ -4264,7 +4325,8 @@ def build(state, prev, seed=None):
         'window': {'from': iso(lo), 'to': iso(hi)},
         'sources': state.get('sources') or {},
         'odds': {'enabled': bool(API_KEY), 'remaining': q.get('remaining'), 'used': q.get('used'),
-                 'interval_min': state.get('odds_interval'), 'regions': REGIONS, 'markets': MARKETS},
+                 'interval_min': state.get('odds_interval'), 'regions': REGIONS, 'markets': MARKETS,
+                 'plan': {k: v for k, v in (state.get('odds_plan') or {}).items() if k in ('iv', 'tiers', 'scale')} or None},
         'leagues': out_leagues,
         'matches': matches,
     }
@@ -6704,7 +6766,7 @@ def stable(doc):
     d.pop('generated', None)
     d.pop('sources', None)
     d.pop('window', None)
-    d['odds'] = {k: v for k, v in (d.get('odds') or {}).items() if k not in ('remaining', 'used', 'interval_min')}
+    d['odds'] = {k: v for k, v in (d.get('odds') or {}).items() if k not in ('remaining', 'used', 'interval_min', 'plan')}
     return json.dumps(d, sort_keys=True, ensure_ascii=False)
 
 

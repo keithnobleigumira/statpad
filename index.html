@@ -1274,12 +1274,20 @@ body { background: var(--paper); }
 .mc-load i:nth-child(2) { animation-delay: .15s; } .mc-load i:nth-child(3) { animation-delay: .3s; }
 @keyframes mcDot { 50% { opacity: .25; transform: translateY(-3px); } }
 @media (prefers-reduced-motion: reduce) { .mc-body, .mc-load i { animation: none; } }
-/* ---- the assistant: an orb over every page, and the panel it opens ---- */
+/* ---- the assistant: the panel Ask Statpad opens, and the orb that floats over the page while a conversation is tucked away ---- */
 .va-orb { --lvl: .2; position: fixed; z-index: 65; right: 14px; bottom: calc(var(--vb, 78px) + env(safe-area-inset-bottom, 0px)); width: 58px; height: 58px; border: 0; padding: 0; border-radius: 50%; background: none; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; transition: transform .35s var(--spring, cubic-bezier(.2,.8,.2,1)), opacity .25s; }
 .va-orb.left { right: auto; left: 14px; }
 body.tts-on .va-orb { bottom: calc(var(--vb, 78px) + 66px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 980px) { .va-orb { bottom: var(--vb, 26px); right: 26px; } .va-orb.left { left: 26px; } }
 body.va-on .va-orb, .va-orb.hide { transform: scale(.2); opacity: 0; pointer-events: none; }
+/* the orb exists only while a conversation does: Ask Statpad starts one, closing it takes the orb away */
+.va-orb:not(.live) { transform: scale(.2); opacity: 0; pointer-events: none; visibility: hidden; transition: transform .3s ease, opacity .2s, visibility 0s .3s; }
+body:not(.va-on) .va-orb.live { animation: va-orb-in .5s var(--spring, cubic-bezier(.2,.8,.2,1)); }
+@media (prefers-reduced-motion: reduce) { body:not(.va-on) .va-orb.live { animation: none; } }
+@keyframes va-orb-in { from { transform: scale(.3) translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+body:not(.va-conv) .va-nudge { right: 14px; border-radius: 16px; }
+body:not(.va-conv) .va-nudge.left { left: 14px; right: auto; }
+@media (min-width: 980px) { body:not(.va-conv) .va-nudge { right: 26px; } body:not(.va-conv) .va-nudge.left { left: 26px; } }
 .va-orb:focus-visible { outline: 2px solid #5ef0ff; outline-offset: 4px; }
 .va-orb.drag { transition: none; transform: scale(1.08); }
 .va-o-glow { position: absolute; inset: -14px; border-radius: 50%; background: radial-gradient(circle, rgba(94, 240, 255, .45), rgba(124, 92, 255, .25) 45%, transparent 70%); filter: blur(6px); opacity: .75; transform: scale(calc(.9 + var(--lvl) * .35)); transition: transform .14s; }
@@ -1579,7 +1587,6 @@ body.va-on .va-nudge { display: none; }
     <div class="top-right">
       <span class="live" id="live" role="status"><span class="dot"></span><span id="liveText">Loading</span></span>
       <button class="icon-btn" id="installBtn" type="button" aria-label="Install the Statpad app" title="Install app" hidden><svg><use href="#i-install"/></svg></button>
-      <button class="icon-btn" id="askBtn" type="button" data-ask="listen" aria-label="Ask Statpad" title="Ask Statpad"><svg><use href="#i-mic"/></svg></button>
       <button class="icon-btn" id="themeBtn" type="button" aria-label="Display settings" title="Display"><svg><use href="#i-sliders"/></svg></button>
     </div>
   </div>
@@ -1716,10 +1723,13 @@ const ENGINE = (() => {
   // uncertainty: how sure Statpad is of each pick. Tiers use the cautious chance (one standard deviation
   // below the stated chance), so thin data or a thin market keeps a pick out of the safest tiers.
   const Z_LO = 1.0, SIG_MOD = 0.25, SIG_EXT = 0.12;
-  function sigMkt(mk, ageH) {
+  // prices are stale when older than the time left to kick-off (at least 6 hours, at most STALE_H): a price from
+  // this morning is fine for a game next week, not for one in an hour, when team news has moved the market
+  function staleAt(m, now) { const h = m && m.ko ? (Date.parse(m.ko) - now) / 3600e3 : STALE_H; return Math.max(6, Math.min(STALE_H, h)); }
+  function sigMkt(mk, ageH, stale) {
     const n = mk && mk.n ? mk.n : mk && mk.src === 'football-data' ? 10 : 4;
     let s = 0.05 + 0.10 / Math.sqrt(Math.max(1, n));
-    if (ageH != null && ageH > STALE_H) s += 0.03;
+    if (stale != null ? stale : ageH != null && ageH > STALE_H) s += 0.03;
     return s;
   }
   const CORNERS = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
@@ -1891,13 +1901,14 @@ const ENGINE = (() => {
     const M = matrix(lh, la, rho), p = markets(M);
     const diverge = pMod && mk ? Math.abs(pMod.H - mk.p[0]) : null;
     const ageH = mk && mk.upd ? (now - Date.parse(mk.upd)) / 3600e3 : null;
+    const stale = ageH != null && ageH > staleAt(m, now);
     // safety haircuts. Those about the estimate itself (no market to lean on, a cross-league model, a friendly)
     // come off the stated chance; those that are only reasons for caution (model and market disagree, old prices)
     // come off the cautious chance alone, so the stated chance stays the best estimate: on three replayed
     // seasons, picks cut for disagreement landed 85% of the time when they had been stated at 81%
     let hair = src === 'model' || src === 'external' ? HAIR : 0, care = 0;
     if (diverge != null && diverge > 0.12) care += HAIR;
-    if (ageH != null && ageH > STALE_H) care += 0.01;
+    if (stale) care += 0.01;
     if (m.xl && src === 'model') hair += 0.02;
     if (m.fr) hair += 0.03;   // friendlies: rotated line-ups and uneven effort
     if (m.thin) hair += 0.02;  // a competition with few games in the ratings yet
@@ -1905,8 +1916,8 @@ const ENGINE = (() => {
     // spread of the log expected goals: the ratings' standard errors, the market's, mixed by their shares
     const ls = m.ls && m.ls[0] > 0 && m.ls[1] > 0 ? m.ls.map((x) => Math.hypot(x, m.xl ? 0.15 : 0, m.fr ? 0.10 : 0)) : [SIG_MOD, SIG_MOD];
     let sh, sa;
-    if (src === 'blend') { const k = sigMkt(mk, ageH); sh = Math.hypot((1 - wm) * ls[0], wm * k); sa = Math.hypot((1 - wm) * ls[1], wm * k); }
-    else if (src === 'market') sh = sa = sigMkt(mk, ageH);
+    if (src === 'blend') { const k = sigMkt(mk, ageH, stale); sh = Math.hypot((1 - wm) * ls[0], wm * k); sa = Math.hypot((1 - wm) * ls[1], wm * k); }
+    else if (src === 'market') sh = sa = sigMkt(mk, ageH, stale);
     else if (src === 'external') { sh = Math.hypot((1 - W_EXT) * ls[0], W_EXT * SIG_EXT); sa = Math.hypot((1 - W_EXT) * ls[1], W_EXT * SIG_EXT); }
     else [sh, sa] = ls;
     const pc = CORNERS.map(([u, v]) => markets(matrix(lh * Math.exp(u * sh), la * Math.exp(v * sa), rho)));
@@ -1947,7 +1958,7 @@ const ENGINE = (() => {
     const scores = [];
     for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) scores.push([i, j, M[i][j]]);
     scores.sort((x, y) => y[2] - x[2]);
-    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, sig: [sh, sa], wm: src === 'blend' ? wm : null, fx, rho, st: !!(st && src === 'blend'), sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5) };
+    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, stale, sig: [sh, sa], wm: src === 'blend' ? wm : null, fx, rho, st: !!(st && src === 'blend'), sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5) };
   }
 
   function tierOf(p) { return p >= 0.82 ? 'A' : p >= 0.70 ? 'B' : p >= 0.58 ? 'C' : null; }
@@ -2668,9 +2679,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const intl = info.group === 'intl', LNs = r.started ? liveNow(m.id) : null;
     const pos = (p, f, dom) => `${p ? `<span>${ord(p)}${intl ? ' in world ratings' : dom ? ' in ' + esc(lgName(dom)) : ''}</span>` : ''}${formDots(f)}`;
     const chips = [];
-    chips.push({ blend: [`Model ${Math.round((1 - (a.wm || 0.8)) * 100)}% · market ${Math.round((a.wm || 0.8) * 100)}%`, ''], market: ['Market-implied', ''], model: ['Model only: no prices yet', 'warn'], external: ['External forecast blend', ''] }[a.src]);
+    chips.push({ blend: [a.st ? (a.wm > 1 ? 'Learned blend: a step past the bookmakers, away from the model' : `Learned blend: model ${Math.round((1 - a.wm) * 100)}% · market ${Math.round(a.wm * 100)}%`) : `Model ${Math.round((1 - (a.wm || 0.8)) * 100)}% · market ${Math.round((a.wm || 0.8) * 100)}%`, ''], market: ['Market-implied', ''], model: ['Model only: no prices yet', 'warn'], external: ['External forecast blend', ''] }[a.src]);
     if (a.top && a.top.sd != null) chips.push([`Top pick ${pct(a.top.pAdj)}, cautious ${pct(a.top.pLo)}: ${a.tier ? TIER_NAME[a.tier] : 'below the tiers'}`, a.top.pAdj - a.top.pLo > 0.05 ? 'warn' : '']);
-    if (m.mkt) chips.push([`${m.mkt.n > 1 ? m.mkt.n + ' bookmakers' : m.mkt.src === 'football-data' ? 'Average of bookmakers' : 'Single price feed'}${a.ageH != null ? ' · ' + (a.ageH < 1 ? 'fresh' : a.ageH < 48 ? Math.round(a.ageH) + ' h old' : Math.round(a.ageH / 24) + ' d old') : ''}`, '']);
+    if (m.mkt) chips.push([`${m.mkt.n > 1 ? m.mkt.n + ' bookmakers' : m.mkt.src === 'football-data' ? 'Average of bookmakers' : 'Single price feed'}${a.ageH != null ? ' · ' + (a.ageH < 1 ? 'fresh' : a.ageH < 48 ? Math.round(a.ageH) + ' h old' : Math.round(a.ageH / 24) + ' d old') + (a.stale ? ', refresh due' : '') : ''}`, a.stale ? 'warn' : '']);
     if (a.hair > 0) chips.push([`Safety haircut −${Math.round(a.hair * 100)} pts on picks`, 'warn']);
     if (a.diverge != null && a.diverge > 0.12) chips.push([`Model and market disagree by ${Math.round(a.diverge * 100)} pts`, 'warn']);
     if (m.clash) chips.push(['Big game: kept out of the two safest slip tiers', 'warn']);
@@ -2762,7 +2773,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const ko = Date.parse(m.ko), mk = a.mkt || {}, i = { H: 0, D: 1, A: 2 }[s.key];
       // the market behind the price: how many bookmakers, how fresh, the average price, and which way it has moved
       const avg = i != null ? (mk.avg || [])[i] : mk.ou && mk.ou.avg ? mk.ou.avg[s.key === 'O25' ? 0 : 1] : null;
-      const nB = mk.n || null, age = a.ageH, thin = mk.src === 'espn' || (nB != null && nB <= 2), old = age != null && age > 12;
+      const nB = mk.n || null, age = a.ageH, thin = mk.src === 'espn' || (nB != null && nB <= 2), old = !!a.stale;
       const chips = [];
       chips.push(nB ? `${nB} bookmaker${nB === 1 ? '' : 's'}` : mk.src === 'football-data' ? 'football-data.co.uk prices' : 'bookmaker prices');
       if (age != null) chips.push(`priced ${age < 1 ? Math.max(1, Math.round(age * 60)) + ' min' : age < 48 ? Math.round(age) + ' h' : Math.round(age / 24) + ' days'} ago`);
@@ -3394,6 +3405,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   })();
 
   // ---------------- method ----------------
+  // minutes as the price plan states them: 40 min, 3 h, 2 days
+  function ivTxt(m) { return m >= 2880 ? Math.round(m / 1440) + ' days' : m >= 90 ? Math.round(m / 60) + ' h' : Math.max(1, Math.round(m)) + ' min'; }
   function renderMethod() {
     const d = S.data, src = d.sources || {}, o = d.odds || {};
     const st = (k, label) => { const s = src[k]; return s ? `<div><span>${label}</span><b>${s.ok ? 'OK' : 'Failed'} · ${new Date(s.at).toLocaleString()}${s.note ? ' · ' + esc(s.note) : ''}</b></div>` : ''; };
@@ -3402,7 +3415,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="status">
         <div><span>Data generated</span><b>${new Date(d.generated).toLocaleString()}</b></div>
         ${st('results', 'Results &amp; tables')}${st('espn_data', 'More competitions (ESPN)')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('live', 'Live scores &amp; fast results')}${st('team_news', 'Team news &amp; injuries')}${st('xg', 'Shot quality (commentary xG)')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
-        <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.interval_min ? ' · refresh every ' + (o.interval_min >= 120 ? Math.round(o.interval_min / 60) + ' h' : Math.round(o.interval_min) + ' min') : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
+        <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.plan && o.plan.iv ? ' · games within 2 h refresh every ' + ivTxt(o.plan.iv[0]) + ', within a day every ' + ivTxt(o.plan.iv[2]) + ', within 3 days every ' + ivTxt(o.plan.iv[3]) : o.interval_min ? ' · refresh every ' + ivTxt(o.interval_min) : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
         <div><span>Live scores on this phone</span><b>${esc(esStatus())}</b></div>
         <div><span>Matches loaded</span><b>${d.matches.length} · ${Object.keys(d.leagues || {}).length} competitions</b></div>
         ${(() => { const T = new Map(); for (const m of d.matches) { T.set(m.h, m.lk); T.set(m.a, m.lk); } let n = 0; for (const [t, lk] of T) if ((d.crests || {})[t] || (lgInfo(lk).group === 'intl' && isoOf(t))) n++; return `<div><span>Club crests</span><b>${n} of ${T.size} teams on the board${UI.crests ? '' : ' · pictures off (Save data)'}</b></div>`; })()}
@@ -3415,6 +3428,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>A third read is tested too: <b>game-by-game ratings</b>, a Kalman filter in which each side's attack and defence drift a little every day and each result moves them by how surprising it was, weighed by how sure the ratings were. On its own it beat the season-long ratings on 2025/26, but next to Elo it added too little (1.7070 → 1.7063, under the bar of 0.001) and was slightly worse on 2024/25, so it stays off until a monthly check says otherwise.</p>
       <p>National teams in the Nations League and friendlies are rated the same way, from every international result of the last six years. Neutral venues get no home bonus, and friendlies count 60% because line-ups are rotated. Friendly picks lose an extra 3 points and are kept out of the two safest slip tiers.</p>
       <p>When a match has prices, each bookmaker's margin is removed by the <b>power method</b> (each 1/price raised to one power so they add to 1), which leaves favourites more of their chance than dividing the margin out evenly: bookmakers load more margin onto long shots. On five seasons of the main leagues (30,000 games) this read results better, and lifting Pinnacle to three times the weight of any other bookmaker helped again; exchanges, whose prices before kick-off were the least reliable, count like any bookmaker. Where The Odds API's prices are more than six hours old, DraftKings' prices from ESPN (fresher, and free) are averaged in, because prices closer to kick-off predict better. Statpad fits the two expected-goals numbers that reproduce the consensus, including the goals line where available (2.5, or the line DraftKings offers), and blends them with the model in log space: 80/20 by default, or the share tuned on past seasons (see Tuning). The market is sharper than any table-based model, so it gets the larger share.</p>
+      <p><b>When prices are refreshed.</b> Each refresh prices every game of one competition, so Statpad plans per competition by how close its next game is: with credits to spare, every 30 minutes in the last 2 hours, hourly from 2 to 6 hours, every 3 hours within a day, every 6 hours within 3 days, twice a day within a week, a little more often for the biggest competitions. Fewer credits stretch every interval by the same factor; more shrink them. Each kick-off also gets one last refresh in its final 90 minutes, the closing price, and games already under way keep their last price before kick-off. A price older than the time left to kick-off (at least 6 hours) counts as stale, which widens the cautious chance a little. Simulated over a month of real fixtures on the free plan, this gets 99% of games priced before kick-off and 64% priced in their last 90 minutes, from 69% and 21% before.</p>
       <p><b>The learned blend.</b> Instead of one fixed share, the monthly tuning can learn how far to lean, game by game, from the bookmakers' numbers towards the model's or away from them: by how thin the ratings' data is, the time of season, the kind of league, and short rest. It is fitted on the prediction error itself, and how strongly it is held back is chosen walk-forward (fitted on the older training season, measured on the newer one). What it learned is a surprise worth knowing: when the model and the bookmakers disagree, leaning slightly further towards the bookmakers is better, by about a tenth of the gap. Their prices move on news the ratings can't see, and they move a little less than they should. This held with closing prices too.</p>
       <p>Every market comes from a Dixon–Coles scoreline grid, which corrects the 0-0, 1-0, 0-1 and 1-1 cells that a plain Poisson model gets wrong. The size of that correction used to be one fixed value (−0.07) for every league; the tuning now fits it per league, pulled towards the value that's best over all leagues when a league has few games, on the latest tuning from −0.07 (League One) to −0.20 (Serie A and Serie B); the Lab shows the current range. With the learned blend, on seasons the tuning never saw, Statpad's error on results fell below the bookmakers' own: 1.0020 → 1.0009 on 2025/26 and 0.9942 → 0.9937 on 2024/25 (log loss; before, Statpad leaned entirely on the bookmakers there and matched them exactly). Both teams to score got a little sharper too; exact scores a little less.</p>
       <p><b>Per-market correction.</b> Every week the site replays two past seasons through the engine and checks, for each kind of market (home or away win, draw, double chance, goals lines, both teams to score, team goals), whether the stated chances came true as often as stated. A correction fitted on the older season is kept only for the kinds where it predicts the newer season, which it never saw, better. On the last replay this lifted chances above about 75% slightly (they had been coming true a little more often than stated) and nudged draws up.</p>
@@ -3483,7 +3497,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>WhatsApp Status pack</h3>
       <p>In the Matches tab's shortcuts and on the Slips tab, <b>Status pack</b> makes 11-second videos for the day, sized for WhatsApp Status, each built around its own animated data graphic. There are thirteen kinds: the safest pick on a confidence dial, an upset alert on a radar that locks onto the underdog, the game with most at stake as three futures, the slip at your target odds climbing leg by leg, a goal rush (the game with most goals expected, as an equalizer of total goals), the most likely exact score on a lit grid of scorelines, the match of the day in the two teams' own colours (who wins as a tug of war, their last five results, expected goals and Statpad's pick), the best value bet as two needles on an odds dial, the last day's results flipping pick by pick to landed or missed, a price that has dropped hard, a team in form, the whole day in numbers, and the weekend's rarest result lit up among 10,000 versions of its game. Each day the pack picks four from what the day's games make interesting, steers away from the kinds made on this phone in the last few days, and turns a little by the date, so it keeps changing; <b>4 more clips</b> makes the next ones on the day's list. Titles, closing lines and camera moves change by day too. Each clip opens with the camera swooping over a floodlit pitch drawn as a hologram and ends on Statpad's address, with the recent record of “Nearly definite” picks when there are enough of them. The sound is made the same way: machine hum, beeps, servo whirs, clunks and radar pings timed to the pictures, with no voices or music. Everything is drawn and encoded on your phone as ordinary MP4 video (H.264 with AAC sound; if the phone's browser has no AAC encoder, one loads with the video packer the first time), stored the way phone cameras store portrait video, so WhatsApp and other apps take it like any video from your gallery. <b>1080p · WhatsApp</b> is the default, as that's what WhatsApp Status shows; <b>4K</b> (2160 × 3840) is for TikTok, Instagram and YouTube Shorts and takes about three times as long. The pack opens on a poster of each clip and makes nothing until you pick: the clip you tap is made first, then the rest follow (tap another and it goes next), or <b>Make all</b> makes them in order. Frames are drawn straight into the shape the encoder takes, the background is reused while it holds still and the sound is made alongside, so a 1080p clip takes about half the time it used to. Each finished clip is played back on your phone before it's offered, and a size the phone can't play is made smaller by itself. Sound can be turned off. Phones that can't make video get the same graphics as 4K pictures. Sharing adds the site's link to the caption. Results clips show misses as well as wins.</p>
       <h3>Statpad, the assistant</h3>
-      <p>A glowing orb sits over every page, match and tool. Tap it to open Statpad's assistant over whatever you're looking at; press and hold it to talk straight away (the microphone at the top and <b>Ask Statpad</b> on the Matches tab do the same). Speak or type, in English or Kiswahili: it answers in the language you use. It listens until you've finished, sending your question once you've been quiet for 3 seconds (5, or only when you tap ✓, under its settings). It answers about games (who wins, why, how sure, goals, both teams to score, the likeliest score, who scores first, clean sheets, the best price), picks (safest, value, underdogs, likely draws, most goals, biggest games, by day, league, market or level), slips (any odds, any number of legs, from the picks it just listed, "another one", "make it safer"), turning a stake into a goal, teams (form, position, ratings, team news, next game, title chances, two teams side by side), league tables and races, live scores and shocks, your bets and budget, Statpad's record, odds arithmetic (what odds mean, payouts after tax, fractions), and how Statpad works, from this Method page. It keeps the thread: "and tomorrow?", "what about La Liga?", "why the second one?", "add it", "more" and "yes" all lean on what came before, and it knows what's on screen, so "who wins?" on a match page means that match. When a name fits two clubs it asks which. It can also act: open a match, team, tab, the shock map, Weekend miracles or the Status pack, add picks to the coupon, switch theme, set a budget or target odds, and remember your name and your team. When it opens something, it shrinks to a strip so the page shows, and stays there for the next question. While the page is open it also speaks up when a game in one of your open bets, your coupon or your team's game kicks off, has a goal or finishes, with your bet's chance from there. Answers can be read aloud: when you speak (the default), always, or never; in hands-free mode it listens again after each spoken answer, so a conversation needs no taps, and tapping the orb while it talks stops it. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so voice needs the internet and the microphone allowed for the site; everything after that runs on the page, from the same numbers as everything else, and nothing is sent anywhere. It doesn't know about things outside Statpad, and it says so.</p>
+      <p>Tap <b>Ask Statpad</b> on the Matches tab (or press Ctrl/⌘ K on a computer) and the assistant opens, listening. Tap its orb, at the top of the conversation, to tuck the conversation away: the orb then floats over every page, match and tool while you look around. Tap it to bring the conversation back, or press and hold it to talk straight away. Close the conversation (×, or say "bye") and the orb goes with it. Speak or type, in English or Kiswahili: it answers in the language you use. It listens until you've finished, sending your question once you've been quiet for 3 seconds (5, or only when you tap ✓, under its settings). It answers about games (who wins, why, how sure, goals, both teams to score, the likeliest score, who scores first, clean sheets, the best price), picks (safest, value, underdogs, likely draws, most goals, biggest games, by day, league, market or level), slips (any odds, any number of legs, from the picks it just listed, "another one", "make it safer"), turning a stake into a goal, teams (form, position, ratings, team news, next game, title chances, two teams side by side), league tables and races, live scores and shocks, your bets and budget, Statpad's record, odds arithmetic (what odds mean, payouts after tax, fractions), and how Statpad works, from this Method page. It keeps the thread: "and tomorrow?", "what about La Liga?", "why the second one?", "add it", "more" and "yes" all lean on what came before, and it knows what's on screen, so "who wins?" on a match page means that match. When a name fits two clubs it asks which. It can also act: open a match, team, tab, the shock map, Weekend miracles or the Status pack, add picks to the coupon, switch theme, set a budget or target odds, and remember your name and your team. When it opens something, it shrinks to a strip so the page shows, and stays there for the next question. While the page is open it also speaks up when a game in one of your open bets, your coupon or your team's game kicks off, has a goal or finishes, with your bet's chance from there. Answers can be read aloud: when you speak (the default), always, or never; in hands-free mode it listens again after each spoken answer, even tucked away, so a conversation needs no taps, and tapping the orb while it talks stops it. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so voice needs the internet and the microphone allowed for the site; everything after that runs on the page, from the same numbers as everything else, and nothing is sent anywhere. It doesn't know about things outside Statpad, and it says so.</p>
       <h3>My bets</h3>
       <p>Save a coupon with your stake and your bookmaker's odds, and Statpad shows the chance of it landing, the odds you need to break even after the tax on winnings (15% in Uganda by default; change it in My bets), and what it's worth on average. Bets settle themselves from the same results, using the 90-minute score; a postponed leg counts at odds 1. Everything is stored on your device: use Back up to keep a copy or move to a new phone.</p>
       <h3>Slips</h3>
@@ -7900,7 +7914,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (a.src === 'model') why.push('there are no bookmaker prices yet');
     if (a.diverge != null && a.diverge > 0.12) why.push(`the model and the market disagree by ${Math.round(a.diverge * 100)} points`);
     if (m.ls && Math.max(m.ls[0], m.ls[1]) > 0.33) why.push('the ratings rest on little data (early in the season, or a newly promoted side)');
-    if (a.ageH != null && a.ageH > 36) why.push('the prices are old');
+    if (a.stale) why.push('the prices are old for a game this close');
     if (m.clash) why.push('it is a big game');
     if (m.fr) why.push('it is a friendly');
     if (why.length || t.pAdj - t.pLo > 0.04) out.push(`Caution: ${why.length ? why.join(', ') : 'the numbers have a wide spread'}, so the cautious chance is ${pct(t.pLo)}.`);
@@ -10173,7 +10187,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // ("yes"). It can act as well as answer: open games, teams, tabs and tools, add picks to the coupon, change
   // settings. Every number comes from the page itself; questions about how Statpad works are answered from the
   // Method text. Nothing is sent anywhere: the phone turns speech into text, everything after that runs here.
-  const VA = S.va = {
+  // one way in: Ask Statpad. The orb exists only while a conversation does: tucked away, it floats over the page
+  // (tap to bring the conversation back, hold to talk); closing the conversation takes it away
+  const VA = S.va = { live: false,
     open: false, peek: false, msgs: [], ctx: {}, busy: false, speaking: false, gen: 0, k: 0, lastVoice: false,
     voice: ['auto', 'on', 'off'].includes(store.get('vaVoice', 'auto')) ? store.get('vaVoice', 'auto') : 'auto',
     hands: !!store.get('vaHands', false), name: String(store.get('vaName', '') || '').slice(0, 24), fav: store.get('vaFav', null), pos: store.get('vaPos', null),
@@ -11072,7 +11088,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     document.body.appendChild(orb);
     const p = document.createElement('section');
     p.id = 'va'; p.className = 'va'; p.hidden = true; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Statpad assistant');
-    p.innerHTML = `<header class="va-h"><span class="va-grab" aria-hidden="true"></span><button type="button" class="va-me" data-vapeek="toggle" aria-label="Expand or shrink"><span class="va-mini"></span><span class="va-tt"><b>Statpad</b><small id="vaSt"></small></span></button>
+    p.innerHTML = `<header class="va-h"><span class="va-grab" aria-hidden="true"></span><button type="button" class="va-me" data-vapeek="tuck" aria-label="Tuck the conversation away into the orb"><span class="va-mini"></span><span class="va-tt"><b>Statpad</b><small id="vaSt"></small></span></button>
         <div class="va-tools"><button type="button" class="va-ic" id="vaLang" data-valang="1"></button><button type="button" class="va-ic" id="vaSpk" data-vavoice="1"></button><button type="button" class="va-ic" data-vaset="1" aria-label="Assistant settings" aria-expanded="false"><svg aria-hidden="true"><use href="#i-sliders"/></svg></button><button type="button" class="va-ic" data-vaclose="1" aria-label="Close"><svg aria-hidden="true"><use href="#i-x"/></svg></button></div></header>
       <div class="va-set" id="vaSet" hidden></div>
       <div class="va-log" id="vaLog" aria-live="polite"></div>
@@ -11091,13 +11107,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     orb.addEventListener('click', (e) => {
       e.stopPropagation(); if (held || orb._dragged) { held = false; orb._dragged = false; return; }
       if (VA.speaking || S.ask.cur) { vaHush(); return; }   // tap to interrupt
-      if (VA.open && !VA.peek) vaClose(); else vaOpen(false);
+      if (VA.open && !VA.peek) vaTuck(); else vaOpen(false);
     });
     orb.addEventListener('contextmenu', (e) => e.preventDefault());
     // swipe the header down to shrink, up to grow
     const h = p.querySelector('.va-h'); let y0 = null;
     h.addEventListener('pointerdown', (e) => { if (e.target.closest('.va-tools')) return; y0 = e.clientY; });
-    h.addEventListener('pointerup', (e) => { if (y0 == null) return; const dy = e.clientY - y0; y0 = null; if (dy > 40) { if (VA.peek) vaClose(); else vaPeek(true); } else if (dy < -40) vaPeek(false); });
+    h.addEventListener('pointerup', (e) => { if (y0 == null) return; const dy = e.clientY - y0; y0 = null; if (dy > 40) { if (VA.peek) vaTuck(); else vaPeek(true); } else if (dy < -40) vaPeek(false); });
   }
   // the orb can be dragged to either side and up or down; it remembers where
   function vaDrag(orb) {
@@ -11122,7 +11138,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function vaOrbState() {
     const o = $('#vaOrb'), st = VA.speaking ? 'speak' : S.ask && S.ask.on ? 'listen' : VA.busy ? 'think' : 'idle';
-    if (o) { o.dataset.st = st; o.classList.toggle('open', VA.open && !VA.peek); }
+    if (o) {
+      const live = VA.live || VA.speaking || !!(S.ask && S.ask.on);
+      o.dataset.st = st; o.classList.toggle('open', VA.open && !VA.peek); o.classList.toggle('live', live);
+      o.setAttribute('aria-hidden', String(!live || VA.open)); o.tabIndex = live && !VA.open ? 0 : -1;
+      document.body.classList.toggle('va-conv', live);
+    }
     const p = $('#va'); if (p) p.dataset.st = st;
     const s = $('#vaSt'); if (s) s.textContent = st === 'speak' ? T('Speaking… tap the orb to stop', 'Ninaongea… gusa kusimamisha') : st === 'listen' ? T('Listening…', 'Nasikiliza…') : st === 'think' ? T('Thinking…', 'Nafikiri…') : VA.hands ? T('Hands-free on', 'Bila mikono') : T('Ask me anything', 'Niulize chochote');
   }
@@ -11149,7 +11170,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function vaOpen(listen) {
     vaBuild(); const p = $('#va');
-    VA.open = true; VA.peek = false; p.hidden = false; p.classList.remove('peek'); document.body.classList.add('va-on');
+    VA.open = true; VA.peek = false; VA.live = true; p.hidden = false; p.classList.remove('peek'); document.body.classList.add('va-on');
     requestAnimationFrame(() => p.classList.add('show'));
     if (!VA.msgs.length) vaPush(null, sHello(true));
     else vaRender();
@@ -11160,10 +11181,20 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const p = $('#va'); if (!p || !VA.open) return;
     VA.peek = on === 'toggle' ? !VA.peek : !!on; p.classList.toggle('peek', VA.peek); vaRender(); vaOrbState();
   }
-  function vaClose() {
+  function vaHide() {
     const p = $('#va'); if (!p) return;
     VA.open = false; VA.peek = false; p.classList.remove('show'); document.body.classList.remove('va-on');
     setTimeout(() => { if (!VA.open) p.hidden = true; }, 260);
+  }
+  // tuck the conversation away: the panel goes, the orb stays over the page until the conversation ends
+  function vaTuck() {
+    if (!VA.open) return;
+    vaHide(); vaOrbState();
+  }
+  // the end of the conversation: the panel and the orb both go
+  function vaClose() {
+    const p = $('#va'); if (!p) return;
+    VA.live = false; vaHide();
     if (S.ask.cur) askAbortRec();
     vaOrbState();
   }
@@ -11205,7 +11236,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     vaRender(); vaOrbState();
     if (A.go) { try { A.go(); } catch (e) { console.error(e); } }
     const talk = !A.quiet && (VA.voice === 'on' || (VA.voice === 'auto' && spoken));
-    const follow = () => { if (VA.open && VA.lastVoice && (VA.hands || A.ask) && !S.ask.cur && A.kind !== 'bye' && A.kind !== 'stop') setTimeout(() => { if (!VA.speaking && !S.ask.cur && VA.open) vaMic(); }, 450); };
+    // hands-free keeps listening while the conversation lasts, tucked away or not
+    const follow = () => { if (VA.live && VA.lastVoice && (VA.hands || A.ask) && !S.ask.cur && A.kind !== 'bye' && A.kind !== 'stop') setTimeout(() => { if (!VA.speaking && !S.ask.cur && VA.live) vaMic(); }, 450); };
     if (talk) vaSpeak(A, m.lang, follow); else follow();
     return A;
   }
@@ -11242,6 +11274,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       else if (k === 'hands') { VA.hands = v === 'true'; store.set('vaHands', VA.hands); }
       else if (k === 'lang') { if (S.ask.cur) askAbortRec(); S.ask.lang = v; store.set('askLang', v); }
       buzz(5); vaRenderHead(); vaRenderSet(); vaRender(); return; }
+    if (t.dataset.vapeek === 'tuck') { if (VA.speaking || S.ask.cur) { vaHush(); return; } if (VA.peek) vaPeek(false); else vaTuck(); return; }
     if (t.dataset.vapeek) { vaPeek(t.dataset.vapeek === 'toggle' ? 'toggle' : t.dataset.vapeek === '1'); return; }
     if (t.dataset.vaclose) { vaHush(); vaClose(); return; }
     if (t.dataset.vaopen) { VA.ctx.match = t.dataset.vaopen; openMatch(t.dataset.vaopen, t); vaPeek(true); return; }
@@ -11262,7 +11295,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   document.addEventListener('input', (e) => { if (e.target.id === 'vaText' && S.ask.cur) askAbortRec(); });
   document.addEventListener('change', (e) => { if (e.target.id === 'vaSil') { S.ask.sil = +e.target.value; store.set('askSil2', S.ask.sil); renderAskMic(); } });
   document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if (VA.open && !VA.peek) vaClose(); else vaOpen(); return; }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if (VA.open && !VA.peek) vaTuck(); else vaOpen(); return; }
     if (e.key === 'Escape' && VA.open && document.activeElement && document.activeElement.closest('#va')) { e.stopPropagation(); vaClose(); }
   }, true);
   // ---------------- speaking up: goals, kick-offs and full time in the games that matter to you ----------------
