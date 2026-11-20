@@ -632,6 +632,12 @@ table { width: 100%; border-collapse: collapse; }
 .mt .sel { font-weight: 600; }
 @media (max-width: 420px) { .mt .fair { display: none; } }
 .mt small { color: var(--ink-3); font-size: 10.5px; display: block; }
+.mt small.mvt { font-weight: 600; }
+.mvt.dn { color: var(--pitch); }
+.mvt.up { color: var(--cobalt); }
+.mvo { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+.mvo b { color: var(--ink); font-weight: 600; width: 100%; }
+.mvo .dn { color: var(--pitch); } .mvo .up { color: var(--cobalt); }
 .edge-pos { color: var(--pitch); font-weight: 700; } .edge-neg { color: var(--ink-3); }
 .pl-pos { color: var(--pitch); } .pl-neg { color: var(--red); }
 details.xm > summary { list-style: none; cursor: pointer; }
@@ -2049,7 +2055,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
 /* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
 const ENGINE = (() => {
   // the engine's version, stamped on every prediction the track record keeps, so versions can be compared later
-  const VERSION = '2026-11-20';
+  const VERSION = '2026-11-21';
   const N = 11, RHO = -0.07, W_MKT = 0.8, W_EXT = 0.5, HAIR = 0.03;
   const M_DC = 0.05, M_EST = 0.06, M_DER = 0.065, STALE_H = 36;
   const TIERS = {
@@ -2064,6 +2070,8 @@ const ENGINE = (() => {
   // the market's memory (ratings read from the closing prices of each side's recent games): as well calibrated
   // as a price on past seasons, so no haircut, and a spread a little wider than a market's
   const SIG_MEM = 0.12;
+  // price outlook: shown from this many hours before kick-off; forecasts below MV_SHOW are not worth a mention
+  const MV_AHEAD = 6, MV_SHOW = 0.01;
   // prices are stale when older than the time left to kick-off (at least 6 hours, at most STALE_H): a price from
   // this morning is fine for a game next week, not for one in an hour, when team news has moved the market
   function staleAt(m, now) { const h = m && m.ko ? (Date.parse(m.ko) - now) / 3600e3 : STALE_H; return Math.max(6, Math.min(STALE_H, h)); }
@@ -2218,7 +2226,7 @@ const ENGINE = (() => {
     const mk = m.mkt && m.mkt.p && m.mkt.p.length === 3 ? m.mkt : null;
     const rho = rhoOk(m.rho) ? m.rho : rhoFor(m.lk);
     const pMod = lm ? markets(matrix(lm[0], lm[1], rho)) : null;
-    let lh, la, src;
+    let lh, la, src, fhm = null, fam = null;
     let wm = m.wm > 0 && m.wm <= 1 ? m.wm : W_MKT;   // the market's share, tuned on past seasons when available
     // the learned blend, when the tuning found it beats a fixed share: per side, the weight on log(model / market)
     // and a shift ([home weight, home shift, away weight, away shift]); the weight can be below zero
@@ -2226,6 +2234,7 @@ const ENGINE = (() => {
     if (mk) {
       const t = { H: mk.p[0], A: mk.p[2], O: mk.ou && mk.ou.pO ? mk.ou.pO : null, L: mk.ou && mk.ou.line };
       const [fh, fa] = fit(t, lm || [1.4, 1.1], rho);
+      fhm = fh; fam = fa;
       if (lm && st) {
         lh = fh * Math.exp(st[0] * Math.log(lm[0] / fh) + st[1]); la = fa * Math.exp(st[2] * Math.log(lm[1] / fa) + st[3]);
         wm = Math.min(1.5, Math.max(0, 1 - (st[0] + st[2]) / 2)); src = 'blend';
@@ -2297,12 +2306,25 @@ const ENGINE = (() => {
       if (s.key === 'D' || s.price < 1.05) continue;
       if (!best || s.pLo > best.pLo) { best = s; bi = k; }
     }
+    // price outlook: where each real price is forecast to be at kick-off (the pipeline's forecast move of the
+    // market's own expected goals), as a change in the price: negative = shorter. Calibrated on 47,190 past games.
+    let outlook = null;
+    const mv = mk && fhm && Array.isArray(m.mv) && m.mv.length === 2 && m.mv.every((x) => typeof x === 'number' && Math.abs(x) <= 0.5) ? m.mv : null;
+    if (mv && m.ko && (Date.parse(m.ko) - now) / 3600e3 >= MV_AHEAD) {
+      const q0 = markets(matrix(fhm, fam, rho)), q1 = markets(matrix(fhm * Math.exp(mv[0] / 2 + mv[1] / 2), fam * Math.exp(-mv[0] / 2 + mv[1] / 2), rho));
+      outlook = {};
+      for (const k of ['H', 'D', 'A', 'O25', 'U25']) {
+        const c = q1[k] > 0 ? q0[k] / q1[k] - 1 : 0;
+        outlook[k] = Math.max(-0.15, Math.min(0.15, c - 3.5 * c * Math.abs(c)));
+      }
+      for (const s of sels) if (s.real && outlook[s.key] != null) s.mv = outlook[s.key];
+    }
     sels.push(...extras(m, M, p));
     // most likely scorelines
     const scores = [];
     for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) scores.push([i, j, M[i][j]]);
     scores.sort((x, y) => y[2] - x[2]);
-    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, stale, sig: [sh, sa], wm: src === 'blend' ? wm : null, fx, rho, st: !!(st && src === 'blend'), sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5) };
+    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, stale, sig: [sh, sa], wm: src === 'blend' ? wm : null, fx, rho, st: !!(st && src === 'blend'), sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5), outlook };
   }
 
   function tierOf(p) { return p >= 0.82 ? 'A' : p >= 0.70 ? 'B' : p >= 0.58 ? 'C' : null; }
@@ -2359,7 +2381,7 @@ const ENGINE = (() => {
 
   // a market's name for a match, for games the page has no analysis of any more (finished ones)
   function labelOf(key, m) { const f = [...LABELS, ...EXTRAS].find((x) => x[0] === key); return f ? f[1](m) : null; }
-  return { VERSION, analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf, setRho, rhoFor };
+  return { VERSION, analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf, setRho, rhoFor, MV_SHOW, MV_AHEAD };
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 
@@ -3128,6 +3150,26 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function sbar(ps) {
     return `<div class="sbar">${['h', 'd', 'a'].map((c, i) => `<i class="${c}" style="width:${ps[i] * 100}%">${ps[i] > 0.09 ? pct(ps[i]) : ''}</i>`).join('')}</div>`;
   }
+  // price outlook: where Statpad forecasts a real price to be at kick-off (engine: s.mv, negative = shorter)
+  const mvPct = (x) => `${Math.max(1, Math.round(Math.abs(x) * 100))}%`;
+  function mvTag(s) {
+    if (s.mv == null || Math.abs(s.mv) < ENGINE.MV_SHOW) return '';
+    return `<small class="mvt ${s.mv < 0 ? 'dn' : 'up'}" title="${s.mv < 0 ? 'Forecast to shorten' : 'Forecast to drift'} about ${mvPct(s.mv)} by kick-off">${s.mv < 0 ? '▼' : '▲'}${mvPct(s.mv)}</small>`;
+  }
+  function mvRecLine() {
+    const R = S.data && S.data.mvrec;
+    if (!R || !(R.n >= 30)) return '';
+    return ` Live since ${esc(dayLabel(dayKey(Date.parse(R.since))))}: right ${pct(R.hit / R.n, 0)} of ${R.n.toLocaleString('en-US')} times, and following it got prices ${sgn(R.gain / R.n, 1)} better than doing the opposite.`;
+  }
+  function outlookBox(m, a) {
+    if (!a || !a.outlook) return '';
+    const mk = m.mkt || {}, ou = mk.ou && mk.ou.pO && (mk.ou.line == null || mk.ou.line === 2.5);
+    const it = [[m.h, 'H'], ['Draw', 'D'], [m.a, 'A'], ...(ou ? [['Over 2.5', 'O25'], ['Under 2.5', 'U25']] : [])];
+    const cell = ([n, k]) => { const x = a.outlook[k]; const on = Math.abs(x) >= ENGINE.MV_SHOW;
+      return `<span class="${on ? (x < 0 ? 'dn' : 'up') : ''}">${esc(n)} ${on ? (x < 0 ? '▼' : '▲') + mvPct(x) : 'steady'}</span>`; };
+    return `<div class="mvo"><b>Price outlook to kick-off</b>${it.map(cell).join('')}</div>
+      <p class="note">▼ shorter by kick-off: if you're backing it, now has usually been the better time. ▲ longer: waiting has usually got more. From the price's gap to the market's memory and each side's play beyond its prices: on 47,190 past games, right 6 times in 10.${mvRecLine()}</p>`;
+  }
   function spark(hist, m) {
     if (!hist || hist.length < 2) return '<p class="note">No price history yet. Movement appears here as prices refresh.</p>';
     const W = 520, H = 120, P = 28;
@@ -3195,7 +3237,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const mrowsOf = (G) => Object.entries(G).map(([g, ss]) => `<tr class="grp"><td colspan="5">${esc(g)}</td></tr>` + ss.map((s) => `<tr>
       <td class="sel">${esc(s.label)}${s.real && s.bk ? `<small>best: ${esc(s.bk)}</small>` : ''}</td>
       <td class="n">${pct(s.p, 1)}${!s.x && s.pLo != null && s.pLo >= 0.5 ? `<small title="Cautious chance: one standard deviation below">≥${pct(s.pLo, 0)}</small>` : ''}</td><td class="n fair">${odds(s.fair)}</td>
-      <td class="n">${odds(s.price)}${s.real ? '' : '<small>est</small>'}</td>
+      <td class="n">${odds(s.price)}${s.real ? mvTag(s) : '<small>est</small>'}</td>
       <td class="n ${s.edge > 0 ? 'edge-pos' : 'edge-neg'}">${s.edge == null ? '–' : sgn(s.edge)}</td>
       <td><button type="button" class="add" data-add="${esc(m.id)}|${s.key}" aria-pressed="${inCoupon(m.id, s.key)}" aria-label="Add ${esc(s.label)} to coupon">${inCoupon(m.id, s.key) ? '✓' : '+'}</button></td></tr>`).join('')).join('');
     const mrows = mrowsOf(groups), xrows = mrowsOf(xgroups), nx = a.sels.filter((s) => s.x).length;
@@ -3228,7 +3270,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       ${nx ? `<details class="card xm"${S.xmOpen ? ' open' : ''}><summary><h4>Combos, draw no bet &amp; handicaps <span>${nx} more markets</span></h4></summary>
         <p class="note">Fair odds come from the scoreline grid, so the link between the two parts of a combo is priced in. Bookmakers' bet builders usually take a bigger margin: if their price is below the fair odds here, it's poor value. Draw no bet returns your stake on a draw; its chance is of winning when there's a winner.</p>
         <table class="mt"><thead><tr><th>Selection</th><th class="n">Prob</th><th class="n fair">Fair</th><th class="n">Est. price</th><th class="n"></th><th></th></tr></thead><tbody>${xrows}</tbody></table></details>` : ''}
-      <div class="card"><h4>Price history <span>average 1X2 price</span></h4>${spark(m.hist, m)}</div>
+      <div class="card"><h4>Price history <span>average 1X2 price</span></h4>${spark(m.hist, m)}${outlookBox(m, a)}</div>
       </div>
       <div data-mt="teams"${mt === 'teams' ? '' : ' hidden'}>
       ${stakesCard(m)}
@@ -3323,6 +3365,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         const o0 = m.hist[0][i + 1], o1 = m.hist[m.hist.length - 1][i + 1];
         if (o0 > 1 && o1 > 1 && Math.abs(o1 / o0 - 1) >= 0.02) mv = `<span class="chip ${o1 < o0 ? 'good' : ''}" title="Average price since Statpad first saw it">average ${odds(o0)} → ${odds(o1)} ${o1 < o0 ? '(shortening)' : '(drifting)'}</span>`;
       }
+      if (s.mv != null && Math.abs(s.mv) >= ENGINE.MV_SHOW) mv += s.mv < 0
+        ? `<span class="chip good" title="Value bets forecast to shorten beat the closing price by 6.3% taken at once, 1.4% left to kick-off (47,190 past games)">Bet now: price forecast ▼${mvPct(s.mv)} by kick-off</span>`
+        : `<span class="chip" title="Value bets forecast to drift did about as well taken later (47,190 past games)">No rush: price forecast ▲${mvPct(s.mv)}</span>`;
       const warn = thin ? 'One bookmaker only: the fair price rests on its own margin' : old ? 'Old prices: the best price may have gone' : '';
       const band = s.edge >= 0.07 ? '7' : s.edge >= 0.04 ? '4' : '2', bh = H && H.bands ? vbStat(H.bands[band]) : null;
       return `<div class="vrow${warn ? ' vwarn' : ''}" data-open="${esc(m.id)}" tabindex="0">
@@ -3758,6 +3803,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // ideas tested on games the model never saw: what went live and what didn't, with the numbers
   const RESEARCH = [
+    ['kept', 'Price outlook: bet now or wait', 'Where each real price will be at kick-off, from the gap between the price and the market’s memory and from how each side has been playing beyond its prices (shots, corners, goals). Each season forecast by a fit on the others: the direction was right 61.5% of the time when the forecast was 1% or more, and following it got better prices in all eight seasons.', 'forecasts of 1%+: prices 0.5–1.2% better than always betting at kick-off; value bets forecast to shorten: +6.3% on the close taken at once, +1.4% left late'],
+    ['off', 'Value measured against the forecast closing price', 'Value bets that also held up against the forecast close beat the close by 5.7%, those that didn’t by −0.7%. But moving a price all the way to its forecast close didn’t predict results any better (half the way helped a little), and those bets lost money in 2023–27: beating a close you could see coming isn’t the same as value.', 'closing-line value +5.7% v −0.7%; results: early price moved half way +0.00025 a game, all the way +0.00026, recent seasons ≤ 0'],
+    ['off', 'Playing well beyond the price, for predictions', 'Sides with more shots, shots on target or corners than their prices expected didn’t score more than the next early price said. The market already counts it (it does move prices, which is what the outlook uses).', 'gain −0.00003 a game against the early price, 8,421 unseen games'],
+    ['off', 'Goals for games priced on 1X2 alone', 'Four in ten priced games have no over/under price, so their goals are read from the draw price. Hiding the over/under on games that had one: adding it back gained 0.0001 a game on 2025/26, and the memory’s goals level 0.0005 (within luck). The draw price already says almost everything about goals.', 'log loss 1.6851 → 1.6850 (real over/under), 1.6846 (memory)'],
     ['kept', 'Market memory for games with no price', 'Each side rated from the expected goals that the closing prices of its recent games implied, not from its goals. Without seeing a game’s own price it got 86% of the way from Statpad’s goal ratings to that price, as well calibrated as the market, and closed 84% of the gap on six leagues with only 1X2 prices. Games with no bookmaker price are now priced from it, and the season simulator uses it.', 'log loss on 2025/26: goal ratings 1.7103, market memory 1.6860, the game’s early price 1.6825'],
     ['off', 'Market memory blended into priced games', 'Where a game has a real price, mixing in the memory changed almost nothing.', 'fitted weight 0.05, gain 0.00003 a game'],
     ['off', 'Price momentum', 'Whether the move from the early price to the closing price carries on past the close. It doesn’t: the market finishes its moves.', 'gain +0.00001 a game on 8,839 unseen games (95% range −0.0003 to +0.0003)'],
@@ -3770,7 +3819,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     ['kept', 'Quarter Kelly as the stake', 'In the bankroll stress test (Value bets) it grew about as fast as flat 1% stakes with half the falls and almost never halved the bank; full Kelly halved it in more than half of seasons.', 'typical season ×1.44, bad season ×1.03'],
   ];
   function researchCard() {
-    return `<div class="card lab-card research"><h4>Research log <span>v56 and v55, tested on unseen games</span></h4>
+    return `<div class="card lab-card research"><h4>Research log <span>v57, v56 and v55, tested on unseen games</span></h4>
       <ul class="rs-l">${RESEARCH.map(([k, name, what, num]) => `<li><span class="rs-k ${k}">${k === 'kept' ? 'Kept' : 'Off'}</span><div><b>${esc(name)}</b><p>${esc(what)}</p><small>${esc(num)}</small></div></li>`).join('')}</ul>
       <p class="note">Every idea is fitted on older seasons and judged on newer ones it never saw, and goes live only if it predicts those better. Log loss is home, draw and away plus over/under 2.5 a game, lower is better; differences of a few ten-thousandths are within luck. The market is hard to beat: most ideas end up here as Off.</p></div>`;
   }
@@ -4006,6 +4055,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>Where football-data.co.uk has shot counts (the main European leagues), shots on target count next to goals: each side's goals are mixed with its shots on target times the league's goals per shot on target. Shots are steadier than goals, so a team that creates chances but finishes badly is rated on what it creates. Each rating also carries a standard error, from how much evidence is behind it.</p>
       <p><b>Shot quality from the commentary.</b> For the eight leagues where ESPN's play-by-play lists every shot with its spot on the pitch (the Premier League, the Championship, La Liga, the Bundesliga, Serie A, Ligue 1, the Eredivisie and the Primeira Liga), Statpad turns each shot into the chance it was a goal: distance, the angle of the goal mouth, and the commentary's own words (header, free kick, penalty, fast break, cross, through ball, corner). That model was fitted on 368,847 shots from 2021/22 to 2026/27; on seasons it wasn't fitted on it scored 0.280 per shot (log loss), against 0.345 for knowing only how often shots go in. A side's expected goals (xG) is the sum. The workflow collects a few dozen games a run. Once most of a league's games have it, the monthly tuning gives those eight leagues their own settings with xG mixed into the goals, and keeps them only if they beat the common settings on the latest season there. In the two tests so far it helped on 2024/25 (error 1.665 → 1.659) and not on 2025/26 (1.686 → 1.687), so expect it to come and go.</p>
       <p><b>Market memory.</b> Most games more than two or three days off have no bookmaker price yet. Statpad prices those from the market's memory: each side rated from the expected goals that the closing prices of its recent games implied, rather than from the goals it scored, with a game a fortnight old counting half as much as today's. A closing price holds everything the market knew (injuries, form, transfers, news), so it says more about a side than a scoreline does. On 2025/26, unseen, it predicted results with a log loss of 1.6860 a game against 1.7103 for the goal-based ratings and 1.6825 for each game's own early price, and it is as well calibrated as a price, so memory-priced games carry no safety haircut. The season simulator plays the rest of the season with it too. With a real price, nothing changes: the memory adds nothing to it.</p>
+      <p><b>Price outlook.</b> Prices move between the first quote and kick-off, and some of that move can be seen coming. The market drifts about a fifth of the way back towards its own memory of both sides, and towards sides that have been playing better than their prices expected (shots on target, shots, corners and goals for minus against, beyond what each game's closing price implied, recent games counting most). From those, Statpad forecasts where each real price will be at kick-off and marks it ▼ (shorter: take it now) or ▲ (longer: waiting usually pays). On 47,190 league games from 2019/20 to 2026/27, each season forecast by a fit on the others, the forecast changes matched what happened (forecast 2.1% shorter: 1.6%; forecast 2.1% longer: 2.2%), the direction was right 61.5% of the time when the forecast was 1% or more, and following those forecasts got prices 1.2–2.0% better than always betting early and 0.5–1.2% better than always betting at kick-off, in every season. Value bets forecast to shorten beat the closing price by 6.3% when taken at once and by only 1.4% when left to kick-off. It is advice on timing only: it never changes a probability or what counts as value, because the forecast part of a move turned out to be only about half real information. Every forecast made ${ENGINE.MV_AHEAD} hours or more before kick-off is graded against the last price before kick-off, and the live record shows under each game's price history.</p>
       <p>A second, independent read of each team comes from Elo ratings, updated game by game, with bigger swings for bigger wins (the World Football Elo method). The gap between two teams' Elo is turned into expected goals around the league's own scoring rate and mixed with the model above, in log space. The monthly tuning fits the mix on two past seasons and keeps it only while it lowers the error on the latest completed season, which it never saw. On 19 leagues it did: the model's error fell from 1.712 to 1.709 (1X2 plus over/under log loss, 2025/26). It matters most for games without bookmaker prices, which rest on the model alone; where prices exist, the tuned blend leans mostly or wholly on them (the Lab shows the current share), because over past seasons they have been the sharpest single source.</p>
       <p>A third read is tested too: <b>game-by-game ratings</b>, a Kalman filter in which each side's attack and defence drift a little every day and each result moves them by how surprising it was, weighed by how sure the ratings were. On its own it beat the season-long ratings on 2025/26, but next to Elo it added too little (1.7070 → 1.7063, under the bar of 0.001) and was slightly worse on 2024/25, so it stays off until a monthly check says otherwise.</p>
       <p>National teams in the Nations League and friendlies are rated the same way, from every international result of the last six years. Neutral venues get no home bonus, and friendlies count 60% because line-ups are rotated. Friendly picks lose an extra 3 points and are kept out of the two safest slip tiers.</p>
@@ -8370,7 +8420,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   setInterval(esTick, 10e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) esTick(); });
-  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, render: () => render(), mvShot: (...a) => mvDebugShot(...a), mvPlan: () => mvDebugPlan(), mvClip: (...a) => mvDebugClip(...a), mvProf: (...a) => mvDebugProf(...a), va: (q, v) => ask(q, !!v), vaAnswer: (q) => vaAnswer(q), vaCtx: () => S.va.ctx, vaLive: () => vaLive(), vaEnt: (q) => { const t = vaNorm(q), E = vaEntities(q, t); return JSON.stringify({ found: E.found, amb: E.ambiguous, sh: vaShared().get(t.split(' ')[0]) || null, t }); }, vaReset: () => { S.va.ctx = {}; S.va.msgs = []; }, esStatus, esTick, esRow, esTuple, esPair, esSim, gsRun: () => gsRun(), gsSolve: (...a) => gsSolve(...a), gsRows: (d) => gsRows(d), openMatch: (id) => openMatch(id), fpTime: (id) => { const t = performance.now(); const c = fpPoster(S.byId.get(id)); const t1 = performance.now(); return new Promise((res) => c.toBlob((b) => res([t1 - t, performance.now() - t1, b.size]), 'image/jpeg', 0.92)); }, mvxTime: (n, mode) => { const cv = document.querySelector('canvas.mvx-cv'); const t = performance.now(); for (let i = 0; i < n; i++) { window.__mvxMode = mode; mvxDraw(cv, performance.now()); } cv.getContext('2d').getImageData(0, 0, 1, 1); return (performance.now() - t) / n; }, mvxBench: (id) => { const r = S.byId.get(id), st = mvxState(r); S.mvx.cache.delete(id); let t = performance.now(); const X = mvxSim(r, st); const ts = performance.now() - t; const cv = document.querySelector('canvas.mvx-cv'); t = performance.now(); const D = cv && cv._mvx ? mvxDensity(cv._mvx, X) : null; const td = performance.now() - t; t = performance.now(); if (D) mvxPaint(D, -1, cv._mvx.G); return { sim: ts, dens: td, paint: performance.now() - t }; } };   // for the test scripts
+  if (/[?&]debug\b/.test(location.search)) window.__sp = { S, render: () => render(), open: (id) => openMatch(id), mvShot: (...a) => mvDebugShot(...a), mvPlan: () => mvDebugPlan(), mvClip: (...a) => mvDebugClip(...a), mvProf: (...a) => mvDebugProf(...a), va: (q, v) => ask(q, !!v), vaAnswer: (q) => vaAnswer(q), vaCtx: () => S.va.ctx, vaLive: () => vaLive(), vaEnt: (q) => { const t = vaNorm(q), E = vaEntities(q, t); return JSON.stringify({ found: E.found, amb: E.ambiguous, sh: vaShared().get(t.split(' ')[0]) || null, t }); }, vaReset: () => { S.va.ctx = {}; S.va.msgs = []; }, esStatus, esTick, esRow, esTuple, esPair, esSim, gsRun: () => gsRun(), gsSolve: (...a) => gsSolve(...a), gsRows: (d) => gsRows(d), openMatch: (id) => openMatch(id), fpTime: (id) => { const t = performance.now(); const c = fpPoster(S.byId.get(id)); const t1 = performance.now(); return new Promise((res) => c.toBlob((b) => res([t1 - t, performance.now() - t1, b.size]), 'image/jpeg', 0.92)); }, mvxTime: (n, mode) => { const cv = document.querySelector('canvas.mvx-cv'); const t = performance.now(); for (let i = 0; i < n; i++) { window.__mvxMode = mode; mvxDraw(cv, performance.now()); } cv.getContext('2d').getImageData(0, 0, 1, 1); return (performance.now() - t) / n; }, mvxBench: (id) => { const r = S.byId.get(id), st = mvxState(r); S.mvx.cache.delete(id); let t = performance.now(); const X = mvxSim(r, st); const ts = performance.now() - t; const cv = document.querySelector('canvas.mvx-cv'); t = performance.now(); const D = cv && cv._mvx ? mvxDensity(cv._mvx, X) : null; const td = performance.now() - t; t = performance.now(); if (D) mvxPaint(D, -1, cv._mvx.G); return { sim: ts, dens: td, paint: performance.now() - t }; } };   // for the test scripts
   document.addEventListener('input', (e) => {
     const d = e.target.dataset || {};
     if (d.man) {
@@ -8501,6 +8551,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (h && h.length > 1 && side != null) {
       const o0 = h[0][side + 1], o1 = h[h.length - 1][side + 1];
       if (o0 > 1 && o1 > 1 && Math.abs(o1 / o0 - 1) >= 0.03) out.push(`${side === 1 ? 'The draw' : esc(nmS)}${side === 1 ? '' : "'s"} price has ${o1 < o0 ? 'shortened' : 'drifted'} from ${odds(o0)} to ${odds(o1)} since ${esc(dayLabel(dayKey(Date.parse(h[0][0]))).replace(/^(Today|Yesterday|Tomorrow)$/, (x) => x.toLowerCase()))}${o1 < o0 ? ': money has been coming in.' : '.'}`);
+    }
+    if (t.mv != null && Math.abs(t.mv) >= 0.015) out.push(t.mv < 0
+      ? `Price outlook: Statpad forecasts this price to shorten by about ${mvPct(t.mv)} before kick-off, so if you're backing it, now has usually been the better time.`
+      : `Price outlook: Statpad forecasts this price to drift by about ${mvPct(t.mv)} before kick-off, so waiting has usually got a better price.`);
+    else if (a.outlook) {
+      // the pick has no real price of its own (double chance, team goals): mention the game's biggest forecast move
+      const big = [['H', m.h + "'s"], ['D', 'the draw'], ['A', m.a + "'s"]].map(([k, n]) => [n, a.outlook[k]]).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1]))[0];
+      if (big && Math.abs(big[1]) >= 0.03) out.push(`Price outlook: ${big[0] === 'the draw' ? 'the draw' : esc(big[0])} price is forecast to ${big[1] < 0 ? 'shorten' : 'drift'} about ${mvPct(big[1])} by kick-off (Markets tab).`);
     }
     const tn = m.tn;
     if (tn) {
@@ -11014,6 +11072,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       out.push(T(`The bookmakers say ${pct(mk)}, Statpad's own model ${pct(md)}${Math.abs(mk - md) < 0.04 ? ': they agree.' : md > mk ? ': the model is a little keener.' : ': the model is a little cooler, and the market takes most of the weight.'}`, `Wabeti wanasema ${pct(mk)}, modeli ya Statpad ${pct(md)}${Math.abs(mk - md) < 0.04 ? ': wanakubaliana.' : '.'}`)); }
     else if (!m.mkt && a.src === 'memory') out.push(T("There are no bookmaker prices for this game yet, so I'm reading both sides from the market's memory: the closing prices of their recent games.", 'Bado hakuna bei za wabeti kwa mechi hii, kwa hiyo ninatumia kumbukumbu ya soko: bei za mwisho za mechi zao za karibuni.'));
     else if (!m.mkt) out.push(T('There are no bookmaker prices yet, so this rests on the model alone.', 'Bado hakuna bei za wabeti, kwa hiyo hii inategemea modeli peke yake.'));
+    if (t.mv != null && Math.abs(t.mv) >= 0.015) { const x = `${Math.max(1, Math.round(Math.abs(t.mv) * 100))}%`;
+      out.push(t.mv < 0 ? T(`Price outlook: I expect this price to shorten about ${x} before kick-off, so if you're backing it, now is usually the better time.`, `Mwelekeo wa bei: natarajia bei hii ishuke karibu ${x} kabla ya mechi, kwa hiyo kama unaiunga mkono, sasa kwa kawaida ndio wakati bora.`)
+        : T(`Price outlook: I expect this price to drift about ${x} before kick-off, so waiting usually gets a better price.`, `Mwelekeo wa bei: natarajia bei hii ipande karibu ${x} kabla ya mechi, kwa hiyo kusubiri kwa kawaida kunaleta bei bora.`)); }
     const tn = m.tn; if (tn) { const outs = (s) => ((tn[s] && tn[s].out) || []).filter((x) => x[2] !== 'q'); const oh = outs('h'), oa = outs('a');
       if (oh.length || oa.length) out.push(T(`Missing: ${[oh.length ? `${m.h} ${oh.length} (${oh.slice(0, 2).map((x) => x[0]).join(', ')})` : '', oa.length ? `${m.a} ${oa.length} (${oa.slice(0, 2).map((x) => x[0]).join(', ')})` : ''].filter(Boolean).join('; ')}.`, `Wanaokosekana: ${[oh.length ? `${m.h} ${oh.length}` : '', oa.length ? `${m.a} ${oa.length}` : ''].filter(Boolean).join('; ')}.`)); }
     const why = [];
@@ -11314,6 +11375,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     [/\b(log loss|brier)\b/, ['Log loss and the Brier score measure how good stated chances were: lower is better. Log loss punishes confident misses hardest. The Lab compares Statpad with the bookmakers on both.', 'Log loss na Brier zinapima ubora wa nafasi zilizotajwa: chini ni bora.']],
     [/\b(learned blend|stacking|meta.?model|how much (do you|does statpad) (trust|lean on) (the )?(bookmakers|market|odds))\b/, ['Statpad learns, game by game, how far to lean from the bookmakers\' numbers towards its own model or away from it, by how thin the data is, the time of season, the kind of league and short rest. On past seasons it learned that when the two disagree, leaning slightly further towards the bookmakers is better: their prices move on news the ratings can\'t see. It is only switched on when it beats the plain blend on a season it never saw, and a live check switches it off in any kind of league where it falls behind.', 'Statpad inajifunza, mechi kwa mechi, kiasi cha kutegemea bei za wabeti au modeli yake. Inawashwa tu pale inaposhinda kwenye msimu ambao haijauona.']],
     [/\b(draw correction|dixon.?coles|rho)\b/, ['Every price comes from a grid of scorelines with a correction for low scores (0-0, 1-0, 0-1, 1-1). That correction is now fitted for each league by the monthly tuning, from about −0.07 to −0.20, instead of one value for all, which made the results sharper on seasons the tuning never saw.', 'Kila bei inatoka kwenye jedwali la matokeo lenye marekebisho ya magoli machache, sasa yanayopimwa kwa kila ligi.']],
+    [/\b(price outlook|bet now or wait|now or (later|wait)|should i (bet now|wait)|when to (bet|place (my|a|the) bet)|will the (price|odds) (shorten|drift|go up|go down|change)|best time to bet|mwelekeo wa bei)\b/, ['The price outlook: for every real price, Statpad forecasts where it will be at kick-off, from the gap between the price and the market\'s memory of both sides and from how each side has been playing beyond its prices. ▼ means forecast to shorten, so take it now; ▲ means forecast to drift, so waiting usually pays. On 47,190 past games it got the direction right 6 times in 10 when the forecast was 1% or more, and following it got prices about 1% better than always betting at one time. Value bets marked Bet now beat the closing price by 6.3% taken at once, 1.4% left late. It is timing only: it never changes a chance or what counts as value. Find it in a game\'s Markets tab.', 'Mwelekeo wa bei: kwa kila bei halisi, Statpad inatabiri itakuwa wapi mechi ikianza. ▼ inamaanisha itashuka, kwa hiyo chukua sasa; ▲ itapanda, kwa hiyo kusubiri kwa kawaida kunalipa. Iko kwenye kichupo cha Masoko cha kila mechi.']],
     [/\b(model autopsy|autopsy of the model|where (are|is) (you|statpad) (wrong|off|biased)|bias(es)?|live check|drift)\b/, ['Two checks watch Statpad. The model autopsy groups every chance from the replayed season by market, league, chance band and side and flags any group that landed more than 2.5 standard errors away from what was stated. The live check compares Statpad with the bookmakers on games graded since the last tuning. Both are in the Lab.', 'Ukaguzi wa modeli na ukaguzi wa moja kwa moja vinaangalia makosa ya kimfumo; vyote viko kwenye Lab.']],
     [/\b(elo)\b/, ['Elo ratings move after every result (more for bigger wins). Statpad mixes an Elo view into expected goals only when the monthly tuning shows it predicts better on a season it never saw.', 'Viwango vya Elo vinabadilika baada ya kila matokeo. Statpad inavichanganya pale tu vinapoboresha utabiri.']],
     [/\b(how (do|does) (you|statpad) (predict|work|make)|where do (your|the) (numbers|predictions) come from|how are (the )?predictions made|mnatabiri vipi|inafanya kazi vipi)\b/, ['Statpad rates every team\'s attack and defence from results and shots on target (recent games count most), turns that into expected goals and a grid of every scoreline, then blends it with the bookmakers\' prices, which carry most of the weight. Every market\'s chance comes from that grid, and a tuning checks the settings on past seasons.', 'Statpad inakadiria mashambulizi na ulinzi wa kila timu kutoka matokeo, inazigeuza kuwa magoli yanayotarajiwa na jedwali la matokeo yote, kisha inachanganya na bei za wabeti.']],

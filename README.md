@@ -53,6 +53,10 @@ Quarter Kelly grows almost as fast as flat staking with half the falls; full Kel
 
 **Research log.** Lab → Accuracy lists the ideas tested for this version on games the model never saw, kept or off, with the numbers (log loss is home, draw and away plus over/under 2.5 a game, lower is better):
 
+- **Price outlook (bet now or wait): kept** (above).
+- **Value measured against the forecast closing price: off.** Value bets that also held up against the forecast close beat the close by 5.7%, the rest by −0.7%. But moving a price all the way to its forecast close didn't predict results better (half way: +0.00025 a game; all the way: +0.00026, and ≤ 0 in 2023–27), and those bets lost money in 2023–27. A close you can see coming is not the same as value, so the forecast changes timing only.
+- **Playing well beyond the price, for predictions: off.** Shots, shots on target and corners beyond what each side's prices expected didn't predict goals beyond the next early price (−0.00003 a game on 8,421 unseen games). They do move prices, which is what the outlook uses.
+- **Goals for games priced on 1X2 alone: off.** 42% of priced games have no over/under price. Hiding the over/under where there was one: adding the real one back gained 0.0001 a game on 2025/26 and the memory's goals level 0.0005 (within luck). The draw price already says almost everything about goals, so the over/under feed (which doubles the odds credits) isn't needed for accuracy.
 - **Market memory: kept** (above).
 - **Market memory blended into priced games: off.** Weight 0.05, gain 0.00003 a game.
 - **Price momentum: off.** Whether the move from the early price to the closing price carries on past the close: on 8,839 unseen games, gain +0.00001 (95% range −0.0003 to +0.0003). The market finishes its moves.
@@ -107,6 +111,19 @@ On 2025/26, which it never saw:
 | The game's own early bookmaker price | 1.6825 |
 
 So the memory gets 86% of the way from the ratings to the market without seeing the game's own price, and it is as well calibrated as a price (favourites it gave 55%, 64% and 78% won 55%, 66% and 79% of the time; the goal ratings were off by up to 6 points). On six extra leagues where football-data has only 1X2 closing prices (Norway, Sweden, Brazil, USA, Japan, Denmark; 7,409 games) it closed 84% of the gap. It also ages well: frozen 60 days before each game, it still beat goal ratings made the day before (1.7023 against 1.7103), so the season simulator and What's at stake use it for every game left to play. Memory-priced games show a **Market memory** badge in place of **Model only**, have no safety haircut (they don't need one), and a spread between a market's and the model's. Where a game has a real price, nothing changes: blended with the price, the memory added nothing (fitted weight 0.05, a gain of 0.00003).
+
+**Price outlook: bet now or wait.** Prices move between the first quote and kick-off, and part of that move can be seen coming: the market drifts about a fifth of the way back towards its own memory of both sides, and towards sides that have been playing better than their prices expected (shots on target, shots, corners and goals for minus against, less what each game's closing price implied, over the last 120 days with a game a month old counting half). Statpad forecasts where each real price will be at kick-off and marks it in a game's Markets tab: ▼ forecast to shorten (take it now), ▲ forecast to drift (waiting usually pays). Value bets get a **Bet now** or **No rush** tag, and the match story says so when the top pick's price is forecast to move 1.5% or more. Fitted on 47,190 league games from 2019/20 to 2026/27 (football-data's early average price against its closing average price), each season forecast by a fit on the others:
+
+| Forecast price change | Actual change (average) |
+|---|---|
+| shorter by 6% or more (average 8.6%) | 5.4% shorter |
+| 3–6% shorter (4.0%) | 2.7% shorter |
+| 1.5–3% shorter (2.1%) | 1.6% shorter |
+| 1.5–3% longer (2.1%) | 2.2% longer |
+| 3–6% longer (4.1%) | 3.9% longer |
+| 6% or more longer (8.5%) | 6.3% longer |
+
+The shown forecast is shrunk at the extremes to match (forecast − 3.5 × forecast × |forecast|). The direction was right 61.5% of the time when the forecast was 1% or more (57% of selections) and 66% at 3% or more. Where the forecast was 1% or more, following it (early when forecast to shorten, at kick-off when forecast to drift) got prices 1.2–2.0% better than always betting early and 0.5–1.2% better than always betting at kick-off, in every one of the eight seasons, for home, draw, away, over and under alike. Value bets forecast to shorten beat the closing price by 6.3% when taken at once and by 1.4% when left to kick-off; those forecast to drift did about the same either way (+1.2%). It is shown from 6 hours before kick-off, for league games with a market memory. It is timing advice only: it never changes a chance or what counts as value. Every forecast is graded live (the first one made 6 hours or more before kick-off against the last price Statpad saw before kick-off), and the record shows under each game's price history once 30 are in.
 
 **Game-by-game ratings (tested, off for now).** A Kalman filter: each side's attack and defence drift a little every day, and each result moves them by how surprising it was, weighed by how sure they were. On its own it beat the season-long ratings on 2025/26, but next to Elo it added too little (1.7070 → 1.7063, under the bar of 0.001) and nothing on 2024/25, so the monthly check keeps it off until that changes.
 

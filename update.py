@@ -1004,9 +1004,10 @@ def build_table(games):
 # ----------------------------------------------------------------------------------------------
 # Step 1: results -> tables + ratings
 # ----------------------------------------------------------------------------------------------
-def mem_take(lk, d, h, a, row, cols1, cols_ou):
+def mem_take(lk, d, h, a, row, cols1, cols_ou, stats=None):
     """Keep a finished game's closing price for the market memory: the first full set of 1X2 prices among
-    cols1 (closing, then the early ones), and over/under 2.5 from cols_ou where there is one."""
+    cols1 (closing, then the early ones), and over/under 2.5 from cols_ou where there is one. stats: the game's
+    goals, shots, shots on target and corners (home, away each), for the price outlook's form."""
     if not d or (NOW - d).days > MEM_WINDOW:
         return
     for c3 in cols1:
@@ -1022,7 +1023,7 @@ def mem_take(lk, d, h, a, row, cols1, cols_ou):
             pO = demargin(ou)[0]
             break
     p = demargin(o)
-    MEM_FD.setdefault(lk, []).append((d.strftime('%Y-%m-%d'), h, a, p[0], p[2], pO))
+    MEM_FD.setdefault(lk, []).append((d.strftime('%Y-%m-%d'), h, a, p[0], p[2], pO, stats))
 
 
 def load_results():
@@ -1053,7 +1054,8 @@ def load_results():
                 if d and h and a and hg is not None and ag is not None:
                     games.append((d, h, a, int(hg), int(ag), cur, hst, ast, xg_for(lk, d, h, a)))
                     mem_take(lk, d, h, a, row, (('AvgCH', 'AvgCD', 'AvgCA'), ('PSCH', 'PSCD', 'PSCA'), ('AvgH', 'AvgD', 'AvgA')),
-                             (('AvgC>2.5', 'AvgC<2.5'), ('PC>2.5', 'PC<2.5'), ('Avg>2.5', 'Avg<2.5')))
+                             (('AvgC>2.5', 'AvgC<2.5'), ('PC>2.5', 'PC<2.5'), ('Avg>2.5', 'Avg<2.5')),
+                             (int(hg), int(ag), fnum(col(row, 'HS')), fnum(col(row, 'AS')), hst, ast, fnum(col(row, 'HC')), fnum(col(row, 'AC'))))
         if games:
             out[lk] = (games, season_label)
         else:
@@ -4251,6 +4253,7 @@ def build(state, prev, seed=None):
     matches = []
     seen = set()
     mem_obs = []
+    mm_by_mid = {}
     for f in sorted(fx, key=lambda f: (f['ko'], f['lk'], f['h'])):
         ko = parse_iso(f['ko'])
         mid = f"{f['lk']}-{ko:%Y%m%d}-{slug(f['h'])}-{slug(f['a'])}"
@@ -4317,6 +4320,7 @@ def build(state, prev, seed=None):
             matches[-1]['tn'] = news
         if mm:
             matches[-1]['mm'] = mm   # the market's memory of both sides: priced from it when there's no bookmaker price
+            mm_by_mid[mid] = mm
         if ls:
             matches[-1]['ls'] = ls
         if MODEL_W and not knockout(f['lk']) and not cross and not (mkt and (mkt.get('n') or 0) == 1):
@@ -4350,6 +4354,18 @@ def build(state, prev, seed=None):
         n_mem = 0
     if n_mem:
         log('market memory: latest prices of', n_mem, 'coming games kept')
+    try:
+        mvs = outlook(state, mem_obs, mm_by_mid)
+        fl = {}
+        for m in matches:
+            if m['id'] in mvs:
+                mv, fh, fa = mvs[m['id']]
+                m['mv'] = mv   # where this price is forecast to be at kick-off (the engine turns it into each selection's)
+                fl[m['id']] = mv_change(None, fh, fa, mv)
+        n_gr = mv_track(state, matches, fl)
+        log('price outlook:', len(mvs), 'games', f'({sum(1 for v in mvs.values() if len(v[0]) == 2)} forecast),', n_gr, 'selections graded')
+    except Exception as e:
+        log('price outlook: skipped', repr(e)[:160])
     if carried:
         log('kept', len(carried), 'earlier fixtures for', len({m['lk'] for m in carried}), 'competitions with no fresh fixtures')
         matches.extend(carried)
@@ -4386,6 +4402,8 @@ def build(state, prev, seed=None):
                  'plan': {k: v for k, v in (state.get('odds_plan') or {}).items() if k in ('iv', 'tiers', 'scale')} or None},
         'leagues': out_leagues,
         'matches': matches,
+        # the price outlook's live record: forecasts of 1%+ graded against the last price before kick-off
+        'mvrec': dict(state.get('mvrec') or {}, ahead=MV_AHEAD) if (state.get('mvrec') or {}).get('n') else {'n': 0, 'ahead': MV_AHEAD},
     }
 
 
@@ -5468,17 +5486,19 @@ MEM_RIDGE = 0.05       # pull towards the league average, per 100 games' worth o
 MEM_WINDOW = 420       # days of prices kept
 MEM_NEW = 0.12         # a side with no priced game in the window starts this much below average, in attack and defence
 MEM_MIN = 30           # priced games a league needs before its memory is used
-MEM_FD = {}            # league -> [(date, home, away, pH, pA, pO)] from the results files, refilled on each load
+MEM_FD = {}            # league -> [(date, home, away, pH, pA, pO, stats)] from the results files, refilled on each load
 
 
 def mem_rows(np):
-    """Expected goals for every collected closing price, by league: [date, home, away, lh, la]."""
+    """Expected goals for every collected closing price, by league: [date, home, away, lh, la], followed where
+    football-data has them by the game's goals, shots, shots on target and corners: [hg, ag, hs, as, hst, ast, hc, ac]."""
     out = {}
     for lk, rows in MEM_FD.items():
         if not rows:
             continue
         lh, la = fit_market_np(np, [r[3] for r in rows], [r[4] for r in rows], [r[5] for r in rows], rho_for(lk))
-        out[lk] = [[r[0], r[1], r[2], round(float(x), 3), round(float(y), 3)] for r, x, y in zip(rows, lh, la)]
+        out[lk] = [[r[0], r[1], r[2], round(float(x), 3), round(float(y), 3)] + (list(r[6]) if len(r) > 6 and r[6] else [])
+                   for r, x, y in zip(rows, lh, la)]
     return out
 
 
@@ -5557,7 +5577,12 @@ def refresh_mem(state):
             out[lk] = f
     state['mem'] = out
     state['mem_at'] = iso(NOW)
-    return f"{len(out)} leagues, {sum(f['n'] for f in out.values())} priced games"
+    try:
+        n_form = move_form(state)
+    except Exception as e:
+        log('price outlook: form not worked out', repr(e)[:160])
+        n_form = 0
+    return f"{len(out)} leagues, {sum(f['n'] for f in out.values())} priced games; form for {n_form} sides"
 
 
 def mem_record(state, obs):
@@ -5578,6 +5603,167 @@ def mem_record(state, obs):
         if not pm[lk]:
             del pm[lk]
     return len(obs)
+
+
+# ----------------------------------------------------------------------------------------------
+# Price outlook. Where will this price be at kick-off? Two things known days before a game move its price before
+# kick-off: the gap between the price and the market's memory of both sides (the market drifts about a fifth of
+# the way back towards its own memory), and how each side has been playing beyond what its prices expected:
+# shots on target, shots, corners and goals for minus against, each less what the closing price of that game
+# implied for it, averaged over the last 120 days with a game a month old counting half. Fitted on 47,190 league
+# games (2019/20-2026/27, early average price to closing average price) and checked season by season, each one
+# predicted by a fit on the others: the forecast price change matched what happened (forecast 2.1% shorter: 1.6%
+# shorter; forecast 2.1% longer: 2.2% longer), the direction was right 61.5% of the time when the forecast was 1%
+# or more, and for those, taking a price early when it was forecast to shorten and late when forecast to drift got
+# 1.2-2.0% better prices than always betting early, and 0.5-1.2% better than always betting at kick-off, in every
+# season. Value bets forecast to shorten beat the closing price by 6.3% when taken at once and by 1.4% when left
+# to kick-off. It is timing advice only: measuring value against the forecast close instead of today's price found
+# more bets that beat the close but did not win more (the forecast part of a move is only about half information).
+# ----------------------------------------------------------------------------------------------
+MV_TAU = 30.0          # days for a game's weight in a side's form to halve
+MV_DAYS = 120          # days of games in a side's form
+MV_SHRINK = 2.0        # form is pulled towards nothing by this many games' worth of weight
+MV_MIN_GAMES = 3       # games a side needs in the window to have a form
+MV_STATS = ((9, 10), (7, 8), (11, 12), (5, 6))   # mem_fd columns: shots on target, shots, corners, goals (home, away)
+# [constant, memory gap in log supremacy, memory gap in log total goals, shots on target, shots, corners, goals]
+MV_FULL = ((0.0003, 0.20823, -0.04494, 0.00554, 0.00651, 0.00564, 0.02373),       # -> move in log supremacy
+           (-0.00373, -0.00741, 0.32269, 0.00036, 0.00005, 0.00012, -0.00093))    # -> move in log total goals
+MV_MEM = ((-0.00035, 0.12843, -0.04143), (-0.00414, -0.00751, 0.30814))         # leagues without match stats
+
+
+def move_form(state):
+    """Each side's form against its prices, by league: {team: [shots on target, shots, corners, goals]}, each the
+    weighted average of (for - against) less what that game's closing price implied, or None when too few games."""
+    today = NOW.toordinal()
+    out = {}
+    for lk, rows in (state.get('mem_fd') or {}).items():
+        use = []
+        for r in rows:
+            if len(r) < 13 or not (r[3] > 0 and r[4] > 0):
+                continue
+            try:
+                age = today - datetime.strptime(r[0][:10], '%Y-%m-%d').toordinal()
+            except ValueError:
+                continue
+            if age > 0:
+                use.append((age, r))
+        if len(use) < 50:
+            continue
+        form = {}
+        for k, (ih, ia) in enumerate(MV_STATS):
+            have = [(age, r) for age, r in use if r[ih] is not None and r[ia] is not None]
+            if len(have) < 50:
+                continue
+            # what a side's expected goals say about this stat: stat = a + b * expected goals (both sides of every game)
+            xs = [r[3] for _, r in have] + [r[4] for _, r in have]; ys = [r[ih] for _, r in have] + [r[ia] for _, r in have]
+            mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
+            vx = sum((x - mx) ** 2 for x in xs)
+            if vx <= 0:
+                continue
+            b = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / vx; a = my - b * mx
+            acc = {}
+            for age, r in have:
+                if age > MV_DAYS:
+                    continue
+                dom = (r[ih] - (a + b * r[3])) - (r[ia] - (a + b * r[4]))
+                w = 0.5 ** (age / MV_TAU)
+                for tm, sg in ((r[1], 1), (r[2], -1)):
+                    t = acc.setdefault(tm, [0.0, 0.0, 0])
+                    t[0] += w * sg * dom; t[1] += w; t[2] += 1
+            for tm, (sx, sw, n) in acc.items():
+                f = form.setdefault(tm, [None] * len(MV_STATS))
+                if n >= MV_MIN_GAMES:
+                    f[k] = round(sx / (sw + MV_SHRINK), 3)
+        if form:
+            out[lk] = form
+    state['mvf'] = out
+    return sum(len(f) for f in out.values())
+
+
+def outlook(state, obs, mm_by_mid):
+    """The forecast move of each priced league game's price by kick-off: {match id: ([log supremacy, log total
+    goals], the price's home and away expected goals)}.
+    obs as for mem_record: (league, id, kick-off, home, away, pH, pA, pO)."""
+    np = numpy_lib(False)
+    if np is None or not obs:
+        return {}
+    use = [o for o in obs if mm_by_mid.get(o[1])]
+    if not use:
+        return {}
+    lh, la = fit_market_np(np, [o[5] for o in use], [o[6] for o in use], [o[7] for o in use], RHO_DC)
+    forms = state.get('mvf') or {}
+    out = {}
+    for o, fh, fa in zip(use, lh, la):
+        fh, fa = float(fh), float(fa)
+        mh, ma = mm_by_mid[o[1]]
+        if not (fh > 0 and fa > 0 and mh > 0 and ma > 0):
+            continue
+        f = [math.log(mh / ma) - math.log(fh / fa), math.log(mh * ma) - math.log(fh * fa)]
+        fm = forms.get(o[0]) or {}
+        th, ta = fm.get(o[3]), fm.get(o[4])
+        if th and ta and None not in th and None not in ta:
+            f += [x - y for x, y in zip(th, ta)]
+            bs, bt = MV_FULL
+        else:
+            bs, bt = MV_MEM
+        ps = bs[0] + sum(b * x for b, x in zip(bs[1:], f)); pt = bt[0] + sum(b * x for b, x in zip(bt[1:], f))
+        out[o[1]] = ([round(max(-0.5, min(0.5, ps)), 4), round(max(-0.5, min(0.5, pt)), 4)], fh, fa)
+    return out
+
+
+def mv_change(p0, lh, la, mv):
+    """Forecast price change of home, draw, away, over 2.5 and under 2.5 (negative: shorter), as the engine shows it."""
+    q0 = dc_probs(lh, la)
+    q1 = dc_probs(lh * math.exp(mv[0] / 2 + mv[1] / 2), la * math.exp(-mv[0] / 2 + mv[1] / 2))
+    out = []
+    for a, b in zip(list(q0[:3]) + [q0[3], 1 - q0[3]], list(q1[:3]) + [q1[3], 1 - q1[3]]):
+        c = a / b - 1 if b > 0 else 0.0
+        out.append(round(max(-0.15, min(0.15, c - 3.5 * c * abs(c))), 4))
+    return out
+
+
+MV_AHEAD = 6           # hours before kick-off from which the outlook is shown and recorded
+
+
+def mv_track(state, matches, fl):
+    """Grade the price outlook live: the first forecast made at least MV_AHEAD hours before kick-off against the
+    last price Statpad saw before kick-off. Running totals in state['mvrec']."""
+    log_ = state.setdefault('mvlog', {})
+    rec = state.setdefault('mvrec', {'n': 0, 'hit': 0, 'gain': 0.0, 'since': iso(NOW)[:10]})
+    for m in matches:
+        mk = m.get('mkt') or {}
+        p = mk.get('p')
+        if not p or len(p) != 3 or mk.get('ext'):
+            continue
+        ou = mk.get('ou') or {}
+        pO = ou.get('pO') if ou.get('line', 2.5) == 2.5 and ou.get('pO') else None
+        ko = parse_iso(m['ko'])
+        cur = [p[0], p[1], p[2], pO]
+        e = log_.get(m['id'])
+        if e is None:
+            if fl.get(m['id']) and (ko - NOW).total_seconds() >= MV_AHEAD * 3600:
+                log_[m['id']] = {'ko': m['ko'], 'p0': cur, 'f': fl[m['id']], 'pl': cur}
+        elif ko > NOW:
+            e['pl'] = cur
+    graded = 0
+    for mid in list(log_):
+        e = log_[mid]
+        if parse_iso(e['ko']) > NOW:
+            continue
+        p0, pl, f = e['p0'], e['pl'], e['f']
+        pairs = [(p0[0], pl[0], f[0]), (p0[1], pl[1], f[1]), (p0[2], pl[2], f[2])]
+        if p0[3] and pl[3]:
+            pairs += [(p0[3], pl[3], f[3]), (1 - p0[3], 1 - pl[3], f[4])]
+        for a, b, fc in pairs:
+            if abs(fc) < 0.01 or not (a > 0 and b > 0) or abs(a - b) < 1e-6:
+                continue   # no forecast to speak of, or no new price seen before kick-off
+            ch = a / b - 1   # the change in the fair price, first sight to the last before kick-off
+            rec['n'] += 1
+            rec['hit'] += 1 if ch * fc > 0 else 0
+            rec['gain'] += (b / a - 1) if fc < 0 else ch   # following the advice, against doing the opposite
+            graded += 1
+        del log_[mid]
+    return graded
 
 
 # ----------------------------------------------------------------------------------------------
