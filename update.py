@@ -4277,9 +4277,12 @@ def build(state, prev, seed=None):
         ph = pos.get((f['lk'], f['h']))
         pa = pos.get((f['lk'], f['a']))
         dom_h = dom_a = None
+        cup_sides = None
         if is_cup(f['lk']):
             gh, ga = teams.resolve_global(f['h'], pool_=pool(f['lk'])), teams.resolve_global(f['a'], pool_=pool(f['lk']))
             dom_h, dom_a = (gh[0] if gh else None), (ga[0] if ga else None)
+            if gh and ga:
+                cup_sides = (gh[0], gh[1], ga[0], ga[1])
             ph = pos.get((dom_h, f['h'])) if dom_h else None
             pa = pos.get((dom_a, f['a'])) if dom_a else None
         clash = bool(ph and pa and ph[0] <= 6 and pa[0] <= 6 and ph[1] >= 10 and pa[1] >= 10)
@@ -4304,6 +4307,9 @@ def build(state, prev, seed=None):
             ls = None
         news = team_news_for(state, mid, f['lk'], ko, f['h'], f['a'])
         mm = None
+        mm_extra = {}
+        if cup_sides and L[f['lk']]['group'] != 'intl':
+            mm, mm_extra = cup_mem(state, *cup_sides)
         if not is_cup(f['lk']) and L[f['lk']]['group'] != 'intl':
             mm = mem_goals((state.get('mem') or {}).get(f['lk']), f['h'], f['a'])
             if mkt and mkt.get('p') and len(mkt['p']) == 3 and not mkt.get('ext'):
@@ -4320,8 +4326,11 @@ def build(state, prev, seed=None):
             matches[-1]['tn'] = news
         if mm:
             matches[-1]['mm'] = mm   # the market's memory of both sides: priced from it when there's no bookmaker price
-            matches[-1].update(mem_extra(f['lk'], state['mem'][f['lk']], f['h'], f['a']))
-            mm_by_mid[mid] = mm
+            if mm_extra:
+                matches[-1].update(mm_extra)   # a cup game: both sides' league memories
+            else:
+                matches[-1].update(mem_extra(f['lk'], state['mem'][f['lk']], f['h'], f['a']))
+                mm_by_mid[mid] = mm
         if ls:
             matches[-1]['ls'] = ls
         if MODEL_W and not knockout(f['lk']) and not cross and not (mkt and (mkt.get('n') or 0) == 1):
@@ -4344,11 +4353,22 @@ def build(state, prev, seed=None):
         mem = (state.get('mem') or {}).get(m['lk'])   # carried games carry display names: look the memory up by them
         rev = {disp(m['lk'], tm): tm for tm in mem['t']} if mem else {}
         mm = mem_goals(mem, rev.get(m['h'], m['h']), rev.get(m['a'], m['a'])) if mem and not is_cup(m['lk']) and L[m['lk']]['group'] != 'intl' else None
-        if mm:
+        cx = {}
+        if is_cup(m['lk']) and L[m['lk']]['group'] != 'intl' and m.get('dh') and m.get('da'):
+            mh_, ma_ = (state.get('mem') or {}).get(m['dh']), (state.get('mem') or {}).get(m['da'])
+            if mh_ and ma_:
+                rh_ = {disp(m['dh'], tm): tm for tm in mh_['t']}; ra_ = {disp(m['da'], tm): tm for tm in ma_['t']}
+                mm, cx = cup_mem(state, m['dh'], rh_.get(m['h'], m['h']), m['da'], ra_.get(m['a'], m['a']))
+        if mm and cx:
+            m['mm'] = mm
+            for k in ('mn', 'mmo', 'xm'):
+                m.pop(k, None)
+            m.update(cx)
+        elif mm:
             m['mm'] = mm
             m.update(mem_extra(m['lk'], mem, rev.get(m['h'], m['h']), rev.get(m['a'], m['a'])))
         else:
-            for k in ('mm', 'mn', 'mmo'):
+            for k in ('mm', 'mn', 'mmo', 'xm'):
                 m.pop(k, None)
     try:
         n_mem = mem_record(state, mem_obs)
@@ -5560,6 +5580,31 @@ def mem_extra(lk, mem, h, a):
     if L[lk].get('fd'):
         out['mmo'] = 1
     return out
+
+
+# Cup and European games: each side's market memory in its own league, plus a league-strength offset and a cup home
+# advantage, both fitted (Poisson, pulled towards the hand-set strengths) on 2,623 cup games from ESPN 2021-2026 whose
+# two sides both play in a rated league. On 1,445 games from July 2024 on, fitted only on the earlier ones, this read
+# the 90-minute result with log loss 0.9928 a game where goal-based ratings with the hand-set strengths managed 1.0144,
+# and over/under 2.5 with 0.6533 against 0.6900. The hand-set strengths overrated the lower divisions.
+CUP_MEM = {"home": 0.229, "goals": 0.046, "s": {"BEL": -0.453, "BUN": 0.011, "DEN1": -0.548, "ENG2": -0.771, "ENG3": -0.971, "ENG4": -1.381, "EPL": 0.0, "ERE": -0.599, "ESP2": -0.667, "FRA2": -0.621, "GER2": -0.65, "GRE1": -0.862, "ITA2": -0.746, "L1": -0.146, "LaLiga": -0.012, "NOR1": -0.627, "POR": -0.562, "SA": -0.087, "SCO1": -0.904, "SCO2": -1.158, "SWE1": -0.799, "TUR1": -0.64}}
+
+
+def cup_mem(state, dh, th, da, ta):
+    """Expected goals for a cup game from both sides' league memories, or (None, {}) when either side is missing."""
+    mems = state.get('mem') or {}
+    mh, ma = mems.get(dh), mems.get(da)
+    rh, ra = (mh or {}).get('t', {}).get(th), (ma or {}).get('t', {}).get(ta)
+    if not rh or not ra:
+        return None, {}
+    sh, sa = CUP_MEM['s'].get(dh, L[dh]['strength']), CUP_MEM['s'].get(da, L[da]['strength'])
+    mu = (mh['mu'] + ma['mu']) / 2 + CUP_MEM['goals']
+    lh = math.exp(mu + CUP_MEM['home'] + rh[0] - ra[1] + (sh - sa) / 2)
+    la = math.exp(mu + ra[0] - rh[1] + (sa - sh) / 2)
+    extra = {'mn': [rh[2], ra[2]], 'xm': 1}   # xm: across leagues, so a little less sure
+    if L[dh].get('fd') and L[da].get('fd'):
+        extra['mmo'] = 1
+    return [round(lh, 4), round(la, 4)], extra
 
 
 def refresh_mem(state):

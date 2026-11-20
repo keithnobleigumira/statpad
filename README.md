@@ -53,6 +53,10 @@ Quarter Kelly grows almost as fast as flat staking with half the falls; full Kel
 
 **Research log.** Lab → Accuracy lists the ideas tested for this version on games the model never saw, kept or off, with the numbers (log loss is home, draw and away plus over/under 2.5 a game, lower is better):
 
+- **Market memory for cup and European games, with fitted league strengths: kept** (above).
+- **Promoted and relegated sides starting from their old league: off.** A side new to a league started from its memory in the league it left, moved onto the new scale with the cup-fitted strengths: on the first 10 games of moved sides (2,850 games) the gain was −0.0001 (95% range −0.0035 to +0.0031). The memory learns a new side from its first priced games anyway.
+- **More weight on Pinnacle in the consensus: off.** Pinnacle alone read results very slightly better than the consensus weighting (+0.00015 a game on early prices 2023/24–2026/27, 95% range −0.00013 to +0.00038): within luck.
+- **Goals level from the memory in cup games: not used.** Tested on league prices only; cup games with a 1X2-only price keep the price's goals.
 - **Goals from the market's memory where there's no over/under price: kept** (above).
 - **Memory spread by recent data: kept** (above).
 - **Memory moving supremacy in priced games, Pinnacle-first memory, a home advantage per side: off** (above).
@@ -127,6 +131,17 @@ So the memory gets 86% of the way from the ratings to the market without seeing 
 | 6% or more longer (8.5%) | 6.3% longer |
 
 The shown forecast is shrunk at the extremes to match (forecast − 3.5 × forecast × |forecast|). The direction was right 61.5% of the time when the forecast was 1% or more (57% of selections) and 66% at 3% or more. Where the forecast was 1% or more, following it (early when forecast to shorten, at kick-off when forecast to drift) got prices 1.2–2.0% better than always betting early and 0.5–1.2% better than always betting at kick-off, in every one of the eight seasons, for home, draw, away, over and under alike. Value bets forecast to shorten beat the closing price by 6.3% when taken at once and by 1.4% when left to kick-off; those forecast to drift did about the same either way (+1.2%). It is shown from 6 hours before kick-off, for league games with a market memory. It is timing advice only: it never changes a chance or what counts as value. Every forecast is graded live (the first one made 6 hours or more before kick-off against the last price Statpad saw before kick-off), and the record shows under each game's price history once 30 are in.
+
+**Cup and European games from the market's memory.** A cup game with no price yet is priced from each side's market memory in its own league, plus a league-strength offset and a cup home advantage. Those were fitted (Poisson, pulled towards the old hand-set strengths) on the 2,623 cup and European games from ESPN, 2021–2026, whose two sides both play in a league Statpad rates and which ended in 90 minutes. On the 1,445 games from July 2024 on, fitted only on the earlier ones (90-minute result; a game that went to extra time counts as a draw):
+
+| Cup and European games, July 2024 on | 1X2 log loss | Over/under 2.5 |
+|---|---|---|
+| Goal-based ratings + hand-set strengths (as before) | 1.0144 | 0.6900 |
+| Goal-based ratings + fitted strengths | 1.0113 | 0.6842 |
+| Market memory + hand-set strengths | 1.0053 | 0.6610 |
+| **Market memory + fitted strengths** | **0.9928** | **0.6533** |
+
+The gain is +0.022 a game on 1X2 (95% range +0.006 to +0.037) and +0.037 on over/under (+0.019 to +0.054). The fitted cup home advantage is 0.23 in log goals and cup games have 4.6% more goals than the two leagues' averages. The hand-set strengths overrated the lower divisions: in log goals below the Premier League, the Championship is 0.77 (hand-set 0.45), League One 0.97 (0.75), League Two 1.38 (0.95), the Scottish Premiership 0.90 (0.50); the Bundesliga, La Liga and Serie A come out level with the Premier League within 0.09. Across leagues the memory was a couple of points too sure of favourites (stated 60%, won 56%; stated 69%, won 67%), so these games keep the cross-league safety haircut (2 points) and a wider spread. Leagues with no cross-league cup games in the data keep their hand-set strength. The strengths are fixed in update.py (`CUP_MEM`).
 
 **Goals from the market's memory, where there's no over/under price.** About 42% of priced games have only home, draw and away prices, and those read the goals level from the draw price, which is weak. For them the engine keeps the price's supremacy (who is stronger) and blends the goals level with the market memory's: its share of log total goals is 50% for a price from many bookmakers and 65% for one to three (ESPN's single feed counts as one), or 35% and 60% where the league's memory was itself built from 1X2 prices alone (the extra leagues). Statpad's own model is no longer blended into these games: with the memory in, its fitted weight was 0.
 
