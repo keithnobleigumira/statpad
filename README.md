@@ -59,6 +59,7 @@ Quarter Kelly grows almost as fast as flat staking with half the falls; full Kel
 - **African leagues: kept** (above), with fixtures and new results from API-Football since ESPN stopped; Zambia left out.
 - **A draw correction for each African league from its own results: off** (above).
 - **CAF Champions League and Confederation Cup, club and country strengths: kept** (above).
+- **Sixteen European leagues from Wikipedia, ESPN and OpenLigaDB: kept** (above); Belgium's, Poland's, Portugal's and Austria's second tiers and Spain's, Italy's and France's third tiers: off.
 - **Ratings for European clubs from leagues Statpad doesn't rate: kept** (above).
 - **Dropping kinds of value bet that never beat the close: nothing to drop.** By league, selection and price range on 2019/20–2022/23, every kind of value bet beat the closing price on average. On 2023/24–2026/27 bigger edges beat the close by more: 3–5% edges +2.7%, 5–8% +4.6%, 8–12% +10.7%, 12–25% +18.4% (535 bets).
 - **Team draw tendencies: off.** How much more or less often the market prices a side's games as draws than its expected goals imply, added to memory-priced games: +0.00013 a game (95% range −0.00003 to +0.00028).
@@ -197,6 +198,44 @@ Would last season's ratings still help, starting this late? Replayed on 2025/26:
 | Nigeria | 115 | +0.030 (+0.002 to +0.059) |
 | Ghana | 100 | −0.003 (−0.036 to +0.037) |
 | South Africa First Division | 42 | −0.021 (−0.098 to +0.052) |
+
+**Sixteen more European leagues, at no cost in API calls.** None of Statpad's price feeds covers these, and the free plans can't backfill their history, so each comes from a free source that can:
+
+| Source | Leagues | What it gives |
+|---|---|---|
+| Wikipedia season articles (`wk=`) | Czech First League `CZE1`, Serbian SuperLiga `SRB1`, SuperSport HNL `CRO1`, Ukrainian Premier League `UKR1`, NB I `HUN1`, Israeli Premier League `ISR1`, Cypriot First Division `CYP1`, Bulgarian First League `BUL1`, Slovak First League `SVK1`, Slovenian PrvaLiga `SVN1`, TFF 1. Lig `TUR2`, Challenge League `SUI2`, Super League 2 `GRE2` | this season's results so far and last season's, from each article's results matrix (read through Wikipedia's page cache, not its rate-limited API: 13 reads every 8 hours, 13 more once a season) |
+| API-Football's day lists (already downloaded for team news) | the 13 above | fixtures a day or two ahead with kick-off times, and new results; which API-Football league is which is learned from games between clubs Wikipedia lists, and its names are paired with Wikipedia's within each league's own club list (most alike first, the last one left by elimination; *FK Crvena Zvezda* = Red Star Belgrade). A game whose clubs aren't paired yet waits rather than being guessed |
+| ESPN (`es=`, as before) | Russian Premier League `RUS1`, National League `ENG5` | fixtures, dated results; DraftKings 1X2 and over/under prices for the National League |
+| OpenLigaDB (`ol=`, free and open, no key) | 3. Liga `GER3` | the whole season's fixtures with kick-off times, and results (2 calls every 2 hours) |
+
+Is Wikipedia right? Its 2025/26 matrices against football-data (Ekstraklasa, Austrian Bundesliga, Swiss Super League, Danish Superliga), ESPN (Russia, National League) and OpenLigaDB (3. Liga): 1,656 of 1,659 games the same. Do missing dates matter? Replayed from 20 Nov 2025 on 15 leagues with true dates, with everything before that given one date a season: −0.0006 a game (95% −0.0012 to +0.0001), nothing. A game in both API-Football's lists and Wikipedia's matrix counts once (the dated copy).
+
+Do the ratings help? Log loss gain a game against every side average on 2025/26 (`exp14/wk_eval.py`): A, ratings from 2024/25 alone for every 2025/26 game (promoted clubs: the newcomer prior); B, 2024/25 plus a random 40% of 2025/26 for the other 60% (three draws; it uses some later games, so read it as a guide).
+
+| League | A season ahead (95%) | B mid-season |
+|---|---|---|
+| Czech First League | +0.065 (+0.024 to +0.108) | +0.061 |
+| Serbian SuperLiga | +0.083 (+0.046 to +0.126) | +0.098 |
+| Croatian HNL | +0.057 (+0.014 to +0.096) | +0.075 |
+| Ukrainian Premier League | +0.027 (−0.012 to +0.066) | +0.110 |
+| NB I (Hungary) | +0.044 (+0.011 to +0.079) | +0.057 |
+| Israeli Premier League | +0.050 (+0.010 to +0.085) | +0.102 |
+| Cypriot First Division | +0.119 (+0.069 to +0.170) | +0.176 |
+| Bulgarian First League | +0.035 (−0.002 to +0.070) | +0.064 |
+| Slovak First League | +0.067 (+0.025 to +0.105) | +0.053 |
+| Slovenian PrvaLiga | +0.084 (+0.032 to +0.138) | +0.094 |
+| TFF 1. Lig | +0.012 (−0.010 to +0.035) | +0.135 |
+| Swiss Challenge League | +0.020 (−0.005 to +0.048) | +0.078 |
+| Super League Greece 2 | +0.070 (+0.043 to +0.099) | +0.165 |
+| *left out:* Challenger Pro League (Belgium) | −0.021 | +0.087 |
+| *left out:* I liga (Poland) | −0.023 | +0.025 |
+| *left out:* Liga Portugal 2 | +0.006 | −0.032 |
+| *left out:* 2. Liga (Austria) | +0.014 | +0.032 |
+| *left out:* Primera Federación, Serie C, National | −0.012 to +0.004 | +0.003 to +0.039 |
+
+Russia, the National League and 3. Liga have dated results, so they were tested like the African leagues, week by week through 2025/26 (`exp14/wave1.py`): +0.093 (95% +0.054 to +0.129), +0.069 (+0.049 to +0.086) and +0.036 (+0.011 to +0.057). All sixteen are `local`: their clubs are never matched to clubs in other competitions, so cup and European games rate them exactly as before (Slavia Prague in the Champions League is still priced by the market, or rated from its European results). The Czech and Serbian entries existed before with no working source (openfootball stopped publishing the Czech league).
+
+Not used, and why: ClubElo (free, but this environment couldn't reach it to test), TheSportsDB's free key (15 games a season), football-data.org's free plan (twelve big competitions only), FotMob and Sofascore (no public API).
 
 **Africa's club competitions.** The CAF Champions League (`CAFCL`) and Confederation Cup (`CAFCC`) are in, with fixtures, live scores and results from ESPN. Nobody prices them for us, so they're rated from their own results: once a day the pipeline reads both competitions back to 2019 from ESPN (16 calls the first time, 2 a day after) and fits one strength per club, its country's plus its own, each pulled towards average (country by 15 games' worth, club by 20), a game's weight halving every four years: log goals = goal level + home advantage + attacker's strength − defender's strength. A club's country is where it plays most home games, so a club new to CAF starts at its country's level (the home club's from the venue); two clubs CAF has never seen get no prediction. ESPN's names are kept as they are: cross-league name matching would have turned Sudan's Al Hilal and Libya's Al Ittihad into the Saudi clubs.
 

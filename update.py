@@ -92,7 +92,7 @@ OF_MAP = {'EPL': ('en.1', 0, True), 'ENG2': ('en.2', 0, True), 'ENG3': ('en.3', 
           'SA': ('it.1', 1, True), 'ITA2': ('it.2', 1, True), 'L1': ('fr.1', 1, True), 'FRA2': ('fr.2', 1, True),
           'ERE': ('nl.1', 1, True), 'NED2': ('nl.2', 1, True), 'POR': ('pt.1', 0, True), 'BEL': ('be.1', 1, True),
           'SCO1': ('sco.1', 0, True), 'TUR1': ('tr.1', 3, False), 'AUT1': ('at.1', 1, True), 'SUI1': ('ch.1', 1, True),
-          'GRE1': ('gr.1', 2, True), 'DEN1': ('dk.1', 1, True), 'CZE1': ('cz.1', 1, True)}
+          'GRE1': ('gr.1', 2, True), 'DEN1': ('dk.1', 1, True)}
 OA = 'https://api.the-odds-api.com/v4'
 
 # ----------------------------------------------------------------------------------------------
@@ -102,10 +102,14 @@ OA = 'https://api.the-odds-api.com/v4'
 L = {}
 
 
-def comp(lk, name, country, group, strength, fd=None, x=None, oa=(), es=None, hist=False, w=False, cup=False):
-    """es: ESPN's scoreboard, for fixtures and DraftKings prices; hist: ratings built from ESPN's results;
-    w: women's football (its teams are matched only with other women's teams); cup: teams from several leagues."""
-    L[lk] = dict(name=name, country=country, group=group, strength=strength, fd=fd, x=x, oa=list(oa), es=es, hist=hist, w=w, cup=cup)
+def comp(lk, name, country, group, strength, fd=None, x=None, oa=(), es=None, hist=False, w=False, cup=False, wk=None, ol=None, local=False):
+    """es: ESPN's scoreboard, for fixtures and DraftKings prices; hist: ratings built from results (ESPN's, or wk / ol);
+    w: women's football (its teams are matched only with other women's teams); cup: teams from several leagues;
+    wk: the Wikipedia season article's name without its season ("Czech First League"), whose results matrix gives this
+    season's and last season's results; ol: OpenLigaDB's league shortcut; local: its clubs are never matched to
+    clubs in other competitions (cups and European games keep rating them their own way)."""
+    L[lk] = dict(name=name, country=country, group=group, strength=strength, fd=fd, x=x, oa=list(oa), es=es, hist=hist, w=w, cup=cup,
+                 wk=wk, ol=ol, local=local or bool(wk or ol))
 
 
 comp('EPL', 'Premier League', 'England', 'big', 0.00, fd='E0', oa=['soccer_epl'])
@@ -136,8 +140,31 @@ comp('NOR1', 'Eliteserien', 'Norway', 'more', -0.55, x='NOR', oa=['soccer_norway
 comp('SWE1', 'Allsvenskan', 'Sweden', 'more', -0.58, x='SWE', oa=['soccer_sweden_allsvenskan'])
 comp('POL1', 'Ekstraklasa', 'Poland', 'more', -0.58, x='POL', oa=['soccer_poland_ekstraklasa'])
 comp('ROU1', 'Liga I', 'Romania', 'more', -0.65, x='ROU')
-comp('CZE1', 'Czech First League', 'Czechia', 'more', -0.50)
-comp('SRB1', 'Serbian SuperLiga', 'Serbia', 'more', -0.62)
+# Europe's leagues no price feed Statpad reads covers, rated from Wikipedia's season articles (this season's results
+# so far and last season's, from their results matrices), with fixtures and new results from API-Football's day
+# lists (already read for team news: no extra calls). Tested on 2025/26 (exp14/wk_eval.py): ratings from 2024/25 alone
+# for every 2025/26 game, and from 2024/25 plus 40% of 2025/26 for the rest; log loss gain a game against every side
+# average in brackets (season ahead / mid-season). Second tiers where the season-ahead test lost (Belgium, Poland) or
+# the mid-season one did (Portugal), and the third tiers (Spain, Italy, France: about level), were left out.
+comp('CZE1', 'Czech First League', 'Czechia', 'more', -0.50, wk='Czech First League', hist=True)          # +0.065 / +0.061
+comp('SRB1', 'Serbian SuperLiga', 'Serbia', 'more', -0.62, wk='Serbian SuperLiga', hist=True)            # +0.083 / +0.098
+comp('CRO1', 'SuperSport HNL', 'Croatia', 'more', -0.55, wk='Croatian Football League', hist=True)       # +0.057 / +0.075
+comp('UKR1', 'Ukrainian Premier League', 'Ukraine', 'more', -0.62, wk='Ukrainian Premier League', hist=True)   # +0.027 / +0.110
+comp('HUN1', 'NB I', 'Hungary', 'more', -0.70, wk='Nemzeti Bajnokság I', hist=True)                      # +0.044 / +0.057
+comp('ISR1', 'Israeli Premier League', 'Israel', 'more', -0.70, wk='Israeli Premier League', hist=True)  # +0.050 / +0.102
+comp('CYP1', 'Cypriot First Division', 'Cyprus', 'more', -0.75, wk='Cypriot First Division', hist=True)  # +0.119 / +0.176
+comp('BUL1', 'First League', 'Bulgaria', 'more', -0.85, wk='First Professional Football League (Bulgaria)', hist=True)   # +0.035 / +0.064
+comp('SVK1', 'Slovak First League', 'Slovakia', 'more', -0.85, wk='Slovak First Football League', hist=True)   # +0.067 / +0.053
+comp('SVN1', 'Slovenian PrvaLiga', 'Slovenia', 'more', -0.90, wk='Slovenian PrvaLiga', hist=True)        # +0.084 / +0.094
+comp('TUR2', 'TFF 1. Lig', 'Turkey', 'second', -0.95, wk='TFF 1. Lig', hist=True)                        # +0.012 / +0.135
+comp('SUI2', 'Challenge League', 'Switzerland', 'second', -1.05, wk='Swiss Challenge League', hist=True)  # +0.020 / +0.078
+comp('GRE2', 'Super League 2', 'Greece', 'second', -1.20, wk='Super League Greece 2', hist=True)          # +0.070 / +0.165
+# with dated results: ESPN (Russia, and the National League with DraftKings prices) and OpenLigaDB (3. Liga).
+# Walk-forward week by week through 2025/26 (exp14/wave1.py), against every side average: Russia +0.093 a game
+# (95% +0.054 to +0.129), National League +0.069 (+0.049 to +0.086), 3. Liga +0.036 (+0.011 to +0.057).
+comp('RUS1', 'Russian Premier League', 'Russia', 'more', -0.55, es='rus.1', hist=True, local=True)
+comp('ENG5', 'National League', 'England', 'second', -1.60, es='eng.5', hist=True, local=True)
+comp('GER3', '3. Liga', 'Germany', 'second', -1.15, ol='bl3', hist=True)
 comp('IRL1', 'League of Ireland', 'Ireland', 'more', -0.85, x='IRL', oa=['soccer_league_of_ireland'])
 comp('FIN1', 'Veikkausliiga', 'Finland', 'more', -0.90, x='FIN', oa=['soccer_finland_veikkausliiga'])
 comp('BRA1', 'Brasileirão', 'Brazil', 'more', -0.30, x='BRA', oa=['soccer_brazil_campeonato'])
@@ -175,7 +202,10 @@ comp('KEN1', 'Premier League', 'Kenya', 'more', -1.30, es='ken.1', hist=True)
 comp('GHA1', 'Premier League', 'Ghana', 'more', -1.20, es='gha.1', hist=True)
 comp('NGA1', 'Premier Football League', 'Nigeria', 'more', -1.20, es='nga.1', hist=True)
 comp('RSA2', 'First Division', 'South Africa', 'second', -1.35, es='rsa.2', hist=True)
-AF_FILL = ('UGA1', 'KEN1', 'GHA1', 'NGA1', 'RSA2')
+AF_AFRICA = ('UGA1', 'KEN1', 'GHA1', 'NGA1', 'RSA2')
+for _lk in AF_AFRICA:
+    L[_lk]['local'] = True
+AF_FILL = AF_AFRICA + tuple(lk for lk, c in L.items() if c.get('wk'))   # fixtures and new results from API-Football
 # Africa's club competitions: nobody prices them for us, so they're rated from their own results (caf_fit)
 comp('CAFCL', 'CAF Champions League', 'Africa', 'cups', 0, es='caf.champions')
 comp('CAFCC', 'CAF Confederation Cup', 'Africa', 'cups', 0, es='caf.confed')
@@ -348,7 +378,7 @@ class Teams:
     def add(self, lk, name):
         k = norm(name)
         self.by_league.setdefault(lk, {})[k] = name
-        if not is_cup(lk):
+        if not is_cup(lk) and not (L.get(lk) or {}).get('local'):
             self.globals.setdefault(pool(lk), {}).setdefault(k, (lk, name))
 
     def resolve(self, lk, raw, cutoff=0.80):
@@ -2603,15 +2633,28 @@ def espn_results(state):
         rows = sorted(hs['g'].values())
         latest = max((r[5] or 0) for r in rows)
         if lk in AF_FILL:
+            if L[lk].get('wk'):   # a game in both API-Football's lists and Wikipedia's matrix counts once (the dated one)
+                from collections import Counter
+                key = lambda r: (r[5], r[1], r[2], r[3], r[4])
+                n_af = Counter(key(r) for gid, r in hs['g'].items() if gid[:2] == 'af')
+                rows = [r for gid, r in hs['g'].items() if gid[:2] != 'wk']
+                for gid, r in sorted(hs['g'].items()):
+                    if gid[:3] == 'wk|':
+                        if n_af.get(key(r)):
+                            n_af[key(r)] -= 1
+                        else:
+                            rows.append(r)
+                rows = sorted(rows)
+                latest = max((r[5] or 0) for r in rows)
             c = (state.get('af_cur') or {}).get(lk) or {}
             if c.get('s') == latest or (c.get('s') or 0) > latest:
                 AF_CUR[lk] = list(c.get('t') or [])   # this season's sides, results or not
             new = [(gid, r) for gid, r in hs['g'].items() if (r[5] or 0) == latest]
-            if new and sum(1 for gid, _ in new if gid[:2] == 'af') > 0.2 * len(new):
+            if new and not L[lk].get('wk') and sum(1 for gid, _ in new if gid[:2] == 'af') > 0.2 * len(new):
                 AF_PART[lk] = min(r[0] for _, r in new)   # only the games since Statpad began reading them
         games = [(parse_date(r[0]), r[1], r[2], int(r[3]), int(r[4]), (r[5] or 0) == latest, None, None) for r in rows]
         if len(games) >= 20:
-            out[lk] = (games, f'{latest}/{str(latest + 1)[2:]}' if L[lk]['country'] in ('England', 'Spain', 'France', 'Saudi Arabia', 'Netherlands', 'Australia', 'South Africa', 'Uganda', 'Kenya', 'Ghana', 'Nigeria') else str(latest))
+            out[lk] = (games, str(latest) if L[lk]['country'] in ('Brazil', 'Chile', 'Colombia', 'USA') else f'{latest}/{str(latest + 1)[2:]}')
     return out
 
 
@@ -3087,6 +3130,280 @@ def publish_live(state):
     return {'app': 'Statpad', 'generated': iso(NOW), 'checked': lv.get('at'), 'games': games}
 
 
+WK_API = 'https://en.wikipedia.org/w/api.php'
+WK_UA = 'Statpad/1.0 (https://keithnobleigumira.github.io/statpad/; football predictions, a few reads a day)'
+WK_EVERY_H = 8
+WK_LINK = re.compile(r'\[\[([^|\]]*)(?:\|([^\]]*))?\]\]')
+WK_SCORE = re.compile(r'(?<![\d/])(\d{1,2})\s*[–\-−]\s*(\d{1,2})(?![\d/])')
+
+
+def wk_title(lk, season):
+    return f"{season}–{str(season + 1)[2:]} {L[lk]['wk']}"
+
+
+def wk_matrices(w):
+    """Every {{#invoke:sports results}} matrix in an article: [{'names': {code: (shown, linked article)},
+    'm': [(home code, away code, home goals, away goals)], 'update': text}]. Checked against 2025/26 results from
+    football-data, ESPN and OpenLigaDB: 1,656 of 1,659 games the same (exp14/wk_check.py)."""
+    def end(i):
+        depth, j = 0, i
+        while j < len(w):
+            if w.startswith('{{', j):
+                depth += 1
+                j += 2
+            elif w.startswith('}}', j):
+                depth -= 1
+                j += 2
+                if depth == 0:
+                    return j
+            else:
+                j += 1
+        return j
+
+    def params(b):
+        b = re.sub(r'<ref[^>]*/>', '', b)
+        b = re.sub(r'<ref[^>]*>.*?</ref>', '', b, flags=re.S)
+        b = re.sub(r'<!--.*?-->', '', b, flags=re.S)
+        out, depth, cur, j = [], 0, [], 0
+        while j < len(b):
+            two = b[j:j + 2]
+            if two in ('{{', '[['):
+                depth += 1
+                cur.append(two)
+                j += 2
+            elif two in ('}}', ']]'):
+                depth -= 1
+                cur.append(two)
+                j += 2
+            elif b[j] == '|' and depth == 1:
+                out.append(''.join(cur))
+                cur = []
+                j += 1
+            else:
+                cur.append(b[j])
+                j += 1
+        out.append(''.join(cur))
+        kv = {}
+        for x in out[1:]:
+            if '=' in x:
+                k, v = x.split('=', 1)
+                kv[k.strip()] = v.strip()
+        return kv
+
+    def score(v):
+        v = re.sub(r'\{\{\s*(?:efn|refn|note|sup|abbr)[^{}]*(?:\{\{[^{}]*\}\}[^{}]*)*\}\}', '', v)
+        v = WK_LINK.sub(lambda m: (m.group(2) if m.group(2) is not None else m.group(1)) if len(m.group(2) or m.group(1)) > 2 else '', v)
+        if re.search(r'\b(ppd|postp|canc|abd|awd|w/o|annulled)\b', v, re.I) or 'small' in v:
+            return None
+        m = WK_SCORE.search(v)
+        return (int(m.group(1)), int(m.group(2))) if m else None
+
+    out = []
+    for m in re.finditer(r'\{\{\s*#invoke:\s*[Ss]ports results', w):
+        kv = params(w[m.start():end(m.start())])
+        names = {}
+        for k, v in kv.items():
+            if k.startswith('name_'):
+                l = WK_LINK.search(v)
+                names[k[5:]] = ((l.group(2) or l.group(1)).strip(), l.group(1).strip()) if l else (re.sub(r'\{\{.*?\}\}', '', v).strip(), '')
+        ms = []
+        for k, v in kv.items():
+            q = k.split('_')
+            if len(q) == 3 and re.fullmatch(r'match\d*', q[0]) and q[1] in names and q[2] in names:
+                sc = score(v)
+                if sc:
+                    ms.append((q[1], q[2], sc[0], sc[1]))
+        out.append({'names': names, 'm': ms, 'update': kv.get('update', '')})
+    return out
+
+
+WK_LEGAL = re.compile(r'^(?:FC|FK|NK|SK|HNK|GNK|PFC|POFC|MFK|ŠK|FSC|AC|PAC|MŠK|KFC|NŠ|AS|SC|CS|FSV|TJ|OFK)\s+|\s+(?:F\.?C\.?|S\.?K\.?|F\.?K\.?|FCS)$|\s*\(\d{4}\)$')
+
+
+def wk_nice(shown, link):
+    """The name to show for a club: the matrix's own, unless that's one bare word ("Dynamo") and its article's
+    title says more ("FC Dynamo Kyiv" -> "Dynamo Kyiv")."""
+    if not link or re.match(r'\d{4}', link) or len(shown.split()) > 1:
+        return shown
+    full = link
+    for _ in range(3):
+        full = WK_LEGAL.sub('', full).strip()
+    return full if norm(shown) and norm(shown) in norm(full) and len(full) <= 28 else shown
+
+
+def wk_raw(title):
+    """An article's wikitext from Wikipedia's page cache (the plain ?action=raw read, not the rate-limited API),
+    following a redirect; None when it can't be read."""
+    url = 'https://en.wikipedia.org/wiki/' + quote(title.replace(' ', '_')) + '?action=raw'
+    for _ in range(3):
+        r = fetch(url, tries=2, timeout=40, headers={'User-Agent': WK_UA})
+        if r.status != 200 or not r.body:
+            return None
+        txt = text_of(r.body)
+        m = re.match(r'\s*#REDIRECT\s*\[\[([^\]|#]+)', txt, re.I)
+        if not m:
+            return txt
+        url = 'https://en.wikipedia.org/wiki/' + quote(m.group(1).strip().replace(' ', '_')) + '?action=raw'
+    return None
+
+
+def refresh_wiki(state):
+    """This season's and last season's results for the wk leagues, from Wikipedia's results matrices: one call for
+    every league's current article every few hours, last season's articles once. Stored as the leagues' history
+    (state['es_hist']) with one date a season (last season's middle; this season's middle so far): a replay on 15
+    leagues found the missing dates cost nothing (-0.0006 a game, exp14/undated.py)."""
+    wk = state.setdefault('wk', {})
+    hist = state.setdefault('es_hist', {})
+    season = af_season(NOW)
+    lks = [lk for lk, c in L.items() if c.get('wk')]
+    want = {}
+    for lk in lks:
+        want[wk_title(lk, season)] = (lk, 'cur', season)
+        if (wk.get(lk) or {}).get('prev', {}).get('s') != season - 1:
+            want[wk_title(lk, season - 1)] = (lk, 'prev', season - 1)
+    got, calls, t0 = {}, 0, time.time()
+    for t in want:
+        if time.time() - t0 > 60:
+            break
+        txt = wk_raw(t)
+        calls += 1
+        if txt:
+            got[t] = (txt, None)
+        time.sleep(0.5)
+    changed, n_games = [], 0
+    for t, (lk, which, s) in want.items():
+        if t not in got:
+            continue
+        txt, ts = got[t]
+        mats = wk_matrices(txt)
+        games = [(b['names'][h], b['names'][a], x, y) for b in mats for h, a, x, y in b['m']]
+        rec = {'s': s, 'title': t, 'rev': ts, 'update': '; '.join(b['update'] for b in mats if b['update'])[:80],
+               'g': [[wk_nice(*h), wk_nice(*a), x, y] for h, a, x, y in games],
+               'links': {wk_nice(*nm): nm[1] for b in mats for nm in b['names'].values()}}
+        if not games and which == 'cur' and (wk.get(lk) or {}).get('cur', {}).get('s') == s:
+            continue   # an article mid-edit or reorganised: keep what we had
+        wk.setdefault(lk, {})[which] = rec
+        n_games += len(games)
+    for lk in lks:
+        w = wk.get(lk) or {}
+        cur, prev = w.get('cur'), w.get('prev')
+        if not cur and not prev:
+            continue
+        by_link = {v: k for k, v in ((cur or {}).get('links') or {}).items() if v and not re.match(r'\d{4}', v)}
+        def canon(name, links):
+            ln = links.get(name) or ''
+            return by_link.get(ln, name) if ln and not re.match(r'\d{4}', ln) else name
+        rows = {}
+        for part, mid in ((prev, None), (cur, None)):
+            if not part:
+                continue
+            s = part['s']
+            if part is prev:
+                d = datetime(s + 1, 1, 15, tzinfo=timezone.utc)
+            else:
+                t1 = parse_iso(part['rev']) if part.get('rev') else NOW
+                t0 = datetime(s, 7, 25, tzinfo=timezone.utc)
+                d = t0 + (min(t1, NOW) - t0) / 2
+            for i, (h, a, x, y) in enumerate(part['g']):
+                rows[f'wk|{s}|{i}'] = [d.strftime('%Y-%m-%d'), canon(h, part['links']), canon(a, part['links']), x, y, s]
+        hs = hist.setdefault(lk, {'m': {}, 'g': {}})
+        old = {k: v for k, v in hs['g'].items() if k.startswith('wk|')}
+        if old != rows:
+            for k in old:
+                del hs['g'][k]
+            hs['g'].update(rows)
+            changed.append(lk)
+    if changed:
+        state['es_hist_new'] = True
+    return f"{len(got)} of {calls} Wikipedia articles read; {n_games} results; updated {', '.join(changed) or 'none'}"
+
+
+OL_API = 'https://api.openligadb.de/getmatchdata/{}/{}'
+OL_EVERY_H = 2
+
+
+def refresh_oldb(state):
+    """3. Liga (and any ol league) from OpenLigaDB: the whole season's fixtures with kick-off times and its results,
+    one call; last season once. Results into the ratings' history, fixtures into state['ol_fixtures']."""
+    hist = state.setdefault('es_hist', {})
+    done = state.setdefault('ol_done', {})
+    season = af_season(NOW)
+    fixl, new, calls = [], 0, 0
+    for lk, c in L.items():
+        if not c.get('ol'):
+            continue
+        for s in (season - 1, season):
+            if s < season and done.get(lk) == s:
+                continue
+            r = fetch(OL_API.format(c['ol'], s), tries=2, timeout=40)
+            calls += 1
+            if r.status != 200 or not r.body:
+                continue
+            try:
+                ms = json.loads(text_of(r.body))
+            except Exception:
+                continue
+            hs = hist.setdefault(lk, {'m': {}, 'g': {}})
+            for m in ms:
+                try:
+                    ko = parse_iso(m['matchDateTimeUTC'])
+                    h, a = m['team1']['teamName'], m['team2']['teamName']
+                except Exception:
+                    continue
+                if m.get('matchIsFinished'):
+                    res = [x for x in m.get('matchResults') or [] if x.get('resultTypeID') == 2] or [x for x in m.get('matchResults') or [] if 'End' in (x.get('resultName') or '')]
+                    if not res:
+                        continue
+                    rec = [ko.strftime('%Y-%m-%d'), h, a, int(res[0]['pointsTeam1']), int(res[0]['pointsTeam2']), s]
+                    if hs['g'].get(f"ol{m['matchID']}") != rec:
+                        hs['g'][f"ol{m['matchID']}"] = rec
+                        new += 1
+                elif s == season and ko > NOW - timedelta(hours=3):
+                    fixl.append({'lk': lk, 'ko': iso(ko), 'h': h, 'a': a})
+            if s < season:
+                done[lk] = s
+    if calls and (fixl or new):
+        state['ol_fixtures'] = sorted(fixl, key=lambda f: f['ko'])
+    if new:
+        state['es_hist_new'] = True
+    return f'{calls} OpenLigaDB call{"s" if calls != 1 else ""}; {len(fixl)} fixtures, {new} new results'
+
+
+def name_sim(a, b):
+    """How alike two names of one club are, 0-1: the same name, one inside the other, shared words, or spelling."""
+    a, b = norm(a), norm(b)
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+    ta, tb = set(a.split()), set(b.split())
+    return max(difflib.SequenceMatcher(None, a, b).ratio(), 0.92 if (ta <= tb or tb <= ta) else 0.0, len(ta & tb) / max(1, len(ta | tb)))
+
+
+AF_WK_ALIAS = {'crvena zvezda': 'Red Star Belgrade'}
+
+
+def pair_names(theirs, ours, links=None, prior=None):
+    """API-Football's names for a league's clubs paired with ours (this season's, so the sets are the same clubs):
+    the most alike pairs first, then a last club left on each side paired by elimination."""
+    links = links or {}
+    mp = {k: v for k, v in (prior or {}).items() if k in theirs and v in ours}
+    used = set(mp.values())
+    for t in theirs:
+        if t not in mp and AF_WK_ALIAS.get(norm(t)) in ours and AF_WK_ALIAS[norm(t)] not in used:
+            mp[t] = AF_WK_ALIAS[norm(t)]
+            used.add(mp[t])
+    pairs = sorted(((max(name_sim(t, o), name_sim(t, links.get(o) or '')), t, o) for t in theirs if t not in mp for o in ours if o not in used), key=lambda x: -x[0])
+    for sc, t, o in pairs:
+        if sc >= 0.55 and t not in mp and o not in used:
+            mp[t] = o
+            used.add(o)
+    lt, lo = [t for t in theirs if t not in mp], [o for o in ours if o not in used]
+    if len(lt) == 1 and len(lo) == 1:
+        mp[lt[0]] = lo[0]
+    return mp
+
+
 AF_NOT_LEAGUE = re.compile(r'\b(cup|women|ladies|female|u1\d|u2\d|youth|reserves?|shield|super ?8|top ?8|play ?-?offs?|friendl\w*|super cup|charity)\b', re.I)
 AF_VOTES = 3   # games between two sides a league already has, all in one of API-Football's leagues, before it's taken as ours
 
@@ -3107,17 +3424,38 @@ def af_fill(state):
     known = state.setdefault('af_lg', {})          # lk -> [league id, its name, when learned]
     votes = state.setdefault('af_votes', {})       # lk -> {league id: [fixture ids]}
     cur = state.setdefault('af_cur', {})           # lk -> {'s': season, 't': [teams seen this season]}
+    amap = state.setdefault('af_map', {})          # wk leagues: lk -> {API-Football's name: ours}
     T = Teams()
     for lk in AF_FILL:
         for r in ((hist.get(lk) or {}).get('g') or {}).values():
             T.add(lk, r[1])
             T.add(lk, r[2])
+    # the wk leagues know this season's clubs exactly (Wikipedia's matrix): names are paired within that set
+    wcur = {lk: ((state.get('wk') or {}).get(lk) or {}).get('cur') for lk in AF_FILL if L[lk].get('wk')}
+    wcur = {lk: c for lk, c in wcur.items() if c and c.get('links')}
+
+    def ours(lk, name):
+        if lk in wcur:
+            return (amap.get(lk) or {}).get(name)
+        return T.resolve(lk, name)
+
+    def votes_for(lk, name):
+        if lk in wcur:
+            c = wcur[lk]['links']
+            return AF_WK_ALIAS.get(norm(name)) in c or max(max(name_sim(name, o), name_sim(name, ln or '')) for o, ln in c.items()) >= 0.8
+        return bool(T.resolve(lk, name))
+
+    def same_country(af_c, lk):
+        a = re.sub(r'[^a-z]', '', (af_c or '').lower())
+        b = re.sub(r'[^a-z]', '', L[lk]['country'].lower())
+        return a == b or {a, b} <= {'czechrepublic', 'czechia'}
+
     rows = [f for rec in lists.values() for f in rec.get('list') or [] if len(f) >= 12 and f[11]]
     for f in rows:
         if AF_NOT_LEAGUE.search(f[4] or ''):
             continue
         for lk in AF_FILL:
-            if (f[5] or '').lower() == L[lk]['country'].lower() and T.resolve(lk, f[2]) and T.resolve(lk, f[3]):
+            if same_country(f[5], lk) and votes_for(lk, f[2]) and votes_for(lk, f[3]):
                 ids = votes.setdefault(lk, {}).setdefault(str(f[11]), [])
                 if f[0] not in ids:
                     ids.append(f[0])
@@ -3137,13 +3475,25 @@ def af_fill(state):
             known[lk] = [lid, name, iso(NOW)]
             log(f'API-Football: {L[lk]["country"]} {name} (league {lid}) is {lk}')
     by_id = {v[0]: lk for lk, v in known.items() if lk in AF_FILL}
+    for lk, c in wcur.items():   # pair this season's API-Football names with Wikipedia's
+        lid = (known.get(lk) or [None])[0]
+        if lid:
+            seen = sorted({n for f in rows if str(f[11]) == lid and af_season(parse_iso(f[1])) >= c['s'] for n in (f[2], f[3])})
+            amap[lk] = pair_names(seen, sorted(c['links']), c['links'], amap.get(lk))
+    held = {}
     fixl, added, season_now = [], 0, af_season(NOW)
     for f in rows:
         lk = by_id.get(str(f[11]))
         if not lk:
             continue
         ko = parse_iso(f[1])
-        h, a = T.resolve(lk, f[2]) or f[2], T.resolve(lk, f[3]) or f[3]
+        if lk in wcur:
+            h, a = ours(lk, f[2]), ours(lk, f[3])
+            if not h or not a:   # a club not yet paired with this season's list: wait rather than guess
+                held.setdefault(lk, set()).update(n for n, x in ((f[2], h), (f[3], a)) if not x)
+                continue
+        else:
+            h, a = T.resolve(lk, f[2]) or f[2], T.resolve(lk, f[3]) or f[3]
         c = cur.get(lk)
         if not c or c.get('s') != af_season(ko):
             if af_season(ko) < season_now:
@@ -3170,9 +3520,12 @@ def af_fill(state):
     if added:
         state['es_hist_new'] = True
     state['af_fixtures'] = sorted(fixl, key=lambda x: x['ko'])
+    if held:
+        log('API-Football names not paired yet:', '; '.join(f"{lk}: {', '.join(sorted(v))}" for lk, v in held.items()))
     if not known:
-        return f'African leagues: none of API-Football\'s leagues recognised yet ({sum(len(i) for v in votes.values() for i in v.values())} games counted)'
-    return f"African leagues from API-Football: {', '.join(sorted(k for k in known if k in AF_FILL))}; {len(fixl)} fixtures, {added} new results"
+        return f'none of API-Football\'s leagues recognised yet ({sum(len(i) for v in votes.values() for i in v.values())} games counted)'
+    return (f"from API-Football: {', '.join(sorted(k for k in known if k in AF_FILL))}; {len(fixl)} fixtures, {added} new results"
+            + (f"; waiting to pair {sum(len(v) for v in held.values())} names" if held else ''))
 
 
 def refresh_team_news(state, matches):
@@ -4371,7 +4724,18 @@ def build(state, prev, seed=None):
         else:
             fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'es_mkt': f.get('mkt'), 'ks': 'es', 'vc': f.get('vc')})
 
-    for f in state.get('af_fixtures') or []:   # API-Football's day lists: the African leagues ESPN stopped listing
+    for f in state.get('ol_fixtures') or []:   # OpenLigaDB: 3. Liga
+        if f['lk'] not in L:
+            continue
+        ko = parse_iso(f['ko'])
+        if not (lo <= ko <= hi):
+            continue
+        h = teams.resolve(f['lk'], f['h']) or f['h']
+        a = teams.resolve(f['lk'], f['a']) or f['a']
+        if not find(f['lk'], h, a, f['ko']):
+            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'ks': 'ol'})
+
+    for f in state.get('af_fixtures') or []:   # API-Football's day lists: the African and Wikipedia-rated leagues
         if f['lk'] not in L or f['lk'] not in AF_FILL:
             continue
         ko = parse_iso(f['ko'])
@@ -7942,12 +8306,23 @@ def main():
         log('team news:', note)
     else:
         src.pop('team_news', None)
-    af_note = safe(lambda: af_fill(state), 'error')   # African leagues from API-Football's day lists
+    if due(state, 'wiki', WK_EVERY_H) or not state.get('wk'):   # Europe's unpriced leagues: Wikipedia's results
+        last['wiki'] = iso(NOW)
+        wk_note = safe(lambda: refresh_wiki(state), 'error')
+        src['wiki'] = {'ok': wk_note != 'error' and not wk_note.startswith('0 '), 'at': iso(NOW), 'note': wk_note}
+        log('Wikipedia results:', wk_note)
+    if due(state, 'oldb', OL_EVERY_H) or 'ol_fixtures' not in state:   # 3. Liga from OpenLigaDB
+        last['oldb'] = iso(NOW)
+        ol_note = safe(lambda: refresh_oldb(state), 'error')
+        src['oldb'] = {'ok': ol_note != 'error', 'at': iso(NOW), 'note': ol_note}
+        log('OpenLigaDB:', ol_note)
+    af_note = safe(lambda: af_fill(state), 'error')   # African and Wikipedia-rated leagues from API-Football's day lists
+    src.pop('africa', None)
     if af_note != 'error' and not state.get('af_lg') and not AF_KEY:
-        src.pop('africa', None)
+        src.pop('af_fill', None)
     else:
-        src['africa'] = {'ok': af_note != 'error', 'at': iso(NOW), 'note': af_note}
-        log(af_note)
+        src['af_fill'] = {'ok': af_note != 'error', 'at': iso(NOW), 'note': af_note}
+        log('Day-list leagues', af_note)
     if state.pop('es_hist_new', False):
         rate_espn(state)
 
