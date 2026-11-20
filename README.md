@@ -55,6 +55,14 @@ Quarter Kelly grows almost as fast as flat staking with half the falls; full Kel
 
 **Research log.** Lab → Accuracy lists the ideas tested for this version on games the model never saw, kept or off, with the numbers (log loss is home, draw and away plus over/under 2.5 a game, lower is better):
 
+- **Ratings for European clubs from leagues Statpad doesn't rate: kept** (above).
+- **Dropping kinds of value bet that never beat the close: nothing to drop.** By league, selection and price range on 2019/20–2022/23, every kind of value bet beat the closing price on average. On 2023/24–2026/27 bigger edges beat the close by more: 3–5% edges +2.7%, 5–8% +4.6%, 8–12% +10.7%, 12–25% +18.4% (535 bets).
+- **Team draw tendencies: off.** How much more or less often the market prices a side's games as draws than its expected goals imply, added to memory-priced games: +0.00013 a game (95% range −0.00003 to +0.00028).
+- **Fast and slow market memories blended: off.** Memories with 5- and 30-day fades blended with the 12-day one: +0.0001 a game (95% range −0.0002 to +0.0004).
+- **More signals for the price outlook: off.** The favourite's size, the goals level, the margin, rest days, midweek and the last game's surprise: direction right 62.5% against 61.9%, prices 0.04 points better.
+- **Form beyond the price added to the memory: off.** +0.0004 a game (95% range −0.0001 to +0.0009).
+- **Statpad's goal model blended into the memory: off.** Its fitted weight was 0.
+- **A new scoreline grid for both teams to score: not needed.** Against closing prices the grid gave both teams to score 51.9% where 53.7% happened and 0-0 7.7% where 7.0% happened; the monthly per-market calibration already corrects it.
 - **Market memory for cup and European games, with fitted league strengths: kept** (above).
 - **Promoted and relegated sides starting from their old league: off.** A side new to a league started from its memory in the league it left, moved onto the new scale with the cup-fitted strengths: on the first 10 games of moved sides (2,850 games) the gain was −0.0001 (95% range −0.0035 to +0.0031). The memory learns a new side from its first priced games anyway.
 - **More weight on Pinnacle in the consensus: off.** Pinnacle alone read results very slightly better than the consensus weighting (+0.00015 a game on early prices 2023/24–2026/27, 95% range −0.00013 to +0.00038): within luck.
@@ -144,6 +152,17 @@ The shown forecast is shrunk at the extremes to match (forecast − 3.5 × forec
 | **Market memory + fitted strengths** | **0.9869** | **0.6606** |
 
 The gain is +0.020 a game on 1X2 (95% range +0.007 to +0.034) and +0.033 on over/under (+0.017 to +0.048). The fitted cup home advantage is 0.24 in log goals and cup games have 2.7% more goals than the two leagues' averages. The hand-set strengths overrated the lower divisions and the smaller European leagues: in log goals below the Premier League, the Championship is 0.78 (hand-set 0.45), League One 0.97 (0.75), League Two 1.39 (0.95), the Scottish Premiership 0.90 (0.50), Austria 0.77 (0.45), Romania 0.95 (0.65), Ireland 1.01 (0.85), Finland 1.25 (0.90); the Bundesliga, La Liga and Serie A come out level with the Premier League (within 0.08). Across leagues the memory was a couple of points too sure of favourites, so these games keep the cross-league safety haircut (2 points) and a wider spread. Leagues with no cross-league cup games in the data keep their hand-set strength. The strengths are fixed in update.py (`CUP_MEM`). ESPN's names for two European regulars ("F.C. København", "Heart of Midlothian") are now matched to their league sides.
+
+**European clubs from leagues Statpad doesn't rate.** Champions, Europa and Conference League games (and their qualifiers) bring in clubs from Czechia, Croatia, Serbia, Ukraine, Hungary, Bulgaria, Cyprus, Israel, Azerbaijan and more, which had no prediction until priced. Once a day the pipeline reads three calendar years of European results from ESPN (18 calls the first time, 6 a day after) and fits one strength q per such club against the sides Statpad does rate (their attack and defence from the market memory and the cup-fitted league strengths): its attack is A0 + q and its defence D0 + q, so q moves who is favourite without moving the goals; a game's weight halves every two years and q is pulled towards 0 by 15 games' worth.
+
+| 1,506 European games with such a club, July 2024 to Nov 2026, refitted monthly | 1X2 log loss | Over/under 2.5 |
+|---|---|---|
+| every such club as the average one | 1.0146 | 0.6840 |
+| **one strength per club** | **0.9686** | **0.6796** |
+
+The gain is +0.046 a game on 1X2 (95% range +0.033 to +0.061), about the same with one or two such clubs in the game, and it holds using only the memory as it stands at each refit (which is what the pipeline has). Favourites stated 57% won 54%, stated 71% won 78%, stated 84% won 86%. Separate attack and defence per club did as well on 1X2 but worse on goals (too few games). These games carry the cross-league safety haircut and spread. A club seen in no European game for three years gets no prediction.
+
+**Ten false name matches fixed.** Matching European names to rated sides linked Arsenal Tivat to Arsenal, Red Star Belgrade to Red Star (Paris), AEK Larnaca to AEK Athens, Aris and Apollon Limassol to the Greek sides, Inter Baku and Inter d'Escaldes to Inter, Dinamo Brest to Brest, AC Virtus to Virtus Entella and Lincoln Red Imps to Lincoln. They're now never matched across leagues (`XNONE` in update.py); an audit of the 446 European club names found no other wrong match among those linked to a differently named side.
 
 **Goals from the market's memory, where there's no over/under price.** About 42% of priced games have only home, draw and away prices, and those read the goals level from the draw price, which is weak. For them the engine keeps the price's supremacy (who is stronger) and blends the goals level with the market memory's: its share of log total goals is 50% for a price from many bookmakers and 65% for one to three (ESPN's single feed counts as one), or 35% and 60% where the league's memory was itself built from 1X2 prices alone (the extra leagues). Statpad's own model is no longer blended into these games: with the memory in, its fitted weight was 0.
 

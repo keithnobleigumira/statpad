@@ -314,6 +314,9 @@ def pretty(name):
 # names used by cup and European feeds for league sides (applied only when matching across leagues, so match ids
 # keep their names)
 XALIAS = {'f c kbenhavn': 'copenhagen', 'kbenhavn': 'copenhagen', 'heart of midlothian': 'hearts'}
+# European clubs whose name contains a rated side's (Arsenal Tivat, Red Star Belgrade, AEK Larnaca, ...): never
+# matched across leagues, so they're rated as the unrated clubs they are
+XNONE = set(['aek larnaca', 'apollon limassol', 'aris limassol', 'arsenal tivat', 'dinamo brest', 'inter baku', 'inter descaldes', 'lincoln red imps', 'red star belgrade', 'virtus'])
 
 
 class Teams:
@@ -344,6 +347,8 @@ class Teams:
     def resolve_global(self, raw, cutoff=0.86, pool_='m'):
         g = self.globals.get(pool_) or {}
         k = norm(raw)
+        if k in XNONE:
+            return None
         k = XALIAS.get(k, k)
         if k in g:
             return g[k]
@@ -4319,6 +4324,11 @@ def build(state, prev, seed=None):
                 mm, mm_extra = cup_mem(state, *cup_sides)
             except Exception as e:   # never let one game cost the run
                 log('cup memory:', mid, repr(e)[:120]); mm, mm_extra = None, {}
+        elif f['lk'] in EURO_LKS and state.get('outs'):
+            try:   # a club from a league Statpad doesn't rate: its strength from its European results
+                mm, mm_extra = euro_mem(state, f['h'], gh, f['a'], ga)
+            except Exception as e:
+                log('European clubs:', mid, repr(e)[:120]); mm, mm_extra = None, {}
         if not is_cup(f['lk']) and L[f['lk']]['group'] != 'intl':
             mm = mem_goals((state.get('mem') or {}).get(f['lk']), f['h'], f['a'])
             if mkt and mkt.get('p') and len(mkt['p']) == 3 and not mkt.get('ext'):
@@ -4371,16 +4381,22 @@ def build(state, prev, seed=None):
             if mh_ and ma_:
                 rh_ = {disp(m['dh'], tm): tm for tm in mh_['t']}; ra_ = {disp(m['da'], tm): tm for tm in ma_['t']}
                 mm, cx = cup_mem(state, m['dh'], rh_.get(m['h'], m['h']), m['da'], ra_.get(m['a'], m['a']))
+        if not mm and m['lk'] in EURO_LKS and state.get('outs'):
+            try:
+                gh_, ga_ = teams.resolve_global(m['h'], pool_='m'), teams.resolve_global(m['a'], pool_='m')
+                mm, cx = euro_mem(state, m['h'], gh_, m['a'], ga_)
+            except Exception as e:
+                log('European clubs:', m.get('id'), repr(e)[:120]); mm, cx = None, {}
         if mm and cx:
             m['mm'] = mm
-            for k in ('mn', 'mmo', 'xm'):
+            for k in ('mn', 'mmo', 'xm', 'mo'):
                 m.pop(k, None)
             m.update(cx)
         elif mm:
             m['mm'] = mm
             m.update(mem_extra(m['lk'], mem, rev.get(m['h'], m['h']), rev.get(m['a'], m['a'])))
         else:
-            for k in ('mm', 'mn', 'mmo', 'xm'):
+            for k in ('mm', 'mn', 'mmo', 'xm', 'mo'):
                 m.pop(k, None)
     try:
         n_mem = mem_record(state, mem_obs)
@@ -5647,6 +5663,187 @@ def cup_mem(state, dh, th, da, ta):
     if L[dh].get('fd') and L[da].get('fd'):
         extra['mmo'] = 1
     return [round(lh, 4), round(la, 4)], extra
+
+
+# ----------------------------------------------------------------------------------------------
+# European clubs from leagues Statpad doesn't rate (Czechia, Croatia, Serbia, Ukraine, Hungary, Bulgaria, Cyprus,
+# Israel, Azerbaijan, ...). Each gets one strength q from its European results against sides Statpad does rate (whose
+# attack and defence come from their market memory and the cup-fitted league strengths), pulled towards the average
+# unrated club by 15 games' worth, a game's weight halving every two years. In a game, an unrated club's attack is
+# A0 + q and its defence D0 + q, so q moves who is favourite without moving the goals. Walk-forward on the 1,506
+# European games with an unrated club from July 2024 to November 2026, refitted monthly with only the memory as it
+# stood at each refit (as here), against "every unrated club is the average one": 90-minute result log loss
+# 1.0146 -> 0.9686 (+0.046 a game, 95% range +0.033 to +0.061), over/under 2.5 0.6840 -> 0.6796; favourites stated
+# 57% won 54%, stated 71% won 78%, stated 84% won 86%. Before this such games had no prediction until priced.
+# ----------------------------------------------------------------------------------------------
+EURO_SLUGS = ('uefa.champions', 'uefa.europa', 'uefa.europa.conf', 'uefa.champions_qual', 'uefa.europa_qual', 'uefa.europa.conf_qual')
+EURO_LKS = ('UCL', 'UEL', 'UECL')
+OUT_TAU, OUT_PULL, OUT_YEARS = 730.0, 15.0, 3
+
+
+def refresh_euro(state):
+    """European results from ESPN, OUT_YEARS calendar years: earlier years once, the current one (and last year in
+    January) each day. state['euro'] = {'slug|year': [[date, home, away, hg, ag, extra time 0/1, neutral 0/1]]}."""
+    eu = state.setdefault('euro', {})
+    yr, calls, bad = NOW.year, 0, 0
+    for y in range(yr - OUT_YEARS + 1, yr + 1):
+        for slug in EURO_SLUGS:
+            k = f'{slug}|{y}'
+            if k in eu and y < yr and not (y == yr - 1 and NOW.month == 1):
+                continue
+            r = fetch(ESPN_SB.format(slug), {'dates': y, 'limit': 1000}, tries=2, timeout=30, headers={'Accept-Encoding': 'gzip'})
+            calls += 1
+            if r.status != 200 or not r.body:
+                bad += 1
+                continue
+            try:
+                body = gzip.decompress(r.body) if r.body[:2] == b'\x1f\x8b' else r.body
+                evs = json.loads(text_of(body)).get('events') or []
+            except Exception:
+                bad += 1
+                continue
+            rows = []
+            for e in evs:
+                try:
+                    c = e['competitions'][0]
+                    st = (c.get('status') or e.get('status') or {}).get('type') or {}
+                    if not st.get('completed'):
+                        continue
+                    side = {x['homeAway']: x for x in c['competitors']}
+                    det = str(st.get('shortDetail') or st.get('detail') or st.get('name') or '').upper()
+                    et = 1 if ('AET' in det or 'PEN' in det or 'EXTRA' in det) else 0
+                    rows.append([e['date'][:10], side['home']['team']['displayName'], side['away']['team']['displayName'],
+                                 int(side['home'].get('score') or 0), int(side['away'].get('score') or 0), et, 1 if c.get('neutralSite') else 0])
+                except Exception:
+                    continue
+            eu[k] = rows
+    for k in list(eu):
+        if int(k.split('|')[1]) < yr - OUT_YEARS + 1:
+            del eu[k]
+    return calls, bad
+
+
+def rated_ad(mems, g):
+    """A rated side's absolute (attack, defence) in log goals on the Premier League scale, from its market memory."""
+    mem = mems.get(g[0]) if g else None
+    t = (mem or {}).get('t', {}).get(g[1]) if mem else None
+    if not t:
+        return None
+    s = CUP_MEM['s'].get(g[0], L[g[0]]['strength'])
+    return mem['mu'] / 2 + t[0] + s / 2, -mem['mu'] / 2 + t[1] + s / 2, t[2]
+
+
+def fit_outsiders(state, np):
+    """One strength per unrated European club (see above) -> state['outs']."""
+    mems = state.get('mem') or {}
+    teams = Teams()
+    for lk, lg in (state.get('leagues') or {}).items():
+        for row in lg.get('table') or []:
+            teams.add(lk, row[0])
+    G0, H0 = CUP_MEM['goals'], CUP_MEM['home']
+    games, names = [], {}
+    for rows in (state.get('euro') or {}).values():
+        for d, h, a, hg, ag, et, neu in rows:
+            if et:
+                continue
+            sides = []
+            for nm in (h, a):
+                g = teams.resolve_global(nm, pool_='m')
+                if g:
+                    ad = rated_ad(mems, g)
+                    sides.append(('R', ad) if ad else None)
+                else:
+                    k = norm(nm); names[k] = nm
+                    sides.append(('O', k))
+            if None in sides or all(x[0] == 'R' for x in sides):
+                continue
+            try:
+                age = (NOW - datetime.strptime(d, '%Y-%m-%d').replace(tzinfo=timezone.utc)).days
+            except ValueError:
+                continue
+            if age < 0:
+                continue
+            games.append((sides, hg, ag, neu, 0.5 ** (age / OUT_TAU), age))
+    clubs = sorted({x[1] for g in games for x in g[0] if x[0] == 'O'})
+    if len(games) < 100 or not clubs:
+        return f'{len(games)} games: too few'
+    IX = {c: i for i, c in enumerate(clubs)}; n = len(clubs)
+    X, off, y, w = [], [], [], []
+    recent = {c: 0 for c in clubs}
+    for (sh, sa), hg, ag, neu, wt, age in games:
+        for side, opp, goals, home in ((sh, sa, hg, 0 if neu else 1), (sa, sh, ag, 0)):
+            x = [0.0] * (n + 2); o = G0 + H0 * home
+            if side[0] == 'R':
+                o += side[1][0]
+            else:
+                x[IX[side[1]]] += 1; x[n] += 1
+            if opp[0] == 'R':
+                o -= opp[1][1]
+            else:
+                x[IX[opp[1]]] -= 1; x[n + 1] -= 1
+            X.append(x); off.append(o); y.append(goals); w.append(wt)
+        if age <= 365:
+            for x_ in (sh, sa):
+                if x_[0] == 'O':
+                    recent[x_[1]] += 1
+    X, off, y, w = np.array(X), np.array(off), np.array(y, float), np.array(w)
+    P = np.zeros(n + 2); P[n], P[n + 1] = -0.3, 0.3
+    pen = np.r_[np.full(n, OUT_PULL), 0.0, 0.0]
+    for _ in range(40):
+        lam = np.exp(off + X @ P)
+        grad = X.T @ (w * (y - lam)) - pen * P
+        hess = -(X.T @ (X * (w * lam)[:, None])) - np.diag(pen) - 1e-6 * np.eye(n + 2)
+        step = np.linalg.solve(hess, -grad)
+        P += np.clip(step, -1, 1)
+        if np.abs(step).max() < 1e-7:
+            break
+    state['outs'] = {'A0': round(float(P[n]), 4), 'D0': round(float(P[n + 1]), 4), 'at': iso(NOW), 'n': len(games),
+                     'q': {c: [round(float(P[IX[c]]), 4), recent[c]] for c in clubs}, 'names': {c: names.get(c, c) for c in clubs}}
+    state.pop('outs_key', None)
+    return f'{len(games)} European games, {n} unrated clubs'
+
+
+def out_key(state, raw):
+    """An unrated club's key in state['outs'] from a fixture's name: exact, then all words of one name in the other
+    (when that picks one club), then a close spelling."""
+    O = state.get('outs') or {}
+    q = O.get('q') or {}
+    k = norm(raw)
+    if k in q:
+        return k
+    memo = state.setdefault('outs_key', {})
+    if k in memo:
+        return memo[k]
+    toks = set(k.split()) - STOP
+    hit = [c for c in q if toks and ((set(c.split()) - STOP) <= toks or toks <= (set(c.split()) - STOP))] if toks else []
+    if len(hit) != 1:
+        close = difflib.get_close_matches(k, list(q), n=1, cutoff=0.86)
+        hit = close if close else []
+    memo[k] = hit[0] if hit else None
+    return memo[k]
+
+
+def euro_mem(state, raw_h, gh, raw_a, ga):
+    """Expected goals for a European game with at least one unrated club, or (None, {})."""
+    O = state.get('outs')
+    if not O:
+        return None, {}
+    mems = state.get('mem') or {}
+    def side(raw, g):
+        if g:
+            return rated_ad(mems, g)
+        k = out_key(state, raw)
+        if k is None:
+            return None
+        q, n = O['q'][k]
+        return O['A0'] + q, O['D0'] + q, n
+    sh, sa = side(raw_h, gh), side(raw_a, ga)
+    if not sh or not sa or (gh and ga):
+        return None, {}
+    G0, H0 = CUP_MEM['goals'], CUP_MEM['home']
+    lh = math.exp(sh[0] - sa[1] + G0 + H0)
+    la = math.exp(sa[0] - sh[1] + G0)
+    return [round(lh, 4), round(la, 4)], {'mn': [sh[2], sa[2]], 'xm': 1, 'mo': 1}
 
 
 def refresh_mem(state):
@@ -7406,6 +7603,15 @@ def main():
         mem_note = safe(lambda: refresh_mem(state), 'error')
         src['memory'] = {'ok': mem_note != 'error', 'at': iso(NOW), 'note': mem_note}
         log('market memory:', mem_note)
+    if state.get('mem') and (due(state, 'euro', 24) or not state.get('outs')):
+        last['euro'] = iso(NOW)
+        def euro_job():
+            calls, bad = refresh_euro(state)
+            np_e = numpy_lib(True)
+            return (f'{calls} ESPN calls ({bad} failed); ' if calls else '') + (fit_outsiders(state, np_e) if np_e is not None else 'no numpy')
+        eu_note = safe(euro_job, 'error')
+        src['european'] = {'ok': eu_note != 'error', 'at': iso(NOW), 'note': eu_note}
+        log('European clubs:', eu_note)
     prev_matches = (prev or {}).get('matches') or []
     lv_ok, lv_note = safe(lambda: refresh_live(state, prev_matches), (False, 'error'))
     src['live'] = {'ok': lv_ok, 'at': iso(NOW), 'note': lv_note}
@@ -7509,7 +7715,7 @@ def main():
     for blob in (state.get('api') or {}).values():
         blob['events'] = [e for e in blob.get('events') or [] if e.get('ko') and parse_iso(e['ko']) > NOW - timedelta(hours=6)]
     (STATE_DIR / 'state.json').write_text(json.dumps(state, ensure_ascii=False, separators=(',', ':')))
-    n_pred = sum(1 for m in doc['matches'] if m['lm'] or m['mkt'])
+    n_pred = sum(1 for m in doc['matches'] if m.get('lm') or m.get('mkt') or m.get('mm'))
     log(f"{len(doc['matches'])} matches ({n_pred} with a prediction), {len(doc['leagues'])} competitions, changed={changed}")
     gh = ENV('GITHUB_OUTPUT')
     if gh:
