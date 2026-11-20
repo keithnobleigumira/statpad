@@ -53,10 +53,13 @@ Quarter Kelly grows almost as fast as flat staking with half the falls; full Kel
 
 **Research log.** Lab → Accuracy lists the ideas tested for this version on games the model never saw, kept or off, with the numbers (log loss is home, draw and away plus over/under 2.5 a game, lower is better):
 
+- **Goals from the market's memory where there's no over/under price: kept** (above).
+- **Memory spread by recent data: kept** (above).
+- **Memory moving supremacy in priced games, Pinnacle-first memory, a home advantage per side: off** (above).
 - **Price outlook (bet now or wait): kept** (above).
 - **Value measured against the forecast closing price: off.** Value bets that also held up against the forecast close beat the close by 5.7%, the rest by −0.7%. But moving a price all the way to its forecast close didn't predict results better (half way: +0.00025 a game; all the way: +0.00026, and ≤ 0 in 2023–27), and those bets lost money in 2023–27. A close you can see coming is not the same as value, so the forecast changes timing only.
 - **Playing well beyond the price, for predictions: off.** Shots, shots on target and corners beyond what each side's prices expected didn't predict goals beyond the next early price (−0.00003 a game on 8,421 unseen games). They do move prices, which is what the outlook uses.
-- **Goals for games priced on 1X2 alone: off.** 42% of priced games have no over/under price. Hiding the over/under where there was one: adding the real one back gained 0.0001 a game on 2025/26 and the memory's goals level 0.0005 (within luck). The draw price already says almost everything about goals, so the over/under feed (which doubles the odds credits) isn't needed for accuracy.
+- **The memory's over 2.5 chance as a target in the price fit: off.** The first way tried of bringing the memory's goals into games with no over/under price (fit the price to the memory's over 2.5 chance, then blend Statpad's model as before) was within luck (1.6851 → 1.6846 on 2025/26). Blending the goals level directly, without the model, is what works (kept, above). Over 2023/24–2026/27 a real over/under price is worth 0.0016 a game over 1X2 alone; with the memory's goals level the gap is 0.0004.
 - **Market memory: kept** (above).
 - **Market memory blended into priced games: off.** Weight 0.05, gain 0.00003 a game.
 - **Price momentum: off.** Whether the move from the early price to the closing price carries on past the close: on 8,839 unseen games, gain +0.00001 (95% range −0.0003 to +0.0003). The market finishes its moves.
@@ -124,6 +127,20 @@ So the memory gets 86% of the way from the ratings to the market without seeing 
 | 6% or more longer (8.5%) | 6.3% longer |
 
 The shown forecast is shrunk at the extremes to match (forecast − 3.5 × forecast × |forecast|). The direction was right 61.5% of the time when the forecast was 1% or more (57% of selections) and 66% at 3% or more. Where the forecast was 1% or more, following it (early when forecast to shorten, at kick-off when forecast to drift) got prices 1.2–2.0% better than always betting early and 0.5–1.2% better than always betting at kick-off, in every one of the eight seasons, for home, draw, away, over and under alike. Value bets forecast to shorten beat the closing price by 6.3% when taken at once and by 1.4% when left to kick-off; those forecast to drift did about the same either way (+1.2%). It is shown from 6 hours before kick-off, for league games with a market memory. It is timing advice only: it never changes a chance or what counts as value. Every forecast is graded live (the first one made 6 hours or more before kick-off against the last price Statpad saw before kick-off), and the record shows under each game's price history once 30 are in.
+
+**Goals from the market's memory, where there's no over/under price.** About 42% of priced games have only home, draw and away prices, and those read the goals level from the draw price, which is weak. For them the engine keeps the price's supremacy (who is stronger) and blends the goals level with the market memory's: its share of log total goals is 50% for a price from many bookmakers and 65% for one to three (ESPN's single feed counts as one), or 35% and 60% where the league's memory was itself built from 1X2 prices alone (the extra leagues). Statpad's own model is no longer blended into these games: with the memory in, its fitted weight was 0.
+
+| Price (no over/under) | Before | Goals level from memory | Gain a game |
+|---|---|---|---|
+| Bet365 alone, 2025/26, against the price + model blend | 1.68663 | 1.68157 | +0.0051 (95% +0.0031 to +0.0071) |
+| Bet&Win alone, same | 1.68413 | 1.68149 | +0.0026 (+0.0011 to +0.0042) |
+| average of many, same | 1.68307 | 1.68156 | +0.0015 (−0.0001 to +0.0027) |
+| Bet365 alone, 2023/24–2026/27 (22,475 games) | | | +0.0045 (+0.0031 to +0.0059) |
+| average of many, 2023/24–2026/27 (22,495 games) | | | +0.0012 (+0.0005 to +0.0019) |
+
+Weights fitted on 2019/20–2022/23. Blending supremacy as well was worse (−0.0002), a price with its own over/under gained nothing (+0.00005, within luck; one bookmaker with its over/under −0.00001), and a memory built from 1X2 prices alone still helped (+0.0034 for one bookmaker, +0.0005 for the average). The match chips say when a game's goals level came from the memory.
+
+**Memory spread by recent data.** Against the closing price, the memory's supremacy was off by 0.32 (in log goals) for sides with no priced game in the last 60 days (the start of a season, promoted sides), 0.22 with one or two and 0.15 with three or more. A memory-priced game's spread is now set per side from that (0.25, 0.17 and 0.12 in log expected goals), so its cautious chance is wider when the memory knows less. Also tested and off: Pinnacle's closing prices first in the memory (−0.00003) and a home advantage for each side (worse at every strength of pull, −0.0008 to −0.0030).
 
 **Game-by-game ratings (tested, off for now).** A Kalman filter: each side's attack and defence drift a little every day, and each result moves them by how surprising it was, weighed by how sure they were. On its own it beat the season-long ratings on 2025/26, but next to Elo it added too little (1.7070 → 1.7063, under the bar of 0.001) and nothing on 2024/25, so the monthly check keeps it off until that changes.
 

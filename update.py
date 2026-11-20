@@ -4320,6 +4320,7 @@ def build(state, prev, seed=None):
             matches[-1]['tn'] = news
         if mm:
             matches[-1]['mm'] = mm   # the market's memory of both sides: priced from it when there's no bookmaker price
+            matches[-1].update(mem_extra(f['lk'], state['mem'][f['lk']], f['h'], f['a']))
             mm_by_mid[mid] = mm
         if ls:
             matches[-1]['ls'] = ls
@@ -4345,8 +4346,10 @@ def build(state, prev, seed=None):
         mm = mem_goals(mem, rev.get(m['h'], m['h']), rev.get(m['a'], m['a'])) if mem and not is_cup(m['lk']) and L[m['lk']]['group'] != 'intl' else None
         if mm:
             m['mm'] = mm
+            m.update(mem_extra(m['lk'], mem, rev.get(m['h'], m['h']), rev.get(m['a'], m['a'])))
         else:
-            m.pop('mm', None)
+            for k in ('mm', 'mn', 'mmo'):
+                m.pop(k, None)
     try:
         n_mem = mem_record(state, mem_obs)
     except Exception as e:
@@ -5548,6 +5551,15 @@ def mem_goals(mem, h, a):
     ah, dh = (th[0], th[1]) if th else (-MEM_NEW, -MEM_NEW)
     aa, da = (ta[0], ta[1]) if ta else (-MEM_NEW, -MEM_NEW)
     return [round(math.exp(mem['mu'] + mem['home'] + ah - da), 4), round(math.exp(mem['mu'] + aa - dh), 4)]
+
+
+def mem_extra(lk, mem, h, a):
+    """What the engine needs beside the memory's expected goals: each side's priced games in the last 60 days (its
+    spread grows when there are few) and whether the league's memory was built with over/under prices."""
+    out = {'mn': [((mem['t'].get(t) or [0, 0, 0])[2]) for t in (h, a)]}
+    if L[lk].get('fd'):
+        out['mmo'] = 1
+    return out
 
 
 def refresh_mem(state):
