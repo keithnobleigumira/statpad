@@ -1004,8 +1004,30 @@ def build_table(games):
 # ----------------------------------------------------------------------------------------------
 # Step 1: results -> tables + ratings
 # ----------------------------------------------------------------------------------------------
+def mem_take(lk, d, h, a, row, cols1, cols_ou):
+    """Keep a finished game's closing price for the market memory: the first full set of 1X2 prices among
+    cols1 (closing, then the early ones), and over/under 2.5 from cols_ou where there is one."""
+    if not d or (NOW - d).days > MEM_WINDOW:
+        return
+    for c3 in cols1:
+        o = [fnum(col(row, k)) for k in c3]
+        if all(x and x > 1 for x in o):
+            break
+    else:
+        return
+    pO = None
+    for c2 in cols_ou:
+        ou = [fnum(col(row, k)) for k in c2]
+        if all(x and x > 1 for x in ou):
+            pO = demargin(ou)[0]
+            break
+    p = demargin(o)
+    MEM_FD.setdefault(lk, []).append((d.strftime('%Y-%m-%d'), h, a, p[0], p[2], pO))
+
+
 def load_results():
     out = {}
+    MEM_FD.clear()
     cur_code, prev_code = season_code(NOW), season_code(NOW, 1)
     for lk, c in L.items():
         if not c['fd']:
@@ -1030,6 +1052,8 @@ def load_results():
                 hst, ast = fnum(col(row, 'HST')), fnum(col(row, 'AST'))
                 if d and h and a and hg is not None and ag is not None:
                     games.append((d, h, a, int(hg), int(ag), cur, hst, ast, xg_for(lk, d, h, a)))
+                    mem_take(lk, d, h, a, row, (('AvgCH', 'AvgCD', 'AvgCA'), ('PSCH', 'PSCD', 'PSCA'), ('AvgH', 'AvgD', 'AvgA')),
+                             (('AvgC>2.5', 'AvgC<2.5'), ('PC>2.5', 'PC<2.5'), ('Avg>2.5', 'Avg<2.5')))
         if games:
             out[lk] = (games, season_label)
         else:
@@ -1050,6 +1074,7 @@ def load_results():
             hg, ag = fnum(col(row, 'HG', 'FTHG')), fnum(col(row, 'AG', 'FTAG'))
             if d and h and a and hg is not None and ag is not None and (NOW - d).days < 600:
                 parsed.append((d, h, a, int(hg), int(ag), col(row, 'Season') or ''))
+                mem_take(lk, d, h, a, row, (('AvgCH', 'AvgCD', 'AvgCA'), ('PSCH', 'PSCD', 'PSCA'), ('MaxCH', 'MaxCD', 'MaxCA')), ())
         if not parsed:
             continue
         latest = max(parsed, key=lambda g: g[0])[5]
@@ -1314,6 +1339,11 @@ def stakes_jobs(state, doc):
         rr = [rows[nm] for nm in names]
         att = [r[9] or 0.0 for r in rr]
         dfn = [r[10] or 0.0 for r in rr]
+        mm = lg.get('mm')
+        if mm and all(nm in mm['t'] for nm in names):   # the market's memory, where it knows every side
+            mu, home = mm['mu'], mm['home']
+            att = [mm['t'][nm][0] for nm in names]
+            dfn = [mm['t'][nm][1] for nm in names]
         fx, ms, tgt = [], [], []
         for k, (i, j) in enumerate(tf['rem']):
             fx.append([i, j, round(math.exp(mu + home + att[i] + dfn[j]), 4), round(math.exp(mu + att[j] + dfn[i]), 4)])
@@ -4220,6 +4250,7 @@ def build(state, prev, seed=None):
         return {}
     matches = []
     seen = set()
+    mem_obs = []
     for f in sorted(fx, key=lambda f: (f['ko'], f['lk'], f['h'])):
         ko = parse_iso(f['ko'])
         mid = f"{f['lk']}-{ko:%Y%m%d}-{slug(f['h'])}-{slug(f['a'])}"
@@ -4269,6 +4300,12 @@ def build(state, prev, seed=None):
         if L[f['lk']]['group'] == 'intl':
             ls = None
         news = team_news_for(state, mid, f['lk'], ko, f['h'], f['a'])
+        mm = None
+        if not is_cup(f['lk']) and L[f['lk']]['group'] != 'intl':
+            mm = mem_goals((state.get('mem') or {}).get(f['lk']), f['h'], f['a'])
+            if mkt and mkt.get('p') and len(mkt['p']) == 3 and not mkt.get('ext'):
+                ou = mkt.get('ou') or {}
+                mem_obs.append((f['lk'], mid, ko, f['h'], f['a'], mkt['p'][0], mkt['p'][2], ou.get('pO') if ou.get('line', 2.5) == 2.5 else None))
         matches.append({
             'id': mid, 'lk': f['lk'], 'ko': iso(ko), 'h': disp(f['lk'], f['h']), 'a': disp(f['lk'], f['a']),
             'ph': ph[0] if ph else None, 'pa': pa[0] if pa else None,
@@ -4278,6 +4315,8 @@ def build(state, prev, seed=None):
         })
         if news:
             matches[-1]['tn'] = news
+        if mm:
+            matches[-1]['mm'] = mm   # the market's memory of both sides: priced from it when there's no bookmaker price
         if ls:
             matches[-1]['ls'] = ls
         if MODEL_W and not knockout(f['lk']) and not cross and not (mkt and (mkt.get('n') or 0) == 1):
@@ -4297,6 +4336,20 @@ def build(state, prev, seed=None):
             m['tn'] = news
         else:
             m.pop('tn', None)
+        mem = (state.get('mem') or {}).get(m['lk'])   # carried games carry display names: look the memory up by them
+        rev = {disp(m['lk'], tm): tm for tm in mem['t']} if mem else {}
+        mm = mem_goals(mem, rev.get(m['h'], m['h']), rev.get(m['a'], m['a'])) if mem and not is_cup(m['lk']) and L[m['lk']]['group'] != 'intl' else None
+        if mm:
+            m['mm'] = mm
+        else:
+            m.pop('mm', None)
+    try:
+        n_mem = mem_record(state, mem_obs)
+    except Exception as e:
+        log('market memory: prices not kept', repr(e)[:160])
+        n_mem = 0
+    if n_mem:
+        log('market memory: latest prices of', n_mem, 'coming games kept')
     if carried:
         log('kept', len(carried), 'earlier fixtures for', len({m['lk'] for m in carried}), 'competitions with no fresh fixtures')
         matches.extend(carried)
@@ -4317,6 +4370,10 @@ def build(state, prev, seed=None):
                         'table': [[disp(lk, r[0])] + r[1:] for r in lg.get('table') or []]})
             if lg.get('shots'):
                 rec['sh'] = 1   # ratings use shots on target as well as goals
+        mem = (state.get('mem') or {}).get(lk)
+        if mem and lk in SIM_LEAGUES:
+            # the season simulator's strengths: the market's memory, in the table's terms (defence: higher concedes more)
+            rec['mm'] = {'mu': mem['mu'], 'home': mem['home'], 't': {disp(lk, tm): [v[0], round(-v[1], 4)] for tm, v in mem['t'].items()}}
         out_leagues[lk] = rec
 
     q = state.get('quota') or {}
@@ -5389,6 +5446,138 @@ def losses_np(np, lh, la, hg, ag, rho=None):
     r = np.where(hg > ag, H, np.where(hg == ag, D, A))
     o = np.where(hg + ag > 2, O, 1 - O)
     return -np.log(np.maximum(1e-9, r)), -np.log(np.maximum(1e-9, o))
+
+
+# ----------------------------------------------------------------------------------------------
+# Market memory. Rate every side from the expected goals that the closing prices of its recent games implied,
+# instead of from the goals it scored: a weighted fit of log expected goals = mu + home + attack - defence,
+# where a game a fortnight old counts half as much as today's (MEM_TAU). The closing price already holds
+# everything the market knew (injuries, form, transfers, news), so these ratings are what the market thinks
+# of each side now. On 2025/26, unseen, they predicted results with log loss 1.6860 a game where Statpad's
+# goal-based ratings managed 1.7103 and the early price of each game itself 1.6825: 86% of the way from the
+# ratings to the market, without seeing the game's own price, and as well calibrated as the market. On six
+# extra leagues with only 1X2 closing prices they closed 84% of that gap. Where a game has no bookmaker price
+# (most games more than two or three days off), the engine prices it from this memory instead of the ratings;
+# with a price, the memory adds nothing (fitted weight 0.05, a gain of 0.00003), so the blend is unchanged.
+# Sources: football-data's closing prices (average, then Pinnacle, then early) for every finished league game
+# in the last MEM_WINDOW days, and, for the latest days and for leagues football-data doesn't price, the last
+# price Statpad itself saw before each kick-off (state['pmem']).
+# ----------------------------------------------------------------------------------------------
+MEM_TAU = 12.0         # days for a game's weight to halve
+MEM_RIDGE = 0.05       # pull towards the league average, per 100 games' worth of weight
+MEM_WINDOW = 420       # days of prices kept
+MEM_NEW = 0.12         # a side with no priced game in the window starts this much below average, in attack and defence
+MEM_MIN = 30           # priced games a league needs before its memory is used
+MEM_FD = {}            # league -> [(date, home, away, pH, pA, pO)] from the results files, refilled on each load
+
+
+def mem_rows(np):
+    """Expected goals for every collected closing price, by league: [date, home, away, lh, la]."""
+    out = {}
+    for lk, rows in MEM_FD.items():
+        if not rows:
+            continue
+        lh, la = fit_market_np(np, [r[3] for r in rows], [r[4] for r in rows], [r[5] for r in rows], rho_for(lk))
+        out[lk] = [[r[0], r[1], r[2], round(float(x), 3), round(float(y), 3)] for r, x, y in zip(rows, lh, la)]
+    return out
+
+
+def mem_fit(np, rows, today):
+    """The memory for one league at today's date: mu, home, and each side's [attack, defence, priced games in
+    the last 60 days]. rows: [date, home, away, lh, la], only games before today."""
+    t0 = datetime.strptime(today, '%Y-%m-%d').toordinal()
+    use = []
+    for r in rows:
+        try:
+            age = t0 - datetime.strptime(r[0][:10], '%Y-%m-%d').toordinal()
+        except ValueError:
+            continue
+        if 0 < age <= MEM_WINDOW and r[3] > 0 and r[4] > 0:
+            use.append((age, r[1], r[2], math.log(r[3]), math.log(r[4])))
+    if len(use) < MEM_MIN:
+        return None
+    teams = sorted({u[1] for u in use} | {u[2] for u in use})
+    ix = {tm: k for k, tm in enumerate(teams)}
+    n, m = len(teams), len(use)
+    w = np.array([0.5 ** (u[0] / MEM_TAU) for u in use])
+    X = np.zeros((2 * m, 2 + 2 * n))
+    X[:, 0] = 1
+    X[:m, 1] = 1
+    hi = np.array([ix[u[1]] for u in use]); ai = np.array([ix[u[2]] for u in use]); r_ = np.arange(m)
+    X[r_, 2 + hi] = 1; X[r_, 2 + n + ai] = -1
+    X[m + r_, 2 + ai] = 1; X[m + r_, 2 + n + hi] = -1
+    y = np.array([u[3] for u in use] + [u[4] for u in use]); ww = np.concatenate([w, w])
+    A = X.T @ (X * ww[:, None]); b = X.T @ (ww * y)
+    A[2:, 2:] += MEM_RIDGE * float(w.sum()) / 100 * np.eye(2 * n)
+    beta = np.linalg.solve(A, b)
+    recent = {}
+    for u in use:
+        if u[0] <= 60:
+            recent[u[1]] = recent.get(u[1], 0) + 1; recent[u[2]] = recent.get(u[2], 0) + 1
+    return {'mu': round(float(beta[0]), 4), 'home': round(float(beta[1]), 4), 'n': m, 'at': today,
+            't': {tm: [round(float(beta[2 + k]), 4), round(float(beta[2 + n + k]), 4), recent.get(tm, 0)] for k, tm in enumerate(teams)}}
+
+
+def mem_goals(mem, h, a):
+    """Expected goals for home v away from a league's memory, or None when neither side is in it."""
+    if not mem:
+        return None
+    th, ta = mem['t'].get(h), mem['t'].get(a)
+    if not th and not ta:
+        return None
+    ah, dh = (th[0], th[1]) if th else (-MEM_NEW, -MEM_NEW)
+    aa, da = (ta[0], ta[1]) if ta else (-MEM_NEW, -MEM_NEW)
+    return [round(math.exp(mem['mu'] + mem['home'] + ah - da), 4), round(math.exp(mem['mu'] + aa - dh), 4)]
+
+
+def refresh_mem(state):
+    """Refit every league's memory from football-data's closing prices and Statpad's own last prices."""
+    np = numpy_lib(True)
+    if np is None:
+        return 'no fast maths this run'
+    today = NOW.strftime('%Y-%m-%d')
+    by = {}
+    for lk, rows in (state.get('mem_fd') or {}).items():
+        d = by.setdefault(lk, {})
+        for r in rows:
+            d[(r[0], r[1], r[2])] = r
+    for lk, games in (state.get('pmem') or {}).items():
+        d = by.setdefault(lk, {})
+        for r in games.values():
+            if r[5] < iso(NOW) and not any((day, r[1], r[2]) in d for day in (r[0], (parse_iso(r[5]) - timedelta(days=1)).strftime('%Y-%m-%d'))):
+                d[(r[0], r[1], r[2])] = r[:5]   # football-data's closing price first; Statpad's own last price where it has none
+    out = {}
+    for lk, d in by.items():
+        try:
+            f = mem_fit(np, list(d.values()), today)
+        except Exception as e:   # one league's bad data never costs the others their memory
+            log('market memory:', lk, repr(e)[:120])
+            f = None
+        if f:
+            out[lk] = f
+    state['mem'] = out
+    state['mem_at'] = iso(NOW)
+    return f"{len(out)} leagues, {sum(f['n'] for f in out.values())} priced games"
+
+
+def mem_record(state, obs):
+    """Remember the latest price of every coming league game (overwritten until kick-off, so the last one stays),
+    as expected goals, for leagues and days football-data hasn't priced."""
+    np = numpy_lib(False)
+    if np is None or not obs:
+        return 0
+    lh, la = fit_market_np(np, [o[5] for o in obs], [o[6] for o in obs], [o[7] for o in obs], RHO_DC)
+    pm = state.setdefault('pmem', {})
+    for o, x, y in zip(obs, lh, la):
+        lk, mid, ko, h, a = o[:5]
+        if ko > NOW:
+            pm.setdefault(lk, {})[mid] = [ko.strftime('%Y-%m-%d'), h, a, round(float(x), 3), round(float(y), 3), iso(ko)]
+    cut = iso(NOW - timedelta(days=MEM_WINDOW))
+    for lk in list(pm):
+        pm[lk] = {k: v for k, v in pm[lk].items() if v[5] >= cut}
+        if not pm[lk]:
+            del pm[lk]
+    return len(obs)
 
 
 # ----------------------------------------------------------------------------------------------
@@ -6888,6 +7077,10 @@ def main():
                     if ds_ > lp_new.setdefault(lk_, {}).get(t_, ''):
                         lp_new[lk_][t_] = ds_
             state['last_played'] = lp_new
+            np_ = numpy_lib(True)
+            if np_ is not None and MEM_FD:
+                state['mem_fd'] = safe(lambda: mem_rows(np_), state.get('mem_fd') or {})
+                state['mem_due'] = True
             last['results'] = iso(NOW)
             src['results'] = {'ok': True, 'at': iso(NOW), 'leagues': len(res)}
         else:
@@ -6925,6 +7118,11 @@ def main():
         src['fixtures'] = {'ok': ok or ok2, 'at': iso(NOW), 'count': len(fx) + len(ofx)}
         log('football-data fixtures:', len(fx), '| openfootball schedule fixtures:', len(ofx))
 
+    if state.pop('mem_due', False) or due(state, 'mem', 1) or not state.get('mem'):
+        last['mem'] = iso(NOW)
+        mem_note = safe(lambda: refresh_mem(state), 'error')
+        src['memory'] = {'ok': mem_note != 'error', 'at': iso(NOW), 'note': mem_note}
+        log('market memory:', mem_note)
     prev_matches = (prev or {}).get('matches') or []
     lv_ok, lv_note = safe(lambda: refresh_live(state, prev_matches), (False, 'error'))
     src['live'] = {'ok': lv_ok, 'at': iso(NOW), 'note': lv_note}

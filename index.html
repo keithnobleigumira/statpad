@@ -232,6 +232,7 @@ h2 { font: 850 clamp(30px, 4.4vw, 42px)/.95 var(--f-display); letter-spacing: .0
 .b-done { background: var(--sunk); color: var(--ink-3); }
 .b-clash { background: var(--yellow-soft); color: var(--yellow); }
 .b-est { background: var(--sunk); color: var(--ink-3); }
+.b-mem { background: var(--cobalt-soft); color: var(--cobalt); }
 .b-xi { background: var(--cobalt-soft, var(--sunk)); color: var(--cobalt); }
 .b-news { background: var(--sunk); color: var(--ink-2); }
 .fx-teams { display: grid; gap: 5px; min-width: 0; grid-row: 2; grid-column: 1; }
@@ -2048,7 +2049,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
 /* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
 const ENGINE = (() => {
   // the engine's version, stamped on every prediction the track record keeps, so versions can be compared later
-  const VERSION = '2026-11-19';
+  const VERSION = '2026-11-20';
   const N = 11, RHO = -0.07, W_MKT = 0.8, W_EXT = 0.5, HAIR = 0.03;
   const M_DC = 0.05, M_EST = 0.06, M_DER = 0.065, STALE_H = 36;
   const TIERS = {
@@ -2060,6 +2061,9 @@ const ENGINE = (() => {
   // uncertainty: how sure Statpad is of each pick. Tiers use the cautious chance (one standard deviation
   // below the stated chance), so thin data or a thin market keeps a pick out of the safest tiers.
   const Z_LO = 1.0, SIG_MOD = 0.25, SIG_EXT = 0.12;
+  // the market's memory (ratings read from the closing prices of each side's recent games): as well calibrated
+  // as a price on past seasons, so no haircut, and a spread a little wider than a market's
+  const SIG_MEM = 0.12;
   // prices are stale when older than the time left to kick-off (at least 6 hours, at most STALE_H): a price from
   // this morning is fine for a game next week, not for one in an hour, when team news has moved the market
   function staleAt(m, now) { const h = m && m.ko ? (Date.parse(m.ko) - now) / 3600e3 : STALE_H; return Math.max(6, Math.min(STALE_H, h)); }
@@ -2210,6 +2214,7 @@ const ENGINE = (() => {
   function analyse(m, now) {
     now = now || Date.now();
     const lm = m.lm && m.lm[0] > 0 && m.lm[1] > 0 ? m.lm : null;
+    const mm = m.mm && m.mm[0] > 0 && m.mm[1] > 0 && m.mm[0] < 8 && m.mm[1] < 8 ? m.mm : null;
     const mk = m.mkt && m.mkt.p && m.mkt.p.length === 3 ? m.mkt : null;
     const rho = rhoOk(m.rho) ? m.rho : rhoFor(m.lk);
     const pMod = lm ? markets(matrix(lm[0], lm[1], rho)) : null;
@@ -2229,7 +2234,8 @@ const ENGINE = (() => {
       const [eh, ea] = fit({ H: m.ext[0], A: m.ext[2], O: null }, lm || [1.4, 1.1], rho);
       if (lm) { lh = blend(eh, lm[0], W_EXT); la = blend(ea, lm[1], W_EXT); } else { lh = eh; la = ea; }
       src = 'external';
-    } else if (lm) { [lh, la] = lm; src = 'model'; }
+    } else if (mm) { [lh, la] = mm; src = 'memory'; }
+    else if (lm) { [lh, la] = lm; src = 'model'; }
     else return null;
     // fatigue and motivation, when the pipeline's tuning found they help on past seasons
     const fx = m.fx && m.fx[0] > 0 && m.fx[1] > 0 && Math.abs(Math.log(m.fx[0])) < 0.5 ? m.fx : null;
@@ -2256,6 +2262,7 @@ const ENGINE = (() => {
     if (src === 'blend') { const k = sigMkt(mk, ageH, stale); sh = Math.hypot((1 - wm) * ls[0], wm * k); sa = Math.hypot((1 - wm) * ls[1], wm * k); }
     else if (src === 'market') sh = sa = sigMkt(mk, ageH, stale);
     else if (src === 'external') { sh = Math.hypot((1 - W_EXT) * ls[0], W_EXT * SIG_EXT); sa = Math.hypot((1 - W_EXT) * ls[1], W_EXT * SIG_EXT); }
+    else if (src === 'memory') sh = sa = Math.hypot(SIG_MEM, m.thin ? 0.05 : 0);
     else [sh, sa] = ls;
     const pc = CORNERS.map(([u, v]) => markets(matrix(lh * Math.exp(u * sh), la * Math.exp(v * sa), rho)));
 
@@ -3026,7 +3033,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const scs = (i) => (sc ? `<span class="sc${was && sc[i] > was[i] ? ' up' : ''}">${sc[i]}</span>` : '');
     const pick = a && a.top ? `<span class="pick"><span class="tier tier-${a.tier || 'C'}">${pct(a.top.pAdj)}</span><b>${esc(a.top.label)}</b> · ${odds(a.top.price)}${a.top.real ? '' : ' est'}</span>` : `<span class="pick">No prediction yet: no ratings or prices</span>`;
     return `<article class="fx${r.live && !(LN && LN.ft) ? ' is-live' : ''}" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}">
-      <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${stakeBadge(m)}${a && !realMkt(m) ? '<span class="badge b-est">Model only</span>' : ''}${newsBadge(m)}</div>
+      <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${stakeBadge(m)}${a && !realMkt(m) ? (a.src === 'memory' ? '<span class="badge b-mem" title="No bookmaker price yet: priced from the market\'s memory of both sides">Market memory</span>' : '<span class="badge b-est">Model only</span>') : ''}${newsBadge(m)}</div>
       <div class="fx-teams">
         <div class="tm"><span class="pos">${m.ph || ''}</span>${crest(m.h, m.lk)}<span class="nm">${esc(m.h)}</span>${formDots(m.fh)}<span class="xg">${a ? a.lh.toFixed(2) : ''}</span>${scs(0)}</div>
         <div class="tm"><span class="pos">${m.pa || ''}</span>${crest(m.a, m.lk)}<span class="nm">${esc(m.a)}</span>${formDots(m.fa)}<span class="xg">${a ? a.la.toFixed(2) : ''}</span>${scs(1)}</div>
@@ -3162,7 +3169,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const intl = info.group === 'intl', LNs = r.started ? liveNow(m.id) : null;
     const pos = (p, f, dom) => `${p ? `<span>${ord(p)}${intl ? ' in world ratings' : dom ? ' in ' + esc(lgName(dom)) : ''}</span>` : ''}${formDots(f)}`;
     const chips = [];
-    chips.push({ blend: [a.st ? (a.wm > 1 ? 'Learned blend: a step past the bookmakers, away from the model' : `Learned blend: model ${Math.round((1 - a.wm) * 100)}% · market ${Math.round(a.wm * 100)}%`) : `Model ${Math.round((1 - (a.wm || 0.8)) * 100)}% · market ${Math.round((a.wm || 0.8) * 100)}%`, ''], market: ['Market-implied', ''], model: ['Model only: no prices yet', 'warn'], external: ['External forecast blend', ''] }[a.src]);
+    chips.push({ blend: [a.st ? (a.wm > 1 ? 'Learned blend: a step past the bookmakers, away from the model' : `Learned blend: model ${Math.round((1 - a.wm) * 100)}% · market ${Math.round(a.wm * 100)}%`) : `Model ${Math.round((1 - (a.wm || 0.8)) * 100)}% · market ${Math.round((a.wm || 0.8) * 100)}%`, ''], market: ['Market-implied', ''], model: ['Model only: no prices yet', 'warn'], memory: ['Market memory: no price for this game yet, so Statpad reads both sides from the closing prices of their recent games', ''], external: ['External forecast blend', ''] }[a.src]);
     if (a.top && a.top.sd != null) chips.push([`Top pick ${pct(a.top.pAdj)}, cautious ${pct(a.top.pLo)}: ${a.tier ? TIER_NAME[a.tier] : 'below the tiers'}`, a.top.pAdj - a.top.pLo > 0.05 ? 'warn' : '']);
     if (m.mkt) chips.push([`${m.mkt.n > 1 ? m.mkt.n + ' bookmakers' : m.mkt.src === 'football-data' ? 'Average of bookmakers' : 'Single price feed'}${a.ageH != null ? ' · ' + (a.ageH < 1 ? 'fresh' : a.ageH < 48 ? Math.round(a.ageH) + ' h old' : Math.round(a.ageH / 24) + ' d old') + (a.stale ? ', refresh due' : '') : ''}`, a.stale ? 'warn' : '']);
     if (a.hair > 0) chips.push([`Safety haircut −${Math.round(a.hair * 100)} pts on picks`, 'warn']);
@@ -3211,6 +3218,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="cmp-row"><span class="n">Statpad</span>${sbar([a.p.H, a.p.D, a.p.A])}</div>
         ${mk ? `<div class="cmp-row"><span class="n">Market</span>${sbar(mk.p)}</div>` : ''}
         ${a.pMod ? `<div class="cmp-row"><span class="n">Model</span>${sbar([a.pMod.H, a.pMod.D, a.pMod.A])}</div>` : ''}
+        ${m.mm && a.src !== 'memory' ? (() => { const am = ENGINE.analyse(Object.assign({}, m, { mkt: null, ext: null })); return am && am.src === 'memory' ? `<div class="cmp-row"><span class="n">Memory</span>${sbar([am.p.H, am.p.D, am.p.A])}</div>` : ''; })() : ''}
       </div><div class="legend"><span><i style="background:var(--h)"></i>${esc(m.h)}</span><span><i style="background:var(--d)"></i>Draw</span><span><i style="background:var(--a)"></i>${esc(m.a)}</span></div></div>
       <div class="card qx" id="qx">${qxCard(r)}</div>
       </div>
@@ -3750,6 +3758,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // ideas tested on games the model never saw: what went live and what didn't, with the numbers
   const RESEARCH = [
+    ['kept', 'Market memory for games with no price', 'Each side rated from the expected goals that the closing prices of its recent games implied, not from its goals. Without seeing a game’s own price it got 86% of the way from Statpad’s goal ratings to that price, as well calibrated as the market, and closed 84% of the gap on six leagues with only 1X2 prices. Games with no bookmaker price are now priced from it, and the season simulator uses it.', 'log loss on 2025/26: goal ratings 1.7103, market memory 1.6860, the game’s early price 1.6825'],
+    ['off', 'Market memory blended into priced games', 'Where a game has a real price, mixing in the memory changed almost nothing.', 'fitted weight 0.05, gain 0.00003 a game'],
+    ['off', 'Price momentum', 'Whether the move from the early price to the closing price carries on past the close. It doesn’t: the market finishes its moves.', 'gain +0.00001 a game on 8,839 unseen games (95% range −0.0003 to +0.0003)'],
+    ['off', 'Overreaction to luck', 'Sides that recently scored more than their prices expected come out very slightly overpriced next time, but too slightly to tell from luck.', 'gain +0.00015 a game (95% range −0.0004 to +0.0007)'],
+    ['off', 'Market memory as a value-bet filter', 'Value bets the memory agreed with beat the closing price by more in 2021–24, and by less in 2024–27. The memory does point where prices go, about a tenth of the way, but too little to bet on.', 'closing-line value, agree v disagree: +5.1% v +2.5%, then +3.8% v +4.7%'],
     ['off', 'Learning from the closing price', 'Fitted to the bookmakers’ closing prices instead of the results, the learned blend predicted the unseen season worse on two different splits. The closing price is sharper than the early one, but what makes it sharper (late team news, sharp money) is not something the blend could learn from it.', 'log loss 1.6817 → 1.6829 and 1.6685 → 1.6689'],
     ['off', 'Line-up rotation', 'Starting line-ups for 32,731 past games in 19 leagues, from ESPN, compared with each side’s usual team over its previous eight games. Against the early prices, a side missing 30% of its usual team scored about 6% fewer goals and conceded about 6% more, but the gain was within luck; against the closing prices it was nothing, because by kick-off the market has priced the line-ups in.', 'gain against early prices +0.0005 a game (95% range −0.0003 to +0.0013); against closing prices −0.0001'],
     ['off', 'Rest days counting cup and European games', 'Counting every competition, not just league games, changed the rest days of 3,548 of 18,465 games, but the blend predicted the unseen season worse, and the rest effect it had found shrank by half.', 'log loss 1.6817 → 1.6820'],
@@ -3757,7 +3770,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     ['kept', 'Quarter Kelly as the stake', 'In the bankroll stress test (Value bets) it grew about as fast as flat 1% stakes with half the falls and almost never halved the bank; full Kelly halved it in more than half of seasons.', 'typical season ×1.44, bad season ×1.03'],
   ];
   function researchCard() {
-    return `<div class="card lab-card research"><h4>Research log <span>tested on unseen games</span></h4>
+    return `<div class="card lab-card research"><h4>Research log <span>v56 and v55, tested on unseen games</span></h4>
       <ul class="rs-l">${RESEARCH.map(([k, name, what, num]) => `<li><span class="rs-k ${k}">${k === 'kept' ? 'Kept' : 'Off'}</span><div><b>${esc(name)}</b><p>${esc(what)}</p><small>${esc(num)}</small></div></li>`).join('')}</ul>
       <p class="note">Every idea is fitted on older seasons and judged on newer ones it never saw, and goes live only if it predicts those better. Log loss is home, draw and away plus over/under 2.5 a game, lower is better; differences of a few ten-thousandths are within luck. The market is hard to beat: most ideas end up here as Off.</p></div>`;
   }
@@ -3992,6 +4005,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>Each league's results feed a Poisson model: home goals = μ × home advantage × home attack × away defence, and the same for the away side without the home bonus. Older games count less, last season counts less again, and every team is pulled towards average by a few phantom games so a hot fortnight doesn't swing the ratings. Newly promoted sides start slightly below average.</p>
       <p>Where football-data.co.uk has shot counts (the main European leagues), shots on target count next to goals: each side's goals are mixed with its shots on target times the league's goals per shot on target. Shots are steadier than goals, so a team that creates chances but finishes badly is rated on what it creates. Each rating also carries a standard error, from how much evidence is behind it.</p>
       <p><b>Shot quality from the commentary.</b> For the eight leagues where ESPN's play-by-play lists every shot with its spot on the pitch (the Premier League, the Championship, La Liga, the Bundesliga, Serie A, Ligue 1, the Eredivisie and the Primeira Liga), Statpad turns each shot into the chance it was a goal: distance, the angle of the goal mouth, and the commentary's own words (header, free kick, penalty, fast break, cross, through ball, corner). That model was fitted on 368,847 shots from 2021/22 to 2026/27; on seasons it wasn't fitted on it scored 0.280 per shot (log loss), against 0.345 for knowing only how often shots go in. A side's expected goals (xG) is the sum. The workflow collects a few dozen games a run. Once most of a league's games have it, the monthly tuning gives those eight leagues their own settings with xG mixed into the goals, and keeps them only if they beat the common settings on the latest season there. In the two tests so far it helped on 2024/25 (error 1.665 → 1.659) and not on 2025/26 (1.686 → 1.687), so expect it to come and go.</p>
+      <p><b>Market memory.</b> Most games more than two or three days off have no bookmaker price yet. Statpad prices those from the market's memory: each side rated from the expected goals that the closing prices of its recent games implied, rather than from the goals it scored, with a game a fortnight old counting half as much as today's. A closing price holds everything the market knew (injuries, form, transfers, news), so it says more about a side than a scoreline does. On 2025/26, unseen, it predicted results with a log loss of 1.6860 a game against 1.7103 for the goal-based ratings and 1.6825 for each game's own early price, and it is as well calibrated as a price, so memory-priced games carry no safety haircut. The season simulator plays the rest of the season with it too. With a real price, nothing changes: the memory adds nothing to it.</p>
       <p>A second, independent read of each team comes from Elo ratings, updated game by game, with bigger swings for bigger wins (the World Football Elo method). The gap between two teams' Elo is turned into expected goals around the league's own scoring rate and mixed with the model above, in log space. The monthly tuning fits the mix on two past seasons and keeps it only while it lowers the error on the latest completed season, which it never saw. On 19 leagues it did: the model's error fell from 1.712 to 1.709 (1X2 plus over/under log loss, 2025/26). It matters most for games without bookmaker prices, which rest on the model alone; where prices exist, the tuned blend leans mostly or wholly on them (the Lab shows the current share), because over past seasons they have been the sharpest single source.</p>
       <p>A third read is tested too: <b>game-by-game ratings</b>, a Kalman filter in which each side's attack and defence drift a little every day and each result moves them by how surprising it was, weighed by how sure the ratings were. On its own it beat the season-long ratings on 2025/26, but next to Elo it added too little (1.7070 → 1.7063, under the bar of 0.001) and was slightly worse on 2024/25, so it stays off until a monthly check says otherwise.</p>
       <p>National teams in the Nations League and friendlies are rated the same way, from every international result of the last six years. Neutral venues get no home bonus, and friendlies count 60% because line-ups are rotated. Friendly picks lose an extra 3 points and are kept out of the two safest slip tiers.</p>
@@ -8481,7 +8495,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     } else if (m.mkt && m.mkt.ou && m.mkt.ou.pO && /^(O|U|BTTS)/.test(t.key) && a.pMod) {
       const L = m.mkt.ou.line || 2.5, mo = L === 1.5 ? a.pMod.O15 : L === 3.5 ? a.pMod.O35 : L === 4.5 ? a.pMod.O45 : a.pMod.O25;
       out.push(`On goals, the bookmakers make over ${L} ${pct(m.mkt.ou.pO)}; Statpad's own model ${pct(mo)}${Math.abs(m.mkt.ou.pO - mo) < 0.04 ? ', so they agree.' : '.'}`);
-    } else if (!m.mkt) out.push('There are no bookmaker prices yet, so this rests on Statpad\'s model alone.');
+    } else if (!m.mkt && a.src === 'memory') out.push(`There are no bookmaker prices for this game yet, so Statpad prices it from the market's memory: what the closing prices of each side's recent games said about them. On past seasons that came within a whisker of the bookmakers' own price.${a.pMod ? ` Statpad's goal-based ratings alone would say ${pct(a.pMod.H)} for ${esc(m.h)}.` : ''}`);
+    else if (!m.mkt) out.push('There are no bookmaker prices yet, so this rests on Statpad\'s model alone.');
     const h = m.hist;
     if (h && h.length > 1 && side != null) {
       const o0 = h[0][side + 1], o1 = h[h.length - 1][side + 1];
@@ -9962,7 +9977,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const names = tf.teams, n = names.length, row = new Map(L.table.map((r) => [r[0], r]));
     if (!names.every((nm) => row.has(nm))) return null;
     const base = names.map((nm) => { const r = row.get(nm); return { pts: r[7], gf: r[5], ga: r[6], att: r[9] || 0, def: r[10] || 0, p: r[1], pos: L.table.indexOf(r) + 1 }; });
-    const mu = L.mu != null ? L.mu : 0.3, home = L.home != null ? L.home : 0.25;
+    let mu = L.mu != null ? L.mu : 0.3, home = L.home != null ? L.home : 0.25;
+    if (L.mm && L.mm.t && names.every((nm) => L.mm.t[nm])) {   // the market's memory of every side
+      mu = L.mm.mu; home = L.mm.home;
+      base.forEach((b, k) => { b.att = L.mm.t[names[k]][0]; b.def = L.mm.t[names[k]][1]; });
+    }
     const live = new Map(S.rows.filter((x) => x.m.lk === lk && !x.started && x.a).map((x) => [x.m.h + '|' + x.m.a, x]));
     const fx = tf.rem.map(([i, j]) => {
       const r = live.get(names[i] + '|' + names[j]);
@@ -10993,6 +11012,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const side = /^(H|1X|DNB_H|AH_H|H&|H_)/.test(t.key) ? 0 : /^(A|X2|DNB_A|AH_A|A&|A_)/.test(t.key) ? 2 : t.key === 'D' ? 1 : null;
     if (m.mkt && side != null && a.pMod) { const mk = m.mkt.p[side], md = [a.pMod.H, a.pMod.D, a.pMod.A][side];
       out.push(T(`The bookmakers say ${pct(mk)}, Statpad's own model ${pct(md)}${Math.abs(mk - md) < 0.04 ? ': they agree.' : md > mk ? ': the model is a little keener.' : ': the model is a little cooler, and the market takes most of the weight.'}`, `Wabeti wanasema ${pct(mk)}, modeli ya Statpad ${pct(md)}${Math.abs(mk - md) < 0.04 ? ': wanakubaliana.' : '.'}`)); }
+    else if (!m.mkt && a.src === 'memory') out.push(T("There are no bookmaker prices for this game yet, so I'm reading both sides from the market's memory: the closing prices of their recent games.", 'Bado hakuna bei za wabeti kwa mechi hii, kwa hiyo ninatumia kumbukumbu ya soko: bei za mwisho za mechi zao za karibuni.'));
     else if (!m.mkt) out.push(T('There are no bookmaker prices yet, so this rests on the model alone.', 'Bado hakuna bei za wabeti, kwa hiyo hii inategemea modeli peke yake.'));
     const tn = m.tn; if (tn) { const outs = (s) => ((tn[s] && tn[s].out) || []).filter((x) => x[2] !== 'q'); const oh = outs('h'), oa = outs('a');
       if (oh.length || oa.length) out.push(T(`Missing: ${[oh.length ? `${m.h} ${oh.length} (${oh.slice(0, 2).map((x) => x[0]).join(', ')})` : '', oa.length ? `${m.a} ${oa.length} (${oa.slice(0, 2).map((x) => x[0]).join(', ')})` : ''].filter(Boolean).join('; ')}.`, `Wanaokosekana: ${[oh.length ? `${m.h} ${oh.length}` : '', oa.length ? `${m.a} ${oa.length}` : ''].filter(Boolean).join('; ')}.`)); }
@@ -11300,6 +11320,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     [/\b(how often|when) (do|does|are) (you|statpad|the (numbers|prices|predictions)) (update|updated|refresh)|\bupdate\b.*\boften\b/, ['The site updates about every hour from the workflow (prices, ratings, results); while the page is open, live scores refresh every 30 seconds to a minute from ESPN.', 'Tovuti inasasishwa karibu kila saa; ukurasa ukiwa wazi, matokeo ya moja kwa moja yanasasishwa kila sekunde 30 hadi dakika moja.']],
     [/\b(is (it|statpad) free|cost|pay for|subscription|bure)\b/, ['Statpad is free: no account, no subscription. It runs on free data sources and your phone does the drawing and the speaking.', 'Statpad ni bure: hakuna akaunti wala malipo.']],
     [/\b(install|add to home|download the app|as an app|pakua)\b/, ['On Android, tap the download icon in the header to install Statpad like an app. On iPhone, open it in Safari, tap Share, then Add to Home Screen.', 'Kwenye Android, gusa alama ya kupakua juu kuisakinisha kama programu. Kwenye iPhone, Safari → Share → Add to Home Screen.']],
+    [/\b(market memory|memory rating|memory ratings|kumbukumbu ya soko)\b/, ["The market's memory: for games with no bookmaker price yet, Statpad rates each side from the closing prices of its recent games instead of its goals, since a closing price holds everything the market knew. On last season, unseen, it came within a whisker of the bookmakers' own prices and was as well calibrated, while Statpad's goal-based ratings were well behind. Games priced this way say Market memory.", 'Kumbukumbu ya soko: kwa mechi zisizo na bei, Statpad inapima timu kwa bei za mwisho za mechi zao za karibuni.']],
     [/\b(how much (should|do|to) (i )?(stake|bet|put)|stak(e|ing) (plan|size|strategy)|kelly|bankroll|bank roll|money management|dau kiasi gani)\b/, ['Stake a small, fixed share of a bankroll you can afford to lose, never chase losses. Statpad suggests quarter Kelly: the edge divided by the price less one, times a quarter, capped at 5% of the bank. In the Lab\'s stress test on five past seasons it grew about as fast as flat 1% stakes with half the falls and almost never halved the bank, while full Kelly halved it in more than half of seasons. Set your bankroll under Slips → Your coupon.', 'Weka sehemu ndogo ya mtaji unaoweza kuupoteza, na usifukuzie hasara. Statpad inapendekeza robo ya Kelly, isiyozidi 5% ya mtaji.']],
     [/\b(guarantee|guaranteed|fixed match|sure win|100%|100 percent|never lose|win every time|always win|uhakika wa 100)\b/, ['No honest prediction is guaranteed, and fixed-match sellers are scams. Statpad gives chances: an 85% pick still loses about one time in seven. The surest picks are under Safest picks, but keep stakes small and set a budget under Slips → Your coupon.', 'Hakuna utabiri wenye uhakika wa 100%, na wanaouza "fixed matches" ni matapeli. Chaguo la 85% bado linapoteza karibu mara 1 kati ya 7.']],
   ];
