@@ -2052,6 +2052,58 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
 </div>
 
 <script>
+/* Safety net. Whatever goes wrong on a phone, the page never just sits blank: errors are kept, and if the page hasn't
+   finished starting after 20 s a panel says what happened, with Repair: it clears this phone's saved copy of the site
+   and its display settings (never the coupon, the bets or the bet settings) and reloads. Opening the site with ?reset
+   does the same. If it's still stuck after a repair, a full reset is offered too. */
+(function () {
+  var errs = [], LOG = [], t0 = Date.now();
+  window.__spMark = function (m) { LOG.push(((Date.now() - t0) / 1000).toFixed(1) + ' s  ' + m); };
+  window.__spMark('page received, scripts starting');
+  if (/[?&]diag\b/.test(location.search)) {   // ?diag: every start-up step on screen, live, to screenshot
+    var nav = navigator, cn = nav.connection || {};
+    window.__spMark('browser: ' + nav.userAgent);
+    window.__spMark('memory ' + (nav.deviceMemory || '?') + ' GB, ' + (nav.hardwareConcurrency || '?') + ' cores, network ' + (cn.effectiveType || '?') + (cn.downlink ? ' ' + cn.downlink + ' Mb/s' : '') + ', online ' + nav.onLine);
+    var show = function () {
+      var d = document.getElementById('spdiag');
+      if (!d && document.body) { d = document.createElement('pre'); d.id = 'spdiag'; d.style.cssText = 'position:fixed;left:6px;right:6px;top:6px;max-height:60vh;overflow:auto;z-index:100000;background:#000c;color:#9ff;font:11px/1.35 monospace;padding:8px;border:1px solid #55e6b1;border-radius:8px;white-space:pre-wrap;margin:0'; document.body.appendChild(d); }
+      if (d) d.textContent = 'Statpad diagnostics (screenshot this)\n' + LOG.join('\n') + (errs.length ? '\nERRORS:\n' + errs.join('\n') : '') + '\nclock ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s';
+    };
+    setInterval(show, 500);
+  }
+  window.addEventListener('error', function (e) { if (e && e.message) errs.push(e.message + (e.filename ? ' (' + String(e.filename).split('/').pop() + ':' + e.lineno + ')' : '')); });
+  window.addEventListener('unhandledrejection', function (e) { var r = e && e.reason; errs.push('promise: ' + (r && r.message ? r.message : String(r))); });
+  var KEEP = { sp_coupon: 1, sp_bets: 1, sp_betcfg: 1, sp_theme: 1 };
+  function repair(full) {
+    try { for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i); if (k && k.indexOf('sp_') === 0 && (full || !KEEP[k])) localStorage.removeItem(k); } } catch (e) {}
+    try { sessionStorage.setItem('spRepaired', '1'); } catch (e) {}
+    var jobs = [];
+    try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })); } catch (e) {}
+    try { if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
+    var done = false, go = function () { if (done) return; done = true; location.replace(location.pathname); };
+    Promise.all(jobs).then(go, go); setTimeout(go, 4000);
+  }
+  window.__spRepair = repair;
+  if (/[?&]reset\b/.test(location.search)) { repair(/[?&]reset=all\b/.test(location.search)); return; }
+  setTimeout(function () {
+    if (window.__spReady || document.getElementById('rescue')) return;
+    var again = false; try { again = sessionStorage.getItem('spRepaired') === '1'; } catch (e) {}
+    var d = document.createElement('div'); d.id = 'rescue'; d.setAttribute('role', 'alert');
+    d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:88px;z-index:99999;background:#14202e;color:#e9eef6;border:1px solid #55e6b1;border-radius:14px;padding:14px 16px;font:14px/1.45 system-ui,-apple-system,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.5)';
+    var btn = 'border:0;border-radius:10px;padding:10px 14px;font:600 14px system-ui,sans-serif;cursor:pointer;';
+    d.innerHTML = '<b style="display:block;margin-bottom:4px">Statpad is taking too long on this phone</b><span id="rescueMsg"></span>'
+      + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button type="button" id="rescueFix" style="' + btn + 'background:#55e6b1;color:#0f1a2b">Repair (keeps your coupon and bets)</button>'
+      + (again ? '<button type="button" id="rescueAll" style="' + btn + 'background:#f07878;color:#0f1a2b">Full reset (clears coupon and bets too)</button>' : '')
+      + '<button type="button" id="rescueWait" style="' + btn + 'background:#22324a;color:#e9eef6">Keep waiting</button></div>';
+    document.body.appendChild(d);
+    document.getElementById('rescueMsg').textContent = errs.length ? 'What went wrong: ' + errs.slice(0, 3).join(' | ') : 'No error was recorded: the match data hasn\'t finished downloading or loading yet.';
+    document.getElementById('rescueFix').onclick = function () { repair(false); };
+    var all = document.getElementById('rescueAll'); if (all) all.onclick = function () { if (confirm('Clear the coupon and saved bets on this phone too?')) repair(true); };
+    document.getElementById('rescueWait').onclick = function () { d.parentNode.removeChild(d); };
+  }, 20000);
+})();
+</script>
+<script>
 /* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
 const ENGINE = (() => {
   // the engine's version, stamped on every prediction the track record keeps, so versions can be compared later
@@ -2470,6 +2522,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const fp = [fresh, rows.length, rows.filter((r) => r.started).length, S.data.generated].join(':');
     if (fresh || fp !== S.fp) { S.ver++; S.slipCache.clear(); }
     S.fp = fp; S.progress = null; S.ready = true;
+    window.__spReady = true; if (window.__spMark) window.__spMark('ready'); { const rb = document.getElementById('rescue'); if (rb) rb.remove(); } try { sessionStorage.removeItem('spRepaired'); } catch (e) { /* none */ }
     return true;
   }
   function showProgress() {
@@ -2839,8 +2892,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const gen = Date.parse(S.data.generated), age = (S.now - gen) / 60e3;
     const ago = age < 1 ? 'just now' : age < 60 ? Math.round(age) + ' min ago' : age < 48 * 60 ? Math.round(age / 60) + ' h ago' : Math.round(age / 1440) + ' d ago';
     const stale = age > 6 * 60 && !S.legacy;
-    el.classList.add(stale || S.err ? 'warn' : 'on');
-    t.innerHTML = `<span class="lt-w">${S.legacy ? 'Live prices' : 'Data'} </span>${esc(ago)}<span class="long"> · checks every minute</span>`;
+    el.classList.add(stale || S.err || S.fromSaved ? 'warn' : 'on');
+    t.innerHTML = S.fromSaved ? `<span class="lt-w">Saved </span>${esc(ago)}<span class="long"> · updating</span>`
+      : `<span class="lt-w">${S.legacy ? 'Live prices' : 'Data'} </span>${esc(ago)}<span class="long"> · checks every minute</span>`;
+    if (S.fromSaved) { el.title = 'The copy saved on this phone, from ' + new Date(gen).toLocaleString() + ': the fresh one is still downloading'; return; }
     el.title = 'Data generated ' + new Date(gen).toLocaleString() + (S.lastOk ? ' · last checked ' + tFmt.format(S.lastOk) : '');
   }
 
@@ -3815,7 +3870,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // ideas tested on games the model never saw: what went live and what didn't, with the numbers
   const RESEARCH = [
-    ['kept', 'Market memory for cup and European games, with fitted league strengths', 'Unpriced cup games are read from both sides’ league memories plus league strengths fitted on 2,623 cup games (2021–2026). The old hand-set strengths overrated the lower divisions.', 'log loss on 1,445 unseen cup games: 1X2 1.0144 → 0.9928, over/under 0.6900 → 0.6533'],
+    ['kept', 'Market memory for cup and European games, with fitted league strengths', 'Unpriced cup games are read from both sides’ league memories plus league strengths fitted on 3,592 cup games (2021–2026). The old hand-set strengths overrated the lower divisions and the smaller European leagues.', 'log loss on 1,745 unseen cup games: 1X2 1.0073 → 0.9869, over/under 0.6939 → 0.6606'],
     ['off', 'Promoted and relegated sides starting from their old league', 'A side new to a league started from its memory in the league it left, moved onto the new league’s scale with the fitted strengths. No better: the memory learns a new side within a game or two of priced games anyway.', 'gain −0.0001 a game on the first 10 games of 2,850 moved sides’ games (95% range −0.0035 to +0.0031)'],
     ['off', 'More weight on Pinnacle in the consensus', 'Pinnacle alone read results very slightly better than the weighted consensus of all bookmakers, but within luck.', 'gain +0.00015 a game (95% range −0.00013 to +0.00038), early prices 2023/24–2026/27'],
     ['kept', 'Goals from the market’s memory where there’s no over/under price', 'Four in ten priced games have only home, draw and away prices, which read goals poorly. The goals level now leans on the memory (50–65%), who is stronger stays the price’s.', '2025/26 against before: +0.0051 a game (Bet365 alone), +0.0026 (Bet&Win), +0.0015 (average of many)'],
@@ -4076,7 +4131,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p><b>Shot quality from the commentary.</b> For the eight leagues where ESPN's play-by-play lists every shot with its spot on the pitch (the Premier League, the Championship, La Liga, the Bundesliga, Serie A, Ligue 1, the Eredivisie and the Primeira Liga), Statpad turns each shot into the chance it was a goal: distance, the angle of the goal mouth, and the commentary's own words (header, free kick, penalty, fast break, cross, through ball, corner). That model was fitted on 368,847 shots from 2021/22 to 2026/27; on seasons it wasn't fitted on it scored 0.280 per shot (log loss), against 0.345 for knowing only how often shots go in. A side's expected goals (xG) is the sum. The workflow collects a few dozen games a run. Once most of a league's games have it, the monthly tuning gives those eight leagues their own settings with xG mixed into the goals, and keeps them only if they beat the common settings on the latest season there. In the two tests so far it helped on 2024/25 (error 1.665 → 1.659) and not on 2025/26 (1.686 → 1.687), so expect it to come and go.</p>
       <p><b>Market memory.</b> Most games more than two or three days off have no bookmaker price yet. Statpad prices those from the market's memory: each side rated from the expected goals that the closing prices of its recent games implied, rather than from the goals it scored, with a game a fortnight old counting half as much as today's. A closing price holds everything the market knew (injuries, form, transfers, news), so it says more about a side than a scoreline does. On 2025/26, unseen, it predicted results with a log loss of 1.6860 a game against 1.7103 for the goal-based ratings and 1.6825 for each game's own early price, and it is as well calibrated as a price, so memory-priced games carry no safety haircut. The season simulator plays the rest of the season with it too. With a real price, nothing changes: the memory adds nothing to it.</p>
       <p><b>Price outlook.</b> Prices move between the first quote and kick-off, and some of that move can be seen coming. The market drifts about a fifth of the way back towards its own memory of both sides, and towards sides that have been playing better than their prices expected (shots on target, shots, corners and goals for minus against, beyond what each game's closing price implied, recent games counting most). From those, Statpad forecasts where each real price will be at kick-off and marks it ▼ (shorter: take it now) or ▲ (longer: waiting usually pays). On 47,190 league games from 2019/20 to 2026/27, each season forecast by a fit on the others, the forecast changes matched what happened (forecast 2.1% shorter: 1.6%; forecast 2.1% longer: 2.2%), the direction was right 61.5% of the time when the forecast was 1% or more, and following those forecasts got prices 1.2–2.0% better than always betting early and 0.5–1.2% better than always betting at kick-off, in every season. Value bets forecast to shorten beat the closing price by 6.3% when taken at once and by only 1.4% when left to kick-off. It is advice on timing only: it never changes a probability or what counts as value, because the forecast part of a move turned out to be only about half real information. Every forecast made ${ENGINE.MV_AHEAD} hours or more before kick-off is graded against the last price before kick-off, and the live record shows under each game's price history.</p>
-      <p><b>Cup and European games.</b> With no price yet, a cup game is priced from each side's market memory in its own league, plus a league-strength offset and a cup home advantage fitted on 2,623 cup and European games from 2021 to 2026 (pulled towards Statpad's old hand-set strengths). On 1,445 of them from July 2024 on, fitted only on the earlier ones, it read the 90-minute result with a log loss of 0.9928 a game, where goal-based ratings with the hand-set strengths managed 1.0144, and over/under 2.5 with 0.6533 against 0.6900. The hand-set strengths had overrated the lower divisions (the Championship, for one, is 0.77 in log goals below the Premier League, not 0.45). Across leagues it was a couple of points too sure of favourites, so these games keep a small safety haircut.</p>
+      <p><b>Cup and European games.</b> With no price yet, a cup game is priced from each side's market memory in its own league, plus a league-strength offset and a cup home advantage fitted on 3,592 cup and European games from 2021 to 2026 (pulled towards Statpad's old hand-set strengths). On 1,745 of them from July 2024 on, fitted only on the earlier ones, it read the 90-minute result with a log loss of 0.9869 a game, where goal-based ratings with the hand-set strengths managed 1.0073, and over/under 2.5 with 0.6606 against 0.6939. The hand-set strengths had overrated the lower divisions and the smaller European leagues (the Championship, for one, is 0.78 in log goals below the Premier League, not 0.45; Austria 0.77, not 0.45). Across leagues it was a couple of points too sure of favourites, so these games keep a small safety haircut.</p>
       <p><b>Goals from the market's memory.</b> About four in ten priced games have no over/under price, and a home, draw and away price alone says little about how many goals to expect (it has to be read from the draw price). For those games, who is stronger still comes from the price, but the goals level leans on the market's memory: half of it for a price from many bookmakers, 65% for one to three (60% and 35% where the memory itself was built from 1X2 prices alone). On 2023/24–2026/27, fitted on the four seasons before, this beat the price alone by 0.0045 a game for one bookmaker and 0.0012 for the average of many; on 2025/26, against what Statpad did before (the price blended with its own model), by 0.0051 (Bet365), 0.0026 (Bet&amp;Win) and 0.0015 (the average). Moving who is stronger towards the memory made things slightly worse, and a price with its own over/under gains nothing, so those are left alone. The memory is also less sure of a side with few recent priced games: against the closing price, its supremacy was off by 0.32 (in log goals) for sides with none in the last 60 days, 0.22 with one or two and 0.15 with three or more, so a memory-priced game's cautious chance now widens with that.</p>
       <p>A second, independent read of each team comes from Elo ratings, updated game by game, with bigger swings for bigger wins (the World Football Elo method). The gap between two teams' Elo is turned into expected goals around the league's own scoring rate and mixed with the model above, in log space. The monthly tuning fits the mix on two past seasons and keeps it only while it lowers the error on the latest completed season, which it never saw. On 19 leagues it did: the model's error fell from 1.712 to 1.709 (1X2 plus over/under log loss, 2025/26). It matters most for games without bookmaker prices, which rest on the model alone; where prices exist, the tuned blend leans mostly or wholly on them (the Lab shows the current share), because over past seasons they have been the sharpest single source.</p>
       <p>A third read is tested too: <b>game-by-game ratings</b>, a Kalman filter in which each side's attack and defence drift a little every day and each result moves them by how surprising it was, weighed by how sure the ratings were. On its own it beat the season-long ratings on 2025/26, but next to Elo it added too little (1.7070 → 1.7063, under the bar of 0.001) and was slightly worse on 2024/25, so it stays off until a monthly check says otherwise.</p>
@@ -13074,7 +13129,9 @@ void main() {
       S.data = doc; S.err = null; S.now = Date.now();
       const cal = doc.calib && doc.calib.on ? { a: doc.calib.a, b: doc.calib.b } : null, mc = doc.mcal || null, rl = doc.rho || null, cs = JSON.stringify([cal, mc, rl]);
       if (cs !== S.calSig) { S.calSig = cs; ENGINE.setCalib(cal); if (ENGINE.setMcal) ENGINE.setMcal(mc); if (ENGINE.setRho) ENGINE.setRho(rl); S.cache.clear(); GR.clear(); }
+      if (window.__spMark) window.__spMark('analysis started');
       if (!(await analyseAll(token))) return;
+      if (window.__spMark) window.__spMark('analysis done, drawing');
       if (!S.day || (S.day !== 'all' && !days().some((d) => d.key === S.day))) S.day = pickDefaultDay();
       const first = !S.introDone; S.introDone = true;
       if (first && motionOK()) { document.documentElement.classList.add('intro'); setTimeout(() => document.documentElement.classList.remove('intro'), 1500); }
@@ -13087,20 +13144,46 @@ void main() {
     $('#matchList').innerHTML = `<div class="empty-state"><b>Something went wrong</b>${esc(S.err)}<br><br>Pull down to reload. If it keeps happening, screenshot this message.</div>`;
     if (window.console) console.error(e);
   }
-  async function load(first) {
-    S.lastFetch = Date.now();
+  // the match file this phone saved last time (the service worker keeps it): shown at once while the fresh one downloads,
+  // so a slow or stalled connection never leaves the page on "Loading"
+  async function savedDoc() {
     try {
-      const res = await fetch('matches.json?t=' + Math.floor(Date.now() / 30e3), { cache: 'no-store' });
+      if (!('caches' in window)) return null;
+      const c = await caches.open('statpad-v1'), r = await c.match(new URL('matches.json', location.href).href, { ignoreSearch: true });
+      const doc = r ? await r.json() : null;
+      return doc && Array.isArray(doc.matches) ? doc : null;
+    } catch (e) { return null; }
+  }
+  async function useSaved() {
+    if (S.data) return true;
+    const doc = await savedDoc(); if (!doc || S.data) return !!S.data;
+    S.fromSaved = true; S.fileGen = doc.generated; if (window.__spMark) window.__spMark('saved copy from this phone shown (' + doc.generated + ')');
+    if (S.legacyDoc) overlayLegacy(doc, S.legacyDoc); ingest(doc); return true;
+  }
+  let loading = false;
+  async function load(first) {
+    if (loading && !first) return;   // one download at a time: on a slow line, retries don't pile up
+    loading = true; S.lastFetch = Date.now();
+    if (first) useSaved();
+    if (window.__spMark) window.__spMark('match data: download started' + (first ? ' (first)' : ''));
+    // a download that stalls is given up after 45 s so the next minute's check can start afresh
+    const ctl = typeof AbortController === 'function' ? new AbortController() : null, stop = ctl ? setTimeout(() => ctl.abort(), 45e3) : 0;
+    try {
+      const res = await fetch('matches.json?t=' + Math.floor(Date.now() / 30e3), { cache: 'no-store', signal: ctl ? ctl.signal : undefined });
       if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (window.__spMark) window.__spMark('match data: answer HTTP ' + res.status + ', reading');
       const doc = await res.json();
-      S.lastOk = new Date();
-      if (!S.data || doc.generated !== S.fileGen || first) { S.fileGen = doc.generated; if (S.legacyDoc) overlayLegacy(doc, S.legacyDoc); ingest(doc); }
-      else renderLive();
+      if (window.__spMark) window.__spMark('match data: read, ' + doc.matches.length + ' matches, made ' + doc.generated);
+      S.lastOk = new Date(); S.err = null;
+      const wasSaved = S.fromSaved; S.fromSaved = false;
+      if (!S.data || doc.generated !== S.fileGen) { S.fileGen = doc.generated; if (S.legacyDoc) overlayLegacy(doc, S.legacyDoc); ingest(doc); }
+      else { if (wasSaved) S.data = doc; renderLive(); }
     } catch (err) {
-      S.err = String(err.message || err);
-      if (!S.data) $('#matchList').innerHTML = `<div class="empty-state"><b>Couldn't load match data</b>matches.json didn't load (${esc(S.err)}). It retries every minute.</div>`;
+      S.err = err && err.name === 'AbortError' ? 'the connection is too slow' : String((err && err.message) || err);
+      if (window.__spMark) window.__spMark('match data: failed: ' + S.err);
+      if (!(await useSaved())) $('#matchList').innerHTML = `<div class="empty-state"><b>Couldn't load match data</b>matches.json didn't load (${esc(S.err)}). It retries every minute.</div>`;
       renderLive();
-    }
+    } finally { clearTimeout(stop); loading = false; }
   }
   // Optional live price feed when this page runs as a claude.ai artifact (database document market/current)
   function demargin(o) {   // the power method, as the site's update uses: each 1/price raised to one power k so they add to 1
@@ -13131,6 +13214,7 @@ void main() {
     } catch (e) { /* not running as an artifact */ }
   }
 
+  if (window.__spMark) window.__spMark('main script running');
   applyUI();
   try { matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (UI.theme === 'auto') applyUI(); }); RM.addEventListener('change', applyUI); } catch (e) { /* old browsers */ }
   renderNav();

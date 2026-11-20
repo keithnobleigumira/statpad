@@ -311,6 +311,11 @@ def pretty(name):
     return PRETTY.get(name, name)
 
 
+# names used by cup and European feeds for league sides (applied only when matching across leagues, so match ids
+# keep their names)
+XALIAS = {'f c kbenhavn': 'copenhagen', 'kbenhavn': 'copenhagen', 'heart of midlothian': 'hearts'}
+
+
 class Teams:
     """Resolve a raw team name to the canonical (football-data) name within a league or globally."""
 
@@ -339,6 +344,7 @@ class Teams:
     def resolve_global(self, raw, cutoff=0.86, pool_='m'):
         g = self.globals.get(pool_) or {}
         k = norm(raw)
+        k = XALIAS.get(k, k)
         if k in g:
             return g[k]
         keys = {kk: kk for kk in g}
@@ -4309,7 +4315,10 @@ def build(state, prev, seed=None):
         mm = None
         mm_extra = {}
         if cup_sides and L[f['lk']]['group'] != 'intl':
-            mm, mm_extra = cup_mem(state, *cup_sides)
+            try:
+                mm, mm_extra = cup_mem(state, *cup_sides)
+            except Exception as e:   # never let one game cost the run
+                log('cup memory:', mid, repr(e)[:120]); mm, mm_extra = None, {}
         if not is_cup(f['lk']) and L[f['lk']]['group'] != 'intl':
             mm = mem_goals((state.get('mem') or {}).get(f['lk']), f['h'], f['a'])
             if mkt and mkt.get('p') and len(mkt['p']) == 3 and not mkt.get('ext'):
@@ -4326,11 +4335,14 @@ def build(state, prev, seed=None):
             matches[-1]['tn'] = news
         if mm:
             matches[-1]['mm'] = mm   # the market's memory of both sides: priced from it when there's no bookmaker price
-            if mm_extra:
-                matches[-1].update(mm_extra)   # a cup game: both sides' league memories
-            else:
-                matches[-1].update(mem_extra(f['lk'], state['mem'][f['lk']], f['h'], f['a']))
-                mm_by_mid[mid] = mm
+            try:
+                if mm_extra:
+                    matches[-1].update(mm_extra)   # a cup game: both sides' league memories
+                else:
+                    matches[-1].update(mem_extra(f['lk'], state['mem'][f['lk']], f['h'], f['a']))
+                    mm_by_mid[mid] = mm
+            except Exception as e:
+                log('market memory:', mid, repr(e)[:120])
         if ls:
             matches[-1]['ls'] = ls
         if MODEL_W and not knockout(f['lk']) and not cross and not (mkt and (mkt.get('n') or 0) == 1):
@@ -4354,7 +4366,7 @@ def build(state, prev, seed=None):
         rev = {disp(m['lk'], tm): tm for tm in mem['t']} if mem else {}
         mm = mem_goals(mem, rev.get(m['h'], m['h']), rev.get(m['a'], m['a'])) if mem and not is_cup(m['lk']) and L[m['lk']]['group'] != 'intl' else None
         cx = {}
-        if is_cup(m['lk']) and L[m['lk']]['group'] != 'intl' and m.get('dh') and m.get('da'):
+        if is_cup(m['lk']) and L[m['lk']]['group'] != 'intl' and m.get('dh') and m.get('da') and m['dh'] in L and m['da'] in L:
             mh_, ma_ = (state.get('mem') or {}).get(m['dh']), (state.get('mem') or {}).get(m['da'])
             if mh_ and ma_:
                 rh_ = {disp(m['dh'], tm): tm for tm in mh_['t']}; ra_ = {disp(m['da'], tm): tm for tm in ma_['t']}
@@ -5480,6 +5492,34 @@ def fit_market_np(np, pH, pA, pO=None, rho=None, iters=14, start=None):
     return np.exp(u), np.exp(v)
 
 
+def fit_market_any(pH, pA, pO=None, rho=None, iters=14):
+    """fit_market_np with numpy when this run has it, otherwise the same Gauss-Newton fit game by game in plain Python
+    (most 5-minute runs don't load numpy). Lists of (home, away) expected goals."""
+    np = numpy_lib(False)
+    if np is not None:
+        lh, la = fit_market_np(np, pH, pA, pO, rho)
+        return [float(x) for x in lh], [float(x) for x in la]
+    out_h, out_a = [], []
+    for k in range(len(pH)):
+        tH, tA, tO = pH[k], pA[k], (pO[k] if pO is not None else None)
+        def res(u_, v_):
+            H, _, A, O = dc_probs(math.exp(u_), math.exp(v_), rho=rho)
+            return (H - tH, A - tA, math.sqrt(0.5) * (O - tO) if tO is not None else 0.0)
+        u, v, e = math.log(1.4), math.log(1.1), 1e-5
+        for _ in range(iters):
+            r0 = res(u, v); ru = res(u + e, v); rv = res(u, v + e)
+            Ju = [(x - y) / e for x, y in zip(ru, r0)]; Jv = [(x - y) / e for x, y in zip(rv, r0)]
+            a = sum(x * x for x in Ju) + 1e-12; b = sum(x * y for x, y in zip(Ju, Jv)); c = sum(y * y for y in Jv) + 1e-12
+            gu = sum(x * r for x, r in zip(Ju, r0)); gv = sum(y * r for y, r in zip(Jv, r0))
+            det = a * c - b * b
+            du, dv = -(c * gu - b * gv) / det, -(a * gv - b * gu) / det
+            u = min(1.9, max(-3.0, u + max(-1.0, min(1.0, du)))); v = min(1.9, max(-3.0, v + max(-1.0, min(1.0, dv))))
+            if abs(du) + abs(dv) < 1e-9:
+                break
+        out_h.append(math.exp(u)); out_a.append(math.exp(v))
+    return out_h, out_a
+
+
 def losses_np(np, lh, la, hg, ag, rho=None):
     """game_loss for many games at once: arrays of the 1X2 and the over/under 2.5 log losses."""
     H, D, A, O = dc_probs_np(np, lh, la, rho)
@@ -5510,6 +5550,7 @@ MEM_WINDOW = 420       # days of prices kept
 MEM_NEW = 0.12         # a side with no priced game in the window starts this much below average, in attack and defence
 MEM_MIN = 30           # priced games a league needs before its memory is used
 MEM_FD = {}            # league -> [(date, home, away, pH, pA, pO, stats)] from the results files, refilled on each load
+MEM_FD_V = 2           # the kept rows' format (2: with match stats); a state holding an older one reloads the results once
 
 
 def mem_rows(np):
@@ -5582,12 +5623,13 @@ def mem_extra(lk, mem, h, a):
     return out
 
 
-# Cup and European games: each side's market memory in its own league, plus a league-strength offset and a cup home
-# advantage, both fitted (Poisson, pulled towards the hand-set strengths) on 2,623 cup games from ESPN 2021-2026 whose
-# two sides both play in a rated league. On 1,445 games from July 2024 on, fitted only on the earlier ones, this read
-# the 90-minute result with log loss 0.9928 a game where goal-based ratings with the hand-set strengths managed 1.0144,
-# and over/under 2.5 with 0.6533 against 0.6900. The hand-set strengths overrated the lower divisions.
-CUP_MEM = {"home": 0.229, "goals": 0.046, "s": {"BEL": -0.453, "BUN": 0.011, "DEN1": -0.548, "ENG2": -0.771, "ENG3": -0.971, "ENG4": -1.381, "EPL": 0.0, "ERE": -0.599, "ESP2": -0.667, "FRA2": -0.621, "GER2": -0.65, "GRE1": -0.862, "ITA2": -0.746, "L1": -0.146, "LaLiga": -0.012, "NOR1": -0.627, "POR": -0.562, "SA": -0.087, "SCO1": -0.904, "SCO2": -1.158, "SWE1": -0.799, "TUR1": -0.64}}
+# Cup and European games: each side's market memory in its own league, plus a league-strength offset, a cup home
+# advantage and a cup goals level, fitted (Poisson, pulled towards the hand-set strengths) on the cup and European
+# games from ESPN 2021-2026 whose two sides both play in a rated league (3,592). On the 1,745 from July 2024 on,
+# fitted only on the earlier ones, this read the 90-minute result with log loss 0.9869 a game where goal-based
+# ratings with the hand-set strengths managed 1.0073, and over/under 2.5 with 0.6606 against 0.6939. The hand-set
+# strengths overrated the lower divisions and the smaller European leagues.
+CUP_MEM = {"home": 0.239, "goals": 0.027, "s": {"ARG1": -0.55, "AUT1": -0.774, "BEL": -0.388, "BUN": 0.075, "DEN1": -0.466, "ENG2": -0.775, "ENG3": -0.973, "ENG4": -1.388, "EPL": 0.0, "ERE": -0.498, "ESP2": -0.63, "FIN1": -1.247, "FRA2": -0.553, "GER2": -0.597, "GRE1": -0.805, "IRL1": -1.013, "ITA2": -0.708, "L1": -0.078, "LaLiga": 0.071, "MEX1": -0.554, "NOR1": -0.585, "POL1": -0.638, "POR": -0.501, "ROU1": -0.953, "SA": -0.002, "SCO1": -0.902, "SCO2": -1.228, "SUI1": -0.656, "SWE1": -0.786, "TUR1": -0.59}}
 
 
 def cup_mem(state, dh, th, da, ta):
@@ -5645,10 +5687,9 @@ def refresh_mem(state):
 def mem_record(state, obs):
     """Remember the latest price of every coming league game (overwritten until kick-off, so the last one stays),
     as expected goals, for leagues and days football-data hasn't priced."""
-    np = numpy_lib(False)
-    if np is None or not obs:
+    if not obs:
         return 0
-    lh, la = fit_market_np(np, [o[5] for o in obs], [o[6] for o in obs], [o[7] for o in obs], RHO_DC)
+    lh, la = fit_market_any([o[5] for o in obs], [o[6] for o in obs], [o[7] for o in obs], RHO_DC)
     pm = state.setdefault('pmem', {})
     for o, x, y in zip(obs, lh, la):
         lk, mid, ko, h, a = o[:5]
@@ -5741,13 +5782,10 @@ def outlook(state, obs, mm_by_mid):
     """The forecast move of each priced league game's price by kick-off: {match id: ([log supremacy, log total
     goals], the price's home and away expected goals)}.
     obs as for mem_record: (league, id, kick-off, home, away, pH, pA, pO)."""
-    np = numpy_lib(False)
-    if np is None or not obs:
-        return {}
     use = [o for o in obs if mm_by_mid.get(o[1])]
     if not use:
         return {}
-    lh, la = fit_market_np(np, [o[5] for o in use], [o[6] for o in use], [o[7] for o in use], RHO_DC)
+    lh, la = fit_market_any([o[5] for o in use], [o[6] for o in use], [o[7] for o in use], RHO_DC)
     forms = state.get('mvf') or {}
     out = {}
     for o, fh, fa in zip(use, lh, la):
@@ -7303,7 +7341,8 @@ def main():
         log('ESPN prices:', n_px, 'games')
     src['espn_data'] = {'ok': es_note != 'error', 'at': iso(NOW), 'note': es_note}
     log('ESPN competitions:', es_note)
-    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or 'teamfiles' not in state or 'last_played' not in state or retuned:
+    if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or 'teamfiles' not in state or 'last_played' not in state or retuned \
+            or state.get('mem_fd_v') != MEM_FD_V:
         res = safe(load_results, {})
         if res:
             state['leagues'] = safe(lambda: compute_leagues(res, Teams()), state.get('leagues') or {})
@@ -7323,6 +7362,7 @@ def main():
             np_ = numpy_lib(True)
             if np_ is not None and MEM_FD:
                 state['mem_fd'] = safe(lambda: mem_rows(np_), state.get('mem_fd') or {})
+                state['mem_fd_v'] = MEM_FD_V
                 state['mem_due'] = True
             last['results'] = iso(NOW)
             src['results'] = {'ok': True, 'at': iso(NOW), 'leagues': len(res)}
