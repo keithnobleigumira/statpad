@@ -8,14 +8,15 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 
 | File | What it does |
 |---|---|
-| `index.html` | The website: design, prediction engine, slips, coupon. It reloads `matches.json` every minute. |
+| `index.html` | The website: design, prediction engine, slips, coupon. While it's on screen it checks `v.json` every 30 seconds and downloads a data file only when that file changed. |
 | `update.py` | Data pipeline. It downloads results, fixtures and prices, fits team ratings and writes `matches.json`. |
 | `.github/workflows/update.yml` | Runs `update.py` every 5 minutes and redeploys the site whenever the data changes. |
 | `matches.json` | Starter data (5–9 Nov 2026). It is replaced on the first run. |
 | `track.json` | The track record. The workflow creates it and commits it; don't edit it by hand. |
 | `ledger/` | Every graded prediction and value bet, one CSV file per month. The workflow creates and commits it; rows are only ever added. GitHub shows each file as a table. |
 | `backtest.json`, `results.json`, `live.json`, `miracles.json`, `teams/` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores; the latest weekend's rarest results; one file per league for team pages and the season simulator). Nothing to upload. |
-| `sw.js`, `manifest.webmanifest` | Let people install Statpad as a phone app and open it offline. `sw.js` also keeps crests and flags on the phone after the first download. |
+| `sw.js`, `manifest.webmanifest` | Let people install Statpad as an app (phone, tablet or computer), open it instantly and offline. `sw.js` also keeps crests and flags on the phone after the first download. |
+| `v.json` | Made by the workflow on each publish: a few hundred bytes naming the version of each data file, so open pages know what changed without downloading it. |
 | `crests/` | Club crests and competition logos: one sheet per competition in `crests/s/`, big single crests for match pages. The workflow makes them on each publish; nothing to upload. |
 | `globe/` | The shock map's earth pictures. The workflow fetches and resizes them once; nothing to upload. |
 | App icons | Drawn by the workflow each time it publishes, so there's nothing to upload. |
@@ -51,7 +52,32 @@ Every run saves each match's top pick before kick-off, along with the 10-odds sl
 
 Quarter Kelly grows almost as fast as flat staking with half the falls; full Kelly looks best on a typical season but halves the bank in more than half of them, because the edges it stakes on are estimates. These are upper bounds: they use the best price across dozens of bookmakers before any of them limits the account.
 
-**Fixed in this version.** On a connection that is on but barely moving (Wi-Fi with a weak or stalled link), the page used to wait for the match file with no time limit and sat on "Loading"; offline it was fine, because a failed request falls back to the copy saved on the phone at once. Now the page shows the saved copy straight away (the header says "Saved … · updating") and swaps in the fresh file when it arrives, and the service worker serves the saved page or match file if the network hasn't answered within 4 or 7 seconds, while the download carries on in the background. Upload sw.js too. If the page hasn't finished starting after 20 seconds, a panel says what went wrong, with **Repair** (clears that phone's saved copy of the site and its display settings, never the coupon, bets or bet settings); `?reset` at the end of the address does the same, and `?diag` shows every start-up step live on screen. Most 5-minute runs don't load NumPy (only the hourly and six-hourly jobs install it), and the step that keeps Statpad's own last price of every coming game for the market memory, and the price outlook, quietly did nothing in those runs. Both now fall back to the same fit in plain Python (identical to 12 decimal places, 0.07 s for 261 games). A state whose kept closing prices predate the match stats now reloads the results once, so the outlook's form is there straight after an upgrade instead of up to six hours later.
+**Faster, smoother, and shaped to each device (v61).** Measured on a phone-speed setup (the CPU slowed 4x, as on a Galaxy A06-class phone) with the live site's 419 games:
+
+| | Before | Now |
+|---|---|---|
+| Working out every game's chances at start-up | 1.7 s | 0.6 s (the same answers to the last digit: the fit that matches each game's prices no longer builds a full scoreline grid at every step) |
+| Data while the page is open | all of `matches.json` (≈120 KB) every minute, even unchanged and even in the background | a 140-byte check every 30 seconds while it's on screen, nothing in the background; a file is downloaded only when it changed, under an address naming its version, so phones and GitHub's servers keep copies |
+| Opening the installed app | waited for the network for up to 4 s before showing anything | opens from the copy on the phone at once, without waiting for the network, checks for a newer version in the background (a few hundred bytes when nothing changed) and switches to it straight away if you haven't touched anything yet, otherwise offers **Update**; a copy older than a week, or none, waits for the network as before |
+| Switching sections | a view transition photographed the whole column and cross-faded the old section over the new one: both on screen at once (the ghosting in the laptop video) and a stutter on phones | the new section slides in on its own |
+| Opening a match | the 3D river was built while the sheet slid up (a 0.4 s freeze) | built once the sheet has arrived |
+| Live scores (ESPN) | every 30 s for games you've bet on, every minute for the rest | every 20 s and every 45 s |
+
+The header now says "Updated 34 min ago · checked just now": when the prices last changed, and that the page is still looking. Before, "Data 34 min ago" looked like nothing was happening when simply nothing had changed. The 5-minute re-sort now redraws only if a game kicked off or finished (it redrew the whole section every time, which could jump the screen while reading). Competitions far down the match list aren't laid out or painted until they're scrolled near. The segmented controls' sliding pill is measured once a frame instead of after every change to the page.
+
+**Each device gets its own fit.** A small script runs before anything is drawn and marks the page with what the device is: phone, tablet, laptop, desktop or large screen; touch or mouse; a short window; the installed app; a slower phone.
+
+- **Laptops with short windows** (under 760 px tall, like the laptop in the video): tighter spacing, so the date, the four day numbers, the top three games and the price ticker all fit the first screen.
+- **Big monitors**: the whole page is drawn larger so it fills the screen the way it fills a phone, about 1.2x on a 1920×1080 monitor and up to 1.5x on 2560×1440. Chromium browsers only (Chrome, Edge, Opera), which scale positions consistently; tooltips, the hero dots, the shock map, the match river and the assistant's orb were checked at 1.2x and 1.5x. Other browsers use more of the width instead (up to 1,720 px).
+- **Rows that scroll sideways with a mouse** (days, competitions, the top games, most at stake): arrows appear at the ends when the pointer is over the row, and the row can be dragged. A mouse can't swipe, so on a laptop these rows looked cut off at the edge with no way along.
+- **Fill the screen**: a full-screen button in the header on laptops, desktops and tablets hides the browser's bars and tabs so Statpad fills the whole screen like an app (Esc or F11 to leave).
+- **Slower phones** (touch devices with 4 GB of memory or less, 2G/3G, or data saver): "Light" effects, with no frosted-glass blur under the top and bottom bars (it re-blurred everything under them on every scroll frame) and animations at up to 30 frames a second.
+- **Display settings** now show what was detected ("Laptop · 1366 × 657 · mouse · 8 GB · 4G"), with **Effects** (Auto, Full, Light), **Size on this screen** (Auto, 90–140%, big screens with a mouse) and **Full screen**.
+- **The installed app** can turn sideways on tablets (it was locked to portrait), and tapping its icon while it's open brings the open window forward instead of opening a second one.
+
+Upload `sw.js` and `manifest.webmanifest` with `index.html` and `update.py`.
+
+**Fixed earlier.** On a connection that is on but barely moving (Wi-Fi with a weak or stalled link), the page used to wait for the match file with no time limit and sat on "Loading"; offline it was fine, because a failed request falls back to the copy saved on the phone at once. Now the page shows the saved copy straight away (the header says "Saved … · updating") and swaps in the fresh file when it arrives, and the service worker serves the saved page or match file if the network hasn't answered within 4 or 7 seconds, while the download carries on in the background. Upload sw.js too. If the page hasn't finished starting after 20 seconds, a panel says what went wrong, with **Repair** (clears that phone's saved copy of the site and its display settings, never the coupon, bets or bet settings); `?reset` at the end of the address does the same, and `?diag` shows every start-up step live on screen. Most 5-minute runs don't load NumPy (only the hourly and six-hourly jobs install it), and the step that keeps Statpad's own last price of every coming game for the market memory, and the price outlook, quietly did nothing in those runs. Both now fall back to the same fit in plain Python (identical to 12 decimal places, 0.07 s for 261 games). A state whose kept closing prices predate the match stats now reloads the results once, so the outlook's form is there straight after an upgrade instead of up to six hours later.
 
 **Research log.** Lab → Accuracy lists the ideas tested for this version on games the model never saw, kept or off, with the numbers (log loss is home, draw and away plus over/under 2.5 a game, lower is better):
 

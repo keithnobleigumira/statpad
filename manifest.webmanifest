@@ -6,19 +6,81 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#090e19",
   "theme_color": "#090e19",
-  "categories": ["sports"],
+  "categories": [
+    "sports"
+  ],
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Value board", "short_name": "Value", "url": "./#value", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
-    { "name": "Slip Studio", "short_name": "Slips", "url": "./#slips", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
-    { "name": "My bets", "short_name": "My bets", "url": "./#saved", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
-    { "name": "Performance Lab", "short_name": "Lab", "url": "./#track", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
-  ]
+    {
+      "name": "Value board",
+      "short_name": "Value",
+      "url": "./#value",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Slip Studio",
+      "short_name": "Slips",
+      "url": "./#slips",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "My bets",
+      "short_name": "My bets",
+      "url": "./#saved",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Performance Lab",
+      "short_name": "Lab",
+      "url": "./#track",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "launch_handler": {
+    "client_mode": [
+      "focus-existing",
+      "auto"
+    ]
+  },
+  "prefer_related_applications": false
 }

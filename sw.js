@@ -1,15 +1,19 @@
-/* Statpad service worker: lets the site install as an app and open offline.
-   Always tries the network first, so updates show straight away; the last good copy is kept for offline use.
+/* Statpad service worker: lets the site install as an app, open instantly and work offline.
+   v2 (v61): the page opens from the copy on the phone at once, and the network is asked in the background whether a
+   newer version is up (a conditional request: a few hundred bytes when nothing changed). A newer page is saved for
+   next time and the open page is told, so it can offer "Update". Only a copy older than a week, or none at all, waits
+   for the network (up to 4 seconds, then the old copy, as before).
    Club crests (single and on sheets), flags and the globe's earth pictures never change, so they come from the
    phone's copy once downloaded (saves data). Pictures are matched on their full address: ESPN's resized crests all
    share one path and differ only in the query (?img=…/<club>.png), so matching without it handed every club the first
    ESPN crest the phone had kept. v2 of the picture store drops the copies saved that way.
-   A slow or stalled connection (Wi-Fi that's on but barely moving) never leaves the page waiting: if the network
-   hasn't answered within a few seconds, the saved copy is shown and the download carries on to refresh it. */
+   Data files: the network first; if it hasn't answered within a few seconds, the saved copy is shown and the download
+   carries on to refresh it. v.json (which version of each data file is up) always goes straight to the network. */
 const CACHE = 'statpad-v1', FONTS = 'statpad-fonts-v1', IMGS = 'statpad-crests-v2', IMG_MAX = 900;
 const IMG_HOSTS = ['media.api-sports.io', 'flagcdn.com', 'a.espncdn.com'];
 const SHELL = ['./', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const NET_WAIT_PAGE = 4000, NET_WAIT_DATA = 7000;   // ms to wait for the network before the saved copy is used
+const PAGE_FRESH = 7 * 86400e3;   // a saved page younger than this opens at once
 
 self.addEventListener('install', (e) => {
   // the page and the latest data are saved straight away, so the app opens offline after the first visit
@@ -38,6 +42,8 @@ self.addEventListener('fetch', (e) => {
   }
 
   if (url.origin === self.location.origin) {
+    if (url.pathname.endsWith('/v.json')) return;   // tiny, and only useful fresh: straight to the network
+    if (req.mode === 'navigate') { e.respondWith(page(e, req, url)); return; }
     // data files are fetched with a cache-busting query; keep one copy per file
     const data = url.pathname.endsWith('.json');
     const key = data || req.mode === 'navigate' ? url.origin + url.pathname : req;
@@ -83,6 +89,40 @@ self.addEventListener('fetch', (e) => {
     }));
   }
 });
+
+// the page: the saved copy at once, and a check in the background for a newer one
+async function digest(buf) {
+  try { const h = await crypto.subtle.digest('SHA-1', buf); return Array.from(new Uint8Array(h).slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join(''); } catch (err) { return String(buf.byteLength); }
+}
+async function page(e, req, url) {
+  const key = url.origin + url.pathname, root = new URL('./', self.location).href, mark = root + '__checked';
+  const c = await caches.open(CACHE);
+  const hit = (await c.match(key, { ignoreSearch: true })) || (await c.match(root, { ignoreSearch: true }));
+  const checked = await c.match(mark).then((r) => (r ? r.text() : '0'), () => '0');
+  const net = fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(async (res) => {
+    if (!res.ok || res.type !== 'basic') return res;
+    const buf = await res.clone().arrayBuffer(), id = await digest(buf);
+    const was = hit ? hit.headers.get('x-statpad-build') : null;
+    c.put(mark, new Response(String(Date.now()))).catch(() => {});   // the saved page is known to be current as of now
+    if (id !== was) {
+      const h = new Headers(res.headers); h.set('x-statpad-build', id); h.set('x-statpad-saved', String(Date.now()));
+      const copy = new Response(buf, { status: 200, statusText: 'OK', headers: h });
+      await Promise.all([c.put(key, copy.clone()), key === root ? null : c.put(root, copy)]).catch(() => {});
+      if (hit && was) {   // a newer page than the one open: tell it (it can offer to switch now; otherwise next time)
+        for (const cl of await self.clients.matchAll({ type: 'window' })) cl.postMessage({ type: 'statpad-update', build: id });
+      }
+    }
+    return res;
+  });
+  e.waitUntil(net.catch(() => {}));
+  const age = hit ? Date.now() - Math.max(+checked || 0, +hit.headers.get('x-statpad-saved') || 0, Date.parse(hit.headers.get('date') || 0) || 0) : Infinity;
+  if (hit && age < PAGE_FRESH) return hit;
+  // nothing saved, or a copy older than a week: the network, with the old copy after a few seconds
+  const first = await Promise.race([net.then((r) => (r.ok ? r : null), () => null), new Promise((r) => setTimeout(() => r(undefined), NET_WAIT_PAGE))]);
+  if (first) return first;
+  if (hit) return hit;
+  return net.catch(() => Response.error());
+}
 
 // crests & flags: cache first, by exact address; only readable (same-site or CORS) pictures are kept, never opaque
 // answers or anything that isn't an image (an error page saved as a crest would stick)

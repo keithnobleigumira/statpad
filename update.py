@@ -8412,6 +8412,7 @@ def main():
             changed = True
     body = json.dumps(doc, ensure_ascii=False, separators=(',', ':'))
     (OUT_DIR / 'matches.json').write_text(body)
+    write_version(doc, body)
     if changed:
         (STATE_DIR / 'last.json').write_text(body)
     # trim cached API events that have kicked off long ago
@@ -8424,6 +8425,19 @@ def main():
     if gh:
         with open(gh, 'a') as fh:
             fh.write(f'changed={"true" if changed else "false"}\n')
+
+
+def write_version(doc, body):
+    """v.json: a few hundred bytes saying which version of each data file is up. The page checks it every 30 seconds
+    and downloads a file only when its version moved, under an address that names the version, so browsers and
+    GitHub's servers can keep copies (v61; before, the page downloaded all of matches.json, about 120 KB, every minute)."""
+    h = lambda t: hashlib.sha1(t.encode('utf-8')).hexdigest()[:12]
+    ver = {'app': 'Statpad', 'g': doc.get('generated'), 'at': iso(NOW), 'matches': h(body)}
+    for name in ('live', 'results', 'track', 'miracles', 'backtest', 'ledger'):
+        f = OUT_DIR / f'{name}.json'
+        if f.exists():
+            ver[name] = h(f.read_text())
+    (OUT_DIR / 'v.json').write_text(json.dumps(ver, separators=(',', ':')))
 
 
 if __name__ == '__main__':
