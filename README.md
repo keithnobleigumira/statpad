@@ -55,6 +55,10 @@ Quarter Kelly grows almost as fast as flat staking with half the falls; full Kel
 
 **Research log.** Lab → Accuracy lists the ideas tested for this version on games the model never saw, kept or off, with the numbers (log loss is home, draw and away plus over/under 2.5 a game, lower is better):
 
+- **Half-time markets: kept** (above).
+- **African leagues: kept** (above), with fixtures and new results from API-Football since ESPN stopped; Zambia left out.
+- **A draw correction for each African league from its own results: off** (above).
+- **CAF Champions League and Confederation Cup, club and country strengths: kept** (above).
 - **Ratings for European clubs from leagues Statpad doesn't rate: kept** (above).
 - **Dropping kinds of value bet that never beat the close: nothing to drop.** By league, selection and price range on 2019/20–2022/23, every kind of value bet beat the closing price on average. On 2023/24–2026/27 bigger edges beat the close by more: 3–5% edges +2.7%, 5–8% +4.6%, 8–12% +10.7%, 12–25% +18.4% (535 bets).
 - **Team draw tendencies: off.** How much more or less often the market prices a side's games as draws than its expected goals imply, added to memory-priced games: +0.00013 a game (95% range −0.00003 to +0.00028).
@@ -152,6 +156,59 @@ The shown forecast is shrunk at the extremes to match (forecast − 3.5 × forec
 | **Market memory + fitted strengths** | **0.9869** | **0.6606** |
 
 The gain is +0.020 a game on 1X2 (95% range +0.007 to +0.034) and +0.033 on over/under (+0.017 to +0.048). The fitted cup home advantage is 0.24 in log goals and cup games have 2.7% more goals than the two leagues' averages. The hand-set strengths overrated the lower divisions and the smaller European leagues: in log goals below the Premier League, the Championship is 0.78 (hand-set 0.45), League One 0.97 (0.75), League Two 1.39 (0.95), the Scottish Premiership 0.90 (0.50), Austria 0.77 (0.45), Romania 0.95 (0.65), Ireland 1.01 (0.85), Finland 1.25 (0.90); the Bundesliga, La Liga and Serie A come out level with the Premier League (within 0.08). Across leagues the memory was a couple of points too sure of favourites, so these games keep the cross-league safety haircut (2 points) and a wider spread. Leagues with no cross-league cup games in the data keep their hand-set strength. The strengths are fixed in update.py (`CUP_MEM`). ESPN's names for two European regulars ("F.C. København", "Heart of Midlothian") are now matched to their league sides.
+
+**Half-time markets.** Each match's Markets tab has a Half-time card: half-time/full-time (all nine), the half-time result and first- and second-half over 0.5 and 1.5 goals, with fair odds. They come from the match's full-time expected goals with the live model's timing (45% of goals before the break; from the half-time score a side a goal up scores 6.5% less and a side a goal down 11% more), scaled so the full-time results match the ones shown everywhere else. Checked on 22,491 games (2023/24–2026/27) with each game's closing expected goals:
+
+| Outcome | Stated | Happened |
+|---|---|---|
+| 1/1 | 26.6% | 26.0% |
+| X/1 | 14.9% | 14.6% |
+| X/X | 14.6% | 15.3% |
+| X/2 | 11.2% | 10.8% |
+| 2/2 | 17.6% | 17.3% |
+| 1/X, 2/X, 1/2, 2/1 | 5.0%, 4.9%, 2.2%, 2.8% | 5.5%, 5.3%, 2.3%, 2.9% |
+| level at half-time | 40.7% | 40.7% |
+| 1st half over 0.5 / 1.5 | 70.1% / 34.5% | 70.8% / 34.5% |
+| 2nd half over 0.5 / 1.5 | 78.1% / 45.3% | 79.0% / 45.5% |
+
+A fresh fit of the first-half share on 2019/20–2022/23 gave 0.445 (the live model's is 0.4495) and no extra low-score correction, so the live timing is used as it is. They're display only: half-time bets aren't added to the coupon or the track record (settling them needs half-time scores).
+
+**African football.** Added the Uganda Premier League (`UGA1`), Kenya's (`KEN1`) and Ghana's (`GHA1`) Premier Leagues, Nigeria's Premier Football League (`NGA1`) and South Africa's First Division (`RSA2`), rated from their results like South Africa's Premiership (`RSA1`). Nobody prices them for us, so they're model-priced (with the model-only safety haircut). Week by week through 2025/26, refitted on earlier games only:
+
+| League | Games | Goals a game | Draws | Log loss: every side average → ratings |
+|---|---|---|---|---|
+| Uganda | 238 | 2.10 | 30% | 1.0753 → 0.9340 (+0.141, 95% +0.096 to +0.191) |
+| South Africa (already in) | 308 | 2.08 | 33% | 1.0917 → 0.9971 (+0.095) |
+| Ghana | 303 | 2.06 | 26% | 0.9674 → 0.9335 (+0.034) |
+| Kenya | 303 | 2.00 | 32% | 1.1066 → 1.0791 (+0.028) |
+| South Africa First Division | 235 | 2.30 | 30% | 1.0619 → 1.0347 (+0.027) |
+| Nigeria | 377 | 2.05 | 24% | 0.8955 → 0.8963 (−0.001) |
+
+In Nigeria home advantage is most of the story, so team ratings add nothing to it; its predictions still carry the league's home advantage and goal rates. A draw correction per league fitted from one season of results was no better than the pooled one (from −0.006 to +0.002 a game), so they keep the pooled one. Zambia was left out: ESPN's results for it stop in September 2025, too few to test.
+
+ESPN's results for these leagues stop at the end of 2025/26 and it lists nothing of 2026/27, so their fixtures and new results come from API-Football's day lists (today and tomorrow, already read for team news; grading their results can add a few calls a day, within the existing allowance). Which API-Football league is which of ours is learned, not assumed: a league in the same country, not a cup, women's, youth or reserve competition, with three or more games between two sides ours already has (logged as `API-Football: Uganda Premier League (league …) is UGA1`). Its names are matched to ESPN's so each side's old and new results are one record; promoted clubs keep API-Football's name and start with the newcomer prior (a little below average). The new season's table isn't published, because only the games since Statpad began reading them are known; the ratings use them. Fixtures appear a day or two ahead, as API-Football's free plan lists only yesterday, today and tomorrow. Data status shows the line "African leagues (API-Football)".
+
+Would last season's ratings still help, starting this late? Replayed on 2025/26: ratings from games before the season, its first 70 days never seen, then twelve weeks predicted with that season's results added week by week from day 70:
+
+| League | Games | Log loss gain a game against every side average |
+|---|---|---|
+| Uganda | 69 | +0.093 (95% +0.034 to +0.148) |
+| Kenya | 94 | +0.058 (+0.006 to +0.103) |
+| Nigeria | 115 | +0.030 (+0.002 to +0.059) |
+| Ghana | 100 | −0.003 (−0.036 to +0.037) |
+| South Africa First Division | 42 | −0.021 (−0.098 to +0.052) |
+
+**Africa's club competitions.** The CAF Champions League (`CAFCL`) and Confederation Cup (`CAFCC`) are in, with fixtures, live scores and results from ESPN. Nobody prices them for us, so they're rated from their own results: once a day the pipeline reads both competitions back to 2019 from ESPN (16 calls the first time, 2 a day after) and fits one strength per club, its country's plus its own, each pulled towards average (country by 15 games' worth, club by 20), a game's weight halving every four years: log goals = goal level + home advantage + attacker's strength − defender's strength. A club's country is where it plays most home games, so a club new to CAF starts at its country's level (the home club's from the venue); two clubs CAF has never seen get no prediction. ESPN's names are kept as they are: cross-league name matching would have turned Sudan's Al Hilal and Libya's Al Ittihad into the Saudi clubs.
+
+| CAF games, walk-forward month by month | Games | 1X2 log loss | Over/under 2.5 |
+|---|---|---|---|
+| home advantage and goal level only, July 2025 on | 290 | 1.0579 | 0.6676 |
+| **club and country strengths**, July 2025 on | 290 | **0.9704** | **0.6498** |
+| country only, July 2023 on | 538 | 0.9706 (home only: 1.0402) | 0.6473 |
+| club only, July 2023 on | 538 | 0.9707 | 0.6464 |
+| club and country, July 2023 on | 538 | 0.9552 | 0.6424 |
+
+The settings were picked on July 2023 to June 2025 and judged on the 290 games after: +0.087 a game (95% range +0.050 to +0.128). Home sides score about 1.8 times as many goals as they would away, the biggest home advantage Statpad rates. Morocco's clubs come out strongest (+0.52 in log goals), then Egypt's (+0.33), Algeria's, Libya's and Tunisia's. Calibration across the whole test: favourites stated 39%/52%/67%/81% won 38%/48%/74%/89%, draws stated 28.4% happened 28.6%. These games are priced like other cross-league memory games (wider spread, 2-point safety haircut).
 
 **European clubs from leagues Statpad doesn't rate.** Champions, Europa and Conference League games (and their qualifiers) bring in clubs from Czechia, Croatia, Serbia, Ukraine, Hungary, Bulgaria, Cyprus, Israel, Azerbaijan and more, which had no prediction until priced. Once a day the pipeline reads three calendar years of European results from ESPN (18 calls the first time, 6 a day after) and fits one strength q per such club against the sides Statpad does rate (their attack and defence from the market memory and the cup-fitted league strengths): its attack is A0 + q and its defence D0 + q, so q moves who is favourite without moving the goals; a game's weight halves every two years and q is pulled towards 0 by 15 games' worth.
 

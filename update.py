@@ -164,6 +164,21 @@ comp('BRA2', 'Brasileirão Série B', 'Brazil', 'second', -0.70, oa=['soccer_bra
 comp('CHI1', 'Primera División', 'Chile', 'more', -0.75, oa=['soccer_chile_campeonato'], es='chi.1', hist=True)
 comp('COL1', 'Primera A', 'Colombia', 'more', -0.65, es='col.1', hist=True)
 comp('RSA1', 'Premiership', 'South Africa', 'more', -0.85, es='rsa.1', hist=True)
+# African leagues, rated from ESPN's results (ESPN lists no prices for them). Week by week through 2025/26, refitted on
+# earlier games only, the ratings beat "every side average" by 0.141 a game (1X2 log loss) in Uganda, 0.034 in Ghana,
+# 0.028 in Kenya and 0.027 in South Africa's First Division; in Nigeria, where home advantage is most of the story,
+# they add nothing over it (-0.001), so its picks rest mainly on home advantage. ESPN stopped at the end of 2025/26
+# for these, so their fixtures and new results come from API-Football's day lists (AF_FILL, af_fill). Zambia was left
+# out: ESPN's results stop in September 2025, too few to test on.
+comp('UGA1', 'Premier League', 'Uganda', 'more', -1.30, es='uga.1', hist=True)
+comp('KEN1', 'Premier League', 'Kenya', 'more', -1.30, es='ken.1', hist=True)
+comp('GHA1', 'Premier League', 'Ghana', 'more', -1.20, es='gha.1', hist=True)
+comp('NGA1', 'Premier Football League', 'Nigeria', 'more', -1.20, es='nga.1', hist=True)
+comp('RSA2', 'First Division', 'South Africa', 'second', -1.35, es='rsa.2', hist=True)
+AF_FILL = ('UGA1', 'KEN1', 'GHA1', 'NGA1', 'RSA2')
+# Africa's club competitions: nobody prices them for us, so they're rated from their own results (caf_fit)
+comp('CAFCL', 'CAF Champions League', 'Africa', 'cups', 0, es='caf.champions')
+comp('CAFCC', 'CAF Confederation Cup', 'Africa', 'cups', 0, es='caf.confed')
 comp('LIB', 'Copa Libertadores', 'South America', 'cups', 0, oa=['soccer_conmebol_copa_libertadores'], es='conmebol.libertadores')
 comp('SUD', 'Copa Sudamericana', 'South America', 'cups', 0, oa=['soccer_conmebol_copa_sudamericana'], es='conmebol.sudamericana')
 # women's football: its own pool of teams, so Chelsea's women's side is never mistaken for the men's
@@ -1101,6 +1116,9 @@ def compute_leagues(results, teams):
     for lk, (games, season) in results.items():
         table = build_table(games)
         cur_teams = [t for t, _ in table]
+        seen = {g[1] for g in games} | {g[2] for g in games}
+        extra = [t for t in AF_CUR.get(lk) or () if t not in set(cur_teams)]
+        cur_teams += [t for t in extra if t in seen]   # sides of this season with no result in it yet
         cur_n = sum(1 for g in games if g[5])
         with_shots = sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None)
         P_ = model_for(lk, games, cur_n and with_shots >= 0.8 * cur_n)
@@ -1126,6 +1144,15 @@ def compute_leagues(results, teams):
                        'se': {t: v for t, v in (rt or {}).get('se', {}).items() if t in cur_teams},
                        'shots': sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None),
                        'games': len(games), 'start': min(cur_d).strftime('%Y-%m-%d') if cur_d else None}
+        nt = P_.get('nt', NEW_TEAM_PRIOR[1])
+        for t in extra:
+            teams.add(lk, t)
+            if t not in seen and rt:   # promoted, never seen: the newcomer prior, as the ratings give newcomers
+                leagues[lk]['ratings'][t] = [round(-nt, 5), round(nt, 5)]
+                s0 = round(1 / math.sqrt(P_['k'] * math.exp(rt['mu'] + rt['home'] / 2)), 4)   # the prior's spread alone
+                leagues[lk]['se'][t] = [s0, s0]
+        if lk in AF_PART:
+            leagues[lk]['part'] = AF_PART[lk]
         if kal:
             leagues[lk]['kal'], leagues[lk]['kbase'] = kal, [round(kbase[0], 5), round(kbase[1], 5)]
     return leagues
@@ -2471,6 +2498,8 @@ def refresh_espn_data(state):
                     if g['st'] in ESPN_OFF or g['done'] or not (lo <= g['ko'] <= hi):
                         continue
                     out.append({'lk': lk, 'ko': iso(g['ko']), 'h': h, 'a': a, 'eid': g['id'], 'mkt': espn_market(cc)})
+                    if lk in CAF_LKS:   # where it's played says which country the home club is from
+                        out[-1]['vc'] = ((cc.get('venue') or {}).get('address') or {}).get('country')
         if ok_any:
             keep = [f for f in fixl if f['lk'] not in {f2['lk'] for f2 in out} and parse_iso(f['ko']) >= lo]
             state['es_fixtures'] = sorted(out + keep, key=lambda f: f['ko'])
@@ -2540,17 +2569,49 @@ def es_learn(state, h, a, g):
             ce[name] = str(tid)
 
 
+AF_CUR = {}    # lk -> this season's sides (from API-Football's lists), so promoted clubs are rated before they've played
+AF_PART = {}   # lk -> first date of a season only partly seen (its table isn't published)
+
+
+def rate_espn(state):
+    """Refit the competitions rated from ESPN's results (and the African leagues' API-Football results)."""
+    def safe(fn, default):
+        try:
+            return fn()
+        except Exception as e:   # one bad source must never stop the run
+            log('source error in', fn.__name__, '->', repr(e))
+            return default
+    eres = safe(lambda: espn_results(state), {})
+    if eres:
+        state.setdefault('leagues', {}).update(safe(lambda: compute_leagues(eres, Teams()), {}))
+        state.setdefault('recent_results', {}).update(safe(lambda: recent_results(eres), {}))
+        tf = safe(lambda: team_files(eres), None)
+        if tf:
+            state['teamfiles'] = dict(state.get('teamfiles') or {}, **tf)
+            state['teams_changed'] = True
+        log('ESPN ratings:', ', '.join(f"{lk} {len(g)} games" for lk, (g, _) in sorted(eres.items())))
+
+
 def espn_results(state):
     """The ESPN-rated competitions' results in the ratings' form: lk -> (games, season label)."""
     out = {}
+    AF_CUR.clear()
+    AF_PART.clear()
     for lk, hs in (state.get('es_hist') or {}).items():
         if lk not in L or not L[lk].get('hist') or not hs.get('g'):
             continue
         rows = sorted(hs['g'].values())
         latest = max((r[5] or 0) for r in rows)
+        if lk in AF_FILL:
+            c = (state.get('af_cur') or {}).get(lk) or {}
+            if c.get('s') == latest or (c.get('s') or 0) > latest:
+                AF_CUR[lk] = list(c.get('t') or [])   # this season's sides, results or not
+            new = [(gid, r) for gid, r in hs['g'].items() if (r[5] or 0) == latest]
+            if new and sum(1 for gid, _ in new if gid[:2] == 'af') > 0.2 * len(new):
+                AF_PART[lk] = min(r[0] for _, r in new)   # only the games since Statpad began reading them
         games = [(parse_date(r[0]), r[1], r[2], int(r[3]), int(r[4]), (r[5] or 0) == latest, None, None) for r in rows]
         if len(games) >= 20:
-            out[lk] = (games, f'{latest}/{str(latest + 1)[2:]}' if L[lk]['country'] in ('England', 'Spain', 'France', 'Saudi Arabia', 'Netherlands', 'Australia', 'South Africa') else str(latest))
+            out[lk] = (games, f'{latest}/{str(latest + 1)[2:]}' if L[lk]['country'] in ('England', 'Spain', 'France', 'Saudi Arabia', 'Netherlands', 'Australia', 'South Africa', 'Uganda', 'Kenya', 'Ghana', 'Nigeria') else str(latest))
     return out
 
 
@@ -3024,6 +3085,94 @@ def publish_live(state):
             v = [done[mid][0], done[mid][1], max(90, v[2]), 'FT', v[4]] + list(v[5:])
         games[mid] = v
     return {'app': 'Statpad', 'generated': iso(NOW), 'checked': lv.get('at'), 'games': games}
+
+
+AF_NOT_LEAGUE = re.compile(r'\b(cup|women|ladies|female|u1\d|u2\d|youth|reserves?|shield|super ?8|top ?8|play ?-?offs?|friendl\w*|super cup|charity)\b', re.I)
+AF_VOTES = 3   # games between two sides a league already has, all in one of API-Football's leagues, before it's taken as ours
+
+
+def af_season(d):
+    """ESPN's season year for these leagues (they run from August to May): 2026 is 2026/27."""
+    return d.year if d.month >= 7 else d.year - 1
+
+
+def af_fill(state):
+    """The African leagues ESPN stopped listing after 2025/26 (AF_FILL): their fixtures and results from API-Football's
+    day lists, which Statpad already reads for team news. Which of API-Football's leagues is ours is learned, not
+    assumed: a league in the same country, not a cup or a women's or youth league, with AF_VOTES or more games between
+    two sides ours already has. Names are matched to ESPN's, so a side's old results and new ones are one record;
+    promoted clubs keep API-Football's name. Results go into the same history the ratings read."""
+    lists = ((state.get('af') or {}).get('fx') or {})
+    hist = state.setdefault('es_hist', {})
+    known = state.setdefault('af_lg', {})          # lk -> [league id, its name, when learned]
+    votes = state.setdefault('af_votes', {})       # lk -> {league id: [fixture ids]}
+    cur = state.setdefault('af_cur', {})           # lk -> {'s': season, 't': [teams seen this season]}
+    T = Teams()
+    for lk in AF_FILL:
+        for r in ((hist.get(lk) or {}).get('g') or {}).values():
+            T.add(lk, r[1])
+            T.add(lk, r[2])
+    rows = [f for rec in lists.values() for f in rec.get('list') or [] if len(f) >= 12 and f[11]]
+    for f in rows:
+        if AF_NOT_LEAGUE.search(f[4] or ''):
+            continue
+        for lk in AF_FILL:
+            if (f[5] or '').lower() == L[lk]['country'].lower() and T.resolve(lk, f[2]) and T.resolve(lk, f[3]):
+                ids = votes.setdefault(lk, {}).setdefault(str(f[11]), [])
+                if f[0] not in ids:
+                    ids.append(f[0])
+                    del ids[:-30]
+    taken = {}
+    for lk in AF_FILL:
+        v = votes.get(lk) or {}
+        if v:
+            lid, ids = max(v.items(), key=lambda kv: len(kv[1]))
+            if len(ids) >= AF_VOTES and len(ids) > taken.get(lid, (None, 0))[1]:
+                taken[lid] = (lk, len(ids))
+    for lid, (lk, _) in taken.items():
+        if (known.get(lk) or [None])[0] != lid:
+            name = next((f[4] for f in rows if str(f[11]) == lid), '')
+            for k2 in [k2 for k2, v in known.items() if v[0] == lid]:
+                del known[k2]
+            known[lk] = [lid, name, iso(NOW)]
+            log(f'API-Football: {L[lk]["country"]} {name} (league {lid}) is {lk}')
+    by_id = {v[0]: lk for lk, v in known.items() if lk in AF_FILL}
+    fixl, added, season_now = [], 0, af_season(NOW)
+    for f in rows:
+        lk = by_id.get(str(f[11]))
+        if not lk:
+            continue
+        ko = parse_iso(f[1])
+        h, a = T.resolve(lk, f[2]) or f[2], T.resolve(lk, f[3]) or f[3]
+        c = cur.get(lk)
+        if not c or c.get('s') != af_season(ko):
+            if af_season(ko) < season_now:
+                continue
+            c = cur[lk] = {'s': af_season(ko), 't': []}
+        for t in (h, a):
+            if t not in c['t']:
+                c['t'].append(t)
+                state['es_hist_new'] = True   # a side new this season: rate it
+        if f[8] in AF_OFF:
+            continue
+        if f[8] in AF_DONE and f[9] is not None and f[10] is not None:
+            hs = hist.setdefault(lk, {'m': {}, 'g': {}})
+            day = ko.strftime('%Y-%m-%d')
+            near = {(ko + timedelta(days=k)).strftime('%Y-%m-%d') for k in (-1, 0, 1)}
+            if any(gid[:2] != 'af' and r[0] in near and r[1] == h and r[2] == a for gid, r in hs['g'].items()):
+                continue   # ESPN has it
+            rec = [day, h, a, int(f[9]), int(f[10]), af_season(ko)]
+            if hs['g'].get('af' + str(f[0])) != rec:
+                hs['g']['af' + str(f[0])] = rec
+                added += 1
+        elif f[8] not in AF_DONE and ko > NOW - timedelta(hours=3):   # to come, or being played
+            fixl.append({'lk': lk, 'ko': iso(ko), 'h': h, 'a': a, 'fid': f[0], 'tbc': f[8] == 'TBD'})
+    if added:
+        state['es_hist_new'] = True
+    state['af_fixtures'] = sorted(fixl, key=lambda x: x['ko'])
+    if not known:
+        return f'African leagues: none of API-Football\'s leagues recognised yet ({sum(len(i) for v in votes.values() for i in v.values())} games counted)'
+    return f"African leagues from API-Football: {', '.join(sorted(k for k in known if k in AF_FILL))}; {len(fixl)} fixtures, {added} new results"
 
 
 def refresh_team_news(state, matches):
@@ -4124,6 +4273,8 @@ def refresh_crests(state, doc):
 def table_pos(leagues):
     pos = {}
     for lk, lg in leagues.items():
+        if lg.get('part'):
+            continue   # a season only partly seen: no positions
         n = len(lg.get('table') or [])
         for i, row in enumerate(lg.get('table') or [], 1):
             pos[(lk, row[0])] = (i, n, row[8])
@@ -4157,6 +4308,8 @@ def build(state, prev, seed=None):
     for lk, lg in leagues.items():
         for row in lg.get('table') or []:
             teams.add(lk, row[0])
+        for t in lg.get('ratings') or {}:   # this season's sides with no result in it yet (African leagues)
+            teams.add(lk, t)
     pos = table_pos(leagues)
     it = IntlTeams(state.get('intl'))
     lo, hi = NOW - timedelta(hours=2.5), NOW + timedelta(days=DAYS)
@@ -4201,7 +4354,9 @@ def build(state, prev, seed=None):
         ko = parse_iso(f['ko'])
         if not (lo <= ko <= hi):
             continue
-        if is_cup(f['lk']):
+        if f['lk'] in CAF_LKS:
+            h, a = f['h'], f['a']
+        elif is_cup(f['lk']):
             h, a = cup_names(f['lk'], f['h'], f['a'])
         else:
             h = teams.resolve(f['lk'], f['h']) or f['h']
@@ -4209,10 +4364,23 @@ def build(state, prev, seed=None):
         g = find(f['lk'], h, a, f['ko'])
         if g:
             g['es_mkt'] = f.get('mkt')
+            if f.get('vc'):
+                g['vc'] = f['vc']
             if g.get('ks') in ('of', 'fd'):
                 g['ko'], g['ks'], g['tbc'] = iso(ko), 'es', False   # ESPN's kick-off time is exact
         else:
-            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'es_mkt': f.get('mkt'), 'ks': 'es'})
+            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'es_mkt': f.get('mkt'), 'ks': 'es', 'vc': f.get('vc')})
+
+    for f in state.get('af_fixtures') or []:   # API-Football's day lists: the African leagues ESPN stopped listing
+        if f['lk'] not in L or f['lk'] not in AF_FILL:
+            continue
+        ko = parse_iso(f['ko'])
+        if not (lo <= ko <= hi):
+            continue
+        h = teams.resolve(f['lk'], f['h']) or f['h']
+        a = teams.resolve(f['lk'], f['a']) or f['a']
+        if not find(f['lk'], h, a, f['ko'], f.get('tbc')):
+            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'af'})
 
     plan = sport_plan(state, quiet=True) if state.get('api') else {}
     for key, blob in (state.get('api') or {}).items():
@@ -4283,13 +4451,13 @@ def build(state, prev, seed=None):
         om = old.get('mkt') or {}
         if mkt and mkt.get('src') == 'football-data' and om.get('src') == 'football-data' and om.get('avg') == mkt.get('avg') and om.get('best') == mkt.get('best'):
             mkt = dict(mkt, upd=om.get('upd'))   # same prices re-read: keep when they were first seen
-        lam, cross = expected_goals(f['lk'], f['h'], f['a'], leagues, teams)
+        lam, cross = (None, False) if f['lk'] in CAF_LKS else expected_goals(f['lk'], f['h'], f['a'], leagues, teams)
         ls = lam_sd(f['lk'], f['h'], f['a'], leagues, teams, cross) if lam else None
         ph = pos.get((f['lk'], f['h']))
         pa = pos.get((f['lk'], f['a']))
         dom_h = dom_a = None
         cup_sides = None
-        if is_cup(f['lk']):
+        if is_cup(f['lk']) and f['lk'] not in CAF_LKS:
             gh, ga = teams.resolve_global(f['h'], pool_=pool(f['lk'])), teams.resolve_global(f['a'], pool_=pool(f['lk']))
             dom_h, dom_a = (gh[0] if gh else None), (ga[0] if ga else None)
             if gh and ga:
@@ -4329,6 +4497,11 @@ def build(state, prev, seed=None):
                 mm, mm_extra = euro_mem(state, f['h'], gh, f['a'], ga)
             except Exception as e:
                 log('European clubs:', mid, repr(e)[:120]); mm, mm_extra = None, {}
+        elif f['lk'] in CAF_LKS and state.get('cafr'):
+            try:   # Africa's club competitions: club and country strengths from their own results
+                mm, mm_extra = caf_goals(state, f['h'], f['a'], f.get('vc'))
+            except Exception as e:
+                log('CAF clubs:', mid, repr(e)[:120]); mm, mm_extra = None, {}
         if not is_cup(f['lk']) and L[f['lk']]['group'] != 'intl':
             mm = mem_goals((state.get('mem') or {}).get(f['lk']), f['h'], f['a'])
             if mkt and mkt.get('p') and len(mkt['p']) == 3 and not mkt.get('ext'):
@@ -4343,6 +4516,8 @@ def build(state, prev, seed=None):
         })
         if news:
             matches[-1]['tn'] = news
+        if f.get('vc') and f['lk'] in CAF_LKS:
+            matches[-1]['vc'] = f['vc']
         if mm:
             matches[-1]['mm'] = mm   # the market's memory of both sides: priced from it when there's no bookmaker price
             try:
@@ -4381,6 +4556,11 @@ def build(state, prev, seed=None):
             if mh_ and ma_:
                 rh_ = {disp(m['dh'], tm): tm for tm in mh_['t']}; ra_ = {disp(m['da'], tm): tm for tm in ma_['t']}
                 mm, cx = cup_mem(state, m['dh'], rh_.get(m['h'], m['h']), m['da'], ra_.get(m['a'], m['a']))
+        if not mm and m['lk'] in CAF_LKS and state.get('cafr'):
+            try:
+                mm, cx = caf_goals(state, m['h'], m['a'], m.get('vc'))
+            except Exception as e:
+                log('CAF clubs:', m.get('id'), repr(e)[:120]); mm, cx = None, {}
         if not mm and m['lk'] in EURO_LKS and state.get('outs'):
             try:
                 gh_, ga_ = teams.resolve_global(m['h'], pool_='m'), teams.resolve_global(m['a'], pool_='m')
@@ -4389,14 +4569,14 @@ def build(state, prev, seed=None):
                 log('European clubs:', m.get('id'), repr(e)[:120]); mm, cx = None, {}
         if mm and cx:
             m['mm'] = mm
-            for k in ('mn', 'mmo', 'xm', 'mo'):
+            for k in ('mn', 'mmo', 'xm', 'mo', 'caf'):
                 m.pop(k, None)
             m.update(cx)
         elif mm:
             m['mm'] = mm
             m.update(mem_extra(m['lk'], mem, rev.get(m['h'], m['h']), rev.get(m['a'], m['a'])))
         else:
-            for k in ('mm', 'mn', 'mmo', 'xm', 'mo'):
+            for k in ('mm', 'mn', 'mmo', 'xm', 'mo', 'caf'):
                 m.pop(k, None)
     try:
         n_mem = mem_record(state, mem_obs)
@@ -4435,6 +4615,8 @@ def build(state, prev, seed=None):
         if lg:
             rec.update({'season': lg.get('season'), 'mu': lg.get('mu'), 'home': lg.get('home'),
                         'table': [[disp(lk, r[0])] + r[1:] for r in lg.get('table') or []]})
+            if lg.get('part'):   # only the games since Statpad began reading this season: no table to show
+                rec.update({'table': [], 'part': lg['part']})
             if lg.get('shots'):
                 rec['sh'] = 1   # ratings use shots on target as well as goals
         mem = (state.get('mem') or {}).get(lk)
@@ -5844,6 +6026,143 @@ def euro_mem(state, raw_h, gh, raw_a, ga):
     lh = math.exp(sh[0] - sa[1] + G0 + H0)
     la = math.exp(sa[0] - sh[1] + G0)
     return [round(lh, 4), round(la, 4)], {'mn': [sh[2], sa[2]], 'xm': 1, 'mo': 1}
+
+
+CAF_LKS = ('CAFCL', 'CAFCC')
+CAF_SLUGS = {'CAFCL': 'caf.champions', 'CAFCC': 'caf.confed'}
+CAF_FROM = 2019              # results read back to this year (16 ESPN calls the first time, 2 a day after)
+CAF_TAU, CAF_KC, CAF_KQ = 1460.0, 15.0, 20.0   # a game's weight halves every 4 years; country and club pulls (games' worth)
+
+
+def refresh_caf(state):
+    """CAF Champions League and Confederation Cup results from ESPN: earlier years once, this year (and last year in
+    January) each day. state['caf'] = {'slug|year': [[date, home, away, hg, ag, extra time 0/1, venue country]]}."""
+    cf = state.setdefault('caf', {})
+    yr, calls, bad = NOW.year, 0, 0
+    for y in range(CAF_FROM, yr + 1):
+        for slug in CAF_SLUGS.values():
+            k = f'{slug}|{y}'
+            if k in cf and y < yr and not (y == yr - 1 and NOW.month == 1):
+                continue
+            r = fetch(ESPN_SB.format(slug), {'dates': y, 'limit': 1000}, tries=2, timeout=30, headers={'Accept-Encoding': 'gzip'})
+            calls += 1
+            if r.status != 200 or not r.body:
+                bad += 1
+                continue
+            try:
+                body = gzip.decompress(r.body) if r.body[:2] == b'\x1f\x8b' else r.body
+                evs = json.loads(text_of(body)).get('events') or []
+            except Exception:
+                bad += 1
+                continue
+            rows = []
+            for e in evs:
+                try:
+                    c = e['competitions'][0]
+                    st = (c.get('status') or e.get('status') or {}).get('type') or {}
+                    if not st.get('completed'):
+                        continue
+                    side = {x['homeAway']: x for x in c['competitors']}
+                    det = str(st.get('name') or '') + ' ' + str(st.get('shortDetail') or st.get('detail') or '')
+                    et = 1 if re.search(r'AET|PEN|EXTRA', det.upper()) else 0
+                    rows.append([e['date'][:10], side['home']['team']['displayName'], side['away']['team']['displayName'],
+                                 int(side['home'].get('score') or 0), int(side['away'].get('score') or 0), et,
+                                 ((c.get('venue') or {}).get('address') or {}).get('country')])
+                except Exception:
+                    continue
+            cf[k] = rows
+    return calls, bad
+
+
+def caf_fit(state, np):
+    """One strength per club, its country's plus its own: log goals = mu + home + s(attacker) - s(defender). Walk-forward
+    month by month from July 2023 (828 games), against home advantage and the goal level alone, this gained 0.087 a
+    game in 1X2 log loss (95% +0.050 to +0.128) on the 290 games from July 2025, with tau and pulls picked on the
+    earlier ones; over/under 2.5 0.6676 -> 0.6498. A club's country is where it plays most of its home games."""
+    from collections import Counter
+    rows = sorted(r for v in (state.get('caf') or {}).values() for r in v)
+    if len(rows) < 200:
+        return 'too few CAF results yet'
+    vc = {}
+    for r in rows:
+        if r[6]:
+            vc.setdefault(r[1], Counter())[r[6]] += 1
+    clubs = sorted({r[1] for r in rows} | {r[2] for r in rows})
+    ctry = {c: (vc[c].most_common(1)[0][0] if c in vc else '?') for c in clubs}
+    cts = sorted(set(ctry.values()))
+    IX, CX = {c: i for i, c in enumerate(clubs)}, {c: i for i, c in enumerate(cts)}
+    nC, nQ = len(cts), len(clubs)
+    m = 2 + nC + nQ
+    X, y, w = [], [], []
+    recent = Counter()
+    for r in rows:
+        d = parse_date(r[0])
+        if (NOW - d).days < 730:
+            recent[r[1]] += 1
+            recent[r[2]] += 1
+        if r[5]:
+            continue   # extra time: no 90-minute goals
+        wt = 0.5 ** (max(0.0, (NOW - d).total_seconds() / 86400) / CAF_TAU)
+        for att, dfn, goals, home in ((r[1], r[2], r[3], 1), (r[2], r[1], r[4], 0)):
+            x = np.zeros(m)
+            x[0], x[1] = 1.0, home
+            x[2 + CX[ctry[att]]] += 1
+            x[2 + CX[ctry[dfn]]] -= 1
+            x[2 + nC + IX[att]] += 1
+            x[2 + nC + IX[dfn]] -= 1
+            X.append(x)
+            y.append(goals)
+            w.append(wt)
+    X, y, w = np.array(X), np.array(y, float), np.array(w)
+    pen = np.zeros(m)
+    pen[2:2 + nC], pen[2 + nC:] = CAF_KC, CAF_KQ
+    P = np.zeros(m)
+    P[0] = math.log(max(0.3, (y * w).sum() / w.sum()))
+    for _ in range(30):
+        lam = np.exp(X @ P)
+        grad = X.T @ (w * (y - lam)) - pen * P
+        H = (X * (w * lam)[:, None]).T @ X + np.diag(pen)
+        step = np.linalg.solve(H, grad)
+        P += step
+        if np.abs(step).max() < 1e-8:
+            break
+    state['cafr'] = {'at': iso(NOW), 'mu': round(float(P[0]), 5), 'home': round(float(P[1]), 5), 'n': len(rows),
+                     'c': {c: round(float(P[2 + CX[c]]), 5) for c in cts if c != '?'},
+                     'q': {c: [round(float(P[2 + nC + IX[c]]), 5), ctry[c], recent[c]] for c in clubs}}
+    return f"{len(rows)} CAF games, {nQ} clubs from {nC} countries; home advantage x{math.exp(P[1]):.2f} goals"
+
+
+def caf_key(state, raw):
+    """A CAF club's name in the ratings: exact, then ESPN's other spellings (normalised, or one name inside the other)."""
+    q = (state.get('cafr') or {}).get('q') or {}
+    if raw in q:
+        return raw
+    k = norm(raw)
+    hits = [c for c in q if norm(c) == k]
+    if not hits:
+        toks = set(k.split())
+        hits = [c for c in q if toks and (toks <= set(norm(c).split()) or set(norm(c).split()) <= toks)]
+    return hits[0] if len(hits) == 1 else None
+
+
+def caf_goals(state, raw_h, raw_a, venue_country=None):
+    """Expected goals for a CAF game from club and country strengths, or (None, {}). A club new to CAF is rated as
+    its country's average (the home club's country is the venue's); an unknown club from an unknown country as 0."""
+    R = state.get('cafr')
+    if not R:
+        return None, {}
+    def side(raw, vc):
+        k = caf_key(state, raw)
+        if k:
+            q, c, n = R['q'][k]
+            return q + R['c'].get(c, 0.0), n
+        return R['c'].get(vc, 0.0) if vc else 0.0, 0
+    (sh, nh), (sa, na) = side(raw_h, venue_country), side(raw_a, None)
+    if not nh and not na:
+        return None, {}   # two clubs CAF has never seen: nothing to go on
+    lh = math.exp(R['mu'] + R['home'] + sh - sa)
+    la = math.exp(R['mu'] + sa - sh)
+    return [round(lh, 4), round(la, 4)], {'mn': [nh, na], 'xm': 1, 'caf': 1}
 
 
 def refresh_mem(state):
@@ -7568,15 +7887,7 @@ def main():
         log('results:', len(res), 'leagues')
         state['es_hist_new'] = True
     if state.pop('es_hist_new', False) or retuned:   # the competitions rated from ESPN's results
-        eres = safe(lambda: espn_results(state), {})
-        if eres:
-            state.setdefault('leagues', {}).update(safe(lambda: compute_leagues(eres, Teams()), {}))
-            state.setdefault('recent_results', {}).update(safe(lambda: recent_results(eres), {}))
-            tf = safe(lambda: team_files(eres), None)
-            if tf:
-                state['teamfiles'] = dict(state.get('teamfiles') or {}, **tf)
-                state['teams_changed'] = True
-            log('ESPN ratings:', ', '.join(f"{lk} {len(g)} games" for lk, (g, _) in sorted(eres.items())))
+        rate_espn(state)
 
     if due(state, 'intl', RESULTS_EVERY):
         last['intl'] = iso(NOW)   # on its own timer, so a failed download can't trigger reloads every run
@@ -7612,6 +7923,15 @@ def main():
         eu_note = safe(euro_job, 'error')
         src['european'] = {'ok': eu_note != 'error', 'at': iso(NOW), 'note': eu_note}
         log('European clubs:', eu_note)
+    if due(state, 'caf', 24) or not state.get('cafr'):
+        last['caf'] = iso(NOW)
+        def caf_job():
+            calls, bad = refresh_caf(state)
+            np_c = numpy_lib(True)
+            return (f'{calls} ESPN calls ({bad} failed); ' if calls else '') + (caf_fit(state, np_c) if np_c is not None else 'no numpy')
+        caf_note = safe(caf_job, 'error')
+        src['caf'] = {'ok': caf_note != 'error', 'at': iso(NOW), 'note': caf_note}
+        log('CAF clubs:', caf_note)
     prev_matches = (prev or {}).get('matches') or []
     lv_ok, lv_note = safe(lambda: refresh_live(state, prev_matches), (False, 'error'))
     src['live'] = {'ok': lv_ok, 'at': iso(NOW), 'note': lv_note}
@@ -7622,6 +7942,14 @@ def main():
         log('team news:', note)
     else:
         src.pop('team_news', None)
+    af_note = safe(lambda: af_fill(state), 'error')   # African leagues from API-Football's day lists
+    if af_note != 'error' and not state.get('af_lg') and not AF_KEY:
+        src.pop('africa', None)
+    else:
+        src['africa'] = {'ok': af_note != 'error', 'at': iso(NOW), 'note': af_note}
+        log(af_note)
+    if state.pop('es_hist_new', False):
+        rate_espn(state)
 
     msg = safe(lambda: refresh_odds_api(state), 'error')
     src['odds_api'] = {'ok': msg not in ('no key', 'paused', 'out of credits'), 'at': iso(NOW), 'note': msg}
