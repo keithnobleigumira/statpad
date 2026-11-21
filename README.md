@@ -400,6 +400,90 @@ None of this makes football predictable: the bookmakers' consensus is already ve
 
 **Safer tiers.** Every chance now comes with a spread, from how much evidence is behind the ratings and how many bookmakers price the game. Tiers and slips use the cautious chance: the stated chance minus one standard deviation. A pick that rests on thin data drops a tier, so **Nearly definite** means more often what it says. The replay shows how the top tier did with and without this rule.
 
+## Pulse: the second read of every side (v63)
+
+The published ratings are now a blend of two reads of each side's attack and defence:
+
+1. **The season-long fit** (as before): a Poisson model over two seasons, older games fading, every side pulled
+   towards average.
+2. **Pulse**, new: an extended Kalman filter on log expected goals. After every result each side's attack and
+   defence move by how surprising the score was and by how sure the filter already was about that side (its own
+   variance, which grows a little every day without a game and jumps at a new season), one Newton step per game.
+   It learns from each result as it lands, with no refit: a whole league's two seasons take a few milliseconds.
+
+What Pulse adds that the fit can't:
+
+- **The league's scoring level follows the season.** It's a running average over about 400 games (a season and a
+  half), where the fit's level drifts with its one-to-two-year half-life. Scoring rose in 2025/26 and the fit lagged:
+  over 2.5 landed more often than it said in most leagues.
+- **Promoted and relegated sides bring their rating.** In 16 pyramids (England's five divisions, Spain, Germany's
+  three, Italy, France, the Netherlands, Scotland, Turkey, Switzerland, Greece, Brazil, South Africa, Korea, China,
+  Argentina, Mexico), a side moving division keeps 90% of its rating going up, then a step of 0.24 down in attack and
+  up in defence (log goals); going down it keeps 30% and gets a step of 0.16 the other way. Before, every newcomer
+  started from the same value.
+- **The gap between the sides is widened.** On all 30,371 games from July 2025, favourites won about four points more
+  often than the ratings said, at every level of confidence and in both kinds of league. The gap between two sides'
+  log expected goals is widened by 20% (goals-only leagues) or 30% (leagues with shots on target), around the league's
+  home edge, so the total goals expected stay where they were.
+
+**The blend.** The two reads are blended separately on the goal level (half the log of the product of the two
+expected goals) and on the gap between the sides (the log of their ratio): goals-only leagues take the level from
+Pulse and the gap half from each; leagues with shots take 60% of the level and half the gap from Pulse. Because both
+are linear in each side's attack and defence, the blend is exactly one new set of ratings (`pulse_blend`), so the
+engine, team pages and the simulator read it with no change.
+
+**How it was tested.** 108,646 results from 85 leagues: the 66 results-only leagues (ESPN and TheSportsDB) and the 19
+football-data leagues with shots on target and closing prices. Settings were fitted on the 37,681 games from July 2023
+to June 2025 only. The 30,371 games from July 2025 were then replayed through the deployed code (`update.fit_ratings`
++ `pulse_run` + `pulse_carry` + `pulse_blend`), refitted before every match day on the two seasons of results the
+pipeline keeps. 95% ranges are from 1,000 bootstrap resamples of the game-by-game differences.
+
+| Games from July 2025 | v62 | v63 | Gain (95% range) |
+|---|---|---|---|
+| Unpriced leagues, 1X2 log loss (21,531) | 1.0056 | 1.0045 | +0.0010 (+0.0003 to +0.0018) |
+| Unpriced leagues, over/under 2.5 | 0.6690 | 0.6647 | +0.0042 (+0.0028 to +0.0057) |
+| Main European leagues, 1X2 (8,840) | 1.0178 | 1.0147 | +0.0031 (+0.0019 to +0.0043) |
+| Main European leagues, over/under 2.5 | 0.6877 | 0.6843 | +0.0034 (+0.0021 to +0.0046) |
+
+Favourites, stated chance against what landed (unpriced leagues):
+
+| Stated | v62 said / won | v63 said / won |
+|---|---|---|
+| 50–60% | 54.5% / 58.6% (4,803 games) | 54.5% / 57.0% (4,911) |
+| 60–70% | 64.4% / 69.2% (2,132) | 64.3% / 66.8% (2,329) |
+| 70% and up | 75.9% / 79.4% (895) | 76.6% / 78.5% (1,193) |
+
+**Against well-known models**, on the same unseen games (1X2 only). Elo (World Football Elo, as in `elo_run`) and
+pi-ratings (Constantinou and Fenton, 2013) each saw every season in the data (back to 2019 for the main leagues), and their rating gaps were turned
+into chances by an ordered logit fitted on 2023–25 (their best use); Statpad saw two seasons.
+
+| | Unpriced leagues: log loss / RPS | Main leagues: log loss / RPS |
+|---|---|---|
+| League averages (home, draw, away rates) | 1.0696 / 0.2238 | 1.0771 / 0.2293 |
+| World Football Elo | 1.0184 / 0.2063 | 1.0162 / 0.2088 |
+| Pi-ratings | 1.0156 / 0.2052 | 1.0179 / 0.2093 |
+| Statpad v62 | 1.0056 / 0.2027 | 1.0178 / 0.2088 |
+| **Statpad v63** | **1.0045 / 0.2024** | **1.0147 / 0.2080** |
+| Bookmakers' closing prices | (none) | 0.9964 / 0.2024 |
+
+The closing price is still well ahead of any results-only model, which is why priced games lean on the market.
+
+**Tried and left off** (all on the same split):
+
+- A draw and home tilt per league, learned game by game: −0.0011 to +0.0002 a game, never clear of zero; the spread
+  of draw rates between leagues (0.031) is barely more than luck (0.025).
+- A home advantage of each side's own (altitude, travel): worse at every strength tried.
+- Capping freak results, counting each result as less than a full Poisson observation, and averaging predictions
+  over the ratings' own uncertainty: each worse.
+- Retuning the season-long fit for the unpriced leagues (half-life 386 days, shrinkage 12, last season 0.75): better
+  on 2023–25, worse on 2025/26 (1X2 1.0056 → 1.0078).
+- Pi-ratings folded into the gap: +0.0003 to +0.0007 with two seasons of memory, +0.0030 on the main leagues with
+  seven. Worth revisiting once the pipeline keeps more seasons (as is Pulse itself with a long memory: on the main
+  leagues Pulse alone scored 1.0159 with every season since 2019 against 1.0184 with two, same settings).
+
+Code: `pulse_run`, `pulse_carry`, `pulse_blend`, `PULSE`, `PULSE_BLEND`, `PYRAMIDS` in `update.py`.
+`PULSE_ON = False` gives v62's ratings exactly.
+
 ## Smart slips: how they're built (v62)
 
 A slip lands only if every leg lands, so its chance is the product of its legs' chances. With the total odds fixed, that product can be written as

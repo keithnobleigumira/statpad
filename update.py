@@ -473,8 +473,35 @@ def disp(lk, name):
 def base_name(n):
     return re.sub(r'\s+Women$', '', n or '')
 
+# Quiet mode (v63). The repository that runs Statpad is public, and so are its Actions logs, so with STATPAD_QUIET=1
+# the run log goes to the private state (.statpad/logs, kept 7 days) instead of the public log, which gets one
+# line a run. A crash prints only where it happened (the line number), never the code. STATPAD_VERBOSE=1 (the
+# "verbose" box on a manual run) prints everything, for debugging.
+QUIET = ENV('STATPAD_QUIET') == '1' and ENV('STATPAD_VERBOSE') != '1'
+_LOG = []
+
+
 def log(*a):
-    print('[statpad]', *a, flush=True)
+    if QUIET:
+        _LOG.append(time.strftime('%H:%M:%S ') + ' '.join(str(x) for x in a))
+    else:
+        print('[statpad]', *a, flush=True)
+
+
+def flush_log(status):
+    """Quiet mode: keep this run's log in the state, drop logs older than a week, print one public line."""
+    if not QUIET:
+        return
+    d = STATE_DIR / 'logs'
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+        (d / (NOW.strftime('%Y%m%d-%H%M%S') + '.txt')).write_text('\n'.join(_LOG + [status]) + '\n')
+        for f in d.glob('*.txt'):
+            if f.stat().st_mtime < time.time() - 7 * 86400:
+                f.unlink()
+    except OSError:
+        pass
+    print('Statpad:', status, flush=True)
 
 
 def iso(dt):
@@ -764,6 +791,180 @@ def kal_lams(st_h, st_a, base, q, now):
     ph = [st_h[2] + q * max(0.0, (now - st_h[4]).total_seconds() / 86400), st_h[3] + q * max(0.0, (now - st_h[4]).total_seconds() / 86400)]
     pa = [st_a[2] + q * max(0.0, (now - st_a[4]).total_seconds() / 86400), st_a[3] + q * max(0.0, (now - st_a[4]).total_seconds() / 86400)]
     return (math.exp(mu + hm + st_h[0] + st_a[1]), math.exp(mu + st_a[0] + st_h[1]), math.sqrt(ph[0] + pa[1]), math.sqrt(pa[0] + ph[1]))
+
+
+# ----------------------------------------------------------------------------------------------
+# Pulse (v63): a second, faster read of every side, blended into the ratings above before they are published.
+# Each side's attack and defence move game by game, by how surprising each result was and how sure the filter
+# already was (one Newton step of an extended Kalman filter on log expected goals), so it costs microseconds a game
+# and learns from every result as it lands, with no refit. Three things the season-long fit cannot do:
+#  - the league's scoring level is a running average of about a season and a half, so a league that starts scoring
+#    more is followed within weeks (the fit's level drifts with its 1-to-2-year half-life);
+#  - promoted and relegated sides bring their rating across divisions (a third of it, plus an exchange rate per step
+#    up or down, both fitted), instead of starting from one newcomer value;
+#  - the gap between two sides is widened a little: on 30,371 games from July 2025 the favourites won about four
+#    points more often than the fit said, at every level of confidence.
+# The fit and the filter are blended separately on the goal level (log of the product of the two expected goals)
+# and on the gap between the sides (log of their ratio), which is exactly a new set of attack and defence ratings,
+# so everything downstream (the engine, team pages, the simulator) reads the blend without a change.
+# Fitted on 37,681 games from July 2023 to June 2025 across 85 leagues; measured on the 30,371 from July 2025, which
+# the fitting never saw (see README, "Pulse").
+# ----------------------------------------------------------------------------------------------
+PULSE_ON = True
+PULSE = {'q': 6.8e-06, 'p0': 0.0356, 'pn': 0.0208, 'ps': 0.75, 'qs': 0.00625, 'nt': 0.03, 'al': 0.0025, 'sw': 0.5,
+         'ru': 0.9, 'ou': -0.24, 'rd': 0.3, 'od': 0.16, 'pv': 0.048}
+# (level weight on the filter, gap weight on the filter, gap widening) for goals-only leagues and leagues with shots
+PULSE_BLEND = {'goals': (1.0, 0.5, 1.2), 'shots': (0.6, 0.5, 1.3)}
+# divisions of one country, top first, whose sides move between each other (names must match across them)
+PYRAMIDS = [['EPL', 'ENG2', 'ENG3', 'ENG4', 'ENG5'], ['LaLiga', 'ESP2'], ['BUN', 'GER2', 'GER3'], ['SA', 'ITA2'],
+            ['L1', 'FRA2'], ['ERE', 'NED2'], ['SCO1', 'SCO2'], ['TUR1', 'TUR2'], ['SUI1', 'SUI2'], ['GRE1', 'GRE2'],
+            ['BRA1', 'BRA2'], ['RSA1', 'RSA2'], ['KOR1', 'KOR2'], ['CHN1', 'CHN2'], ['ARG1', 'ARG2'], ['MEX1', 'MEX2']]
+
+
+def pulse_groups(lks):
+    """The leagues of one call, grouped by pyramid (in division order); every other league on its own."""
+    have, out, used = set(lks), [], set()
+    for p in PYRAMIDS:
+        g = [lk for lk in p if lk in have]
+        if g:
+            out.append(g)
+            used |= set(g)
+    return out + [[lk] for lk in lks if lk not in used]
+
+
+def pulse_run(group, games_of, P=None, sw_of=None):
+    """Run the filter over the games of one pyramid (or one league). games_of: {league: games as fit_ratings takes
+    them}; sw_of: {league: shot weight, 0 for goals only}. Returns ({league: {'base': (log away goals, log home edge),
+    'teams': {team: [attack, defence]}}}, {team: (league, attack, defence)} for every side the filter has seen)."""
+    P = P or PULSE
+    sw_of = sw_of or {}
+    q, p0, pn, ps, qs, nt, al = P['q'], P['p0'], P['pn'], P['ps'], P['qs'], P['nt'], P['al']
+    ev = []
+    for li, lk in enumerate(group):
+        for g in games_of.get(lk) or ():
+            ev.append((g[0], li, 1 if g[5] else 0, g))
+    if len(ev) < 20:
+        return {}, {}
+    ev.sort(key=lambda e: (e[0], e[1]))
+    nl = len(group)
+    mh, ma, conv = [1.45] * nl, [1.15] * nl, [0.30] * nl
+    cnt, lseason, started = [0] * nl, [None] * nl, [False] * nl
+    firsts = {}
+    for e in ev:
+        firsts.setdefault(e[1], []).append(e[3])
+    for li, gs in firsts.items():   # opening level: the first 200 games' scoring
+        gs = gs[:200]
+        mh[li] = sum(g[3] for g in gs) / len(gs)
+        ma[li] = max(0.3, sum(g[4] for g in gs) / len(gs))
+        sh = [(g[3] + g[4], g[6] + g[7]) for g in gs if len(g) > 7 and g[6] is not None and g[7] is not None and g[6] + g[7] > 0]
+        if sh:
+            conv[li] = sum(x[0] for x in sh) / sum(x[1] for x in sh)
+    S = {}   # team: [attack, defence, var attack, var defence, last day, league, season]
+    for d, li, season, g in ev:
+        h, a, hg, ag = g[1], g[2], g[3], g[4]
+        day = d.toordinal()
+        if lseason[li] != season:
+            lseason[li] = season
+            started[li] = started[li] or cnt[li] > 0
+        for t in (h, a):
+            st = S.get(t)
+            if st is None:
+                x = nt if started[li] else 0.0
+                v = pn if started[li] else p0
+                S[t] = st = [-x, x, v, v, day, li, season]
+            elif st[5] != li:   # promoted (to a smaller index) or relegated
+                if li < st[5]:
+                    st[0], st[1] = P['ru'] * st[0] + P['ou'], P['ru'] * st[1] - P['ou']
+                else:
+                    st[0], st[1] = P['rd'] * st[0] + P['od'], P['rd'] * st[1] - P['od']
+                st[2] += P['pv'] + qs
+                st[3] += P['pv'] + qs
+                st[5], st[6] = li, season
+            elif st[6] != season:   # a new season: drift back a little and grow less sure
+                st[0] *= ps
+                st[1] *= ps
+                st[2] += qs
+                st[3] += qs
+                st[6] = season
+            if day > st[4]:
+                st[2] += q * (day - st[4])
+                st[3] += q * (day - st[4])
+                st[4] = day
+        H, A = S[h], S[a]
+        mu, hm = math.log(ma[li]), math.log(mh[li] / ma[li])
+        lh, la = math.exp(mu + hm + H[0] + A[1]), math.exp(mu + A[0] + H[1])
+        sw = sw_of.get(group[li], 0.0)
+        yh, ya = float(hg), float(ag)
+        if sw and len(g) > 7 and g[6] is not None and g[7] is not None:
+            yh, ya = (1 - sw) * yh + sw * g[6] * conv[li], (1 - sw) * ya + sw * g[7] * conv[li]
+        sh_, sa_ = H[2] + A[3], A[2] + H[3]
+        kh, ka = 1.0 / (1.0 + lh * sh_), 1.0 / (1.0 + la * sa_)
+        rh, ra = yh - lh, ya - la
+        H0, H1, A0, A1 = H[0], H[1], A[0], A[1]
+        H[0], A[1] = H0 + H[2] * rh * kh, A1 + A[3] * rh * kh
+        A[0], H[1] = A0 + A[2] * ra * ka, H1 + H[3] * ra * ka
+        H[2] -= lh * H[2] * H[2] * kh
+        A[3] -= lh * A[3] * A[3] * kh
+        A[2] -= la * A[2] * A[2] * ka
+        H[3] -= la * H[3] * H[3] * ka
+        mh[li] += al * (yh - mh[li])
+        ma[li] += al * (ya - ma[li])
+        if len(g) > 7 and g[6] is not None and g[7] is not None and g[6] + g[7] > 0:
+            conv[li] += 0.002 * ((hg + ag) / (g[6] + g[7]) - conv[li])
+        cnt[li] += 1
+        if cnt[li] % 30 == 0:   # keep each league's sides centred on its own scoring level
+            live = [st for st in S.values() if st[5] == li and st[6] == season]
+            if live:
+                ca = sum(st[0] for st in live) / len(live)
+                cd = sum(st[1] for st in live) / len(live)
+                for st in S.values():
+                    if st[5] == li:
+                        st[0] -= ca
+                        st[1] -= cd
+    out = {}
+    for li, lk in enumerate(group):
+        live = {t: st for t, st in S.items() if st[5] == li and st[6] == lseason[li]}
+        if not live:
+            continue
+        ca = sum(st[0] for st in live.values()) / len(live)
+        cd = sum(st[1] for st in live.values()) / len(live)
+        out[lk] = {'base': (math.log(ma[li]) + ca + cd, math.log(mh[li] / ma[li])), 'ca': ca, 'cd': cd,
+                   'teams': {t: [st[0] - ca, st[1] - cd] for t, st in S.items() if st[5] == li}}
+    seen = {t: (group[st[5]], st[0], st[1]) for t, st in S.items()}
+    return out, seen
+
+
+def pulse_carry(lk, team, group, seen, pu, P=None):
+    """A side about to play its first game in lk after a season in another division of the same pyramid: its rating
+    carried across, on lk's scale. None when the filter hasn't seen it."""
+    P = P or PULSE
+    if team not in seen or lk not in group:
+        return None
+    src, a, d = seen[team]
+    if src == lk or src not in group or src not in pu:
+        return None
+    a, d = a - pu[src]['ca'], d - pu[src]['cd']   # centred on its old league
+    if group.index(lk) < group.index(src):
+        return [P['ru'] * a + P['ou'], P['ru'] * d - P['ou']]
+    return [P['rd'] * a + P['od'], P['rd'] * d - P['od']]
+
+
+def pulse_blend(rt, pu, teams, kind, nt):
+    """The season-long fit rt and the filter's ratings pu blended on goal level and gap (weights PULSE_BLEND[kind]).
+    Returns mu, home and {team: [attack, defence]} in the fit's own form."""
+    wl, wd, s = PULSE_BLEND[kind]
+    c0, h0 = rt['mu'] + rt['home'] / 2, rt['home']   # level and home edge as the fit has them
+    c1, h1 = pu['base'][0] + pu['base'][1] / 2, pu['base'][1]
+    c_l, h_d = wl * c1 + (1 - wl) * c0, wd * h1 + (1 - wd) * h0
+    t0, t1 = rt.get('teams') or {}, pu.get('teams') or {}
+    out = {}
+    for t in teams:
+        a0, d0 = t0.get(t) or (-nt, nt)
+        a1, d1 = t1.get(t) or (-nt, nt)
+        u = wl * (a1 + d1) + (1 - wl) * (a0 + d0)
+        v = s * (wd * (a1 - d1) + (1 - wd) * (a0 - d0))
+        out[t] = [round((u + v) / 2, 5), round((u - v) / 2, 5)]
+    return round(c_l - h_d / 2, 5), round(h_d, 5), out
 
 
 def goal_means(games, n=500):
@@ -1185,6 +1386,22 @@ def load_results():
 
 def compute_leagues(results, teams):
     leagues = {}
+    pul, pgroup = {}, {}
+    if PULSE_ON:   # the game-by-game read, one run per pyramid (see "Pulse")
+        sw_of = {}
+        for lk, (games, season) in results.items():
+            cur_n = sum(1 for g in games if g[5])
+            with_shots = sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None)
+            sw_of[lk] = PULSE['sw'] if (model_for(lk, games, cur_n and with_shots >= 0.8 * cur_n).get('sw') or 0) > 0 else 0.0
+        for grp in pulse_groups(list(results)):
+            try:
+                o, pseen = pulse_run(grp, {lk: results[lk][0] for lk in grp}, sw_of=sw_of)
+            except Exception as e:
+                log('pulse failed for', '/'.join(grp), '->', repr(e))
+                continue
+            pul.update(o)
+            for lk in grp:
+                pgroup[lk] = (grp, pseen, o)
     for lk, (games, season) in results.items():
         table = build_table(games)
         cur_teams = [t for t, _ in table]
@@ -1195,6 +1412,17 @@ def compute_leagues(results, teams):
         with_shots = sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None)
         P_ = model_for(lk, games, cur_n and with_shots >= 0.8 * cur_n)
         rt = fit_ratings(games, cur_teams, P=P_)
+        if rt and lk in pul:   # blended with Pulse, sides new to the league carried across from their old division
+            nt0 = P_.get('nt', NEW_TEAM_PRIOR[1])
+            pt = dict(pul[lk], teams=dict(pul[lk]['teams']))
+            grp, pseen, o = pgroup[lk]
+            for t in cur_teams + extra:
+                if t not in pt['teams']:
+                    c = pulse_carry(lk, t, grp, pseen, o)
+                    if c:
+                        pt['teams'][t] = c
+            mu_b, home_b, tb = pulse_blend(rt, pt, set(rt['teams']) | set(cur_teams) | set(extra), 'shots' if (P_.get('sw') or 0) > 0 else 'goals', nt0)
+            rt = dict(rt, mu=mu_b, home=home_b, teams=tb, pulse=1)
         for t in cur_teams:
             teams.add(lk, t)
         kal = kbase = None
@@ -1219,8 +1447,8 @@ def compute_leagues(results, teams):
         nt = P_.get('nt', NEW_TEAM_PRIOR[1])
         for t in extra:
             teams.add(lk, t)
-            if t not in seen and rt:   # promoted, never seen: the newcomer prior, as the ratings give newcomers
-                leagues[lk]['ratings'][t] = [round(-nt, 5), round(nt, 5)]
+            if t not in seen and rt:   # promoted, never seen: carried from its old division by Pulse, else the newcomer prior
+                leagues[lk]['ratings'][t] = list(rt['teams'][t]) if rt.get('pulse') and t in rt['teams'] else [round(-nt, 5), round(nt, 5)]
                 s0 = round(1 / math.sqrt(P_['k'] * math.exp(rt['mu'] + rt['home'] / 2)), 4)   # the prior's spread alone
                 leagues[lk]['se'][t] = [s0, s0]
         if lk in AF_PART:
@@ -8663,7 +8891,8 @@ def main():
         elif not state.get('tune'):
             src['tuning'] = {'ok': False, 'at': iso(NOW), 'note': 'past seasons not available yet'}
     apply_tuning(state)
-    model_sig = json.dumps([MODEL, MODEL0, MODEL_W, FX] + ([MODEL_X, KAL, RHO_L, STACK] if MODEL_X or KAL or RHO_L or STACK else []), sort_keys=True)
+    model_sig = json.dumps([MODEL, MODEL0, MODEL_W, FX] + ([MODEL_X, KAL, RHO_L, STACK] if MODEL_X or KAL or RHO_L or STACK else [])
+                           + ([PULSE, PULSE_BLEND] if PULSE_ON else []), sort_keys=True)
     if model_sig != state.get('model_sig'):
         state['model_sig'] = model_sig
         retuned = True
@@ -8874,6 +9103,7 @@ def main():
         if sig != state.get('track_sig'):
             state['track_sig'] = sig
             changed = True
+    watermark(doc)
     body = json.dumps(doc, ensure_ascii=False, separators=(',', ':'))
     (OUT_DIR / 'matches.json').write_text(body)
     write_version(doc, body)
@@ -8891,6 +9121,61 @@ def main():
             fh.write(f'changed={"true" if changed else "false"}\n')
 
 
+# Watermark (v63). Each published model expected-goals figure (a match's "lm", four decimals) has the parity of its
+# last digit set by a keyed hash of the match and the side, moving it by at most 0.0001 goals (nothing any chance
+# shows can change). Anyone republishing Statpad's raw numbers republishes the pattern: on a copy, the last digits
+# match the key about 100% of the time where chance gives 50%, and vault/wm_check.py (the "Check a copy" workflow)
+# turns that into odds against coincidence. The key is made on the first run inside GitHub and kept only in the
+# private state; it never appears in a file, a log or a chat. Off unless STATPAD_WM=1 (v63 ships it switched off).
+WM_FILE = Path(ENV('STATPAD_WM_KEY_FILE') or STATE_DIR / 'wm.key')
+
+
+def wm_key(create=True):
+    try:
+        k = WM_FILE.read_text().strip()
+        if len(k) >= 32:
+            return k.encode()
+    except OSError:
+        pass
+    if not create:
+        return None
+    k = os.urandom(32).hex()
+    try:
+        WM_FILE.parent.mkdir(parents=True, exist_ok=True)
+        WM_FILE.write_text(k)
+    except OSError:
+        return None
+    return k.encode()
+
+
+def wm_bit(key, mid, side):
+    import hmac
+    return hmac.new(key, f'{mid}|{side}'.encode(), hashlib.sha256).digest()[0] & 1
+
+
+def wm_mark(v, bit):
+    """v rounded to four decimals with its last digit's parity set to bit, on the side nearer v."""
+    n = round(v * 1e4)
+    if n % 2 != bit:
+        n += 1 if v * 1e4 >= n else -1
+    return round(n / 1e4, 4)
+
+
+def watermark(doc):
+    if ENV('STATPAD_WM') != '1' or OFFLINE:
+        return 0
+    key = wm_key()
+    if not key:
+        return 0
+    k = 0
+    for m in doc.get('matches') or ():
+        lm = m.get('lm')
+        if isinstance(lm, list) and len(lm) == 2 and all(isinstance(x, (int, float)) and x > 0.0002 for x in lm):
+            m['lm'] = [wm_mark(lm[0], wm_bit(key, m.get('id'), 0)), wm_mark(lm[1], wm_bit(key, m.get('id'), 1))]
+            k += 1
+    return k
+
+
 def write_version(doc, body):
     """v.json: a few hundred bytes saying which version of each data file is up. The page checks it every 30 seconds
     and downloads a file only when its version moved, under an address that names the version, so browsers and
@@ -8904,5 +9189,25 @@ def write_version(doc, body):
     (OUT_DIR / 'v.json').write_text(json.dumps(ver, separators=(',', ':')))
 
 
+def _quiet_main():
+    """main(), with quiet mode's rules: warnings into the private log, and a crash reported by line number only."""
+    import traceback
+    import warnings
+    warnings.showwarning = lambda msg, cat, fn, ln, *a, **k: log(f'warning at line {ln}: {cat.__name__}: {msg}')
+    t0 = time.time()
+    try:
+        main()
+    except BaseException as e:
+        tb = traceback.extract_tb(e.__traceback__)
+        where = ' < '.join(f'{Path(f.filename).name}:{f.lineno}' for f in reversed(tb[-4:]))
+        log('crash:', ''.join(traceback.format_exception(type(e), e, e.__traceback__)))
+        flush_log(f'run failed ({type(e).__name__} at {where}); the details are in the private log')
+        sys.exit(1)
+    flush_log(f'run finished in {time.time() - t0:.0f} s; {_LOG[-1] if _LOG else ""}'.rstrip('; '))
+
+
 if __name__ == '__main__':
-    main()
+    if QUIET:
+        _quiet_main()
+    else:
+        main()
