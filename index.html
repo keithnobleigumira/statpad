@@ -64,6 +64,28 @@
   window.SPDEV_detect = detect;
 })();
 </script>
+<script>
+/* v65: start the data download while the page itself is still arriving. The version file and the match data used to
+   wait until the whole page had downloaded and started; on a slow line that's two round trips and a second of
+   waiting saved. The main script picks these up (checkVersion/load); if either fails it simply asks again. */
+(function () {
+  document.documentElement.classList.add('booting');   // until the first data is in (see renderNav's hero line)
+  try {   // opening on the Overview (no other page named in the address, none remembered): its headline block shows at once
+    var hh = decodeURIComponent((location.hash || '').slice(1)), tb = null;
+    try { tb = JSON.parse(localStorage.getItem('sp_tab')); } catch (e) { tb = null; }
+    if (hh ? hh === 'home' : (!tb || tb === 'home')) document.documentElement.classList.add('boot-home');
+  } catch (e) { /* no storage */ }
+  setTimeout(function () { document.documentElement.classList.remove('booting'); }, 20000);
+  try {
+    var v = fetch('v.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; });
+    window.__spV = v.catch(function () { return null; });
+    window.__spM = window.__spV.then(function (j) {
+      if (!j || !j.matches) return null;
+      return fetch('matches.json?v=' + j.matches).then(function (r) { return { v: j.matches, r: r }; });
+    }).catch(function () { return null; });
+  } catch (e) { window.__spV = window.__spM = null; }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&display=swap">
@@ -73,7 +95,7 @@
    probability (ice-blue home, orange away, slate draw), gold for value, coral for losses, mint for wins and
    the model's edge. Dark ("night match") is the default; light ("day match") is a choice in Display settings. */
 :root {
-  --paper: #090e19; --card: #111b2a; --card-2: #16233a; --sunk: #0c1421; --ink: #e9eef6; --ink-2: #9dacc2; --ink-3: #6a7b93;
+  --paper: #090e19; --card: #111b2a; --card-2: #16233a; --sunk: #0c1421; --ink: #e9eef6; --ink-2: #9dacc2; --ink-3: #7b8ca5;
   --rule: #1d2b3c; --rule-2: #152131;
   --cobalt: #61bdf5; --cobalt-ink: #04121d; --cobalt-soft: rgba(97, 189, 245, .13); --cobalt-line: rgba(97, 189, 245, .42);
   --pitch: #55e6b1; --pitch-soft: rgba(85, 230, 177, .12); --red: #f07878; --red-soft: rgba(240, 120, 120, .13);
@@ -94,7 +116,7 @@
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --paper: #f3f6fa; --card: #ffffff; --card-2: #f8fafc; --sunk: #eaeff5; --ink: #0b1424; --ink-2: #48566c; --ink-3: #78869a;
+  --paper: #f3f6fa; --card: #ffffff; --card-2: #f8fafc; --sunk: #eaeff5; --ink: #0b1424; --ink-2: #48566c; --ink-3: #627085;
   --rule: #dce3ec; --rule-2: #e8edf3;
   --cobalt: #1a7bc0; --cobalt-ink: #ffffff; --cobalt-soft: rgba(26, 123, 192, .09); --cobalt-line: rgba(26, 123, 192, .35);
   --pitch: #0a9466; --pitch-soft: rgba(10, 148, 102, .1); --red: #d24646; --red-soft: rgba(210, 70, 70, .09);
@@ -153,6 +175,12 @@ a { color: var(--cobalt); }
 
 /* bottom nav on phones */
 .bnav { position: fixed; z-index: 45; left: 0; right: 0; bottom: 0; background: var(--card); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--rule); display: grid; grid-template-columns: repeat(7, 1fr); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+.bnav { min-height: calc(61px + env(safe-area-inset-bottom)); }
+:root.booting #v-home .home-grid, :root.booting #explore, :root.booting body > footer { display: none; }
+:root.booting.boot-home #hero[hidden] { display: block; }
+:root.booting .spot-wrap { display: none; }
+:root.booting #hero { min-height: 650px; }
+@media (min-width: 700px) { :root.booting #hero { min-height: 520px; } }
 .bnav button { border: 0; background: none; display: grid; justify-items: center; gap: 3px; padding: 4px 0; font-size: 10px; min-width: 0; font-weight: 600; color: var(--ink-3); position: relative; }
 .bnav svg { width: 21px; height: 21px; }
 .bnav button[aria-current="page"] { color: var(--cobalt); }
@@ -345,8 +373,8 @@ h2 { font: 850 clamp(30px, calc(4.4vw / var(--z, 1)), 42px)/.95 var(--f-display)
 .xg-big { font: 750 24.6px/1 var(--f-display); letter-spacing: .005em; white-space: nowrap; }
 .xg-l { font: 600 9.5px/1 var(--f-mono); font-variant-numeric: tabular-nums; color: var(--ink-3); letter-spacing: .08em; margin-top: 6px; }
 .card { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); padding: 16px; margin-top: 14px; box-shadow: var(--shadow); }
-.card h4 { margin: 0 0 12px; font: 760 16.5px/1.1 var(--f-display); letter-spacing: -.005em; color: var(--ink); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.card h4 span { text-transform: none; font: 500 12px/1.25 var(--f-body); color: var(--ink-3); letter-spacing: 0; text-align: right; }
+.card h4, .card h2.h4, .card h3.h4 { margin: 0 0 12px; font: 760 16.5px/1.1 var(--f-display); letter-spacing: -.005em; color: var(--ink); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.card h4 span, .card h2.h4 span, .card h3.h4 span { text-transform: none; font: 500 12px/1.25 var(--f-body); color: var(--ink-3); letter-spacing: 0; text-align: right; }
 .cmp { display: grid; gap: 10px; }
 .cmp-row { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: center; font-size: 12.5px; }
 .cmp-row .n { color: var(--ink-2); font-weight: 600; }
@@ -1069,9 +1097,11 @@ body { background: var(--paper); }
 .spot-pick { margin-top: 11px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--ink) 9%, transparent); display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); min-width: 0; }
 .spot-pick > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .spot-pick b { color: var(--ink); }
-.spot-dots { display: flex; justify-content: center; gap: 6px; margin-top: -2px; }
-.spot-dots button { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 99px; background: var(--rule); transition: width .35s var(--spring), background .3s; }
-.spot-dots button[aria-current="true"] { width: 20px; background: var(--cobalt); }
+.spot-dots { display: flex; justify-content: center; gap: 0; margin-top: -11px; margin-bottom: -9px; }
+.spot-dots button { width: 24px; height: 24px; padding: 0; border: 0; background: none; display: grid; place-items: center; transition: width .35s var(--spring); }
+.spot-dots button::before { content: ""; width: 6px; height: 6px; border-radius: 99px; background: var(--rule); transition: width .35s var(--spring), background .3s; }
+.spot-dots button[aria-current="true"] { width: 32px; }
+.spot-dots button[aria-current="true"]::before { width: 20px; background: var(--cobalt); }
 
 /* matches: quick actions, days, competition chips */
 #v-matches .sec-head .ctl { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
@@ -1742,7 +1772,7 @@ h2 { font: 760 clamp(24px, calc(3.4vw / var(--z, 1)), 32px)/1.05 var(--f-display
 .tape-item { font: 520 13px/1 var(--f-body); }
 .tape-item b { font-weight: 650; }
 .tape-tag { background: rgba(233, 238, 246, .08); border: 1px solid rgba(233, 238, 246, .1); border-radius: 5px; font: 650 11px/1 var(--f-body); padding: 4px 6px; }
-.tape-tag.lv { background: var(--red); border-color: transparent; color: #fff; font-variant-numeric: tabular-nums; }
+.tape-tag.lv { background: #c62f3b; border-color: transparent; color: #fff; font-variant-numeric: tabular-nums; }
 .tape-sc { font: 760 15px/1 var(--f-display); font-stretch: 125%; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .tape .up { color: #55e6b1; } .tape .down { color: #f07878; }
 
@@ -1769,7 +1799,7 @@ h2 { font: 760 clamp(24px, calc(3.4vw / var(--z, 1)), 32px)/1.05 var(--f-display
 .feed-i.t-gold .feed-v { color: var(--yellow); } .feed-i.t-mint .feed-v { color: var(--pitch); } .feed-i.t-red .feed-v { color: var(--red); }
 .nextk .comp-list { border: 0; background: none; border-radius: 0; margin: 0 -16px; }
 .nextk .fx:first-child { border-top: 1px solid var(--rule-2); }
-.nextk h4 .lnk { font-size: 12.5px; }
+.nextk h4 .lnk, .nextk h2.h4 .lnk { font-size: 12.5px; }
 
 /* the match page header: the two kits as a stripe, no wash */
 .vs { background: var(--card); border-color: var(--rule); }
@@ -2005,6 +2035,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
       <div class="hero-main">
         <div class="mday"><h1 class="mday-d" id="mdayD"></h1><div class="mday-s" id="mdayS"></div></div>
         <p class="hero-sub" id="heroSub"></p>
+        <script>/* v65: today's date in the headline block from the first paint, before the app has started */(function () { try { if (!document.documentElement.classList.contains('boot-home')) return; var d = document.getElementById('mdayD'), s = document.getElementById('heroSub'); if (d && !d.textContent) d.textContent = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()); if (s && !s.textContent) s.textContent = 'Getting today\u2019s games ready\u2026'; } catch (e) {} })();</script>
         <div class="kpis hk" id="kpis"></div>
         <div class="spot-wrap"><div class="spot-rail" id="spotRail" aria-label="Headline games"></div><div class="spot-dots" id="spotDots" role="group" aria-label="Headline games"></div></div>
       </div>
@@ -2017,12 +2048,12 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
     <section id="v-home" class="section" data-view="home" hidden>
       <div class="xp-row" id="explore" role="group" aria-label="More to explore"></div>
       <div class="home-grid">
-        <div class="card feed"><h4>Intelligence feed <span id="feedAt"></span></h4><ol class="feed-l" id="feed"></ol></div>
-        <div class="card nextk"><h4>Next kick-offs <button type="button" class="lnk" data-tab="matches">All matches</button></h4><div id="nextList"></div></div>
+        <div class="card feed"><h2 class="h4">Intelligence feed <span id="feedAt"></span></h2><ol class="feed-l" id="feed"></ol></div>
+        <div class="card nextk"><h2 class="h4">Next kick-offs <button type="button" class="lnk" data-tab="matches">All matches</button></h2><div id="nextList"></div></div>
       </div>
     </section>
 
-    <section id="v-matches" class="section" data-view="matches">
+    <section id="v-matches" class="section" data-view="matches" hidden>
       <div class="sec-head">
         <div><h2>Matches</h2><p class="sub" id="matchesSub">Tap a match for the full breakdown.</p></div>
       </div>
@@ -2121,7 +2152,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
   <div class="itip-t"><b>Install Statpad</b><span>In Safari, tap <svg aria-label="Share"><use href="#i-share"/></svg> <b>Share</b>, then <b>Add to Home Screen</b>.</span></div>
   <button class="icon-btn" id="installTipX" type="button" aria-label="Close"><svg><use href="#i-x"/></svg></button>
 </div>
-<div class="tip" id="tip" role="tooltip"></div>
+<div class="tip" id="tip" aria-hidden="true"></div>
 <div class="pal" id="pal" role="dialog" aria-modal="true" aria-label="Find" hidden>
   <div class="pal-box">
     <label class="pal-in"><svg aria-hidden="true"><use href="#i-search"/></svg><span class="sr">Find a team, match or league</span><input id="palQ" type="search" placeholder="Find a team, match or league" autocomplete="off" spellcheck="false" aria-controls="palList"></label><button type="button" class="pal-x" data-palx="1">Cancel</button>
@@ -2798,21 +2829,33 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const b = seg.querySelector('button'); if (!b) return '';
     return [...b.attributes].filter((a) => a.name.startsWith('data-')).map((a) => a.name + (a.name === 'data-ui' ? '=' + a.value.split(':')[0] : '')).join(',');
   }
+  // v65: measures every control first and writes after, with one forced layout for all of them (it used to force one
+  // per control: a tenth of a second at every redraw on a budget phone)
   function segSync(snap) {
+    const todo = [];
     for (const seg of document.querySelectorAll('.seg')) {
       const on = seg.querySelector('button[aria-pressed="true"]');
-      if (!on) { seg.classList.remove('pill'); seg._pill = null; continue; }
+      if (!on) { if (seg._pill || seg.classList.contains('pill')) { seg.classList.remove('pill'); seg._pill = null; } continue; }
       if (!seg.offsetWidth) continue;                       // hidden for now: measured when it shows
       const x = on.offsetLeft, w = on.offsetWidth, cur = seg._pill;
       if (cur && cur.x === x && cur.w === w) continue;
-      const k = segKey(seg), was = PILL.get(k);
-      if (!cur || snap) {
-        const from = !snap && was && motionOK() ? was : { x, w };
-        seg.classList.add('pill', 'np'); seg.style.setProperty('--px', from.x + 'px'); seg.style.setProperty('--pw', from.w + 'px');
-        void seg.offsetWidth; seg.classList.remove('np');
+      todo.push({ seg, x, w, cur });
+    }
+    if (!todo.length) return;
+    let jump = false;
+    for (const t of todo) {
+      const k = segKey(t.seg), was = PILL.get(k); t.k = k;
+      if (!t.cur || snap) {
+        const from = !snap && was && motionOK() ? was : { x: t.x, w: t.w };
+        t.seg.classList.add('pill', 'np'); t.seg.style.setProperty('--px', from.x + 'px'); t.seg.style.setProperty('--pw', from.w + 'px');
+        t.np = true; jump = true;
       }
-      seg.style.setProperty('--px', x + 'px'); seg.style.setProperty('--pw', w + 'px');
-      seg._pill = { x, w }; if (k) PILL.set(k, { x, w });
+    }
+    if (jump) void document.body.offsetWidth;   // one layout: the starting places take effect without a slide
+    for (const t of todo) {
+      if (t.np) t.seg.classList.remove('np');
+      t.seg.style.setProperty('--px', t.x + 'px'); t.seg.style.setProperty('--pw', t.w + 'px');
+      t.seg._pill = { x: t.x, w: t.w }; if (t.k) PILL.set(t.k, { x: t.x, w: t.w });
     }
   }
   if ('MutationObserver' in window) {
@@ -3022,7 +3065,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (S.navCC != null && cc > S.navCC) for (const c of document.querySelectorAll('[data-nav="studio"] .count')) c.classList.add('bump');
     S.navCC = cc;
     for (const v of document.querySelectorAll('[data-view]')) v.hidden = v.dataset.view !== S.tab;
-    $('#hero').hidden = S.tab !== 'home' || !S.data;
+    // v65: while the first data downloads, the headline block shows today's date at its usual height, so nothing jumps
+    // when the games arrive (it used to appear late and push the whole page down)
+    const boot = !S.data && document.documentElement.classList.contains('booting');
+    $('#hero').hidden = S.tab !== 'home' || (!S.data && !boot);
+    if (boot && S.tab === 'home' && !$('#mdayD').textContent) {
+      $('#mdayD').textContent = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+      $('#heroSub').textContent = 'Getting today’s games ready…';
+    }
+    if (S.data) document.documentElement.classList.remove('booting');
     $('#tape').hidden = (S.tab !== 'value' && S.tab !== 'home') || !S.data || !$('#tapeIn').children.length;
     renderStudio();
   }
@@ -3276,7 +3327,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     });
   }
   function maxEdge(r) { return r.a ? Math.max(-1, ...r.a.sels.filter((s) => s.real).map((s) => s.edge)) : -1; }
-  function formDots(f) { return f ? `<span class="form" aria-label="Form ${esc(f)}">${[...f].map((c) => `<i class="${c}"></i>`).join('')}</span>` : ''; }
+  function formDots(f) { return f ? `<span class="form" role="img" aria-label="Form ${esc([...f].join(' '))}">${[...f].map((c) => `<i class="${c}"></i>`).join('')}</span>` : ''; }
   function inCoupon(id, key) { return S.coupon.some((c) => c.id === id && c.key === key); }
   function newsBadge(m) {
     const t = m.tn; if (!t) return '';
@@ -3937,7 +3988,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const recent = x.rows.slice().reverse(), shown = S.tkMore ? recent : recent.slice(0, 12);
     const days = T.since ? Math.round((Date.now() - Date.parse(T.since)) / 86400e3) : 0, span = days > 90 ? 'last 90 days' : 'so far';
     return `<div class="card tk-card tk-${t}" id="tkCard">
-      <h4><b class="tk-h"><i class="tier tier-${t}">${t}</i>${esc(name)}</b><span>${esc(TIER_RANGE(t))}</span></h4>
+      <h3 class="h4"><b class="tk-h"><i class="tier tier-${t}">${t}</i>${esc(name)}</b><span>${esc(TIER_RANGE(t))}</span></h3>
       <div class="tk-stats">
         <div><b class="mono">${x.n ? `${x.w}/${x.n}` : '–'}</b><span>${x.n ? `top picks landed (${pct(x.hr, 0)})` : 'no top picks graded yet'}</span></div>
         <div><b class="mono">${x.said != null ? pct(x.said, 0) : '–'}</b><span>${diff == null ? 'Statpad said' : `Statpad said · ${diff >= 0 ? 'landed' : 'fell'} ${Math.abs(Math.round(diff * 100))} pts ${diff >= 0 ? 'above' : 'below'}`}</span></div>
@@ -4105,6 +4156,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // ideas tested on games the model never saw: what went live and what didn't, with the numbers
   const RESEARCH = [
+    ['kept', 'Taking the margin off: the power method stays', 'Five ways of turning prices into chances (proportional, additive, power, Shin, odds ratio) on 49,452 games, with Pinnacle’s, Bet365’s and the average prices before kick-off and at the close, for home-draw-away and over/under 2.5.', 'power best or level everywhere; Shin −0.05 to −0.11 per 1,000 games in log loss, odds ratio −0.08 to −0.18, proportional −0.31 to −0.71'],
+    ['off', 'More weight on the sharpest bookmaker', 'Pinnacle alone against the average of all bookmakers, and every blend between, before kick-off.', 'Pinnacle 0.99968, average 0.99989, the live weighting (Pinnacle ×3 among about 20) within 0.1 per 1,000 of the best: not worth a change'],
+    ['off', 'A learned stack over the unpriced leagues', 'v64’s chances corrected by a multinomial logit on Pulse’s and the season fit’s gaps, Elo and pi-ratings over the same two seasons, the goal level and the league’s draw and home rates; fitted on 2023–25, judged on 21,531 games since.', '+0.0004 a game in log loss (95% −0.0001 to +0.0008): not clear of zero'],
+    ['off', 'Boosted trees on the same signals', 'Gradient-boosted trees with v64’s chances as an input.', '−0.0045 a game on the unseen games (95% −0.0059 to −0.0030): they learned the fitting seasons’ noise'],
     ['kept', 'Slips: every leg at least 50% by default, any target odds', 'A leg carries about 5% of margin from 1.20 to 2.00 and 8–10% beyond 2.50, so legs of 1.4 to 1.9 reach a target almost as surely as two long ones, while legs under 1.3 cost the most. 1,927 match days replayed through the deployed builder, every target from 2 to 1,000 odds.', 'chance by the closing prices, legs of 50%+ against any legs: 5 odds 18.9% vs 19.1%; 10 odds 9.1% vs 9.4% (4.5 legs vs 2.4, longest 1.85 vs 4.4); 20 odds 4.3% vs 4.6%; 100 odds 0.78% vs 0.88%'],
     ['kept', 'Legs of 60%+, on request', 'Every leg at least 60% likely (about 1.6 at most): more legs, a little less chance.', '10 odds: 8.5% by the closing prices with six legs, against 9.1% for 50%+'],
     ['off', 'Very short legs, the “sure picks” way', 'Every leg capped at 1.30 or 1.40.', '10 odds: 6.6% (10.5 legs) and 7.6% (8.4 legs) by the closing prices, against 9.1%'],
@@ -7646,8 +7701,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   };
   const CK_GENERIC = new Set(('real sporting athletic atletico inter united city west east north south new san st saint borussia eintracht dynamo dinamo racing union hellas young red ' +
     'athletico deportivo club town rovers wanderers albion county park olympic olympiakos ajax').split(' '));
-  const ckPlain = (s) => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/&/g, ' and ').replace(/['’.]/g, '').replace(/[^a-z0-9+\-−–]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const ckKey = (s) => { const t = ckPlain(s).replace(/[+\-−–]/g, ' ').split(' ').filter((w) => w && !CK_STOP.has(w) && !/^(\d{1,2}|1[89]\d\d|20\d\d)$/.test(w)).join(' '); return CK_ALIAS[t] || t; };
+  // v65: team-name keys are worked out once per name (the shock map, the assistant and Check a slip asked for the same
+  // names thousands of times on every load: about 0.8 s on a budget phone)
+  const CK_MEMO = new Map(), CK_KMEMO = new Map();
+  const ckPlainRaw = (s) => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/&/g, ' and ').replace(/['’.]/g, '').replace(/[^a-z0-9+\-−–]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const ckPlain = (s) => { const k = String(s || ''); let v = CK_MEMO.get(k); if (v === undefined) { if (CK_MEMO.size > 40000) CK_MEMO.clear(); v = ckPlainRaw(k); CK_MEMO.set(k, v); } return v; };
+  const ckKeyRaw = (s) => { const t = ckPlain(s).replace(/[+\-−–]/g, ' ').split(' ').filter((w) => w && !CK_STOP.has(w) && !/^(\d{1,2}|1[89]\d\d|20\d\d)$/.test(w)).join(' '); return CK_ALIAS[t] || t; };
+  const ckKey = (s) => { const k = String(s || ''); let v = CK_KMEMO.get(k); if (v === undefined) { if (CK_KMEMO.size > 40000) CK_KMEMO.clear(); v = ckKeyRaw(k); CK_KMEMO.set(k, v); } return v; };
+  let CK_ALIAS_BY = null;   // CK_ALIAS turned round: a team key -> the nicknames that mean it
+  const ckAliasesOf = (key) => { if (!CK_ALIAS_BY) { CK_ALIAS_BY = new Map(); for (const [k, v] of Object.entries(CK_ALIAS)) { if (!CK_ALIAS_BY.has(v)) CK_ALIAS_BY.set(v, []); CK_ALIAS_BY.get(v).push(k); } } return CK_ALIAS_BY.get(key) || []; };
   const UNPRETTY = { 'Manchester United': 'Man United', 'Manchester City': 'Man City', 'Nottingham Forest': "Nott'm Forest", 'Sheffield Wednesday': 'Sheffield Weds', 'Atlético Madrid': 'Ath Madrid',
     'Athletic Club': 'Ath Bilbao', 'Real Sociedad': 'Sociedad', 'Real Betis': 'Betis', 'Celta Vigo': 'Celta', 'Rayo Vallecano': 'Vallecano', 'Espanyol': 'Espanol', 'Eintracht Frankfurt': 'Ein Frankfurt',
     "Borussia M'gladbach": "M'gladbach", '1. FC Köln': 'FC Koln', 'Hamburger SV': 'Hamburg', 'Paris Saint-Germain': 'Paris SG', 'Saint-Étienne': 'St Etienne', 'Fortuna Sittard': 'For Sittard',
@@ -7669,7 +7731,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           fx.set(t, []);
           const raw = UNPRETTY[nm];
           [ckKey(nm), ckPlain(nm).replace(/[+\-−–]/g, ' ').replace(/\s+/g, ' '), raw ? ckKey(raw) : '', raw ? ckPlain(raw) : ''].forEach((v) => add(v, t));
-          for (const [k, v] of Object.entries(CK_ALIAS)) if (v === t || (raw && v === ckKey(raw))) add(k, t);
+          for (const k of ckAliasesOf(t)) add(k, t);
+          if (raw) for (const k of ckAliasesOf(ckKey(raw))) add(k, t);
           const w = ckKey(nm).split(' ');
           if (w.length > 1) for (const x of [w[0], w[w.length - 1]]) if (x.length >= 5 && !CK_GENERIC.has(x)) first.set(x, (first.get(x) || new Set()).add(t));
         }
@@ -10944,7 +11007,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         teams.set(nm, { name: nm, lks: new Set() });
         const raw = UNPRETTY[nm];
         add(nm, nm); add(ckKey(nm), nm); if (raw) { add(raw, nm); add(ckKey(raw), nm); }
-        for (const [k, v] of Object.entries(CK_ALIAS)) if (v === ckKey(nm) || (raw && v === ckKey(raw))) add(k, nm);
+        for (const k of ckAliasesOf(ckKey(nm))) add(k, nm);
+        if (raw) for (const k of ckAliasesOf(ckKey(raw))) add(k, nm);
         for (const w of ckKey(nm).split(' ')) if (w.length >= 4 && !CK_GENERIC.has(w) && !ASK_STOP.has(w)) words.set(w, (words.get(w) || new Set()).add(nm));
       }
       teams.get(nm).lks.add(lk);
@@ -13582,8 +13646,12 @@ void main() {
     if (vfBusy) return; vfBusy = true;
     const ctl = typeof AbortController === 'function' ? new AbortController() : null, stop = ctl ? setTimeout(() => ctl.abort(), first ? 4e3 : 15e3) : 0;
     try {
-      const r = await fetch('v.json?t=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined });
-      const v = r.ok ? await r.json() : null;
+      let v;
+      // the first check takes the version file the page head already asked for (v65), if it came within 4 s
+      const early = first && window.__spV ? await Promise.race([window.__spV, new Promise((res) => setTimeout(() => res(undefined), 4e3))]) : undefined;
+      window.__spV = null;
+      if (early && early.matches) v = early;
+      else { const r = await fetch('v.json?t=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined }); v = r.ok ? await r.json() : null; }
       if (!v || !v.matches) throw new Error('no version file');
       S.vf = { v, at: Date.now() }; S.lastOk = new Date();
       if (!vfSame('matches') || first) await load(first); else { if (S.fromSaved) { S.fromSaved = false; } renderLive(); }
@@ -13604,7 +13672,11 @@ void main() {
     const ctl = typeof AbortController === 'function' ? new AbortController() : null, stop = ctl ? setTimeout(() => ctl.abort(), 45e3) : 0;
     try {
       const want = vfHas('matches') ? S.vf.v.matches : null;
-      const res = await fetch(dataUrl('matches', 30e3), Object.assign(dataOpts('matches'), { signal: ctl ? ctl.signal : undefined }));
+      // the first download takes the one the page head started (v65) when it's for the same version
+      const early = first && window.__spM ? await Promise.race([window.__spM, new Promise((res) => setTimeout(() => res(null), 45e3))]) : null;
+      window.__spM = null;
+      const res = early && early.r && early.r.ok && want && early.v === want ? early.r
+        : await fetch(dataUrl('matches', 30e3), Object.assign(dataOpts('matches'), { signal: ctl ? ctl.signal : undefined }));
       if (!res.ok) throw new Error('HTTP ' + res.status);
       if (window.__spMark) window.__spMark('match data: answer HTTP ' + res.status + ', reading');
       const doc = await res.json();
@@ -13622,6 +13694,7 @@ void main() {
     } catch (err) {
       S.err = err && err.name === 'AbortError' ? 'the connection is too slow' : String((err && err.message) || err);
       if (window.__spMark) window.__spMark('match data: failed: ' + S.err);
+      document.documentElement.classList.remove('booting');
       if (!(await useSaved())) $('#matchList').innerHTML = `<div class="empty-state"><b>Couldn't load match data</b>matches.json didn't load (${esc(S.err)}). It tries again every 30 seconds.</div>`;
       renderLive();
     } finally { clearTimeout(stop); loading = false; }
@@ -13655,6 +13728,7 @@ void main() {
     } catch (e) { /* not running as an artifact */ }
   }
 
+  { const sh = $('#sheet'); if (sh) { const sync = () => { sh.inert = sh.getAttribute('aria-hidden') === 'true'; }; sync(); new MutationObserver(sync).observe(sh, { attributes: true, attributeFilter: ['aria-hidden'] }); } }
   if (window.__spMark) window.__spMark('main script running');
   applyUI();
   try { matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (UI.theme === 'auto') applyUI(); }); RM.addEventListener('change', applyUI); } catch (e) { /* old browsers */ }

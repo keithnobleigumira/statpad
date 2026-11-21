@@ -484,6 +484,35 @@ The closing price is still well ahead of any results-only model, which is why pr
 Code: `pulse_run`, `pulse_carry`, `pulse_blend`, `PULSE`, `PULSE_BLEND`, `PYRAMIDS` in `update.py`.
 `PULSE_ON = False` gives v62's ratings exactly.
 
+## Speed, accessibility and a research round (v65)
+
+**The page on a budget phone.** Measured with the processor slowed six times (about a budget Android) on a 1.6 Mbps line with 150 ms delay, live data (606 matches), and with Lighthouse's mobile audit:
+
+| | v64 | v65 |
+|---|---|---|
+| Layout shift while loading (lower is better; good is under 0.1) | 0.57 | 0.01 |
+| Lighthouse performance (mobile) | 52 | 71 |
+| Lighthouse accessibility | 82 (Overview), 96 (Matches, Tables), 98 (Lab) | 100 on every page |
+| Longest freeze while loading | 0.98 s | 0.5 s |
+| Main-thread time in long tasks | 1.85 s | 1.0 s |
+| First games on screen | 6.6 s | about 5.5 s |
+
+What changed:
+
+- **Team names.** The shock map, the assistant and Check a slip each built an index of team names on every load, working out the same names' keys thousands of times and scanning the whole nickname table for every team: 0.8 s on a budget phone. Keys are now worked out once per name and the nickname table is turned round once: 0.09 s.
+- **Data starts downloading from the page head.** The version file and the match data used to wait until the whole 1.3 MB page had arrived and started; now they download alongside it, and the app picks them up (falling back to asking again if either fails).
+- **Nothing jumps.** The headline block used to appear only when the data was in, pushing everything down by 700 pixels. It now shows today's date at its usual height from the first paint; the strips under it wait for the data; the bottom bar keeps its height before its buttons are drawn; the Matches page no longer flashes before the app starts.
+- **Segmented controls** (targets, days, minimums) are measured in one layout pass instead of one each.
+- **Accessibility**: muted text is lighter on dark (#7b8ca5, 5.0:1 on cards) and darker on light (#627085, 5.0:1); the live tag is a darker red (5.4:1 under white); the headline dots are 24-pixel touch targets; the closed menu sheet can't be reached by keyboard or screen reader; the hover tooltip is hidden from screen readers (its facts are on the page); form badges read as "Form W D L L W"; headings follow in order.
+
+**Reading bookmaker prices.** Five ways of taking the margin off (proportional, additive, power, Shin, odds ratio) on 49,452 games of the main leagues, with Pinnacle's, Bet365's and the average prices before kick-off and at the close, for home-draw-away and over/under 2.5. The power method, which Statpad uses, was best or level everywhere: Shin was worse by 0.05 to 0.11 per 1,000 games in log loss, odds ratio by 0.08 to 0.18, proportional by 0.31 to 0.71. Pinnacle alone (0.99968) read the results better than the average of all bookmakers (0.99989), but blends between them gained nothing beyond Pinnacle, and the live weighting (Pinnacle three times, among about 20 bookmakers) is within 0.1 per 1,000 of the best. No change. (`exp19/devig.py`, `exp19/blend.py`.)
+
+**Machine learning on the unpriced leagues** (58% of the live board has no bookmaker price). A learned stack on top of v64: a multinomial logit, with v64's chances as an offset, on Pulse's and the season fit's gaps, Elo and pi-ratings over the same two seasons, the goal level and the league's past draw and home rates; fitted on July 2023 to June 2025, judged on the 21,531 games since. +0.0004 a game (95% range −0.0001 to +0.0008): not clear of zero, not shipped. Gradient-boosted trees on the same signals did worse (−0.0045): they learned the fitting seasons' noise. Results alone have little more to tell than v64 already reads from them. (`exp17/stack.py`.)
+
+**The live record so far** (334 graded top picks, 9–21 November): stated 82.5%, landed 80.2%, within about one standard error. Picks priced only by the bookmakers landed 75.3% against 82.9% stated (158 picks, 2.2 standard errors under); picks from the blend 84.6% against 82.9%, the model alone 84.8% against 78.9% (33 picks). Too few to act on yet; worth watching as the record grows.
+
+**Freshness.** The Odds API's free plan (500 credits a month) sets how often prices refresh: on 21 November, games within two hours every 3.8 hours. The pipeline already spends one credit a call (one region, home-draw-away only) and plans every call; the next real step up in freshness would be a paid plan. DraftKings' prices through ESPN (free) cover about 65 games a day.
+
 ## Smart slips: how they're built (v64)
 
 A slip lands only if every leg lands, so its chance is the product of its legs' chances. With the total odds fixed, that product can be written as
