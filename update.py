@@ -2821,6 +2821,11 @@ def af_blocked(state):
             af['note'] = af['why'] = None
             log('API-Football: a new key; the pause for the refused one is lifted')
         af['kfp'] = fp
+    if fp and af.get('note') == 'the key was refused' and 'why' not in af:
+        # refused before Statpad kept API-Football's reason: ask once more, so Data status can show it
+        af.pop('block_until', None)
+        af['why'] = None
+        log('API-Football: asking once more to learn why the key is refused')
     b = af.get('block_until')
     return bool(b and parse_iso(b) > NOW)
 
@@ -3932,7 +3937,7 @@ def refresh_team_news(state, matches):
     if nope:
         note += ' · your plan refuses ' + ', '.join(nope) + ' (asked again weekly)'
     if af.get('note') and af_blocked(state):
-        note += ' · paused: ' + af['note']
+        note += ' · paused: ' + af['note'] + (f' (API-Football: “{af["why"]}”)' if af['note'] == 'the key was refused' and af.get('why') else '')
     return note
 
 
