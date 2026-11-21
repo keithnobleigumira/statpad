@@ -2818,7 +2818,7 @@ def af_blocked(state):
     if fp and af.get('kfp') != fp:
         if af.get('note') == 'the key was refused':
             af.pop('block_until', None)
-            af['note'] = None
+            af['note'] = af['why'] = None
             log('API-Football: a new key; the pause for the refused one is lifted')
         af['kfp'] = fp
     b = af.get('block_until')
@@ -2865,6 +2865,9 @@ def af_get(path, params, state, reserve=2):
         keys = set(err) if isinstance(err, dict) else set()
         if 'token' in keys or 'access' in keys:
             af['block_until'], af['note'] = iso(NOW + timedelta(hours=6)), 'the key was refused'
+            # API-Football's own words go on the Data status page (v62), so a wrong key, a suspended account or a
+            # blocked address can be told apart without opening the run's log; anything key-like is masked
+            af['why'] = re.sub(r'[0-9a-fA-F]{20,}', '…', msg)[:160]
         elif 'requests' in keys:
             tomorrow = (NOW + timedelta(days=1)).replace(hour=0, minute=5, second=0, microsecond=0)
             af['block_until'], af['note'] = iso(tomorrow), "today's allowance is used up"
@@ -3899,7 +3902,8 @@ def refresh_team_news(state, matches):
     for k in [k for k, v in (af.get('nope') or {}).items() if parse_iso(v[0]) < NOW]:
         del af['nope'][k]
     if af_blocked(state):
-        return 'paused: ' + (af.get('note') or '')
+        why = af.get('why') if af.get('note') == 'the key was refused' else None
+        return 'paused: ' + (af.get('note') or '') + (f' (API-Football: “{why}”)' if why else '')
     fx = af.setdefault('fx', {})
     days = [NOW.strftime('%Y-%m-%d'), (NOW + timedelta(days=1)).strftime('%Y-%m-%d')]
     graded = af_results(state)    # results first: they matter more than news
