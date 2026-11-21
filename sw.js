@@ -8,7 +8,10 @@
    share one path and differ only in the query (?img=…/<club>.png), so matching without it handed every club the first
    ESPN crest the phone had kept. v2 of the picture store drops the copies saved that way.
    Data files: the network first; if it hasn't answered within a few seconds, the saved copy is shown and the download
-   carries on to refresh it. v.json (which version of each data file is up) always goes straight to the network. */
+   carries on to refresh it. v.json (which version of each data file is up) always goes straight to the network.
+   v3 (v62): a data file asked for by version (?v=…) is never answered with the saved copy just because the network is
+   slow, only when it fails: the page already shows what it has, and on a slow line the old copy had been handed back
+   as if it were the new version, so the page stopped asking and showed data hours old ("Updated 5 h ago"). */
 const CACHE = 'statpad-v1', FONTS = 'statpad-fonts-v1', IMGS = 'statpad-crests-v2', IMG_MAX = 900;
 const IMG_HOSTS = ['media.api-sports.io', 'flagcdn.com', 'a.espncdn.com'];
 const SHELL = ['./', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
@@ -65,7 +68,8 @@ self.addEventListener('fetch', (e) => {
       if (req.mode === 'navigate') return caches.match(new URL('./', self.location).href);
       return undefined;
     };
-    const wait = req.mode === 'navigate' ? NET_WAIT_PAGE : data ? NET_WAIT_DATA : 0;
+    const versioned = data && url.searchParams.has('v');   // the page names the version it wants: only that will do
+    const wait = req.mode === 'navigate' ? NET_WAIT_PAGE : data && !versioned ? NET_WAIT_DATA : 0;
     e.respondWith((async () => {
       if (!wait) return net.catch(async () => (await saved()) || Response.error());
       // the network, if it answers in time; otherwise the saved copy; with nothing saved, wait for the network after all

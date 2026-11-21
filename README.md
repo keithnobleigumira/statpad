@@ -1,6 +1,6 @@
 # Statpad
 
-Football predictions from a goals model blended with live bookmaker prices. Statpad covers 44 men's leagues and six women's competitions (five leagues and the Women's Champions League), plus the UEFA and South American club competitions, domestic cups and national teams. For each match it gives probabilities for every market, value against the best available price, and slips built to a target price.
+Football predictions from a goals model blended with live bookmaker prices. Statpad covers 110 men's leagues from 92 countries and six women's competitions (five leagues and the Women's Champions League), plus the UEFA and South American club competitions, domestic cups and national teams. For each match it gives probabilities for every market, value against the best available price, and slips built to a target price.
 
 The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps its data file (`matches.json`) fresh and publishes both to GitHub Pages.
 
@@ -79,8 +79,18 @@ Upload `sw.js` and `manifest.webmanifest` with `index.html` and `update.py`.
 
 **Fixed earlier.** On a connection that is on but barely moving (Wi-Fi with a weak or stalled link), the page used to wait for the match file with no time limit and sat on "Loading"; offline it was fine, because a failed request falls back to the copy saved on the phone at once. Now the page shows the saved copy straight away (the header says "Saved … · updating") and swaps in the fresh file when it arrives, and the service worker serves the saved page or match file if the network hasn't answered within 4 or 7 seconds, while the download carries on in the background. Upload sw.js too. If the page hasn't finished starting after 20 seconds, a panel says what went wrong, with **Repair** (clears that phone's saved copy of the site and its display settings, never the coupon, bets or bet settings); `?reset` at the end of the address does the same, and `?diag` shows every start-up step live on screen. Most 5-minute runs don't load NumPy (only the hourly and six-hourly jobs install it), and the step that keeps Statpad's own last price of every coming game for the market memory, and the price outlook, quietly did nothing in those runs. Both now fall back to the same fit in plain Python (identical to 12 decimal places, 0.07 s for 261 games). A state whose kept closing prices predate the match stats now reloads the results once, so the outlook's form is there straight after an upgrade instead of up to six hours later.
 
+**The dip of 19–20 November (v62).** After four days with every pick landing (50 of 50 from 15 to 18 Nov, when 41.6 were expected), 31 of 44 landed on 20 Nov when 37.8 were expected. Looked into:
+- *Duplicates.* 7 of the first 193 graded picks were the same game twice, saved under two spellings or two kick-off times from different sources (*Inverness C* and *Inverness Caledonian Thistle*; *Celta B* and *Celta Fortuna*; Armenia v Cyprus listed at two times; Austria's opponent named two ways). The record now keeps one copy (same competition, kick-offs within 36 hours, one side the same; the copy snapshotted last stays), removed the 7 from the graded picks and rebuilt the level counts: Nearly definite 69 of 81 (85%, said 88%), Highly possible 81 of 99 (82%, said 81%).
+- *Fatigue.* The monthly check had switched on a short-rest shift (short-rested sides doing slightly better than their prices) from a gain of 0.00013 a game on one season. On seven seasons of prices it made results worse (0.0026 a game over 3,288 games, worse in five of the eight seasons), and live it moved a few prices by up to 12 points against the market (Fluminense v Mirassol: the market's 60% home win read as 72%). It is now off for good (`FX_REST_ALLOWED`).
+- *The engine itself didn't change.* v61's faster fitting gives identical chances to v60's on every game of the board (464 games, largest difference 0).
+- *The rest is luck, mostly.* Over the whole record the picks landed as often as stated (160 of 193 against 160.9 expected before the duplicates were taken out); 15–18 Nov was luck one way (3.2 standard deviations above), 19–21 Nov the other (2.4 below). Replayed on the 2025/26 season, Nearly definite picks landed 88.1% against 87.6% stated (1,704 picks). Two things make the live picks a little less sure than they could be, and both are about keys: API-Football refuses the key (no line-ups, so no fresh price after team news) and The Odds API's credits are nearly spent (its prices for games within two hours refresh only every few hours). A refused key pauses team news for 6 hours; a new key in the `API_FOOTBALL_KEY` secret is now tried on the very next run (Statpad keeps only a short fingerprint of the key to notice the change, never the key).
+
 **Research log.** Lab → Accuracy lists the ideas tested for this version on games the model never saw, kept or off, with the numbers (log loss is home, draw and away plus over/under 2.5 a game, lower is better):
 
+- **Slips built for the highest chance at the target: kept** (Smart slips, above). At 10 odds, closing-price chance 3.4%, 6.6%, 8.0% (old) → 9.4%, 9.3%, 9.4%.
+- **Rating legs on more than chance and price: off** (+0.012 per 1,000 in log loss with six signals).
+- **Short rest as a shift on top of the prices: off for good** (worse on seven seasons; above).
+- **47 more leagues: kept** (below).
 - **Half-time markets: kept** (above).
 - **African leagues: kept** (above), with fixtures and new results from API-Football since ESPN stopped; Zambia left out.
 - **A draw correction for each African league from its own results: off** (above).
@@ -225,6 +235,75 @@ Would last season's ratings still help, starting this late? Replayed on 2025/26:
 | Ghana | 100 | −0.003 (−0.036 to +0.037) |
 | South Africa First Division | 42 | −0.021 (−0.098 to +0.052) |
 
+**Fixtures that don't depend on API-Football (v62).** On 20 Nov API-Football started refusing the key ("Team news: paused, the key was refused" in Data status), and the 13 Wikipedia-rated leagues and the 5 African leagues, whose fixtures came only from its day lists, went empty. They now come first from **TheSportsDB**, a free sports database whose public key needs no account: one call returns a league's whole round with dates, kick-off times, statuses and scores. Each run reads a few leagues, the most overdue first (every 15 minutes while one of its games may be in play, hourly with games within a day, every 6 hours otherwise; a round already settled, or read in the last 6 hours and all still to come, isn't read again; at most 14 calls a run for this, 2.1 seconds apart, inside its 30 a minute). Earlier rounds have an allowance of their own (14 calls a run): the African leagues, which have no Wikipedia matrix, get this season's earlier rounds once, so Uganda's 2026/27 table is whole from round 1 (before, it would only have counted games since Statpad began reading them). Its results matched Wikipedia's in every game checked: Czech First League rounds 1–14, 110 of 110; Uganda 2026/27, 22 of 22. Names are paired with Wikipedia's list of this season's clubs (all 16 Czech clubs paired), or matched to ESPN's past names for the African leagues (*Kampala Capital City Authority* is KCCA FC; a promoted club keeps its name). API-Football's lists still count when its key works; a game in both counts once. TheSportsDB ids: `TS_IDS` in `update.py` (no Nigeria fixtures there yet, nor South Africa's First Division or Greece's Super League 2, which keep API-Football only).
+
+**47 more leagues (v62), at no cost in API calls.** Each was kept only after the same test as the others: ratings refitted week by week from July 2025 on earlier games only, against treating every side as average (1X2 log loss a game, 95% range by bootstrap), and only with the range above zero.
+
+- *From ESPN* (dated results, kick-off times, live scores; no prices): eleven leagues of South and Central America and India. ESPN's month pages are now read six at a time, so the history of all eleven came in on one run (255 reads in the 40-second allowance).
+- *From TheSportsDB* (round by round, its free key): 36 leagues of Africa, the Middle East, Central and South-East Asia and Europe's smaller leagues. A league's history comes from the same key (this season's earlier rounds and last season's, about 50 calls a league), with its own allowance beside the 14 calls for what's coming: 28 a run while any league is still waiting to be shown, 14 after. Until then a new league costs one call every 6 hours (its season and round). So the 36 fill in over the first 60 or so runs after the upgrade (five to eight hours, depending on how often GitHub starts the workflow), the African leagues first, and each appears only once both seasons are read (`ts_ready`). Their scores reach the board while games are on: a league with a game that may be in play is read every 15 minutes, and its score and final result go straight onto the match (`ts_live`).
+- Tanzania, Malawi and Mozambique have no league on TheSportsDB or ESPN with dated results (their clubs are listed under "no league"), and Cameroon's rounds came back empty.
+
+| League | Source | Games tested | Gain a game (95% range) |
+|---|---|---|---|
+| Peru, Liga 1 | ESPN `PER1` | 483 | +0.054 (+0.027 to +0.077) |
+| Ecuador, LigaPro | ESPN `ECU1` | 456 | +0.039 (+0.016 to +0.061) |
+| Uruguay, Primera División | ESPN `URU1` | 416 | +0.035 (+0.009 to +0.062) |
+| Paraguay, Primera División | ESPN `PAR1` | 378 | +0.044 (+0.012 to +0.078) |
+| Bolivia, División Profesional | ESPN `BOL1` | 348 | +0.109 (+0.074 to +0.145) |
+| Venezuela, Liga FUTVE | ESPN `VEN1` | 344 | +0.065 (+0.038 to +0.096) |
+| Costa Rica, Liga FPD | ESPN `CRC1` | 272 | +0.044 (+0.009 to +0.078) |
+| Honduras, Liga Nacional | ESPN `HON1` | 332 | +0.088 (+0.050 to +0.129) |
+| Guatemala, Liga Nacional | ESPN `GUA1` | 411 | +0.043 (+0.020 to +0.068) |
+| El Salvador, Primera División | ESPN `SLV1` | 416 | +0.075 (+0.043 to +0.109) |
+| *left out:* Argentina, Primera Nacional | ESPN `ARG2` | 931 | +0.010 (-0.003 to +0.023) |
+| *left out:* Mexico, Liga de Expansión | ESPN `MEX2` | 372 | +0.007 (-0.026 to +0.034) |
+| India, Super League | ESPN `IND1` | 121 | +0.070 (+0.022 to +0.119) |
+| Zambia, Super League | TheSportsDB `ZAM1` | 377 | +0.041 (+0.011 to +0.073) |
+| Rwanda, Premier League | TheSportsDB `RWA1` | 189 | +0.037 (+0.003 to +0.070) |
+| *left out:* Ethiopia | TheSportsDB `ETH1` | 418 | -0.023 (-0.041 to -0.003) |
+| Egypt, Premier League | TheSportsDB `EGY1` | 402 | +0.061 (+0.036 to +0.085) |
+| Zimbabwe, PSL | TheSportsDB `ZIM1` | 441 | +0.060 (+0.035 to +0.086) |
+| Morocco, Botola Pro | TheSportsDB `MAR1` | 295 | +0.039 (+0.010 to +0.069) |
+| Algeria, Ligue 1 | TheSportsDB `ALG1` | 314 | +0.052 (+0.028 to +0.077) |
+| Tunisia, Ligue 1 | TheSportsDB `TUN1` | 296 | +0.104 (+0.058 to +0.148) |
+| *left out:* Ivory Coast | TheSportsDB `CIV1` | 282 | -0.007 (-0.046 to +0.024) |
+| *left out:* Senegal | TheSportsDB `SEN1` | 279 | +0.025 (-0.005 to +0.057) |
+| DR Congo, Linafoot | TheSportsDB `COD1` | 521 | +0.066 (+0.036 to +0.096) |
+| Angola, Girabola | TheSportsDB `ANG1` | 322 | +0.086 (+0.044 to +0.123) |
+| Botswana, Premiership | TheSportsDB `BOT1` | 308 | +0.112 (+0.067 to +0.154) |
+| Sudan, Premier League | TheSportsDB `SDN1` | 165 | +0.055 (+0.018 to +0.095) |
+| Libya, Premier League | TheSportsDB `LBY1` | 339 | +0.128 (+0.091 to +0.160) |
+| Burundi, Ligue A | TheSportsDB `BDI1` | 290 | +0.105 (+0.057 to +0.148) |
+| *left out:* Qatar | TheSportsDB `QAT1` | 190 | +0.039 (-0.012 to +0.092) |
+| UAE, Pro League | TheSportsDB `UAE1` | 235 | +0.121 (+0.079 to +0.161) |
+| Iran, Persian Gulf Pro League | TheSportsDB `IRN1` | 286 | +0.052 (+0.026 to +0.083) |
+| Iraq, Stars League | TheSportsDB `IRQ1` | 526 | +0.056 (+0.033 to +0.079) |
+| Jordan, Pro League | TheSportsDB `JOR1` | 177 | +0.115 (+0.057 to +0.173) |
+| Kuwait, Premier League | TheSportsDB `KUW1` | 161 | +0.119 (+0.064 to +0.174) |
+| Uzbekistan, Super League | TheSportsDB `UZB1` | 350 | +0.097 (+0.058 to +0.132) |
+| Kazakhstan, Premier League | TheSportsDB `KAZ1` | 322 | +0.076 (+0.042 to +0.115) |
+| Vietnam, V.League 1 | TheSportsDB `VIE1` | 232 | +0.049 (+0.012 to +0.088) |
+| *left out:* South Korea, K League 1 (priced by the market already) | TheSportsDB `KOR1` | 314 | +0.016 (-0.009 to +0.038) |
+| South Korea, K League 2 | TheSportsDB `KOR2` | 403 | +0.050 (+0.018 to +0.080) |
+| China, League One | TheSportsDB `CHN2` | 370 | +0.053 (+0.026 to +0.084) |
+| Azerbaijan, Premier League | TheSportsDB `AZE1` | 264 | +0.123 (+0.077 to +0.170) |
+| Georgia, Erovnuli Liga | TheSportsDB `GEO1` | 255 | +0.047 (+0.009 to +0.084) |
+| Armenia, Premier League | TheSportsDB `ARM1` | 216 | +0.203 (+0.140 to +0.260) |
+| Belarus, Premier League | TheSportsDB `BLR1` | 353 | +0.082 (+0.042 to +0.119) |
+| Bosnia and Herzegovina, Premijer Liga | TheSportsDB `BIH1` | 244 | +0.110 (+0.070 to +0.151) |
+| *left out:* Albania | TheSportsDB `ALB1` | 243 | -0.005 (-0.040 to +0.030) |
+| *left out:* Iceland | TheSportsDB `ISL1` | 246 | +0.029 (-0.008 to +0.064) |
+| Northern Ireland, Premiership | TheSportsDB `NIR1` | 321 | +0.100 (+0.058 to +0.136) |
+| Wales, Cymru Premier | TheSportsDB `WAL1` | 319 | +0.137 (+0.091 to +0.180) |
+| Estonia, Meistriliiga | TheSportsDB `EST1` | 270 | +0.132 (+0.083 to +0.184) |
+| Latvia, Virslīga | TheSportsDB `LVA1` | 257 | +0.185 (+0.124 to +0.239) |
+| Lithuania, A Lyga | TheSportsDB `LTU1` | 254 | +0.074 (+0.033 to +0.117) |
+| Indonesia, Super League | TheSportsDB `IDN1` | 392 | +0.065 (+0.036 to +0.094) |
+| Thailand, Thai League 1 | TheSportsDB `THA1` | 302 | +0.084 (+0.046 to +0.122) |
+| North Macedonia, First League | TheSportsDB `MKD1` | 265 | +0.116 (+0.064 to +0.163) |
+
+All are `local`: their clubs are never matched to clubs elsewhere (Barcelona SC stays in Ecuador, Liverpool in Montevideo). In the league lists, a name several leagues share now carries its country (*Premier League (Uganda)*, *Primera División (Uruguay)*). Scripts: `exp15/wave2.py` (ESPN), `exp15/ts_hist.py` and `exp15/ts_eval.py` (TheSportsDB). Tests: `tests/ts_only_unit.py` (offline, played back from the downloaded rounds), `tests/ts_unit.py` (live).
+
 **Sixteen more European leagues, at no cost in API calls.** None of Statpad's price feeds covers these, and the free plans can't backfill their history, so each comes from a free source that can:
 
 | Source | Leagues | What it gives |
@@ -261,7 +340,7 @@ Do the ratings help? Log loss gain a game against every side average on 2025/26 
 
 Russia, the National League and 3. Liga have dated results, so they were tested like the African leagues, week by week through 2025/26 (`exp14/wave1.py`): +0.093 (95% +0.054 to +0.129), +0.069 (+0.049 to +0.086) and +0.036 (+0.011 to +0.057). All sixteen are `local`: their clubs are never matched to clubs in other competitions, so cup and European games rate them exactly as before (Slavia Prague in the Champions League is still priced by the market, or rated from its European results). The Czech and Serbian entries existed before with no working source (openfootball stopped publishing the Czech league).
 
-Not used, and why: ClubElo (free, but this environment couldn't reach it to test), TheSportsDB's free key (15 games a season), football-data.org's free plan (twelve big competitions only), FotMob and Sofascore (no public API).
+Not used, and why: ClubElo (free, but this environment couldn't reach it to test), TheSportsDB's free key for a whole season in one call (15 games; its rounds, one call each, are what v62 uses), football-data.org's free plan (twelve big competitions only), FotMob and Sofascore (no public API).
 
 **Africa's club competitions.** The CAF Champions League (`CAFCL`) and Confederation Cup (`CAFCC`) are in, with fixtures, live scores and results from ESPN. Nobody prices them for us, so they're rated from their own results: once a day the pipeline reads both competitions back to 2019 from ESPN (16 calls the first time, 2 a day after) and fits one strength per club, its country's plus its own, each pulled towards average (country by 15 games' worth, club by 20), a game's weight halving every four years: log goals = goal level + home advantage + attacker's strength − defender's strength. A club's country is where it plays most home games, so a club new to CAF starts at its country's level (the home club's from the venue); two clubs CAF has never seen get no prediction. ESPN's names are kept as they are: cross-league name matching would have turned Sudan's Al Hilal and Libya's Al Ittihad into the Saudi clubs.
 
@@ -320,6 +399,39 @@ Weights fitted on 2019/20–2022/23. Blending supremacy as well was worse (−0.
 None of this makes football predictable: the bookmakers' consensus is already very sharp, and these are gains of a fraction of a percent per game. They are real, measured on games the changes never saw, and they add up over thousands of picks.
 
 **Safer tiers.** Every chance now comes with a spread, from how much evidence is behind the ratings and how many bookmakers price the game. Tiers and slips use the cautious chance: the stated chance minus one standard deviation. A pick that rests on thin data drops a tier, so **Nearly definite** means more often what it says. The replay shows how the top tier did with and without this rule.
+
+## Smart slips: how they're built (v62)
+
+A slip lands only if every leg lands, so its chance is the product of its legs' chances. With the total odds fixed, that product can be written as
+
+**slip chance = (1 / total odds) × (chance₁ × price₁) × (chance₂ × price₂) × …**
+
+A fairly priced leg has chance × price = 1. A bookmaker's margin makes it less than 1 (about 0.95 for a typical leg), and every leg added multiplies that loss in. That is why the old slips, which reached the target by piling up "safe" legs, were the least likely way to get there: the Nearly definite slip needed 22 legs on average to make 10 odds, and 22 margins.
+
+Since v62 the three slips are built from the whole day's games, whatever their level: the combination whose chances multiply to the most while its prices still reach the target (between 95% and 110% of it), one leg a match, at most 8 legs, priced at a typical bookmaker's price (the average across bookmakers; the best price anywhere is shown beside it). **A, Best chance** is the likeliest combination; **B, Second best** is the likeliest without A's matches; **C, Third best** the likeliest without A's or B's. In practice that means two or three legs at 10 odds (2.4 on average), chosen where the price is fairest for its chance. One guard keeps the live board honest, where a leg's chance can drift from the market's (a model share in a few competitions, or the track record's self-correction, which is fitted near 80% and stretches long shots): no leg counts as more likely than the bookmakers' own consensus says, and no estimated price as better than a 5% margin allows. A real price above the consensus's fair price still counts; that gap is real (the value bets live on it). Replayed, the guard changes nothing (closing-price chance at 10 odds 9.37%, 9.33%, 9.36% with it, 9.38%, 9.32%, 9.31% without); a 25% floor on each leg's chance was tried as well and cost a little (9.29%, 9.21%, 9.21%), so it isn't used. Before the guards (and the rest fix above), Sunday 22 November's best slip on the live board leaned on Cincinnati to win at Nashville at 5.50, rated 26% by Statpad's shifted chance against the market's 16%. The search is a knapsack over (total price, legs) in flat arrays: a busy day's three slips take about 60 ms on a laptop.
+
+Replayed on seven seasons of 19 leagues (1,927 match days, 2019/20 to now), each day's games analysed by the page's own engine an hour before kick-off, at a typical bookmaker's prices. "Closing-price chance" is the slip's chance by the closing prices, the market's last word: it moves far less with luck than the count of slips that landed, so it is the fairer yardstick.
+
+| Target | Slip | Old builder (by level) | New builder (v62) |
+|---|---|---|---|
+| 2 | A | Nearly definite: 650 slips, 6.2 legs, landed 40.6%, closing-price chance 39.9%, return -23% | Best chance: 1823 slips, 1.4 legs, landed 48.7%, closing-price chance 49.4%, return -6% |
+| 2 | B | Highly possible: 1620 slips, 3.0 legs, landed 46.5%, closing-price chance 45.9%, return -11% | Second best: 1658 slips, 1.5 legs, landed 46.8%, closing-price chance 49.0%, return -10% |
+| 2 | C | Possible: 1753 slips, 2.0 legs, landed 50.7%, closing-price chance 47.7%, return -3% | Third best: 1529 slips, 1.6 legs, landed 49.1%, closing-price chance 48.8%, return -5% |
+| 5 | A | Nearly definite: 340 slips, 15.4 legs, landed 14.1%, closing-price chance 9.9%, return -33% | Best chance: 1752 slips, 2.0 legs, landed 21.2%, closing-price chance 19.1%, return +2% |
+| 5 | B | Highly possible: 1290 slips, 7.0 legs, landed 16.9%, closing-price chance 15.2%, return -19% | Second best: 1582 slips, 2.1 legs, landed 19.5%, closing-price chance 18.9%, return -6% |
+| 5 | C | Possible: 1529 slips, 4.1 legs, landed 19.2%, closing-price chance 17.2%, return -8% | Third best: 1412 slips, 2.1 legs, landed 18.5%, closing-price chance 19.0%, return -11% |
+| 10 | A | Nearly definite: 149 slips, 22.5 legs, landed 5.4%, closing-price chance 3.4%, return -49% | Best chance: 1704 slips, 2.4 legs, landed 10.3%, closing-price chance 9.4%, return -2% |
+| 10 | B | Highly possible: 1091 slips, 9.9 legs, landed 6.9%, closing-price chance 6.6%, return -35% | Second best: 1486 slips, 2.4 legs, landed 9.6%, closing-price chance 9.3%, return -8% |
+| 10 | C | Possible: 1388 slips, 6.1 legs, landed 8.1%, closing-price chance 8.0%, return -23% | Third best: 1300 slips, 2.4 legs, landed 10.7%, closing-price chance 9.4%, return +3% |
+| 20 | A | Nearly definite: never reached the target | Best chance: 1651 slips, 2.8 legs, landed 4.8%, closing-price chance 4.6%, return -8% |
+| 20 | B | Highly possible: 922 slips, 12.9 legs, landed 2.3%, closing-price chance 2.8%, return -57% | Second best: 1417 slips, 2.8 legs, landed 5.4%, closing-price chance 4.6%, return +4% |
+| 20 | C | Possible: 1206 slips, 7.8 legs, landed 4.8%, closing-price chance 3.6%, return -8% | Third best: 1215 slips, 2.8 legs, landed 3.5%, closing-price chance 4.5%, return -32% |
+
+At 10 odds the three old slips landed 195 of 2628 (7.4%), the new ones 457 of 4490 (10.2%), and they reach the target on many more days (the old Nearly definite slip reached 10 odds on only 149 of 1,927 days). About one in ten is the ceiling at 10 odds at a typical bookmaker's prices: the price itself says roughly how likely a slip is. Only a better price (shopping around between bookmakers) or a lower target raises it: built on the best price anywhere instead, the same kind of slips landed 10.7%, 11.3% and 10.4% at 10 odds (closing-price chance 11.1%, 10.7%, 10.7%; `exp16/sim2.py`). No choice of legs can make a 10-odds slip land one time in three.
+
+**Rating legs on more than their chance: tested, nothing found.** Six signals were tried as a correction to each leg's chance, fitted on earlier seasons and judged on the next, on 741,780 replayed legs: the market's memory of both sides, the price outlook's forecast move, recent shots on target for and against, the price level, the engine's own uncertainty, and the league's tier. With the engine leaning fully on the market (as it does live), together they improved the chance by +0.012 per 1,000 in log loss: nothing. (An earlier run looked better, +2.0 per 1,000, until it turned out the price-outlook feature had been built from the actual closing move; with the forecast made only from what was known before kick-off it vanished.) Legs on the same day in the same league don't land together more often than their chances say either (both of two same-day overs: 0.233 against 0.240 expected). So legs are judged on chance and price alone, and the gain comes from the structure: fewer, fairer legs.
+
+Scripts: `exp16/` (`build.py`, `replay.js` and `replay2.js` through the page's engine, `sim2.py`, `eval2.py`, `meta.py`, `corr.py`).
 
 ## Check a slip
 

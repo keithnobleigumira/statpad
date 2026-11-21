@@ -2049,7 +2049,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
     <div class="studio" id="studio" role="group" aria-label="Slip Studio" hidden></div>
     <section id="v-slips" class="section" data-view="slips" hidden>
       <div class="sec-head">
-        <div><h2 id="slipsTitle">Smart slips</h2><p class="sub" id="slipsSub">For the chosen day, the combination with the highest chance of landing that still pays the target. One leg per match, kicked-off games removed.</p></div>
+        <div><h2 id="slipsTitle">Smart slips</h2><p class="sub" id="slipsSub">For the chosen day, the three likeliest combinations that still pay the target, no match in two of them. Kicked-off games removed.</p></div>
         <div class="ctl"><span class="lbl sl-only">Target odds</span><div class="seg sl-only" id="target"></div><button type="button" class="btn listen-b sl-only" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
       </div>
       <div class="days" id="days-slips" role="group" aria-label="Day"></div>
@@ -2180,7 +2180,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
 /* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
 const ENGINE = (() => {
   // the engine's version, stamped on every prediction the track record keeps, so versions can be compared later
-  const VERSION = '2026-11-22';
+  const VERSION = '2026-11-23';
   const N = 11, RHO = -0.07, W_MKT = 0.8, W_EXT = 0.5, HAIR = 0.03;
   const M_DC = 0.05, M_EST = 0.06, M_DER = 0.065, STALE_H = 36;
   const TIERS = {
@@ -2440,9 +2440,11 @@ const ENGINE = (() => {
     const sels = LABELS.map(([key, lab, group]) => {
       const prob = p[key]; let price, real = false, bk = null, pm = null;
       const i = { H: 0, D: 1, A: 2 }[key];
-      if (i != null && mk && mk.best && mk.best[i] > 1) { price = mk.best[i]; real = true; bk = mk.bk ? mk.bk[i] : null; pm = mk.p[i]; }
+      let pt = null;   // the typical price: the average across bookmakers, what a bettor with one bookmaker can expect
+      if (i != null && mk && mk.best && mk.best[i] > 1) { price = mk.best[i]; real = true; bk = mk.bk ? mk.bk[i] : null; pm = mk.p[i]; pt = mk.avg && mk.avg[i] > 1 ? Math.min(price, mk.avg[i]) : null; }
       else if ((key === 'O25' || key === 'U25') && mk && mk.ou && (mk.ou.line == null || mk.ou.line === 2.5) && mk.ou.best && mk.ou.best[key === 'O25' ? 0 : 1] > 1) {
         price = mk.ou.best[key === 'O25' ? 0 : 1]; real = true;
+        const av = mk.ou.avg && mk.ou.avg[key === 'O25' ? 0 : 1]; pt = av > 1 ? Math.min(price, av) : null;
         if (mk.ou.pO > 0 && mk.ou.pO < 1) pm = key === 'O25' ? mk.ou.pO : 1 - mk.ou.pO;
       } else if (key === '1X' || key === 'X2') {
         const base = mk ? (key === '1X' ? mk.p[0] + mk.p[1] : mk.p[2] + mk.p[1]) : prob;
@@ -2453,7 +2455,7 @@ const ENGINE = (() => {
       const pRaw = Math.max(0, mcal(prob, key, m.lk) - hair), pAdj = calib(pRaw);
       const sd = Math.sqrt(pc.reduce((acc, c) => acc + (c[key] - prob) ** 2, 0) / 4);
       const pLo = Math.max(0, pAdj - care - Z_LO * sd);
-      const s = { key, label: lab(m), group, p: prob, pRaw, pAdj, sd, pLo, tier: tierOf(pLo), fair: real && pm ? 1 / pm : 1 / prob, price, real, bk, pm,
+      const s = { key, label: lab(m), group, p: prob, pRaw, pAdj, sd, pLo, tier: tierOf(pLo), fair: real && pm ? 1 / pm : 1 / prob, price, pt: pt || price, real, bk, pm,
         edge: real ? (pm || prob) * price - 1 : null };
       return s;
     });
@@ -2486,46 +2488,104 @@ const ENGINE = (() => {
 
   function tierOf(p) { return p >= 0.82 ? 'A' : p >= 0.70 ? 'B' : p >= 0.58 ? 'C' : null; }
 
-  // list: [{m, a}] ; target: combined odds aimed for
-  function buildSlip(list, t, target) {
-    const cfg = TIERS[t];
-    target = target || 10;
+  // Smart slips (v62). A slip lands only if every leg lands, so its chance is the product of its legs' chances.
+  // With the total odds fixed, that product is (1 / total odds) x the product of each leg's chance x price: a leg
+  // priced fairly has chance x price = 1, and a bookmaker's margin makes it less than 1, so every extra leg shaves
+  // the slip's chance. The builder therefore looks, over the whole day, for the combination whose chances multiply
+  // to the most while its prices reach the target: the fewest and fairest legs that get there, one leg a match.
+  // The three slips are the best, second-best and third-best such combinations, no match in two of them.
+  // Replayed on seven seasons of 19 leagues (1,927 match days, a typical bookmaker's prices), at 10 odds the old
+  // levelled slips landed 5.4% (Nearly definite, 22 legs on average), 6.9% (Highly possible, 10 legs) and 8.1%
+  // (Possible, 6 legs); these land about 9% each (SLIP_NOTE has the tested numbers for every target).
+  // Rating legs on more than their chance was tested too: the market's memory, the price outlook's forecast, recent
+  // shots on target, the price level, the model's uncertainty and the league's tier, together, on 741,780 legs,
+  // improved on the engine's chance by nothing measurable once the engine leans on the market (+0.012 per 1,000 in
+  // log loss), so legs are rated on their chance and price alone.
+  const SLIPS = { A: { name: 'Best chance' }, B: { name: 'Second best' }, C: { name: 'Third best' } };
+  const SLIP_MAX = 8, SLIP_GAMES = 70;
+  // a guard for the live board, where a leg's chance can drift from the market's (a model share in a few competitions,
+  // the track record's correction, which is fitted near 80% and stretches long shots): no leg counts as more likely
+  // than the bookmakers' own consensus says, and no estimated price as better than a 5% margin allows. A real price
+  // above the consensus's fair price still counts (that gap is real: it's what the value bets live on).
+  const SLIP_MIN_P = 0.05;
+  let SLIP_MEMO = { key: '', out: null };
+  // per match, the fairest leg in each price band (a short leg and a longer one both stay in play)
+  function slipLegs(m, a) {
+    if (!a || m.fr || m.clash) return [];
+    const band = {};
+    for (const s of a.sels) {
+      const pr = s.pt || s.price;
+      if (s.x || s.key === 'D' || !(pr >= 1.05) || !(s.pAdj >= SLIP_MIN_P)) continue;
+      const q = Math.min(s.pAdj, s.real ? (s.pm > 0 ? s.pm : 1 / pr) : 1 / (pr * 1.05));   // the leg's chance for the slip
+      const lp = Math.log(pr), b = lp < 0.18 ? 0 : lp < 0.34 ? 1 : lp < 0.53 ? 2 : lp < 0.80 ? 3 : 4;
+      const fair = Math.log(q) + lp;   // log(chance x price): 0 at a fair price, below 0 with a margin
+      // the slip's copy of the leg carries the typical price (the best price anywhere stays on the match card)
+      if (!band[b] || band[b].fair < fair) band[b] = { s: Object.assign({}, s, { price: pr, best: s.price, pSlip: q }), lp, fair };
+    }
+    return Object.values(band);
+  }
+  // a knapsack over (odds step, legs used), match by match, in flat typed arrays (fast enough for a phone):
+  // the most chance for every reachable total price, then the best total inside the target's window
+  function bestSlip(opts, target, banned) {
     const WIN_LO = Math.log(target * 0.95), WIN_HI = Math.log(target * 1.10);
-    let opts = list.map(({ m, a }) => ({
-      m, a,
-      legs: a.sels.filter((s) => !s.x && s.key !== 'D' && s.pLo >= cfg.lo && s.pLo < cfg.hi && s.price >= 1.05 && !((m.clash || m.fr) && (t === 'A' || t === 'B')))
-        .sort((x, y) => y.pLo - x.pLo).slice(0, 3),
-    })).filter((o) => o.legs.length);
-    opts.sort((x, y) => y.legs[0].pLo - x.legs[0].pLo);
-    opts = opts.slice(0, 40);
-    // dynamic programme over (odds bucket, legs used); each state points at its parent instead of copying legs
-    let states = new Map([[0, { sc: 0, b: 0, n: 0, leg: null, up: null }]]);
-    const maxB = Math.floor(WIN_HI / STEP) + 1;
-    for (const o of opts) {
-      // legs are weighed by their cautious chance, so a sure-looking leg built on thin or disputed evidence loses
-      // out to one that's nearly as likely and better founded (on three replayed seasons this won a few more slips)
-      const steps = o.legs.map((s) => ({ s, db: Math.round(Math.log(s.price) / STEP), lp: Math.log(Math.max(1e-4, s.pLo)), leg: { m: o.m, a: o.a, s } }));
-      const next = new Map(states);
-      for (const st of states.values()) {
-        if (st.n >= cfg.max) continue;
-        for (const x of steps) {
-          const b = st.b + x.db; if (b > maxB) continue;
-          const key = b * 64 + st.n + 1, sc = st.sc + x.lp, cur = next.get(key);
-          if (!cur || cur.sc < sc) next.set(key, { sc, b, n: st.n + 1, leg: x.leg, up: st });
+    const NN = SLIP_MAX + 1, NB = Math.floor(WIN_HI / STEP) + 2, SZ = NB * NN;
+    const games = opts.filter((o) => !banned.has(o.m.id));
+    let cur = new Float64Array(SZ).fill(-Infinity); cur[0] = 0;
+    const choice = [], gsteps = [];
+    for (const o of games) {
+      const st = o.legs.map((x) => [Math.round(x.lp / STEP), Math.log(x.s.pSlip)]).filter((x) => x[0] >= 1);
+      const nxt = cur.slice(), ch = new Int8Array(SZ).fill(-1);
+      for (let b = 0; b < NB; b++) {
+        const row = b * NN;
+        for (let n = 0; n < SLIP_MAX; n++) {
+          const v = cur[row + n]; if (v === -Infinity) continue;
+          for (let k = 0; k < st.length; k++) {
+            const b2 = b + st[k][0]; if (b2 >= NB) continue;
+            const i2 = b2 * NN + n + 1, s2 = v + st[k][1];
+            if (s2 > nxt[i2]) { nxt[i2] = s2; ch[i2] = k; }
+          }
         }
       }
-      states = next;
+      choice.push(ch); gsteps.push(st); cur = nxt;
     }
-    let best = null; const all = [...states.values()].filter((s) => s.n > 0);
-    for (const s of all) if (s.b * STEP >= WIN_LO - 1e-9 && s.b * STEP <= WIN_HI + 1e-9 && (!best || s.sc > best.sc)) best = s;
-    const feasible = !!best;
-    if (!best && all.length) { let bmax = -Infinity; for (const s of all) if (s.b > bmax) bmax = s.b; for (const s of all) if (s.b >= bmax - 5 && (!best || s.sc > best.sc)) best = s; }
-    if (!best) return { tier: t, name: cfg.name, feasible: false, legs: [], odds: 1, prob: 0, target };
-    const chain = []; for (let st = best; st && st.leg; st = st.up) chain.push(st.leg);
-    const legs = chain.sort((x, y) => (x.m.ko > y.m.ko ? 1 : x.m.ko < y.m.ko ? -1 : 0));
-    const odds = legs.reduce((acc, l) => acc * l.s.price, 1), prob = legs.reduce((acc, l) => acc * l.s.pAdj, 1);
-    return { tier: t, name: cfg.name, feasible, legs, odds, prob, target, real: legs.filter((l) => l.s.real).length };
+    let best = -1, bv = -Infinity, bmax = -1;
+    for (let b = 1; b < NB; b++) for (let n = 1; n <= SLIP_MAX; n++) {
+      const v = cur[b * NN + n]; if (v === -Infinity) continue;
+      if (b > bmax) bmax = b;
+      if (b * STEP >= WIN_LO - 1e-9 && b * STEP <= WIN_HI + 1e-9 && v > bv) { bv = v; best = b * NN + n; }
+    }
+    const feasible = best >= 0;
+    if (!feasible && bmax > 0) for (let b = Math.max(1, bmax - 5); b <= bmax; b++) for (let n = 1; n <= SLIP_MAX; n++) { const v = cur[b * NN + n]; if (v > bv) { bv = v; best = b * NN + n; } }
+    const legs = [];
+    for (let g = games.length - 1, i = best; g >= 0 && i > 0; g--) {
+      const k = choice[g][i]; if (k < 0) continue;
+      const o = games[g], x = o.legs.filter((y) => Math.round(y.lp / STEP) >= 1)[k];
+      legs.push({ m: o.m, a: o.a, s: x.s });
+      i -= gsteps[g][k][0] * NN + 1;
+    }
+    return { feasible, legs: legs.sort((x, y) => (x.m.ko > y.m.ko ? 1 : x.m.ko < y.m.ko ? -1 : 0)) };
   }
+  // list: [{m, a}]; target: the combined odds aimed for. -> the three slips, best first
+  function buildSlips(list, target) {
+    target = target || 10;
+    const key = target + '|' + list.map(({ m, a }) => m.id + ':' + (a && a.top ? a.top.pAdj.toFixed(4) + a.top.price : '')).join(',');
+    if (SLIP_MEMO.key === key) return SLIP_MEMO.out;
+    let opts = list.map(({ m, a }) => ({ m, a, legs: slipLegs(m, a) })).filter((o) => o.legs.length);
+    opts.forEach((o) => { o.top = Math.max(...o.legs.map((x) => x.fair)); });
+    opts.sort((x, y) => y.top - x.top);
+    opts = opts.slice(0, SLIP_GAMES);
+    const banned = new Set(), out = [];
+    for (const t of ['A', 'B', 'C']) {
+      const r = bestSlip(opts, target, banned);
+      for (const l of r.legs) banned.add(l.m.id);
+      const odds = r.legs.reduce((acc, l) => acc * l.s.price, 1), prob = r.legs.reduce((acc, l) => acc * l.s.pSlip, 1);
+      out.push({ tier: t, name: SLIPS[t].name, feasible: r.feasible && r.legs.length > 0, legs: r.legs, odds: r.legs.length ? odds : 1, prob: r.legs.length ? prob : 0,
+        target, real: r.legs.filter((l) => l.s.real).length });
+    }
+    SLIP_MEMO = { key, out };
+    return out;
+  }
+  function buildSlip(list, t, target) { return buildSlips(list, target)[{ A: 0, B: 1, C: 2 }[t] || 0]; }
 
   function value(list, minEdge) {
     const out = [];
@@ -2538,7 +2598,7 @@ const ENGINE = (() => {
 
   // a market's name for a match, for games the page has no analysis of any more (finished ones)
   function labelOf(key, m) { const f = [...LABELS, ...EXTRAS].find((x) => x[0] === key); return f ? f[1](m) : null; }
-  return { VERSION, analyse, buildSlip, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf, setRho, rhoFor, MV_SHOW, MV_AHEAD };
+  return { VERSION, analyse, buildSlip, buildSlips, SLIPS, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf, setRho, rhoFor, MV_SHOW, MV_AHEAD };
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 
@@ -2626,6 +2686,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   const lgInfo = (lk) => (S.data && S.data.leagues && S.data.leagues[lk]) || { name: lk, group: 'more', country: '' };
   const lgName = (lk) => lgInfo(lk).name;
+  // in lists, a name several leagues share (Premier League, Primera División, Liga Nacional) carries its country
+  let LBL = null, LBLsrc = null;
+  const lgLabel = (lk) => {
+    const all = (S.data && S.data.leagues) || {};
+    if (LBLsrc !== all) {
+      const n = new Map(); for (const v of Object.values(all)) n.set(v.name, (n.get(v.name) || 0) + 1);
+      LBL = new Map(Object.entries(all).map(([k, v]) => [k, n.get(v.name) > 1 && v.group !== 'big' && v.country ? `${v.name} (${v.country})` : v.name])); LBLsrc = all;
+    }
+    return LBL.get(lk) || lgName(lk);
+  };
   const realMkt = (m) => !!(m.mkt && m.mkt.best && m.mkt.src !== 'none');
   // ---------------- crests, flags & display settings ----------------
   // Club crests come from the pipeline (crests/ on the site): API-Football ids learnt from its club lists and
@@ -3116,7 +3186,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="t-head"><div><div class="t-kick">${esc(dayLabel(dk.key, true))} · ${esc(best.name)}</div><div class="t-title">Best ${best.target}-odds slip</div></div>
       <div class="t-odds"><div class="v">${odds(best.odds)}</div><div class="l">${pct(best.prob, 1)} to land</div></div></div>
       <div class="t-perf"></div>
-      <ul class="t-legs">${legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pAdj)}${l.s.real ? '' : ' · est'}</small></span><span class="tfx">${pair(l.m)}${esc(l.m.h)} v ${esc(l.m.a)} · ${tFmt.format(Date.parse(l.m.ko))}</span></li>`).join('')}</ul>
+      <ul class="t-legs">${legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pSlip || l.s.pAdj)}${l.s.real ? '' : ' · est'}</small></span><span class="tfx">${pair(l.m)}${esc(l.m.h)} v ${esc(l.m.a)} · ${tFmt.format(Date.parse(l.m.ko))}</span></li>`).join('')}</ul>
       ${best.legs.length > 5 ? `<div class="t-more" style="margin-top:8px">+ ${best.legs.length - 5} more legs</div>` : ''}
       <div class="t-foot"><span>${best.legs.length} legs · one per match</span><button type="button" class="t-share" data-shareslip="hero" aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg></button><button type="button" data-goslips="${esc(dk.key)}">See all slips</button></div></div>`, 'ticket:' + dk.key);
     S.heroSlip = { s: best, dk: dk.key };
@@ -3171,8 +3241,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const present = new Set(S.rows.map((r) => r.m.lk));
     let h = withAll ? `<option value="all">All competitions</option><option value="g:big">Big leagues</option><option value="g:cups">Europe &amp; cups</option><option value="g:intl">Internationals</option><option value="live">Live now</option>` : '';
     for (const [g, gl] of GROUPS) {
-      const ks = [...present].filter((k) => lgInfo(k).group === g).sort((a, b) => lgName(a).localeCompare(lgName(b)));
-      if (ks.length) h += `<optgroup label="${esc(gl)}">${ks.map((k) => `<option value="${esc(k)}">${esc(lgName(k))}</option>`).join('')}</optgroup>`;
+      const ks = [...present].filter((k) => lgInfo(k).group === g).sort((a, b) => lgLabel(a).localeCompare(lgLabel(b)));
+      if (ks.length) h += `<optgroup label="${esc(gl)}">${ks.map((k) => `<option value="${esc(k)}">${esc(lgLabel(k))}</option>`).join('')}</optgroup>`;
     }
     sel.innerHTML = h; sel.value = val; if (sel.value !== val) sel.value = withAll ? 'all' : (sel.options[0] && sel.options[0].value);
   }
@@ -3590,7 +3660,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     renderStudio(); $('#slipsTitle').textContent = goal ? 'Goal seek' : 'Smart slips';
     for (const el of [$('#days-slips'), $('#slips'), ...document.querySelectorAll('#v-slips .filters, #v-slips .sl-only')]) if (el) el.hidden = goal;
     $('#goalBox').hidden = !goal;
-    $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.' : 'For the chosen day, the combination with the highest chance of landing that still pays the target. One leg per match, kicked-off games removed.';
+    $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.' : 'For the chosen day, the three likeliest combinations that still pay the target, no match in two of them. A slip lands only if every leg does, so fewer and fairer legs beat many safe-looking ones. Priced at a typical bookmaker’s odds; kicked-off games removed.';
     if (goal) { renderGoal(); return; }
     if (S.day === 'all') S.day = pickDefaultDay();
     renderDays('days-slips', false);
@@ -3601,11 +3671,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!n) { box.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>No open games for this day</b>Pick another day, or widen the scope.</div>`; return; }
     const want = [S.day, S.target, S.scope, S.ver].join('|');
     S.slipWant = want;
-    const cached = ['C', 'B', 'A'].every((t) => S.slipCache.has([S.ver, S.day, S.target, S.scope, t, n].join('|')));
-    if (!cached) box.innerHTML = ['C', 'B', 'A'].map((t) => `<article class="slip"><div class="slip-h"><div class="name"><span class="tier tier-${t}">${t}</span>${esc(ENGINE.TIERS[t].name)}</div><div class="band">Building…</div></div></article>`).join('');
+    const cached = ['A', 'B', 'C'].every((t) => S.slipCache.has([S.ver, S.day, S.target, S.scope, t, n].join('|')));
+    if (!cached) box.innerHTML = ['A', 'B', 'C'].map((t) => `<article class="slip"><div class="slip-h"><div class="name"><span class="tier tier-${t}">${t}</span>${esc(SLIP_NAME[t])}</div><div class="band">Building…</div></div></article>`).join('');
     setTimeout(async () => {
       const out = [];
-      for (const t of ['C', 'B', 'A']) {
+      for (const t of ['A', 'B', 'C']) {
         if (S.slipWant !== want) return;
         out.push(slipTier(S.day, S.target, S.scope, t));
         await yieldUI();
@@ -3616,14 +3686,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function paintSlips(box, slips) {
     morph(box, slips.map((s) => {
-      const cfg = ENGINE.TIERS[s.tier];
       const ev = s.legs.length ? s.prob * s.odds - 1 : null;
+      const oneIn = s.prob > 0 ? Math.max(1, Math.round(1 / s.prob)) : null;
       return `<article class="slip">
-        <div class="slip-h"><div class="name"><span class="tier tier-${s.tier}">${s.tier === 'A' ? 'A' : s.tier === 'B' ? 'B' : 'C'}</span>${esc(cfg.name)}</div>
-        <div class="band">Each leg ${Math.round(cfg.lo * 100)}–${cfg.hi > 1 ? '100' : Math.round(cfg.hi * 100)}% · up to ${cfg.max} legs</div>
+        <div class="slip-h"><div class="name"><span class="tier tier-${s.tier}">${s.tier}</span>${esc(SLIP_NAME[s.tier])}</div>
+        <div class="band">${s.tier === 'A' ? 'The likeliest way to reach the target' : s.tier === 'B' ? 'The likeliest without slip A’s matches' : 'The likeliest without A’s or B’s matches'}${oneIn ? ` · about 1 in ${oneIn}` : ''}</div>
         <div class="slip-nums"><div><div class="v">${s.legs.length ? odds(s.odds) : '–'}</div><div class="l">total odds</div></div><div><div class="v">${s.legs.length ? pct(s.prob, 1) : '–'}</div><div class="l">to land</div></div><div><div class="v">${s.legs.length}</div><div class="l">legs</div></div></div></div>
-        ${s.legs.length ? `<ol>${s.legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pAdj)}${l.s.real ? '' : ' · est'}</small></span><span class="fxl">${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</span></li>`).join('')}</ol>` : '<p class="note" style="padding:0 18px 12px">No legs fall in this band for the day.</p>'}
-        <div class="slip-f"><span class="${s.feasible ? 'lbl' : 'w'}">${s.legs.length ? (s.feasible ? `${s.real}/${s.legs.length} legs at real prices${ev != null ? ' · EV ' + sgn(ev, 0) : ''}` : `Can't reach ${s.target} in this band; closest shown`) : ''}</span>
+        ${s.legs.length ? `<ol>${s.legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pSlip || l.s.pAdj)}${l.s.real ? (l.s.best > l.s.price + 0.005 ? ` · best ${odds(l.s.best)}` : '') : ' · est'}</small></span><span class="fxl">${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</span></li>`).join('')}</ol>` : '<p class="note" style="padding:0 18px 12px">No combination left for this slip today.</p>'}
+        <div class="slip-f"><span class="${s.feasible ? 'lbl' : 'w'}">${s.legs.length ? (s.feasible ? `${s.real}/${s.legs.length} legs at a typical bookmaker’s real price${ev != null ? ' · EV ' + sgn(ev, 0) : ''}` : `Can't reach ${s.target} with what's left; closest shown`) : ''}</span>
         <div class="slip-acts"><button type="button" class="btn" data-shareslip="${s.tier}" ${s.legs.length ? '' : 'disabled'} aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg>Share</button>
         <button type="button" class="btn pri" data-addslip="${s.tier}" ${s.legs.length ? '' : 'disabled'}>Add to coupon</button></div></div>
       </article>`;
@@ -3710,8 +3780,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const sel = $('#tleague');
     let h = '';
     for (const [g, gl] of GROUPS) {
-      const ks = lgs.filter(([, v]) => v.group === g).sort((a, b) => a[1].name.localeCompare(b[1].name));
-      if (ks.length) h += `<optgroup label="${esc(gl)}">${ks.map(([k, v]) => `<option value="${esc(k)}">${esc(v.name)}</option>`).join('')}</optgroup>`;
+      const ks = lgs.filter(([, v]) => v.group === g).sort((a, b) => lgLabel(a[0]).localeCompare(lgLabel(b[0])));
+      if (ks.length) h += `<optgroup label="${esc(gl)}">${ks.map(([k]) => `<option value="${esc(k)}">${esc(lgLabel(k))}</option>`).join('')}</optgroup>`;
     }
     sel.innerHTML = h;
     if (!S.tleague || !lgs.some(([k]) => k === S.tleague)) S.tleague = lgs.some(([k]) => k === 'EPL') ? 'EPL' : (lgs[0] && lgs[0][0]);
@@ -3740,6 +3810,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     BTTS_N: () => 'Both teams to score: no', H_O05: (h) => h + ' to score', A_O05: (h, a) => a + ' to score', H_O15: (h) => h + ' 2+ goals', A_O15: (h, a) => a + ' 2+ goals' };
   const keyLabel = (k, h, a) => (KEY_LABEL[k] ? KEY_LABEL[k](h, a) : k);
   const TIER_NAME = { A: 'Nearly definite', B: 'Highly possible', C: 'Possible' };
+  // slips since v62 are the best, second-best and third-best combinations (b: 2); older ones were built per level
+  const SLIP_NAME = { A: 'Best chance', B: 'Second best', C: 'Third best' };
+  const slipName = (s) => (s && s.b === 2 ? SLIP_NAME[s.t] : `${TIER_NAME[s.t]} (old builder)`);
   async function loadTrack(force) {
     if (S.trackBusy || (!force && S.trackAt && Date.now() - S.trackAt < 5 * 60e3)) return;
     if (S.track && vfSame('track') && (S.bt || !vfHas('backtest') || vfSame('backtest'))) { S.trackAt = Date.now(); return; }
@@ -3850,11 +3923,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       ${x.n ? `<span class="hit" data-tip="Landed ${pct(x.hr, 1)} · Statpad said ${pct(x.said, 1)}"><i style="width:${x.hr * 100}%"></i><b style="left:calc(${x.said * 100}% - 1px)"></b></span>` : ''}
       ${x.rows.length ? `<div class="tk-row"><span>${x.rows.length > 1 ? `Last ${Math.min(20, x.rows.length)}, oldest first` : 'Last pick'}</span><div class="tk-form">${x.rows.slice(-20).map((p) => `<span class="${p[13] ? 'w' : ''}" data-tip="${esc(keyLabel(p[8], p[3], p[4]))} · ${esc(p[3])} ${p[5]}–${p[6]} ${esc(p[4])} · ${p[13] ? 'landed' : 'missed'}"></span>`).join('')}</div></div>` : ''}
       ${x.curve.length >= 4 ? `<div class="tk-row"><span>Units won or lost, pick by pick (dashed line: break-even)</span><b class="mono ${x.u >= 0 ? 'pl-pos' : 'pl-neg'}" style="margin-left:auto">${x.u >= 0 ? '+' : ''}${x.u.toFixed(1)} u</b></div>${tkSpark(x.curve)}` : ''}
-      <div class="tk-row"><span>${T.target || 10}-odds ${esc(name)} slips: <b>${sl[0] ? `${sl[1]} of ${sl[0]} won` : 'none settled yet'}</b>${sl[0] ? ` · <b class="${sl[2] >= 0 ? 'pl-pos' : 'pl-neg'}">${sl[2] >= 0 ? '+' : ''}${sl[2].toFixed(1)} u</b> · Statpad said ${pct(sl[3] / sl[0], 1)} a slip` : ''}${x.open.length ? ` · ${x.open.length} in play` : ''}</span></div>
       <div class="tk-cols"><div class="tk-sec"><h5>Waiting and in play <span>${x.wait.length || ''}</span></h5><div id="tkWait">${tkWaitHtml(t)}</div></div>
       <div class="tk-sec"><h5>Latest results <span>${x.rows.length ? `${x.rows.length} ${span}` : ''}</span></h5>${tkPickRows(shown) || `<p class="note">No ${esc(name)} picks graded yet.</p>`}
         ${recent.length > 12 && !S.tkMore ? `<button type="button" class="btn tk-more" data-tkmore="1">Show all ${recent.length}</button>` : ''}</div></div>
-      <div class="tk-sec"><h5>${esc(name)} slips</h5>${slipList(x.open.slice(-4).reverse().concat(x.slips.slice(-8).reverse())) || '<p class="note">No slips at this level yet.</p>'}</div>
       ${x.est ? `<p class="note">${x.est} of the ${x.un} prices are estimates (markets without a bookmaker price, marked est).</p>` : ''}
     </div>`;
   }
@@ -4016,6 +4087,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     ['off', 'A draw correction for each African league from its own results', 'Fitted on 2024/25, judged on 2025/26: one season of results is too few to set it; the pooled value stays.', 'gain from −0.006 to +0.002 a game across six leagues'],
     ['kept', 'Ratings for European clubs from leagues Statpad doesn’t rate', 'One strength per club from its European results against rated sides, a game’s weight halving every two years, pulled towards the average such club. These games had no prediction at all until priced.', '1,506 unseen European games: 1X2 log loss 1.0146 → 0.9686 (95% range of the gain +0.033 to +0.061), over/under 0.6840 → 0.6796'],
     ['kept', 'CAF Champions League and Confederation Cup: club and country strengths from their own results', 'No prices for these anywhere Statpad reads. One strength per club, its country’s plus its own, a game’s weight halving every four years. Walk-forward month by month; settings picked on July 2023 to June 2025, judged on the 290 games after.', '1X2 log loss 1.0579 → 0.9704 against home advantage alone (+0.087 a game, 95% +0.050 to +0.128); over/under 0.6676 → 0.6498'],
+    ['kept', 'TheSportsDB for fixtures and results of the unpriced leagues', 'API-Football refused the key on 20 Nov 2026 and 18 leagues lost their fixtures. TheSportsDB’s free key gives a league’s whole round (dates, kick-off times, scores) in one call. Checked against Wikipedia’s matrices.', 'Czech First League rounds 1–14: 110 of 110 games and scores the same; Uganda 2026/27: 22 of 22'],
+    ['off', 'Short rest as a shift on top of the prices', 'The monthly check had switched it on (short-rested sides doing a little better than their prices on 2025/26). Re-tested on seven seasons of prices.', '3,288 games with one side short of rest: 1X2 log loss 0.98844 → 0.99107 (worse by 0.0026 a game), worse in five of eight seasons'],
+    ['kept', 'Slips built for the highest chance at the target', 'A slip’s chance is one over its odds times each leg’s chance × price, so the builder takes the fewest, fairest legs that reach the target, at a typical bookmaker’s price, and makes three with no match shared. Seven seasons, 1,927 match days.', 'chance by the closing prices at 10 odds: 3.4%, 6.6%, 8.0% (old Nearly definite, Highly possible, Possible) → 9.4%, 9.3%, 9.4%; landed 195 of 2628 → 457 of 4490'],
+    ['off', 'Rating legs on more than chance and price', 'The market’s memory, the price outlook’s forecast, recent shots on target, the price level, the model’s uncertainty and the league’s tier, as a correction to each leg’s chance, fitted on earlier seasons and judged on the next.', '741,780 legs: +0.012 per 1,000 in log loss with all six (nothing); alone, each between −0.05 and +0.03'],
+    ['kept', 'South and Central America and India from ESPN’s results', 'Peru, Ecuador, Uruguay, Paraguay, Bolivia, Venezuela, Costa Rica, Honduras, Guatemala, El Salvador, India’s Super League. Walk-forward week by week from July 2025, refitted on earlier games only, against “every side average”.', 'log loss gain a game, all eleven 95% ranges above 0: Bolivia +0.109, Honduras +0.088, El Salvador +0.075, India +0.070, Venezuela +0.065, Peru +0.054, Paraguay +0.044, Costa Rica +0.044, Guatemala +0.043, Ecuador +0.039, Uruguay +0.035'],
+    ['off', 'Argentina’s Primera Nacional and Mexico’s Liga de Expansión', 'Same test.', '+0.010 (95% −0.003 to +0.023) and +0.007 (−0.026 to +0.034)'],
+    ['kept', 'Thirty-six leagues from TheSportsDB’s rounds', 'Three seasons of each league’s rounds from the free key; the same walk-forward test from July 2025. Africa, the Middle East, Central and South-East Asia, Eastern Europe, the Baltics, Northern Ireland and Wales.', 'gain a game from +0.037 (Rwanda) to +0.203 (Armenia), every 95% range above 0; Zambia +0.041, Egypt +0.061, DR Congo +0.066, Botswana +0.112'],
+    ['off', 'Ethiopia, Ivory Coast, Albania, Senegal, Qatar, Iceland, K League 1', 'Same test.', 'Ethiopia −0.023 (95% −0.041 to −0.003), Ivory Coast −0.007, Albania −0.005; Senegal +0.025, Qatar +0.039, Iceland +0.029 and K League 1 +0.016 with ranges crossing 0'],
     ['kept', 'Europe’s unpriced top divisions from Wikipedia’s results matrices', 'Czechia, Serbia, Croatia, Ukraine, Hungary, Israel, Cyprus, Bulgaria, Slovakia, Slovenia. 2024/25 ratings for every 2025/26 game; and 2024/25 plus 40% of 2025/26 for the rest.', 'gain a game against every side average, season ahead: +0.027 (Ukraine) to +0.119 (Cyprus), all ten above 0; mid-season +0.053 to +0.176'],
     ['kept', 'Second tiers of Turkey, Switzerland and Greece from Wikipedia', 'Same tests.', 'season ahead +0.012, +0.020, +0.070; mid-season +0.135, +0.078, +0.165'],
     ['off', 'Second tiers of Belgium, Poland, Portugal and Austria; third tiers of Spain, Italy and France', 'Same tests.', 'Belgium −0.021 and Poland −0.023 season ahead; Portugal −0.032 mid-season; Austria +0.014 / +0.032; third tiers −0.012 to +0.039'],
@@ -4070,14 +4149,18 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }).join('');
     const slipRows = ['A', 'B', 'C'].map((t) => {
       const r = sl[t] || [0, 0, 0, 0];
-      return `<tr><td><span class="tier tier-${t}">${t}</span>${TIER_NAME[t]}</td><td>${r[0]}</td><td>${r[1]}</td><td>${r[0] ? pct(r[1] / r[0], 0) : '–'}</td><td class="hide-sm">${r[0] ? pct(r[3] / r[0], 1) : '–'}</td><td class="${r[2] > 0 ? 'edge-pos' : ''}">${r[0] ? (r[2] >= 0 ? '+' : '') + r[2].toFixed(2) : '–'}</td></tr>`;
+      return `<tr><td><span class="tier tier-${t}">${t}</span>${SLIP_NAME[t]}</td><td>${r[0]}</td><td>${r[1]}</td><td>${r[0] ? pct(r[1] / r[0], 0) : '–'}</td><td class="hide-sm">${r[0] ? pct(r[3] / r[0], 1) : '–'}</td><td class="${r[2] > 0 ? 'edge-pos' : ''}">${r[0] ? (r[2] >= 0 ? '+' : '') + r[2].toFixed(2) : '–'}</td></tr>`;
     }).join('');
+    const s1 = g.slips_v1, s1n = s1 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s1[t] || [0])[0]), 0) : 0, s1w = s1 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s1[t] || [0, 0])[1]), 0) : 0;
+    const recent = (T.open || []).slice(-4).reverse().concat((T.slips || []).slice(-8).reverse());
     return `<div class="tk-tiles" role="group" aria-label="Entry level">${tiles}</div>
       ${tkCard(T, X[S.tkT])}
       <div class="trk-grid">
         <div class="card"><h4>Slips at ${T.target || 10} odds <span>1 unit on each</span></h4>
-          <div class="tt-wrap"><table class="tt"><thead><tr><th>Level</th><th>Played</th><th>Won</th><th>Hit</th><th class="hide-sm">Said</th><th>Units</th></tr></thead><tbody>${slipRows}</tbody></table></div>
-          ${g.void ? `<p class="note">${g.void} slips voided after a postponed game.</p>` : ''}</div>
+          <div class="tt-wrap"><table class="tt"><thead><tr><th>Slip</th><th>Played</th><th>Won</th><th>Hit</th><th class="hide-sm">Said</th><th>Units</th></tr></thead><tbody>${slipRows}</tbody></table></div>
+          ${s1n ? `<p class="note">Before the slip builder changed on 22 November, ${s1n} slips were built level by level and ${s1w} won; they are kept apart.</p>` : ''}
+          ${g.void ? `<p class="note">${g.void} slips voided after a postponed game.</p>` : ''}
+          ${recent.length ? `<div class="tk-sec"><h5>Latest slips</h5>${slipList(recent)}</div>` : ''}</div>
       </div>`;
   }
   function renderTrack() {
@@ -4120,7 +4203,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }).join('');
     const srows = ['A', 'B', 'C'].filter((t) => (sl[t] || [0])[0]).map((t) => {
       const r = sl[t];
-      return `<tr><td><span class="tier tier-${t}">${t}</span>${TIER_NAME[t]}</td><td>${r[0]}</td><td>${r[1]}</td><td>${pct(r[1] / r[0], 0)}</td><td class="hide-sm">${pct(r[3] / r[0], 1)}</td><td class="${r[2] > 0 ? 'edge-pos' : ''}">${(r[2] >= 0 ? '+' : '') + r[2].toFixed(1)}</td></tr>`;
+      return `<tr><td><span class="tier tier-${t}">${t}</span>${(B.ver || '') >= '2026-11-23' ? SLIP_NAME[t] : TIER_NAME[t] + ' (old builder)'}</td><td>${r[0]}</td><td>${r[1]}</td><td>${pct(r[1] / r[0], 0)}</td><td class="hide-sm">${pct(r[3] / r[0], 1)}</td><td class="${r[2] > 0 ? 'edge-pos' : ''}">${(r[2] >= 0 ? '+' : '') + r[2].toFixed(1)}</td></tr>`;
     }).join('');
     const lls = ll[0] ? [ll[1] / ll[0], ll[2] / ll[0], ll[3] / ll[0]] : null;
     const tn = B.tune, to = g.tiers_old, tA = (tiers.A || [0]), oA = to && to.A ? to.A : null;
@@ -4142,7 +4225,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (stk && stk.ll) rows.push(['Learned blend (model against bookmakers, by game)', 'Not used', stOn ? `On (error ${f4(stk.ll[0] / 2)} → ${f4(stk.ll[1] / 2)})` : 'Tested, left off']);
       const fx = tn.fx || null, fxOn = (k) => fx && fx[k] && fx[k].on && fx[k].p;
       if (fx) {
-        rows.push(['Short rest (2–3 days since the last league game)', 'Not used', fxOn('rest') ? `On: ${fx.rest.p[0] < 0 ? 'nudged up' : 'nudged down'} ${Math.round(Math.abs(fx.rest.p[0]) * 100)}%` : 'Tested, left off']);
+        rows.push(['Short rest (2–3 days since the last league game)', 'Not used', 'Off: it failed a seven-season test']);
         if (fx.rest && fx.rest.in_blend) rows[rows.findIndex((r) => r[0].startsWith('Short rest'))][2] = 'In the learned blend';
         if (fx.dead) rows.push(['Nothing left to play for', 'Not used', fxOn('dead') ? `On: ${fx.dead.p[0] > 0 ? 'nudged down' : 'nudged up'} ${Math.round(Math.abs(fx.dead.p[0]) * 100)}%` : 'Tested, left off']);
         if (fx.open) rows.push(['Both sides with nothing to play for: more goals', 'Not used', fxOn('open') ? `On: +${Math.round(fx.open.p[0] * 100)}% goals` : 'Tested, left off']);
@@ -4228,7 +4311,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const res = s.res || 'open';
       const lab = { won: 'Won', lost: 'Lost', void: 'Void', open: 'In play' }[res];
       const now = res === 'open' ? slipNow(s) : null;
-      return `<div class="sliprow"><div class="hd"><span class="wl ${res === 'won' ? 'w' : res === 'lost' ? 'l' : 'o'}">${lab}</span><span class="tier tier-${s.t}">${s.t}</span>${esc(TIER_NAME[s.t])}<span class="mono">${odds(s.o)} · ${pct(s.p)}${now && now.live ? ` → now ${pct(now.p, now.p < 0.095 && now.p > 0 ? 1 : 0)}` : ''}</span></div>
+      return `<div class="sliprow"><div class="hd"><span class="wl ${res === 'won' ? 'w' : res === 'lost' ? 'l' : 'o'}">${lab}</span><span class="tier tier-${s.t}">${s.t}</span>${esc(slipName(s))}<span class="mono">${odds(s.o)} · ${pct(s.p)}${now && now.live ? ` → now ${pct(now.p, now.p < 0.095 && now.p > 0 ? 1 : 0)}` : ''}</span></div>
         <div class="legdots">${s.legs.map((l) => `<span class="${l[6] === 1 ? 'w' : l[6] === 0 ? 'l' : ''}" data-tip="${esc(keyLabel(l[1], l[2], l[3]))} · ${esc(l[2])} v ${esc(l[3])} · ${odds(l[5])}${l[6] === 1 ? ' · won' : l[6] === 0 ? ' · lost' : ' · waiting'}">${l[6] === 1 ? '✓' : l[6] === 0 ? '✕' : '•'} ${esc(String(l[2]).slice(0, 12))}</span>`).join('')}</div>
         <div class="fxl" style="font-size:11.5px;color:var(--ink-3);margin-top:6px">${esc(s.d)} · ${s.legs.length} legs</div></div>`;
     }).join('');
@@ -4278,7 +4361,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Data status</h3>
       <div class="status">
         <div><span>Data generated</span><b>${new Date(d.generated).toLocaleString()}</b></div>
-        ${st('results', 'Results &amp; tables')}${st('espn_data', 'More competitions (ESPN)')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('live', 'Live scores &amp; fast results')}${st('team_news', 'Team news &amp; injuries')}${st('af_fill', 'Day-list leagues (API-Football)')}${st('wiki', 'Wikipedia results (Europe’s unpriced leagues)')}${st('oldb', '3. Liga (OpenLigaDB)')}${st('caf', 'CAF club competitions (ESPN)')}${st('xg', 'Shot quality (commentary xG)')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
+        ${st('results', 'Results &amp; tables')}${st('espn_data', 'More competitions (ESPN)')}${st('intl', 'National teams')}${st('fixtures', 'Fixtures')}${st('odds_api', 'Bookmaker prices')}${st('live', 'Live scores &amp; fast results')}${st('team_news', 'Team news &amp; injuries')}${st('tsdb', 'Fixtures for unpriced leagues (TheSportsDB)')}${st('af_fill', 'Day-list leagues (API-Football)')}${st('wiki', 'Wikipedia results (Europe’s unpriced leagues)')}${st('oldb', '3. Liga (OpenLigaDB)')}${st('caf', 'CAF club competitions (ESPN)')}${st('xg', 'Shot quality (commentary xG)')}${st('tuning', 'Model tuning')}${st('snapshot', 'Starter snapshot')}
         <div><span>Price feed</span><b>${o.enabled ? `On · ${o.remaining != null ? Math.round(o.remaining) + ' credits left' : 'credits unknown'}${o.plan && o.plan.iv ? ' · games within 2 h refresh every ' + ivTxt(o.plan.iv[0]) + ', within a day every ' + ivTxt(o.plan.iv[2]) + ', within 3 days every ' + ivTxt(o.plan.iv[3]) : o.interval_min ? ' · refresh every ' + ivTxt(o.interval_min) : ''}` : (S.legacy ? 'Live feed connected' : 'Off: add an Odds API key')}</b></div>
         <div><span>Live scores on this phone</span><b>${esc(esStatus())}</b></div>
         <div><span>Matches loaded</span><b>${d.matches.length} · ${Object.keys(d.leagues || {}).length} competitions</b></div>
@@ -4291,10 +4374,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p><b>Market memory.</b> Most games more than two or three days off have no bookmaker price yet. Statpad prices those from the market's memory: each side rated from the expected goals that the closing prices of its recent games implied, rather than from the goals it scored, with a game a fortnight old counting half as much as today's. A closing price holds everything the market knew (injuries, form, transfers, news), so it says more about a side than a scoreline does. On 2025/26, unseen, it predicted results with a log loss of 1.6860 a game against 1.7103 for the goal-based ratings and 1.6825 for each game's own early price, and it is as well calibrated as a price, so memory-priced games carry no safety haircut. The season simulator plays the rest of the season with it too. With a real price, nothing changes: the memory adds nothing to it.</p>
       <p><b>Price outlook.</b> Prices move between the first quote and kick-off, and some of that move can be seen coming. The market drifts about a fifth of the way back towards its own memory of both sides, and towards sides that have been playing better than their prices expected (shots on target, shots, corners and goals for minus against, beyond what each game's closing price implied, recent games counting most). From those, Statpad forecasts where each real price will be at kick-off and marks it ▼ (shorter: take it now) or ▲ (longer: waiting usually pays). On 47,190 league games from 2019/20 to 2026/27, each season forecast by a fit on the others, the forecast changes matched what happened (forecast 2.1% shorter: 1.6%; forecast 2.1% longer: 2.2%), the direction was right 61.5% of the time when the forecast was 1% or more, and following those forecasts got prices 1.2–2.0% better than always betting early and 0.5–1.2% better than always betting at kick-off, in every season. Value bets forecast to shorten beat the closing price by 6.3% when taken at once and by only 1.4% when left to kick-off. It is advice on timing only: it never changes a probability or what counts as value, because the forecast part of a move turned out to be only about half real information. Every forecast made ${ENGINE.MV_AHEAD} hours or more before kick-off is graded against the last price before kick-off, and the live record shows under each game's price history.</p>
       <p><b>Cup and European games.</b> With no price yet, a cup game is priced from each side's market memory in its own league, plus a league-strength offset and a cup home advantage fitted on 3,592 cup and European games from 2021 to 2026 (pulled towards Statpad's old hand-set strengths). On 1,745 of them from July 2024 on, fitted only on the earlier ones, it read the 90-minute result with a log loss of 0.9869 a game, where goal-based ratings with the hand-set strengths managed 1.0073, and over/under 2.5 with 0.6606 against 0.6939. The hand-set strengths had overrated the lower divisions and the smaller European leagues (the Championship, for one, is 0.78 in log goals below the Premier League, not 0.45; Austria 0.77, not 0.45). Across leagues it was a couple of points too sure of favourites, so these games keep a small safety haircut.</p>
-      <p><b>African football.</b> The Uganda Premier League, Kenya's and Ghana's Premier Leagues, Nigeria's Premier Football League and South Africa's First Division are rated from their results, as South Africa's Premiership is (no one prices them for us, so these games are model-priced). Week by week through 2025/26, refitted on earlier games only, the ratings beat treating every side as average by 0.141 a game in log loss in Uganda, 0.034 in Ghana, 0.028 in Kenya and 0.027 in South Africa's First Division; in Nigeria, where home advantage is most of the story, team ratings add nothing to it. ESPN stopped listing these leagues after 2025/26, so their fixtures (a day or two ahead) and new results come from API-Football's daily lists; which of its leagues is which is learned from games between sides each league already has, and cups, women's and youth leagues never count. Promoted clubs start a little below average, as newcomers do everywhere on Statpad, and this season's table isn't shown, because only the games since Statpad began reading them are known. Replayed on 2025/26 with the season's first ten weeks never seen, last season's ratings still beat every-side-average over the next twelve weeks by 0.093 a game in Uganda, 0.058 in Kenya and 0.030 in Nigeria; in Ghana and South Africa's First Division they were level with it.</p>
+      <p><b>African football.</b> The Uganda Premier League, Kenya's and Ghana's Premier Leagues, Nigeria's Premier Football League and South Africa's First Division are rated from their results, as South Africa's Premiership is (no one prices them for us, so these games are model-priced). Week by week through 2025/26, refitted on earlier games only, the ratings beat treating every side as average by 0.141 a game in log loss in Uganda, 0.034 in Ghana, 0.028 in Kenya and 0.027 in South Africa's First Division; in Nigeria, where home advantage is most of the story, team ratings add nothing to it. ESPN stopped listing these leagues after 2025/26, so their fixtures (about a week ahead, with kick-off times) and this season's results come from TheSportsDB, a free sports database that needs no account, and also from API-Football's daily lists when its key works. Promoted clubs start a little below average, as newcomers do everywhere on Statpad, and this season's table is built from every game of the season (Uganda's from round 1). Replayed on 2025/26 with the season's first ten weeks never seen, last season's ratings still beat every-side-average over the next twelve weeks by 0.093 a game in Uganda, 0.058 in Kenya and 0.030 in Nigeria; in Ghana and South Africa's First Division they were level with it.</p>
       <p><b>Clubs from leagues Statpad doesn't rate.</b> Champions, Europa and Conference League games bring in clubs from Czechia, Croatia, Serbia, Ukraine, Hungary, Bulgaria, Cyprus, Israel, Azerbaijan and more. Each gets one strength from its European results over the last three years against sides Statpad does rate (a game's weight halving every two years, pulled towards the average such club), which moves who is favourite without moving the goals. Walking forward month by month over the 1,506 European games with such a club from July 2024 on, against treating every such club as average, it read the 90-minute result with a log loss of 0.9686 a game against 1.0146, and over/under 2.5 with 0.6796 against 0.6840. Before this those games had no prediction until they were priced. Ten European clubs whose names contain a rated side's (Arsenal Tivat, Red Star Belgrade, AEK Larnaca, Inter Baku and others) used to be matched to that side; they no longer are.</p>
       <p><b>Africa's club competitions.</b> The CAF Champions League and Confederation Cup have no bookmaker prices anywhere Statpad reads, so they're rated from their own results since 2019 (from ESPN, once a day): each club's strength is its country's plus its own, both pulled towards average, with a game's weight halving every four years and the home side's goals multiplied by about 1.8, the biggest home advantage Statpad rates. A club's country is where it plays most home games, so a club new to CAF starts at its country's level. Walk-forward month by month, with the settings picked on July 2023 to June 2025, on the 290 games after that it beat home advantage and the goal level alone by 0.087 a game in log loss (95% range +0.050 to +0.128). Morocco's clubs come out strongest, then Egypt's, Algeria's, Libya's and Tunisia's. These games keep the cross-league safety haircut and a wider spread.</p>
-      <p><b>Europe's unpriced leagues.</b> Sixteen more European leagues are now in, at no cost in API calls. The top divisions of Czechia, Serbia, Croatia, Ukraine, Hungary, Israel, Cyprus, Bulgaria, Slovakia and Slovenia, and the second tiers of Turkey, Switzerland and Greece, are rated from Wikipedia's season articles: their results matrices give this season's results so far and last season's (checked against three other sources, 1,656 of 1,659 games agreed). Their fixtures, and the results that come in after, are read from API-Football's daily lists, which Statpad already downloads; API-Football's names are paired with Wikipedia's within each league's own list of clubs. The matrices carry no dates, so each season's games share one date: replayed on fifteen leagues with true dates, that cost nothing. On 2025/26, ratings from 2024/25 alone beat treating every side as average in every one of the top divisions (from 0.027 a game in Ukraine to 0.119 in Cyprus), and with part of the season already seen the gain ran from 0.053 to 0.176. Second tiers churn more: Belgium's and Poland's lost with last season alone and Portugal's lost mid-season, so they were left out, as were Spain's, Italy's and France's third tiers (level with average). Russia's Premier League and England's National League come from ESPN with dated results (the National League with DraftKings prices too), and Germany's 3. Liga from OpenLigaDB, a free open database with the whole season's fixtures; week by week through 2025/26 their ratings beat every-side-average by 0.093 (Russia), 0.069 (National League) and 0.036 (3. Liga) a game. These clubs are never matched to clubs in other competitions, so cup and European games rate them as before.</p>
+      <p><b>Europe's unpriced leagues.</b> Sixteen more European leagues are now in, at no cost in API calls. The top divisions of Czechia, Serbia, Croatia, Ukraine, Hungary, Israel, Cyprus, Bulgaria, Slovakia and Slovenia, and the second tiers of Turkey, Switzerland and Greece, are rated from Wikipedia's season articles: their results matrices give this season's results so far and last season's (checked against three other sources, 1,656 of 1,659 games agreed). Their fixtures with kick-off times, and the results that come in after, come from TheSportsDB (a free sports database that needs no account; its results matched Wikipedia's in all 132 games checked), with API-Football's daily lists as a second source; both sources' names are paired with Wikipedia's within each league's own list of clubs. The matrices carry no dates, so each season's games share one date: replayed on fifteen leagues with true dates, that cost nothing. On 2025/26, ratings from 2024/25 alone beat treating every side as average in every one of the top divisions (from 0.027 a game in Ukraine to 0.119 in Cyprus), and with part of the season already seen the gain ran from 0.053 to 0.176. Second tiers churn more: Belgium's and Poland's lost with last season alone and Portugal's lost mid-season, so they were left out, as were Spain's, Italy's and France's third tiers (level with average). Russia's Premier League and England's National League come from ESPN with dated results (the National League with DraftKings prices too), and Germany's 3. Liga from OpenLigaDB, a free open database with the whole season's fixtures; week by week through 2025/26 their ratings beat every-side-average by 0.093 (Russia), 0.069 (National League) and 0.036 (3. Liga) a game. These clubs are never matched to clubs in other competitions, so cup and European games rate them as before.</p>
+      <p><b>The rest of the world.</b> Forty-seven more leagues are in, again at no cost in API calls, each kept only after the same test: refitted week by week from July 2025 on earlier games only, its ratings had to beat treating every side as average, with the 95% range of the gain above zero. From ESPN, with dated results, kick-off times and live scores: Peru, Ecuador, Uruguay, Paraguay, Bolivia, Venezuela, Costa Rica, Honduras, Guatemala, El Salvador and India's Super League (from 0.035 a game in Uruguay to 0.109 in Bolivia). From TheSportsDB, round by round: in Africa, Zambia, Rwanda, Burundi, DR Congo, Angola, Botswana, Zimbabwe, Egypt, Sudan, Libya, Tunisia, Algeria and Morocco; in Asia, the UAE, Iran, Iraq, Jordan, Kuwait, Uzbekistan, Kazakhstan, Vietnam, Indonesia, Thailand and the second tiers of South Korea and China; in Europe, Azerbaijan, Georgia, Armenia, Belarus, Bosnia and Herzegovina, North Macedonia, Northern Ireland, Wales, Estonia, Latvia and Lithuania (from 0.037 a game in Rwanda to 0.203 in Armenia). Nine failed and were left out: Ethiopia (worse than average), Ivory Coast, Albania, Senegal, Qatar, Iceland, South Korea's K League 1 (priced by the market anyway) and Argentina's and Mexico's second tiers. Tanzania, Malawi and Mozambique have no free source with dated results yet. A TheSportsDB league appears once last season and this season so far have been read: they fill in over the first several hours after an update (up to 42 calls a run, inside the free key's limit), Africa's first, and its scores reach the board within about fifteen minutes. Their clubs are never matched to clubs in other competitions, so Barcelona SC stays in Ecuador and Liverpool in Montevideo.</p>
       <p><b>Goals from the market's memory.</b> About four in ten priced games have no over/under price, and a home, draw and away price alone says little about how many goals to expect (it has to be read from the draw price). For those games, who is stronger still comes from the price, but the goals level leans on the market's memory: half of it for a price from many bookmakers, 65% for one to three (60% and 35% where the memory itself was built from 1X2 prices alone). On 2023/24–2026/27, fitted on the four seasons before, this beat the price alone by 0.0045 a game for one bookmaker and 0.0012 for the average of many; on 2025/26, against what Statpad did before (the price blended with its own model), by 0.0051 (Bet365), 0.0026 (Bet&amp;Win) and 0.0015 (the average). Moving who is stronger towards the memory made things slightly worse, and a price with its own over/under gains nothing, so those are left alone. The memory is also less sure of a side with few recent priced games: against the closing price, its supremacy was off by 0.32 (in log goals) for sides with none in the last 60 days, 0.22 with one or two and 0.15 with three or more, so a memory-priced game's cautious chance now widens with that.</p>
       <p>A second, independent read of each team comes from Elo ratings, updated game by game, with bigger swings for bigger wins (the World Football Elo method). The gap between two teams' Elo is turned into expected goals around the league's own scoring rate and mixed with the model above, in log space. The monthly tuning fits the mix on two past seasons and keeps it only while it lowers the error on the latest completed season, which it never saw. On 19 leagues it did: the model's error fell from 1.712 to 1.709 (1X2 plus over/under log loss, 2025/26). It matters most for games without bookmaker prices, which rest on the model alone; where prices exist, the tuned blend leans mostly or wholly on them (the Lab shows the current share), because over past seasons they have been the sharpest single source.</p>
       <p>A third read is tested too: <b>game-by-game ratings</b>, a Kalman filter in which each side's attack and defence drift a little every day and each result moves them by how surprising it was, weighed by how sure the ratings were. On its own it beat the season-long ratings on 2025/26, but next to Elo it added too little (1.7070 → 1.7063, under the bar of 0.001) and was slightly worse on 2024/25, so it stays off until a monthly check says otherwise.</p>
@@ -4308,6 +4392,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>Confidence tiers</h3>
       <p>Tiers use the <b>cautious chance</b>: the stated chance minus one standard deviation of it. The spread comes from the ratings' standard errors and the market's (fewer bookmakers or older prices mean more), mixed by their shares in the blend, so a pick resting on thin data or a thin market drops a tier. The top pick is the one with the highest cautious chance. On the match page, chances of 50% or more show their cautious value underneath.</p>
       <p><b>Nearly definite</b> picks have a cautious chance of 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. Picks lose a 3-point safety haircut when they rest on the model alone. When model and market disagree by more than 12 points the cautious chance loses another 3, and 1 more when prices are over a day and a half old; those two only make Statpad more careful about the tier, so the stated chance stays its best estimate (on three replayed seasons, picks that used to be cut for disagreement landed 85% of the time against a stated 81%). Big games between two top-six sides are kept out of the two safest tiers.</p>
+      <h3>How slips are built</h3>
+      <p>A slip lands only if every leg lands, so its chance is the product of its legs' chances. With the total odds fixed, that product is one over the total odds, times each leg's chance × its price. A fairly priced leg has chance × price = 1; a bookmaker's margin makes it less than 1, and every extra leg multiplies that loss in. So a pile of “safe” legs is the least likely way to reach big odds: twenty legs at 1.12 each, all landing, is far less likely than three legs at 2.15. Smart slips therefore search the whole day for the combination whose chances multiply to the most while its prices still reach the target (the fewest and fairest legs that get there, one leg a match), using a typical bookmaker's price (the average across bookmakers), and build three: the best, the second best without the first one's matches, and the third best without either's. No leg counts as more likely than the bookmakers' own consensus says, so a chance Statpad's corrections have nudged above the market's can't win a leg its place. Replayed on seven seasons of 19 leagues (1,927 match days), at 10 odds the old slips, built level by level, had a chance by the closing prices of 3.4% (Nearly definite, 22 legs on average), 6.6% (Highly possible, 10 legs) and 8.0% (Possible, 6 legs), and landed 5.4%, 6.9% and 8.1%; the new ones have 9.4%, 9.3% and 9.4% and landed 10.3%, 9.6% and 10.7%, with two or three legs each. At 5 odds: from 9.9%, 15.2% and 17.2% to about 19.1%; at 2 odds from 39.9%, 45.9% and 47.7% to about 49.4%. About one in ten is the ceiling at 10 odds at a typical bookmaker's prices: the price itself says roughly how likely a slip is, and only a better price (shopping around: the best price anywhere took the new slips to about 11%) or a lower target raises it. Rating legs on more than their chance was tested too (the market's memory, the price outlook's forecast, recent shots on target, the price level, the model's uncertainty, the league's tier): on 741,780 replayed legs, once the market sets the chance, together they improved it by nothing measurable (+0.012 per 1,000 in log loss), so legs are judged on chance and price alone.</p>
       <h3>Self-tuning</h3>
       <p>${d.calib && d.calib.on ? `On, from ${d.calib.n} graded top picks.` : `Learning: ${(d.calib && d.calib.n) || 0} of ${(d.calib && d.calib.need) || 150} graded top picks.`} Every update compares the chances Statpad stated (before any correction) with what landed over the last 90 days, and fits a small correction on the log-odds scale. A prior centred on “no change” keeps the correction modest until there is plenty of evidence. The correction applies to stated chances, tiers and slips.</p>
       <h3>Tuning</h3>
@@ -4362,7 +4448,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>What's at stake</h3>
       <p>Every hour the workflow plays the rest of each league season 10,000 times, the way the season simulator does, and measures how far each coming game moves both teams' chances of the title, the top places or the bottom places, after a win, a draw or a defeat. The stakes number adds up both teams' swings between winning and losing, in percentage points: 45 or more is <b>Huge</b>, 25 or more <b>High</b>, 10 or more <b>Some</b>. Match cards show High and Huge games, the Matches page lists the games with most at stake and can sort by it, and each match page draws the swing for both teams. It covers leagues where every team plays every other home and away.</p>
       <h3>Fatigue and motivation</h3>
-      <p>Statpad tests two more things each month, on two past seasons, then on a third the test never saw, after blending with the market as the site does: <b>rest</b> (a side with only two or three days since its last league game, against one with more) and <b>motivation</b> (from the season simulation run week by week: a side whose season chances barely move whatever the result, and games where neither side has anything left to play for). Each goes on only if it lowers the error on the unseen season too, and the Lab shows which are on. Football-data.co.uk lists league games only, so cup and European games don't count towards rest. When one applies to a game, its match page says so.</p>
+      <p>Statpad tests two more things each month, on two past seasons, then on a third the test never saw, after blending with the market as the site does: <b>rest</b> (a side with only two or three days since its last league game, against one with more) and <b>motivation</b> (from the season simulation run week by week: a side whose season chances barely move whatever the result, and games where neither side has anything left to play for). Each goes on only if it lowers the error on the unseen season too, and the Lab shows which are on. Football-data.co.uk lists league games only, so cup and European games don't count towards rest. When one applies to a game, its match page says so. Rest is now off for good: the monthly check had switched it on from a tiny gain on one season (short-rested sides doing a little better than their prices), but on seven seasons of prices that same shift made results worse (0.0026 a game over 3,288 games with one side short of rest, worse in five of the eight seasons), and on the live board it had moved a few prices by up to 12 points against the market.</p>
       <h3>Live shock map</h3>
       <p><b>Shock map</b>, in the Overview's shortcuts, opens a globe of the games in play, full screen and floating in open space; while games are on, the shortcut glows and counts them. It's the real earth, drawn on your phone's graphics chip from NASA's Blue Marble and city-lights pictures: day where the sun is up right now, city lights where it's night, with a thin atmosphere at the rim. It turns on its own and slows down while a shock passes the middle. Drag it to turn it any way. On the full-screen map, pinch, scroll, double-tap or use + and − to zoom in (up to 16 times; sharper pictures load for close-ups), and the globe button goes back to the whole world. Where games are too close to tell apart they merge into a numbered bubble; tap it to fly in, and zoomed in, every game in play gets its score and minute. Display → Save data keeps to a simple built-in map instead of the pictures. Without a graphics chip the page uses a dotted globe. Each game sits in its country with a beam of light that rises higher for a bigger shock, and pulses faster and wider the further the favourite's chance of winning has fallen since kick-off, or the more the chances moved in the last ten minutes: red for a shock, amber for a wobble, blue when it's going to plan, grey for games kicking off soon. The shock number is that fall in percentage points (a small favourite collapsing counts more). Chances in play come from the score, the minute, red cards and each side's expected goals before kick-off. Tap a dot for the match.</p>
       <h3>Goal seek</h3>
@@ -7389,7 +7475,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       [won + lost ? `${won}/${won + lost}` : '–', open.length ? `won · ${open.length} open (${money(open.reduce((a, b) => a + b.stake, 0))})` : 'won', ''],
     ];
     const size = (b) => (b.legs.length === 1 ? 'Singles' : b.legs.length <= 4 ? '2–4 legs' : '5+ legs');
-    const src = (b) => { const t = /^slip-([ABC])$/.exec(String(b.src || '')); return t ? TIER_NAME[t[1]] + ' slips' : String(b.src || '').startsWith('slip-') ? 'Statpad slips' : 'Own picks'; };
+    const src = (b) => { const t = /^slip-([ABC])$/.exec(String(b.src || '')); return t ? SLIP_NAME[t[1]] + ' slips' : String(b.src || '').startsWith('slip-') ? 'Statpad slips' : 'Own picks'; };
     const cfg = S.bcfg;
     if (!all.length) {
       box.innerHTML = `<div class="empty-state"><b>No saved bets yet</b>Build a coupon, then tap <b>Save to My bets</b>. Enter your stake and your bookmaker's odds; Statpad checks the price, settles the bet when results come in and keeps your profit and loss. Everything stays on this device.</div>${settingsCard(cfg)}`;
@@ -11627,7 +11713,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     [/\b(clv|closing line)\b/, ['Closing-line value compares the price taken with the bookmakers\' fair price at kick-off. Beating the close regularly is the best early sign of a real edge.', 'Closing-line value inalinganisha bei uliyochukua na bei ya haki wakati wa kuanza mechi.']],
     [/\b(what is|whats|what s|what does|meaning of|define|explain|maana ya|ni nini)\b.*\bvalue\b|\bvalue bet\b|\bthamani ni\b/, ['A value bet is a price higher than the real chance deserves. If Statpad says 50%, fair odds are 2.00; a bookmaker offering 2.20 is value (10% over fair). Value wins over many bets, not on every bet: a value pick can still be unlikely.', 'Bet ya thamani ni bei iliyo juu kuliko nafasi halisi. Statpad ikisema 50%, odds za haki ni 2.00; mbeti akitoa 2.20 hiyo ni thamani. Thamani inaleta faida kwa bet nyingi, si kila bet.']],
     [/\b(edge)\b/, ['Edge is how much a price beats Statpad\'s fair odds: price × chance − 1. A 2.20 price on a 50% chance is a 10% edge.', 'Edge ni kiasi ambacho bei inazidi odds za haki za Statpad: bei × nafasi − 1.']],
-    [/\b(cautious chance|caution)\b/, ['The cautious chance is Statpad\'s chance minus one standard deviation of its uncertainty (thin data, model and market disagreeing, old prices). Tiers and slips use it, so a pick resting on shaky numbers drops a level.', 'Nafasi ya tahadhari ni nafasi ya Statpad ukitoa kipimo kimoja cha kutokuwa na uhakika. Viwango na mikeka vinaitumia.']],
+    [/\b(cautious chance|caution)\b/, ['The cautious chance is Statpad\'s chance minus one standard deviation of its uncertainty (thin data, model and market disagreeing, old prices). The levels use it, so a pick resting on shaky numbers drops a level.', 'Nafasi ya tahadhari ni nafasi ya Statpad ukitoa kipimo kimoja cha kutokuwa na uhakika. Viwango vinaitumia.']],
     [/\b(tiers?|levels?|nearly definite|highly possible|what does possible mean|viwango)\b/, ['Every pick has a level from its cautious chance: Nearly definite (the surest), Highly possible, and Possible. The Lab tracks each level\'s real hit rate against what was stated.', 'Kila chaguo lina kiwango: Uhakika mkubwa, Inawezekana sana, na Inawezekana. Lab inafuatilia kila kiwango.']],
     [/\b(commentary xg|shot quality|xg from (the )?commentary|play.?by.?play)\b/, ['For eight leagues ESPN lists every shot with its spot on the pitch. Statpad turns each into the chance it was a goal (distance, angle, header, free kick, penalty, fast break, cross, through ball, corner) and adds them up into expected goals per side. The monthly tuning uses them in the ratings only when they beat the usual settings on the latest season.', 'Kwa ligi nane, kila shuti linapimwa uwezekano wa kuwa goli, na kujumlishwa kuwa magoli yanayotarajiwa.']],
     [/\b(expected goals|xg)\b/, ['Expected goals are how many goals each side is likely to score in this game, from Statpad\'s attack and defence ratings (goals and shots on target, recent games counting most), home advantage and the bookmakers\' prices.', 'Magoli yanayotarajiwa ni idadi ya magoli kila timu inatarajiwa kufunga, kutoka viwango vya Statpad na bei za wabeti.']],
@@ -11636,7 +11722,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     [/\b(handicap)\b/, ['A handicap gives one side a head start: Arsenal −1.5 wins only if Arsenal win by 2 or more; Chelsea +1.5 wins unless Chelsea lose by 2 or more.', 'Handicap inaipa timu moja faida: Arsenal −1.5 inashinda tu Arsenal wakishinda kwa magoli 2 au zaidi.']],
     [/\b(over under|over 2\.5 mean|over 1\.5 mean|what is over)\b/, ['Over 2.5 goals wins if there are 3 or more goals in the game; under 2.5 wins with 2 or fewer. The same idea for 1.5, 3.5 and so on.', 'Zaidi ya 2.5 inashinda kukiwa na magoli 3 au zaidi; chini ya 2.5 inashinda magoli 2 au chache.']],
     [/\b(both teams to score mean|what is btts|what is both teams)\b/, ['Both teams to score (GG) wins if each side scores at least once, whatever the result.', 'Timu zote kufunga (GG) inashinda kila timu ikifunga angalau goli moja.']],
-    [/\b(accumulator|multi bet|what is a slip|how do slips work|mkeka ni)\b/, ['A slip (accumulator) joins several picks into one bet: the odds multiply, and so do the chances, so every leg must land. Statpad builds slips at your target odds from the surest legs that reach it.', 'Mkeka unaunganisha machaguo kadhaa kuwa bet moja: odds zinazidishana, na nafasi pia, kwa hiyo kila chaguo lazima lishinde.']],
+    [/\b(accumulator|multi bet|what is a slip|how do slips work|mkeka ni)\b/, ['A slip (accumulator) joins several picks into one bet: the odds multiply, and so do the chances, so every leg must land. Its chance is one over the total odds, times each leg\'s chance × price, and a bookmaker\'s margin makes that less than 1 for every leg, so piling up safe-looking legs is the least likely way to big odds. Statpad builds the three likeliest combinations at your target, the fewest and fairest legs that reach it, no match in two of them. On seven past seasons its 10-odds slips have about a 9% chance each by the closing prices, where the old safe-leg slips had 3% to 8%; about one in ten is the most 10 odds can be at a typical bookmaker.', 'Mkeka unaunganisha machaguo kadhaa kuwa bet moja: odds zinazidishana, na nafasi pia, kwa hiyo kila chaguo lazima lishinde. Statpad inatengeneza mikeka mitatu yenye nafasi kubwa zaidi kwa odds unazotaka: machaguo machache na ya haki zaidi, bila mechi moja kwenye mikeka miwili. Kwa odds 10, nafasi ni karibu moja kwa kumi.']],
     [/\b(cash ?out|kutoa pesa)\b/, ['Cash-out is the bookmaker buying your bet back before it ends. Under Slips → My bets, Statpad shows what a running bet is worth on average from the live chances, so you can tell a fair offer from a poor one.', 'Cash-out ni mbeti kununua bet yako kabla haijaisha. Kwenye Slips → My bets, Statpad inaonyesha thamani ya bet yako sasa.']],
     [/\b(tax|kodi)\b/, ['Statpad takes off the tax on winnings you set under Bets (15% by default, Uganda\'s rate on winnings) when it works out returns and break-even odds.', 'Statpad inatoa kodi ya ushindi uliyoweka kwenye Bets (15% kwa kawaida) inapohesabu mapato.']],
     [/\b(log loss|brier)\b/, ['Log loss and the Brier score measure how good stated chances were: lower is better. Log loss punishes confident misses hardest. The Lab compares Statpad with the bookmakers on both.', 'Log loss na Brier zinapima ubora wa nafasi zilizotajwa: chini ni bora.']],
@@ -11651,8 +11737,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     [/\b(is (it|statpad) free|cost|pay for|subscription|bure)\b/, ['Statpad is free: no account, no subscription. It runs on free data sources and your phone does the drawing and the speaking.', 'Statpad ni bure: hakuna akaunti wala malipo.']],
     [/\b(install|add to home|download the app|as an app|pakua)\b/, ['On Android, tap the download icon in the header to install Statpad like an app. On iPhone, open it in Safari, tap Share, then Add to Home Screen.', 'Kwenye Android, gusa alama ya kupakua juu kuisakinisha kama programu. Kwenye iPhone, Safari → Share → Add to Home Screen.']],
     [/\b(caf|caf champions league|confederation cup|african champions league|kombe la shirikisho)\b/, ['The CAF Champions League and Confederation Cup have no bookmaker prices Statpad can read, so every club is rated from CAF results since 2019: its country\'s strength plus its own, with home sides scoring about 1.8 times what they would away. On the games since July 2025 that beat home advantage alone by 0.087 a game in log loss. Morocco\'s and Egypt\'s clubs rate strongest.', 'Ligi ya Mabingwa ya CAF na Kombe la Shirikisho hazina bei za wabashiri Statpad inazoweza kusoma, kwa hiyo kila klabu inapimwa kwa matokeo ya CAF tangu 2019: nguvu ya nchi yake pamoja na yake yenyewe, na timu ya nyumbani hufunga karibu mara 1.8 zaidi. Klabu za Morocco na Misri ndizo zenye nguvu zaidi.']],
-    [/\b(do you|does statpad|is there|are there|why (no|not|is there no|don t you)|cover|covered|include|where (is|are)|which leagues|unapriced|unpriced|wikipedia)\b.*\b(czech|serbian|croatian|ukrainian|hungarian|israeli|cypriot|bulgarian|slovak|slovenian|russian|3\. ?liga|national league|tff|challenge league|super league 2|european leagues|wikipedia)\b/, ['Sixteen European leagues with no price feed are rated too: the top divisions of Czechia, Serbia, Croatia, Ukraine, Hungary, Israel, Cyprus, Bulgaria, Slovakia and Slovenia and the second tiers of Turkey, Switzerland and Greece from Wikipedia\'s results tables, with fixtures from API-Football\'s daily lists; Russia and England\'s National League from ESPN; Germany\'s 3. Liga from OpenLigaDB. On last season the ratings beat treating every side as average in all ten top divisions. Their fixtures appear a day or two ahead (3. Liga\'s, Russia\'s and the National League\'s a week ahead).', 'Ligi kumi na sita za Ulaya zisizo na bei zinapimwa pia: kutoka majedwali ya matokeo ya Wikipedia, ESPN na OpenLigaDB. Mechi huonekana siku moja au mbili kabla.']],
-    [/\b(uganda premier league|upl|ugandan league|kenya premier league|kpl|ghana premier league|npfl|african leagues?)\b/, ['Uganda\'s, Kenya\'s, Ghana\'s and Nigeria\'s top leagues and South Africa\'s First Division are rated from their results (no prices for them, so model-priced). Fixtures appear a day or two ahead from API-Football\'s daily lists, and new results go straight into the ratings. Replayed on last season, the ratings beat treating every side as average by 0.141 a game in Uganda; this season\'s table isn\'t shown because only the games since Statpad began reading them are known.', 'Ligi kuu za Uganda, Kenya, Ghana na Nigeria pamoja na daraja la kwanza la Afrika Kusini zinapimwa kwa matokeo yake (hazina bei, kwa hiyo bei ni za modeli). Mechi huonekana siku moja au mbili kabla, kutoka orodha za kila siku za API-Football.']],
+    [/\b(do you|does statpad|is there|are there|why (no|not|is there no|don t you)|cover|covered|include|where (is|are)|which leagues|unapriced|unpriced|wikipedia)\b.*\b(czech|serbian|croatian|ukrainian|hungarian|israeli|cypriot|bulgarian|slovak|slovenian|russian|3\. ?liga|national league|tff|challenge league|super league 2|european leagues|wikipedia)\b/, ['Sixteen European leagues with no price feed are rated too: the top divisions of Czechia, Serbia, Croatia, Ukraine, Hungary, Israel, Cyprus, Bulgaria, Slovakia and Slovenia and the second tiers of Turkey, Switzerland and Greece from Wikipedia\'s results tables, with fixtures and new results from TheSportsDB (a free database); Russia and England\'s National League from ESPN; Germany\'s 3. Liga from OpenLigaDB. On last season the ratings beat treating every side as average in all ten top divisions. Their fixtures appear about a week ahead with kick-off times.', 'Ligi kumi na sita za Ulaya zisizo na bei zinapimwa pia: kutoka majedwali ya matokeo ya Wikipedia, ESPN, OpenLigaDB na TheSportsDB. Mechi huonekana karibu wiki moja kabla.']],
+    [/\b(do you|does statpad|is there|are there|why (no|not|is there no|don t you)|cover|covered|include|where (is|are)|which leagues|how many leagues|unpriced|missing)\b.*\b(peru|peruvian|ecuador|uruguay|paraguay|bolivia|venezuela|costa rica|honduras|guatemala|el salvador|india|indian super league|indonesia|thailand|thai league|vietnam|v\.? ?league|iran|iraq|jordan|kuwait|emirates|uae|uzbekistan|kazakhstan|azerbaijan|georgia|armenia|belarus|bosnia|macedonia|northern ireland|wales|cymru|estonia|latvia|lithuania|zambia|rwanda|burundi|congo|angola|botswana|zimbabwe|egypt|sudan|libya|tunisia|algeria|morocco|botola|tanzania|malawi|mozambique|ethiopia|ivory coast|senegal|qatar|iceland|albania|cameroon|k league|china league|south america|central america|asia|asian leagues|more leagues|other leagues)\b/, ['Beyond the priced leagues, Statpad rates more than sixty leagues from their results alone, each kept only after a test on last season (its ratings had to beat treating every side as average, with room to spare). From ESPN: Peru, Ecuador, Uruguay, Paraguay, Bolivia, Venezuela, Costa Rica, Honduras, Guatemala, El Salvador and India\'s Super League. From TheSportsDB: Zambia, Rwanda, Burundi, DR Congo, Angola, Botswana, Zimbabwe, Egypt, Sudan, Libya, Tunisia, Algeria, Morocco, the UAE, Iran, Iraq, Jordan, Kuwait, Uzbekistan, Kazakhstan, Vietnam, Indonesia, Thailand, Korea\'s and China\'s second tiers, Azerbaijan, Georgia, Armenia, Belarus, Bosnia, North Macedonia, Northern Ireland, Wales and the Baltic leagues. Ethiopia, Ivory Coast, Senegal, Qatar, Iceland and Albania failed the test, and Tanzania, Malawi and Mozambique have no free source with dated results yet.', 'Zaidi ya ligi zenye bei, Statpad inapima ligi zaidi ya sitini kwa matokeo yake pekee, kila moja baada ya kupita jaribio la msimu uliopita: Amerika Kusini na Kati na India kutoka ESPN; Zambia, Rwanda, Burundi, DR Congo, Angola, Botswana, Zimbabwe, Misri, Sudan, Libya, Tunisia, Algeria, Morocco, Mashariki ya Kati, Asia na Ulaya ya mashariki kutoka TheSportsDB. Ethiopia, Ivory Coast, Senegal, Qatar, Iceland na Albania hazikupita jaribio, na Tanzania, Malawi na Msumbiji bado hazina chanzo cha bure chenye tarehe.']],
+    [/\b(uganda premier league|upl|ugandan league|kenya premier league|kpl|ghana premier league|npfl|african leagues?)\b/, ['Uganda\'s, Kenya\'s, Ghana\'s and Nigeria\'s top leagues and South Africa\'s First Division are rated from their results (no prices for them, so model-priced). Fixtures appear about a week ahead with kick-off times, from TheSportsDB, and new results go straight into the ratings; this season\'s table counts every game (Uganda\'s from round 1). Replayed on last season, the ratings beat treating every side as average by 0.141 a game in Uganda. Zambia, Rwanda, Burundi, DR Congo, Angola, Botswana, Zimbabwe, Egypt, Sudan, Libya, Tunisia, Algeria and Morocco are in too, each kept only after the same kind of test.', 'Ligi kuu za Uganda, Kenya, Ghana na Nigeria pamoja na daraja la kwanza la Afrika Kusini zinapimwa kwa matokeo yake (hazina bei, kwa hiyo bei ni za modeli). Mechi huonekana karibu wiki moja kabla, kutoka TheSportsDB, na jedwali la msimu huu linahesabu kila mechi. Zambia, Rwanda, Burundi, DR Congo, Angola, Botswana, Zimbabwe, Misri, Sudan, Libya, Tunisia, Algeria na Morocco zimo pia.']],
     [/\b(market memory|memory rating|memory ratings|kumbukumbu ya soko)\b/, ["The market's memory: for games with no bookmaker price yet, Statpad rates each side from the closing prices of its recent games instead of its goals, since a closing price holds everything the market knew. On last season, unseen, it came within a whisker of the bookmakers' own prices and was as well calibrated, while Statpad's goal-based ratings were well behind. Games priced this way say Market memory.", 'Kumbukumbu ya soko: kwa mechi zisizo na bei, Statpad inapima timu kwa bei za mwisho za mechi zao za karibuni.']],
     [/\b(how much (should|do|to) (i )?(stake|bet|put)|stak(e|ing) (plan|size|strategy)|kelly|bankroll|bank roll|money management|dau kiasi gani)\b/, ['Stake a small, fixed share of a bankroll you can afford to lose, never chase losses. Statpad suggests quarter Kelly: the edge divided by the price less one, times a quarter, capped at 5% of the bank. In the Lab\'s stress test on five past seasons it grew about as fast as flat 1% stakes with half the falls and almost never halved the bank, while full Kelly halved it in more than half of seasons. Set your bankroll under Slips → Your coupon.', 'Weka sehemu ndogo ya mtaji unaoweza kuupoteza, na usifukuzie hasara. Statpad inapendekeza robo ya Kelly, isiyozidi 5% ya mtaji.']],
     [/\b(guarantee|guaranteed|fixed match|sure win|100%|100 percent|never lose|win every time|always win|uhakika wa 100)\b/, ['No honest prediction is guaranteed, and fixed-match sellers are scams. Statpad gives chances: an 85% pick still loses about one time in seven. The surest picks are under Safest picks, but keep stakes small and set a budget under Slips → Your coupon.', 'Hakuna utabiri wenye uhakika wa 100%, na wanaouza "fixed matches" ni matapeli. Chaguo la 85% bado linapoteza karibu mara 1 kati ya 7.']],
@@ -12299,7 +12386,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     Belgium: [50.6, 4.6], 'Saudi Arabia': [24.3, 45.1], Turkey: [39.1, 34.8], Greece: [39.3, 22.0], Austria: [47.5, 14.5], Switzerland: [46.8, 8.2], Denmark: [56.0, 9.4], Norway: [61.0, 9.5],
     Sweden: [62.0, 15.5], Poland: [52.1, 19.4], Romania: [45.9, 24.9], Czechia: [49.8, 15.4], Serbia: [44.0, 20.9], Ireland: [53.2, -8.0], Finland: [62.5, 26.0], Brazil: [-14.2, -51.9],
     Argentina: [-34.6, -64.0], Mexico: [23.6, -102.5], USA: [39.5, -98.4], Japan: [36.2, 138.2], China: [34.5, 104.0], Europe: [49.0, 9.0], World: [20.0, 10.0] };
-  const GEO_NAT = Object.fromEntries(('Albania:41.1,20.1|Algeria:28,2.6|Andorra:42.5,1.5|Armenia:40.1,45|Australia:-25.3,133.8|Azerbaijan:40.1,47.6|Belarus:53.7,28|Bosnia and Herzegovina:44.2,17.7|Bosnia:44.2,17.7|Bulgaria:42.7,25.5|Cameroon:5.7,12.4|Canada:56.1,-106.3|Chile:-35.7,-71.5|Colombia:4.6,-74.3|Costa Rica:9.7,-83.8|Croatia:45.1,15.2|Cyprus:35.1,33.4|Ecuador:-1.8,-78.2|Egypt:26.8,30.8|Estonia:58.6,25|Faroe Islands:61.9,-6.9|Georgia:42.3,43.4|Ghana:7.9,-1|Gibraltar:36.1,-5.3|Hungary:47.2,19.5|Iceland:64.9,-19|Iran:32.4,53.7|Israel:31,34.9|Ivory Coast:7.5,-5.5|Jamaica:18.1,-77.3|Kazakhstan:48,66.9|Kenya:0,37.9|Kosovo:42.6,20.9|Latvia:56.9,24.6|Liechtenstein:47.2,9.6|Lithuania:55.2,23.9|Luxembourg:49.8,6.1|Malta:35.9,14.4|Moldova:47.4,28.4|Montenegro:42.7,19.4|Morocco:31.8,-7.1|Nigeria:9.1,8.7|North Macedonia:41.6,21.7|Northern Ireland:54.8,-6.5|Panama:8.5,-80.8|Paraguay:-23.4,-58.4|Peru:-9.2,-75|Qatar:25.4,51.2|San Marino:43.9,12.5|Senegal:14.5,-14.5|Slovakia:48.7,19.7|Slovenia:46.2,15|South Africa:-30.6,22.9|South Korea:35.9,127.8|Korea Republic:35.9,127.8|Tunisia:33.9,9.5|Uganda:1.4,32.3|Ukraine:48.4,31.2|Uruguay:-32.5,-55.8|Wales:52.1,-3.8|Venezuela:6.4,-66.6|United States:39.5,-98.4|Mexico:23.6,-102.5|New Zealand:-40.9,174.9|Russia:56,38|DR Congo:-4,21.8|Mali:17.6,-4|Zambia:-13.1,27.8|Tanzania:-6.4,34.9|Rwanda:-1.9,29.9|Ethiopia:9.1,40.5|Angola:-11.2,17.9|Libya:26.3,17.2|Sudan:12.9,30.2|Guinea:9.9,-9.7|Botswana:-22.3,24.7|Mauritania:21,-10.9|Togo:8.6,0.8|Benin:9.3,2.3|Zimbabwe:-19,29.2|Burkina Faso:12.2,-1.6|Mozambique:-18.7,35.5|Niger:17.6,8.1|Mauritius:-20.3,57.6|Eswatini:-26.5,31.5|Malawi:-13.3,34.3|Gabon:-0.8,11.6|Liberia:6.4,-9.4|Sierra Leone:8.5,-11.8|Gambia:13.4,-15.3|Burundi:-3.4,29.9|Madagascar:-18.8,46.9|Djibouti:11.8,42.6|Somalia:5.2,46.2|Chad:15.5,18.7|Lesotho:-29.6,28.2|Namibia:-22.9,18.5|South Sudan:6.9,31.3|Equatorial Guinea:1.6,10.3|Cape Verde:16,-24|Comoros Islands:-11.9,43.9|Seychelles:-4.7,55.5|Central African Republic:6.6,20.9|Eritrea:15.2,39.8|Congo:-4,21.8').split('|').map((x) => { const [n, c] = x.split(':'); return [n, c.split(',').map(Number)]; }));
+  const GEO_NAT = Object.fromEntries(('Albania:41.1,20.1|Algeria:28,2.6|Andorra:42.5,1.5|Armenia:40.1,45|Australia:-25.3,133.8|Azerbaijan:40.1,47.6|Belarus:53.7,28|Bosnia and Herzegovina:44.2,17.7|Bosnia:44.2,17.7|Bulgaria:42.7,25.5|Cameroon:5.7,12.4|Canada:56.1,-106.3|Chile:-35.7,-71.5|Colombia:4.6,-74.3|Costa Rica:9.7,-83.8|Croatia:45.1,15.2|Cyprus:35.1,33.4|Ecuador:-1.8,-78.2|Egypt:26.8,30.8|Estonia:58.6,25|Faroe Islands:61.9,-6.9|Georgia:42.3,43.4|Ghana:7.9,-1|Gibraltar:36.1,-5.3|Hungary:47.2,19.5|Iceland:64.9,-19|Iran:32.4,53.7|Israel:31,34.9|Ivory Coast:7.5,-5.5|Jamaica:18.1,-77.3|Kazakhstan:48,66.9|Kenya:0,37.9|Kosovo:42.6,20.9|Latvia:56.9,24.6|Liechtenstein:47.2,9.6|Lithuania:55.2,23.9|Luxembourg:49.8,6.1|Malta:35.9,14.4|Moldova:47.4,28.4|Montenegro:42.7,19.4|Morocco:31.8,-7.1|Nigeria:9.1,8.7|North Macedonia:41.6,21.7|Northern Ireland:54.8,-6.5|Panama:8.5,-80.8|Paraguay:-23.4,-58.4|Peru:-9.2,-75|Qatar:25.4,51.2|San Marino:43.9,12.5|Senegal:14.5,-14.5|Slovakia:48.7,19.7|Slovenia:46.2,15|South Africa:-30.6,22.9|South Korea:35.9,127.8|Korea Republic:35.9,127.8|Tunisia:33.9,9.5|Uganda:1.4,32.3|Ukraine:48.4,31.2|Uruguay:-32.5,-55.8|Wales:52.1,-3.8|Venezuela:6.4,-66.6|United States:39.5,-98.4|Mexico:23.6,-102.5|New Zealand:-40.9,174.9|Russia:56,38|DR Congo:-4,21.8|Mali:17.6,-4|Zambia:-13.1,27.8|Tanzania:-6.4,34.9|Rwanda:-1.9,29.9|Ethiopia:9.1,40.5|Angola:-11.2,17.9|Libya:26.3,17.2|Sudan:12.9,30.2|Guinea:9.9,-9.7|Botswana:-22.3,24.7|Mauritania:21,-10.9|Togo:8.6,0.8|Benin:9.3,2.3|Zimbabwe:-19,29.2|Burkina Faso:12.2,-1.6|Mozambique:-18.7,35.5|Niger:17.6,8.1|Mauritius:-20.3,57.6|Eswatini:-26.5,31.5|Malawi:-13.3,34.3|Gabon:-0.8,11.6|Liberia:6.4,-9.4|Sierra Leone:8.5,-11.8|Gambia:13.4,-15.3|Burundi:-3.4,29.9|Madagascar:-18.8,46.9|Djibouti:11.8,42.6|Somalia:5.2,46.2|Chad:15.5,18.7|Lesotho:-29.6,28.2|Namibia:-22.9,18.5|South Sudan:6.9,31.3|Equatorial Guinea:1.6,10.3|Cape Verde:16,-24|Comoros Islands:-11.9,43.9|Seychelles:-4.7,55.5|Central African Republic:6.6,20.9|Eritrea:15.2,39.8|Congo:-4,21.8|Bolivia:-16.3,-63.6|Honduras:15.2,-86.2|Guatemala:15.8,-90.2|El Salvador:13.8,-88.9|India:21,78.5|Indonesia:-2.5,118|Thailand:15.9,101|United Arab Emirates:23.4,53.8|Iraq:33.2,43.7|Jordan:30.6,36.2|Kuwait:29.3,47.5|Uzbekistan:41.4,64.6|Vietnam:14.1,108.3|Bahrain:26,50.6|Oman:21.5,55.9|Syria:35,38.5|Lebanon:33.9,35.9').split('|').map((x) => { const [n, c] = x.split(':'); return [n, c.split(',').map(Number)]; }));
   function geoOf(m) {
     const info = lgInfo(m.lk), c = info.country;
     if (c === 'Africa' && m.vc && (GEO_NAT[m.vc] || GEO_CC[m.vc])) return GEO_NAT[m.vc] || GEO_CC[m.vc];   // CAF: where it's played
@@ -13155,7 +13242,7 @@ void main() {
     if (cnt.has(S.league) && !ks.includes(S.league)) ks.unshift(S.league);
     el.innerHTML = `<button type="button" class="all" data-lgchip="all" aria-pressed="${S.league === 'all'}">All<span class="n">${dayRows.length}</span></button>`
       + (live ? `<button type="button" class="live-c" data-lgchip="live" aria-pressed="${S.league === 'live'}"><i></i>Live<span class="n">${live}</span></button>` : '')
-      + ks.map((k) => `<button type="button" data-lgchip="${esc(k)}" aria-pressed="${S.league === k}">${lgIcon(k, 'xs')}${esc(lgName(k))}<span class="n">${cnt.get(k)}</span></button>`).join('');
+      + ks.map((k) => `<button type="button" data-lgchip="${esc(k)}" aria-pressed="${S.league === k}" title="${esc(lgLabel(k))}">${lgIcon(k, 'xs')}${esc(lgName(k))}<span class="n">${cnt.get(k)}</span></button>`).join('');
   }
   // the price flies from the button to the Slips tab
   function flyToBets(from) {
@@ -13348,7 +13435,7 @@ void main() {
     if (t.id === 'installTipX') { $('#installTip').hidden = true; store.set('itipSeen', 1); return; }
     if (t.dataset.addslip) {
       const s = (S.lastSlips || []).find((x) => x.tier === t.dataset.addslip); if (!s) return;
-      for (const l of s.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: null, from: s.tier });
+      for (const l of s.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: l.s.real && l.s.best ? l.s.price : null, from: s.tier });
       saveCoupon(); toast(`${s.legs.length} legs added to coupon`); return;
     }
     if (t.id === 'copyCoupon') {
@@ -13469,10 +13556,16 @@ void main() {
       if (window.__spMark) window.__spMark('match data: answer HTTP ' + res.status + ', reading');
       const doc = await res.json();
       if (window.__spMark) window.__spMark('match data: read, ' + doc.matches.length + ' matches, made ' + doc.generated);
-      S.lastOk = new Date(); S.err = null; if (want) S.got.matches = want;
-      const wasSaved = S.fromSaved; S.fromSaved = false;
+      // an older file than v.json names (an app whose old service worker handed back its saved copy on a slow line):
+      // show it, but don't count the new version as fetched, and ask again soon (v62: before, the page stopped asking
+      // and could show data hours old until the next change)
+      const stale = !!(want && S.vf.v.g && doc.generated && doc.generated < S.vf.v.g);
+      S.err = null;
+      if (stale) { S.staleTry = (S.staleTry || 0) + 1; setTimeout(() => checkVersion(false), Math.min(60e3, 6e3 * S.staleTry)); }
+      else { S.lastOk = new Date(); S.staleTry = 0; if (want) S.got.matches = want; }
+      const wasSaved = S.fromSaved; S.fromSaved = stale;
       if (!S.data || doc.generated !== S.fileGen) { S.fileGen = doc.generated; if (S.legacyDoc) overlayLegacy(doc, S.legacyDoc); ingest(doc); }
-      else { if (wasSaved) S.data = doc; renderLive(); }
+      else { if (wasSaved && !stale) S.data = doc; renderLive(); }
     } catch (err) {
       S.err = err && err.name === 'AbortError' ? 'the connection is too slow' : String((err && err.message) || err);
       if (window.__spMark) window.__spMark('match data: failed: ' + S.err);

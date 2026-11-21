@@ -102,14 +102,15 @@ OA = 'https://api.the-odds-api.com/v4'
 L = {}
 
 
-def comp(lk, name, country, group, strength, fd=None, x=None, oa=(), es=None, hist=False, w=False, cup=False, wk=None, ol=None, local=False):
+def comp(lk, name, country, group, strength, fd=None, x=None, oa=(), es=None, hist=False, w=False, cup=False, wk=None, ol=None, local=False, ts=None):
     """es: ESPN's scoreboard, for fixtures and DraftKings prices; hist: ratings built from results (ESPN's, or wk / ol);
     w: women's football (its teams are matched only with other women's teams); cup: teams from several leagues;
     wk: the Wikipedia season article's name without its season ("Czech First League"), whose results matrix gives this
     season's and last season's results; ol: OpenLigaDB's league shortcut; local: its clubs are never matched to
-    clubs in other competitions (cups and European games keep rating them their own way)."""
+    clubs in other competitions (cups and European games keep rating them their own way); ts: TheSportsDB's league id,
+    for a league TheSportsDB alone feeds (fixtures, results, and last season's results for the ratings)."""
     L[lk] = dict(name=name, country=country, group=group, strength=strength, fd=fd, x=x, oa=list(oa), es=es, hist=hist, w=w, cup=cup,
-                 wk=wk, ol=ol, local=local or bool(wk or ol))
+                 wk=wk, ol=ol, local=local or bool(wk or ol or ts), ts=ts)
 
 
 comp('EPL', 'Premier League', 'England', 'big', 0.00, fd='E0', oa=['soccer_epl'])
@@ -191,6 +192,21 @@ comp('BRA2', 'Brasileirão Série B', 'Brazil', 'second', -0.70, oa=['soccer_bra
 comp('CHI1', 'Primera División', 'Chile', 'more', -0.75, oa=['soccer_chile_campeonato'], es='chi.1', hist=True)
 comp('COL1', 'Primera A', 'Colombia', 'more', -0.65, es='col.1', hist=True)
 comp('RSA1', 'Premiership', 'South Africa', 'more', -0.85, es='rsa.1', hist=True)
+# South and Central America and India, rated from ESPN's results (no prices anywhere free). Week by week from July 2025,
+# refitted on earlier games only, the ratings beat "every side average" (1X2 log loss a game, 95% interval) in all
+# eleven: Bolivia +0.109 (+0.074 to +0.145), Honduras +0.088 (+0.050 to +0.129), El Salvador +0.075 (+0.043 to +0.109),
+# India +0.070 (+0.022 to +0.119), Venezuela +0.065 (+0.038 to +0.096), Peru +0.054 (+0.027 to +0.077), Paraguay +0.044
+# (+0.012 to +0.078), Costa Rica +0.044 (+0.009 to +0.079), Guatemala +0.043 (+0.020 to +0.068), Ecuador +0.039 (+0.016 to
+# +0.062), Uruguay +0.035 (+0.009 to +0.062). Argentina's Primera Nacional (+0.010, -0.003 to +0.023) and Mexico's Liga
+# de Expansión (+0.007, -0.026 to +0.034) didn't clear zero and were left out. local: names like Barcelona SC,
+# Liverpool (Montevideo) and Nacional must never be matched to clubs elsewhere.
+for _a in (('PER1', 'Liga 1', 'Peru', -0.95), ('ECU1', 'LigaPro', 'Ecuador', -0.85), ('URU1', 'Primera División', 'Uruguay', -0.90),
+           ('PAR1', 'Primera División', 'Paraguay', -0.95), ('BOL1', 'División Profesional', 'Bolivia', -1.10),
+           ('VEN1', 'Liga FUTVE', 'Venezuela', -1.10), ('CRC1', 'Liga FPD', 'Costa Rica', -1.10), ('HON1', 'Liga Nacional', 'Honduras', -1.20),
+           ('GUA1', 'Liga Nacional', 'Guatemala', -1.25), ('SLV1', 'Primera División', 'El Salvador', -1.35),
+           ('IND1', 'Indian Super League', 'India', -1.40)):
+    comp(_a[0], _a[1], _a[2], 'more', _a[3], es=_a[0][:3].lower() + '.1', hist=True, local=True)
+CAL_YEAR = ('Brazil', 'Chile', 'Colombia', 'USA', 'Peru', 'Ecuador', 'Uruguay', 'Paraguay', 'Bolivia', 'Venezuela')   # seasons named by one year
 # African leagues, rated from ESPN's results (ESPN lists no prices for them). Week by week through 2025/26, refitted on
 # earlier games only, the ratings beat "every side average" by 0.141 a game (1X2 log loss) in Uganda, 0.034 in Ghana,
 # 0.028 in Kenya and 0.027 in South Africa's First Division; in Nigeria, where home advantage is most of the story,
@@ -206,6 +222,32 @@ AF_AFRICA = ('UGA1', 'KEN1', 'GHA1', 'NGA1', 'RSA2')
 for _lk in AF_AFRICA:
     L[_lk]['local'] = True
 AF_FILL = AF_AFRICA + tuple(lk for lk, c in L.items() if c.get('wk'))   # fixtures and new results from API-Football
+# Leagues TheSportsDB alone carries with dates (its free key, round by round). Each was tested like the others: three
+# seasons of its rounds, ratings refitted week by week from July 2025 on earlier games only, against "every side
+# average" (1X2 log loss a game). The 36 below beat it with the 95% interval above zero (gains a game from +0.037
+# in Rwanda to +0.203 in Armenia; README has the table). Left out: Ethiopia (worse than average: -0.023), Ivory Coast
+# (-0.007), Albania (-0.005), and four whose interval crossed zero: Senegal (+0.025), Qatar (+0.039), Iceland (+0.029)
+# and K League 1 (+0.016; the market prices it already). Cameroon's rounds came back empty.
+TS_ONLY = (('ZAM1', 'Super League', 'Zambia', 'more', -1.30, 5211), ('RWA1', 'Premier League', 'Rwanda', 'more', -1.35, 5253),
+           ('EGY1', 'Premier League', 'Egypt', 'more', -0.95, 4829), ('ZIM1', 'Premier Soccer League', 'Zimbabwe', 'more', -1.35, 5261),
+           ('MAR1', 'Botola Pro', 'Morocco', 'more', -0.95, 4520), ('ALG1', 'Ligue 1', 'Algeria', 'more', -1.05, 4753),
+           ('TUN1', 'Ligue 1', 'Tunisia', 'more', -1.05, 4828), ('COD1', 'Linafoot', 'DR Congo', 'more', -1.30, 4955),
+           ('ANG1', 'Girabola', 'Angola', 'more', -1.30, 5229), ('BOT1', 'Premiership', 'Botswana', 'more', -1.50, 5233),
+           ('SDN1', 'Premier League', 'Sudan', 'more', -1.40, 5255), ('LBY1', 'Premier League', 'Libya', 'more', -1.35, 5245),
+           ('BDI1', 'Ligue A', 'Burundi', 'more', -1.60, 5235),
+           ('UAE1', 'Pro League', 'United Arab Emirates', 'more', -0.90, 4678), ('IRN1', 'Persian Gulf Pro League', 'Iran', 'more', -0.95, 4742),
+           ('IRQ1', 'Stars League', 'Iraq', 'more', -1.15, 5056), ('JOR1', 'Pro League', 'Jordan', 'more', -1.25, 5055),
+           ('KUW1', 'Premier League', 'Kuwait', 'more', -1.35, 4823), ('UZB1', 'Super League', 'Uzbekistan', 'more', -1.10, 4794),
+           ('KAZ1', 'Premier League', 'Kazakhstan', 'more', -1.05, 4649), ('VIE1', 'V.League 1', 'Vietnam', 'more', -1.25, 4803),
+           ('IDN1', 'Super League', 'Indonesia', 'more', -1.20, 4790), ('THA1', 'Thai League 1', 'Thailand', 'more', -1.15, 4743),
+           ('KOR2', 'K League 2', 'South Korea', 'second', -1.00, 4822), ('CHN2', 'China League One', 'China', 'second', -1.10, 4628),
+           ('AZE1', 'Premier League', 'Azerbaijan', 'more', -0.95, 4693), ('GEO1', 'Erovnuli Liga', 'Georgia', 'more', -1.10, 4638),
+           ('ARM1', 'Premier League', 'Armenia', 'more', -1.20, 4619), ('BLR1', 'Premier League', 'Belarus', 'more', -1.10, 4622),
+           ('BIH1', 'Premijer Liga', 'Bosnia and Herzegovina', 'more', -1.05, 4624), ('MKD1', 'First League', 'North Macedonia', 'more', -1.25, 4652), ('NIR1', 'Premiership', 'Northern Ireland', 'more', -1.25, 4659),
+           ('WAL1', 'Cymru Premier', 'Wales', 'more', -1.45, 4472), ('EST1', 'Meistriliiga', 'Estonia', 'more', -1.30, 4634),
+           ('LVA1', 'Virslīga', 'Latvia', 'more', -1.25, 4650), ('LTU1', 'A Lyga', 'Lithuania', 'more', -1.25, 4651))
+for _a in TS_ONLY:
+    comp(*_a[:5], hist=True, local=True, ts=_a[5])
 # Africa's club competitions: nobody prices them for us, so they're rated from their own results (caf_fit)
 comp('CAFCL', 'CAF Champions League', 'Africa', 'cups', 0, es='caf.champions')
 comp('CAFCC', 'CAF Confederation Cup', 'Africa', 'cups', 0, es='caf.confed')
@@ -2408,6 +2450,7 @@ ES_FIX_EVERY_H = 2        # hours between fixture reads
 ES_HIST_EVERY_H = 6       # hours between re-reads of this month's and last month's results
 ES_HIST_DAYS = 600        # results kept for the ratings
 ES_BUDGET_S = float(ENV('STATPAD_ES_BUDGET') or 40)   # seconds of these reads per run, at most
+ES_THREADS = 6           # month pages read at once
 
 
 def american(x):
@@ -2472,7 +2515,8 @@ def months_between(a, b):
 
 
 def refresh_espn_data(state):
-    """Fixtures (with prices) for the ESPN-read competitions, and results for the ones rated from ESPN."""
+    """Fixtures (with prices) for the ESPN-read competitions, and results for the ones rated from ESPN. The month
+    pages are read six at a time (one at a time took most of the time budget once forty competitions were read)."""
     t0, calls = time.time(), 0
     fixl = state.get('es_fixtures') or []
     hist = state.setdefault('es_hist', {})
@@ -2482,12 +2526,30 @@ def refresh_espn_data(state):
     new_hist = False
     fix_due = due(state, 'es_fix', ES_FIX_EVERY_H) or 'es_fixtures' not in state
 
-    def read(lk, slug, ym):
-        nonlocal calls, new_hist
-        evs, ok = espn_month(slug, ym)
-        calls += 1
-        if not ok:
-            return None
+    def grab(job):
+        if time.time() - t0 > ES_BUDGET_S:
+            return job, None, None
+        evs, ok = espn_month(job[1], job[2])
+        return job, evs, ok
+
+    def read_all(jobs):
+        """(lk, slug, ym) pages -> [(lk, ym, rows)] for the ones read; rows as take() gives them."""
+        nonlocal calls
+        out = []
+        if not jobs:
+            return out
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=ES_THREADS) as ex:
+            for (lk, slug, ym), evs, ok in ex.map(grab, jobs):
+                if ok is None:
+                    continue
+                calls += 1
+                if ok:
+                    out.append((lk, ym, take(lk, ym, evs)))
+        return out
+
+    def take(lk, ym, evs):
+        nonlocal new_hist
         rows = []
         for e in evs:
             g = espn_row(e)
@@ -2515,42 +2577,42 @@ def refresh_espn_data(state):
     # 1) fixtures: this month and the next, for every ESPN-read competition
     if fix_due:
         lo, hi = NOW - timedelta(hours=3), NOW + timedelta(days=DAYS)
-        out, ok_any = [], False
-        for lk, c in comps:
-            if time.time() - t0 > ES_BUDGET_S:
-                break
-            for ym in months_between(lo, hi):
-                rows = read(lk, c['es'], ym)
-                if rows is None:
+        out, got = [], {}
+        months = months_between(lo, hi)
+        for lk, ym, rows in read_all([(lk, c['es'], ym) for lk, c in comps for ym in months]):
+            got[lk] = got.get(lk, 0) + 1
+            for g, h, a, cc, _yr in rows:
+                if g['st'] in ESPN_OFF or g['done'] or not (lo <= g['ko'] <= hi):
                     continue
-                ok_any = True
-                for g, h, a, cc, _yr in rows:
-                    if g['st'] in ESPN_OFF or g['done'] or not (lo <= g['ko'] <= hi):
-                        continue
-                    out.append({'lk': lk, 'ko': iso(g['ko']), 'h': h, 'a': a, 'eid': g['id'], 'mkt': espn_market(cc)})
-                    if lk in CAF_LKS:   # where it's played says which country the home club is from
-                        out[-1]['vc'] = ((cc.get('venue') or {}).get('address') or {}).get('country')
-        if ok_any:
-            keep = [f for f in fixl if f['lk'] not in {f2['lk'] for f2 in out} and parse_iso(f['ko']) >= lo]
+                out.append({'lk': lk, 'ko': iso(g['ko']), 'h': h, 'a': a, 'eid': g['id'], 'mkt': espn_market(cc)})
+                if lk in CAF_LKS:   # where it's played says which country the home club is from
+                    out[-1]['vc'] = ((cc.get('venue') or {}).get('address') or {}).get('country')
+        if got:
+            full, seen = {lk for lk, n in got.items() if n == len(months)}, {f['eid'] for f in out}
+            # competitions (or months) not read this time keep what was read before
+            keep = [f for f in fixl if f['lk'] not in full and f.get('eid') not in seen and parse_iso(f['ko']) >= lo]
             state['es_fixtures'] = sorted(out + keep, key=lambda f: f['ko'])
             last['es_fix'] = iso(NOW)
     # 2) results history: past months once, recent months every few hours
     oldest = NOW - timedelta(days=ES_HIST_DAYS)
+    jobs = []
     for lk, c in comps:
         if not c.get('hist'):
             continue
         hs = hist.setdefault(lk, {'m': {}, 'g': {}})
         for ym in reversed(months_between(oldest, NOW)):
-            if time.time() - t0 > ES_BUDGET_S:
-                break
             at = hs['m'].get(ym)
             y, m = int(ym[:4]), int(ym[4:])
             month_end = datetime(y + (m == 12), m % 12 + 1, 1, tzinfo=UTC)
             if at and (parse_iso(at) > month_end + timedelta(days=2) or NOW - parse_iso(at) < timedelta(hours=ES_HIST_EVERY_H)):
                 continue
-            read(lk, c['es'], ym)
-        for gid in [k for k, v in hs['g'].items() if v[0] < oldest.strftime('%Y-%m-%d')]:
-            del hs['g'][gid]
+            jobs.append((lk, c['es'], ym))
+    jobs.sort(key=lambda j: -int(j[2]))   # the newest months of every competition first
+    read_all(jobs)
+    for lk, hs in hist.items():
+        if lk in L and (L[lk].get('es') or L[lk].get('ts')):
+            for gid in [k for k, v in hs['g'].items() if v[0] < oldest.strftime('%Y-%m-%d')]:
+                del hs['g'][gid]
     if new_hist:
         state['es_hist_new'] = True
     n_fix = len(state.get('es_fixtures') or [])
@@ -2628,7 +2690,7 @@ def espn_results(state):
     AF_CUR.clear()
     AF_PART.clear()
     for lk, hs in (state.get('es_hist') or {}).items():
-        if lk not in L or not L[lk].get('hist') or not hs.get('g'):
+        if lk not in L or not L[lk].get('hist') or not hs.get('g') or not ts_ready(state, lk):
             continue
         rows = sorted(hs['g'].values())
         latest = max((r[5] or 0) for r in rows)
@@ -2636,7 +2698,7 @@ def espn_results(state):
             if L[lk].get('wk'):   # a game in both API-Football's lists and Wikipedia's matrix counts once (the dated one)
                 from collections import Counter
                 key = lambda r: (r[5], r[1], r[2], r[3], r[4])
-                n_af = Counter(key(r) for gid, r in hs['g'].items() if gid[:2] == 'af')
+                n_af = Counter(key(r) for gid, r in hs['g'].items() if gid[:2] in ('af', 'ts'))
                 rows = [r for gid, r in hs['g'].items() if gid[:2] != 'wk']
                 for gid, r in sorted(hs['g'].items()):
                     if gid[:3] == 'wk|':
@@ -2650,11 +2712,13 @@ def espn_results(state):
             if c.get('s') == latest or (c.get('s') or 0) > latest:
                 AF_CUR[lk] = list(c.get('t') or [])   # this season's sides, results or not
             new = [(gid, r) for gid, r in hs['g'].items() if (r[5] or 0) == latest]
-            if new and not L[lk].get('wk') and sum(1 for gid, _ in new if gid[:2] == 'af') > 0.2 * len(new):
+            tsfull = ((state.get('ts') or {}).get(lk) or {}).get('full')
+            if new and not L[lk].get('wk') and not tsfull and sum(1 for gid, _ in new if gid[:2] in ('af', 'ts')) > 0.2 * len(new):
                 AF_PART[lk] = min(r[0] for _, r in new)   # only the games since Statpad began reading them
         games = [(parse_date(r[0]), r[1], r[2], int(r[3]), int(r[4]), (r[5] or 0) == latest, None, None) for r in rows]
         if len(games) >= 20:
-            out[lk] = (games, str(latest) if L[lk]['country'] in ('Brazil', 'Chile', 'Colombia', 'USA') else f'{latest}/{str(latest + 1)[2:]}')
+            cal = L[lk]['country'] in CAL_YEAR or (L[lk].get('ts') and '-' not in (((state.get('ts') or {}).get(lk) or {}).get('season') or '-'))
+            out[lk] = (games, str(latest) if cal else f'{latest}/{str(latest + 1)[2:]}')
     return out
 
 
@@ -2746,7 +2810,18 @@ AF_LIVE_RESERVE = 25    # live scores stop when this many of the day's calls are
 
 
 def af_blocked(state):
-    b = (state.get('af') or {}).get('block_until')
+    af = state.setdefault('af', {})
+    # a new key in the API_FOOTBALL_KEY secret lifts a pause for a refused key at once, instead of after up to 6 hours
+    # (v62; also the first run after the upgrade, which can't know whether the key changed: one call tells). Only a
+    # short fingerprint of the key is kept, never the key.
+    fp = hashlib.sha256(AF_KEY.encode()).hexdigest()[:10] if AF_KEY else None
+    if fp and af.get('kfp') != fp:
+        if af.get('note') == 'the key was refused':
+            af.pop('block_until', None)
+            af['note'] = None
+            log('API-Football: a new key; the pause for the refused one is lifted')
+        af['kfp'] = fp
+    b = af.get('block_until')
     return bool(b and parse_iso(b) > NOW)
 
 
@@ -3402,6 +3477,288 @@ def pair_names(theirs, ours, links=None, prior=None):
     if len(lt) == 1 and len(lo) == 1:
         mp[lt[0]] = lo[0]
     return mp
+
+
+TSDB = 'https://www.thesportsdb.com/api/v1/json/123/'   # TheSportsDB's public free key (no account, 30 calls a minute)
+TS_IDS = {'CZE1': 4631, 'CRO1': 4629, 'SRB1': 4671, 'UKR1': 4354, 'HUN1': 4690, 'ISR1': 4644, 'CYP1': 4630, 'BUL1': 4626,
+          'SVK1': 4672, 'SVN1': 4692, 'TUR2': 4676, 'SUI2': 4713, 'UGA1': 5259, 'KEN1': 4745, 'GHA1': 4974, 'NGA1': 4827}
+TS_IDS.update({lk: c['ts'] for lk, c in L.items() if c.get('ts')})
+TS_CALLS = 14          # calls a run for what's coming, 2.1 seconds apart (inside the free key's 30 a minute)
+TS_BACK_CALLS = 14     # and for reading back earlier rounds (a new league's season so far, and last season)
+TS_BACK_RUSH = 28      # the same while some league is still waiting to be shown (the first hours after an upgrade)
+TS_NEW_PER_RUN = 7     # leagues not shown yet that may learn their season first in a run
+TS_ROUND_FRESH_H = 6   # a round read this recently, all of it settled or all of it to come, isn't read again
+TS_DONE = ('FT', 'AET', 'PEN', 'AP', 'Match Finished', 'FT_PEN')
+TS_ALIAS = {'kampala capital city authority': 'KCCA FC'}   # TheSportsDB's name -> ours, where nothing alike links them
+TS_OFF = ('PST', 'CANC', 'ABD', 'AWD', 'WO', 'Postponed', 'Cancelled', 'Abandoned')
+
+
+def ts_get(ep, **q):
+    r = fetch(TSDB + ep, q, tries=2, timeout=30, headers={'User-Agent': WK_UA})
+    if r.status != 200 or not r.body:
+        return None
+    try:
+        return json.loads(text_of(r.body) or '{}')
+    except ValueError:
+        return None
+
+
+def ts_prev(season):
+    """'2026-2027' -> '2025-2026'; '2026' -> '2025'."""
+    y = int(season[:4])
+    return f'{y - 1}-{y}' if '-' in season else str(y - 1)
+
+
+def ts_ready(state, lk):
+    """A league TheSportsDB alone feeds is shown once this season so far and last season are read (its ratings need
+    them); the others at once."""
+    if not (L.get(lk) or {}).get('ts'):
+        return True
+    rec = (state.get('ts') or {}).get(lk) or {}
+    return bool(rec.get('full') and rec.get('pdone'))
+
+
+def refresh_tsdb(state):
+    """Fixtures, kick-off times and results from TheSportsDB's free key, a source that needs no account: for the leagues
+    API-Football's day lists were feeding (v62: API-Football refused the key on 20 Nov and those leagues went empty), and
+    for the leagues only TheSportsDB carries (L[lk]['ts']). A league's whole round comes in one call. Each run first
+    reads what's coming, the most overdue league first: every 15 minutes while a game may be finishing, hourly with
+    games within a day, every 6 hours otherwise; a round already settled or read lately isn't read again. Then, with
+    a separate allowance, earlier rounds: this season's (leagues without a Wikipedia matrix, so their tables are
+    whole) and, for the TheSportsDB-only leagues, last season's, one league at a time."""
+    ts = state.setdefault('ts', {})
+    calls, t_last, notes = 0, 0.0, []
+
+    def call(ep, cap, **q):
+        nonlocal calls, t_last
+        if calls >= cap:
+            return None
+        wait = 2.1 - (time.time() - t_last)
+        if wait > 0 and not OFFLINE:
+            time.sleep(wait)
+        calls += 1
+        t_last = time.time()
+        return ts_get(ep, **q)
+
+    def store(rec, d, r, sy):
+        n = 0
+        for e in d.get('events') or []:
+            try:
+                ko = parse_iso((e.get('strTimestamp') or (e['dateEvent'] + 'T' + (e.get('strTime') or '12:00:00'))).replace('+00:00', '') + 'Z')
+            except Exception:
+                continue
+            hs, as_ = e.get('intHomeScore'), e.get('intAwayScore')
+            rec['ev'][str(e['idEvent'])] = [iso(ko), e.get('strHomeTeam') or '', e.get('strAwayTeam') or '', e.get('strStatus') or '',
+                                            None if hs in (None, '') else int(hs), None if as_ in (None, '') else int(as_), r,
+                                            not e.get('strTime') or e.get('strTime') == '00:00:00', sy]
+            n += 1
+        rec.setdefault('ra', {})[str(r)] = iso(NOW)
+        return n
+
+    def settled(rec, r):   # every game of round r on file is over (or called off)
+        g = [v for v in rec['ev'].values() if v[6] == r]
+        return bool(g) and all(v[3] in TS_DONE or v[3] in TS_OFF or (v[4] is not None and parse_iso(v[0]) < NOW - timedelta(hours=3)) for v in g)
+
+    def fresh(rec, r):
+        at = (rec.get('ra') or {}).get(str(r))
+        return bool(at) and NOW - parse_iso(at) < timedelta(hours=TS_ROUND_FRESH_H)
+
+    order = sorted((lk for lk in TS_IDS if lk in L), key=lambda lk: (ts.get(lk) or {}).get('due') or '')
+    # a few leagues not shown yet go first (one call each, to learn their season, so reading back can start), the
+    # rest of the allowance by what's most overdue, so the leagues already shown keep their fixtures fresh
+    fresh_lks = [lk for lk in order if L[lk].get('ts') and not ts_ready(state, lk)][:TS_NEW_PER_RUN]
+    order = fresh_lks + [lk for lk in order if lk not in fresh_lks]
+    # 1) what's coming: the next round, and the ones either side of it
+    for lk in order:
+        if calls >= TS_CALLS:
+            break
+        rec = ts.setdefault(lk, {'ev': {}})
+        if rec.get('due') and parse_iso(rec['due']) > NOW:
+            continue
+        nx = call('eventsnextleague.php', TS_CALLS, id=TS_IDS[lk])
+        if nx is None:
+            continue
+        evs = nx.get('events') or []
+        rnd, season = (evs[0].get('intRound'), evs[0].get('strSeason')) if evs else (None, None)
+        if not evs:   # between seasons: the season TheSportsDB calls current, so its table can still be read
+            lg = call('lookupleague.php', TS_CALLS, id=TS_IDS[lk])
+            season = (((lg or {}).get('leagues') or [{}])[0] or {}).get('strCurrentSeason')
+        try:
+            rnd = int(rnd) if rnd is not None else None
+        except (TypeError, ValueError):
+            rnd = None
+        if not season or not re.match(r'^\d{4}(-\d{4})?$', season):
+            rec['due'] = iso(NOW + timedelta(hours=12))
+            continue
+        if rec.get('season') != season:
+            # the season just followed in full counts as last season's read
+            done = bool(rec.get('season')) and bool(rec.get('full')) and ts_prev(season) == rec.get('season')
+            rec.update({'season': season, 'back': 0, 'ev': {}, 'ra': {}, 'full': False, 'pr': 0, 'pe': 0, 'be': 0, 'pdone': done})
+        rec['rnd'] = rnd
+        sy = int(season[:4])
+        if not ts_ready(state, lk):   # not shown yet: knowing the season and round is enough until it's read back
+            rec['due'] = iso(NOW + timedelta(hours=6))
+            notes.append(f'{lk} {season}')
+            continue
+        if rnd:
+            for r in (rnd - 1, rnd, rnd + 1):
+                if r < 1 or (r == rnd - 1 and settled(rec, r) and fresh(rec, r)) or (r == rnd + 1 and fresh(rec, r)):
+                    continue
+                d = call('eventsround.php', TS_CALLS, id=TS_IDS[lk], r=r, s=season)
+                if d is None:
+                    break
+                store(rec, d, r, sy)
+        live = any(0 < (NOW - parse_iso(v[0])).total_seconds() < 4 * 3600 and v[3] not in TS_DONE and v[3] not in TS_OFF for v in rec['ev'].values())
+        soon = any(abs((parse_iso(v[0]) - NOW).total_seconds()) < 86400 for v in rec['ev'].values())
+        rec['due'] = iso(NOW + timedelta(minutes=15 if live else 60 if soon else 360 if rnd else 720))
+        rec['at'] = iso(NOW)
+        notes.append(f'{lk} r{rnd}' if rnd else f'{lk} {season}')
+    # 2) earlier rounds, one league at a time: the ones nearest to being shown first, then in TS_IDS's order (the
+    #    African leagues first)
+    rush = any(lk in L and L[lk].get('ts') and not ts_ready(state, lk) for lk in TS_IDS)
+    cap = TS_CALLS + (TS_BACK_RUSH if rush else TS_BACK_CALLS)
+    rank = {lk: i for i, lk in enumerate(TS_IDS)}
+    for lk in sorted(order, key=lambda lk: (not (ts.get(lk) or {}).get('full'), rank.get(lk, 999))):
+        rec = ts.get(lk) or {}
+        if calls >= cap:
+            break
+        if not rec.get('season'):
+            continue
+        season, rnd, sy = rec['season'], rec.get('rnd'), int(rec['season'][:4])
+        if not L[lk].get('wk') and not rec.get('full'):   # this season so far
+            while calls < cap:
+                r = rec.get('back', 0) + 1
+                if rnd and r > rnd - 2:
+                    break
+                d = call('eventsround.php', cap, id=TS_IDS[lk], r=r, s=season)
+                if d is None:
+                    break
+                n = store(rec, d, r, sy)
+                rec['back'], rec['be'] = r, 0 if n else rec.get('be', 0) + 1
+                if not rnd and (rec['be'] >= 2 or r >= 60):   # between seasons: to two empty rounds in a row
+                    break
+            rec['full'] = bool((rnd and rec.get('back', 0) >= rnd - 2) or (not rnd and (rec.get('be', 0) >= 2 or rec.get('back', 0) >= 60)))
+            if rec['full']:
+                notes.append(f'{lk} season so far')
+        if L[lk].get('ts') and rec.get('full') and not rec.get('pdone'):   # last season, to two empty rounds in a row
+            ps = ts_prev(season)
+            while calls < cap:
+                r = rec.get('pr', 0) + 1
+                d = call('eventsround.php', cap, id=TS_IDS[lk], r=r, s=ps)
+                if d is None:
+                    break
+                n = store(rec, d, r, int(ps[:4]))
+                rec['pr'], rec['pe'] = r, 0 if n else rec.get('pe', 0) + 1
+                if rec['pe'] >= 2 or r >= 60:
+                    rec['pdone'] = True
+                    notes.append(f'{lk} {ps}')
+                    break
+    new_res = ts_apply(state)
+    # then drop old events from the store: their results are in the history now
+    for rec in ts.values():
+        for k in [k for k, v in (rec.get('ev') or {}).items() if parse_iso(v[0]) < NOW - timedelta(days=21)]:
+            del rec['ev'][k]
+    waiting = [lk for lk in TS_IDS if lk in L and L[lk].get('ts') and not ts_ready(state, lk)]
+    return (f"{calls} TheSportsDB calls; read {', '.join(notes) or 'nothing due'}; {len(state.get('ts_fixtures') or [])} fixtures, "
+            f"{new_res} new results" + (f"; {len(waiting)} leagues still reading back" if waiting else ''))
+
+
+def ts_apply(state):
+    """TheSportsDB's events -> fixtures (state['ts_fixtures']) and results (the ratings' history), under our names:
+    paired with Wikipedia's list of this season's clubs where there is one, else matched to the league's past names
+    (a promoted club keeps TheSportsDB's name)."""
+    ts, hist = state.get('ts') or {}, state.setdefault('es_hist', {})
+    tmap = state.setdefault('ts_map', {})
+    fixl, added = [], 0
+    for lk, rec in ts.items():
+        if lk not in L or not rec.get('ev'):
+            continue
+        names = sorted({v[1] for v in rec['ev'].values()} | {v[2] for v in rec['ev'].values()})
+        wcur = ((state.get('wk') or {}).get(lk) or {}).get('cur')
+        T = Teams()
+        for r in ((hist.get(lk) or {}).get('g') or {}).values():
+            T.add(lk, r[1])
+            T.add(lk, r[2])
+        if L[lk].get('wk') and wcur and wcur.get('links'):
+            mp = tmap[lk] = pair_names(names, sorted(wcur['links']), wcur['links'], tmap.get(lk))
+        elif L[lk].get('ts'):   # TheSportsDB's names are the league's names
+            mp = {n: n for n in names}
+        else:
+            mp = tmap[lk] = {n: TS_ALIAS.get(norm(n)) or T.resolve(lk, n) or n for n in names}
+        hs = hist.setdefault(lk, {'m': {}, 'g': {}})
+        show = ts_ready(state, lk)
+        for eid, v in rec['ev'].items():
+            ko_s, h0, a0, st, x, y, rnd, tbc = v[:8]
+            h, a = mp.get(h0), mp.get(a0)
+            if not h or not a:
+                continue
+            ko = parse_iso(ko_s)
+            if st in TS_OFF:
+                continue
+            if (st in TS_DONE or (x is not None and ko < NOW - timedelta(hours=3))) and x is not None and y is not None:
+                near = {(ko + timedelta(days=k)).strftime('%Y-%m-%d') for k in (-1, 0, 1)}
+                if any(gid[:2] != 'ts' and gid[:3] != 'wk|' and r[0] in near and r[1] == h and r[2] == a for gid, r in hs['g'].items()):
+                    continue   # already in from ESPN or API-Football
+                row = [ko.strftime('%Y-%m-%d'), h, a, int(x), int(y), v[8] if len(v) > 8 and v[8] else af_season(ko)]
+                if hs['g'].get('ts' + eid) != row:
+                    hs['g']['ts' + eid] = row
+                    added += 1
+            elif show and ko > NOW - timedelta(hours=3) and ko < NOW + timedelta(days=9):
+                fixl.append({'lk': lk, 'ko': iso(ko), 'h': h, 'a': a, 'tbc': bool(tbc), 'tsid': eid})
+    state['ts_fixtures'] = sorted(fixl, key=lambda f: f['ko'])
+    if added:
+        state['es_hist_new'] = True
+    return added
+
+
+TS_PLAY = {'1H': '1H', '2H': '2H', 'HT': 'HT', 'ET': 'ET', 'P': 'P', 'BT': 'ET', 'LIVE': '1H', 'In Progress': '1H', 'First Half': '1H',
+           'Second Half': '2H', 'Halftime': 'HT', 'Half Time': 'HT'}
+
+
+def ts_live(state, matches):
+    """TheSportsDB's scores for the board's games no one else follows (its leagues are read every 15 minutes while a
+    game may be in play): the score in play, with an estimated minute, and the final score at once (the ratings'
+    copy of a result comes a little later). -> (in play, finished) counts."""
+    af = state.setdefault('af', {})
+    games = af.setdefault('live', {}).setdefault('games', {})
+    done, off = af.setdefault('scores', {}), af.setdefault('void', {})
+    ev_es = state.get('espn_ev') or {}
+    tmap, ts = state.get('ts_map') or {}, state.get('ts') or {}
+    n_live = n_done = 0
+    idx = {}
+    for lk, rec in ts.items():
+        mp = tmap.get(lk) or {}
+        for v in (rec.get('ev') or {}).values():
+            h, a = mp.get(v[1], v[1] if (L.get(lk) or {}).get('ts') else None), mp.get(v[2], v[2] if (L.get(lk) or {}).get('ts') else None)
+            if h and a:
+                idx.setdefault(lk, []).append((h, a, v))
+    for m in list(matches) + list((state.get('track_pending') or {}).values()):
+        if m['lk'] not in TS_IDS or m['id'] in done or m['id'] in off or (m['id'] in ev_es and m['id'] in games):
+            continue
+        ko = parse_iso(m['ko'])
+        if not (NOW - timedelta(days=3) < ko < NOW + timedelta(minutes=10)):
+            continue
+        mh, ma = base_name(m['h']), base_name(m['a'])
+        cand = [v for h, a, v in idx.get(m['lk'], []) if abs((parse_iso(v[0]) - ko).total_seconds()) < 36 * 3600
+                and (h == mh or same_team(h, mh)) and (a == ma or same_team(a, ma))]
+        if not cand:
+            continue
+        v = min(cand, key=lambda v: abs((parse_iso(v[0]) - ko).total_seconds()))
+        st, x, y = v[3], v[4], v[5]
+        if st in TS_OFF:
+            off[m['id']] = [st[:4].upper(), m['ko']]
+            games.pop(m['id'], None)
+        elif x is not None and y is not None and (st in TS_DONE or parse_iso(v[0]) < NOW - timedelta(hours=3)):
+            done[m['id']] = [int(x), int(y), m['ko']]
+            n_done += 1
+            if NOW - ko < timedelta(hours=4):
+                games[m['id']] = [int(x), int(y), 90, 'FT', iso(NOW), [], [], 0]
+        elif st in TS_PLAY and x is not None and y is not None:
+            stage, mins = TS_PLAY[st], (NOW - ko).total_seconds() / 60
+            minute = 45 if stage == 'HT' else max(46, min(90, int(mins) - 15)) if stage == '2H' else max(1, min(45, int(mins)))
+            games[m['id']] = [int(x), int(y), minute, stage, iso(NOW), [], [], 0]
+            n_live += 1
+    return n_live, n_done
 
 
 AF_NOT_LEAGUE = re.compile(r'\b(cup|women|ladies|female|u1\d|u2\d|youth|reserves?|shield|super ?8|top ?8|play ?-?offs?|friendl\w*|super cup|charity)\b', re.I)
@@ -4735,6 +5092,17 @@ def build(state, prev, seed=None):
         if not find(f['lk'], h, a, f['ko']):
             fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'ks': 'ol'})
 
+    for f in state.get('ts_fixtures') or []:   # TheSportsDB: the same leagues, when API-Football isn't answering
+        if f['lk'] not in L:
+            continue
+        ko = parse_iso(f['ko'])
+        if not (lo <= ko <= hi):
+            continue
+        h = teams.resolve(f['lk'], f['h']) or f['h']
+        a = teams.resolve(f['lk'], f['a']) or f['a']
+        if not find(f['lk'], h, a, f['ko'], f.get('tbc')):
+            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'ts'})
+
     for f in state.get('af_fixtures') or []:   # API-Football's day lists: the African and Wikipedia-rated leagues
         if f['lk'] not in L or f['lk'] not in AF_FILL:
             continue
@@ -5187,8 +5555,8 @@ for (const m of inp.matches) {
 for (const [d, list] of Object.entries(byDay)) {
   out.slips[d] = ['C', 'B', 'A'].map((t) => {
     const sl = E.buildSlip(list, t, inp.target);
-    return { t, f: sl.feasible, o: sl.odds, p: sl.prob,
-      legs: sl.legs.map((l) => ({ id: l.m.id, k: l.s.key, pr: l.s.price, pp: l.s.pAdj, r: !!l.s.real, ko: l.m.ko, h: l.m.h, a: l.m.a })) };
+    return { t, f: sl.feasible, o: sl.odds, p: sl.prob, b: E.buildSlips ? 2 : 1,
+      legs: sl.legs.map((l) => ({ id: l.m.id, k: l.s.key, pr: l.s.price, pp: l.s.pSlip || l.s.pAdj, r: !!l.s.real, ko: l.m.ko, h: l.m.h, a: l.m.a })) };
   });
 }
 out.ver = E.VERSION || null;
@@ -5428,6 +5796,10 @@ def load_track(state):
     # records made before value bets, Brier scores and engine versions were kept
     for k, v in (('br', [0, 0.0, 0.0, 0.0]), ('vb', new_vb()), ('vbb', {}), ('ver', {})):
         tr['agg'].setdefault(k, v)
+    if tr['agg'].get('slips_b') != 2:   # v62: slips are built a new way; the old ones' results are kept apart
+        tr['agg']['slips_v1'] = tr['agg'].get('slips') or {t: [0, 0, 0.0, 0.0] for t in 'ABC'}
+        tr['agg']['slips'] = {t: [0, 0, 0.0, 0.0] for t in 'ABC'}
+        tr['agg']['slips_b'] = 2
     tr.setdefault('vbets', [])
     state['track'] = tr
     return tr, repo
@@ -5506,8 +5878,66 @@ def live_check(state):
     return out
 
 
+def twin_games(r1, r2):
+    """The same game under two spellings: one competition, kick-offs within 36 hours (nobody plays twice in a
+    competition that fast) and one side the same. Two sources had spelled Inverness Caledonian Thistle "Inverness C"
+    and Celta's reserve side "Celta B" and "Celta Fortuna", and the record kept both copies (3 of the first 193 picks)."""
+    return (r1['lk'] == r2['lk'] and abs((parse_iso(r1['ko']) - parse_iso(r2['ko'])).total_seconds()) < 36 * 3600
+            and (same_team(r1['h'], r2['h']) or same_team(r1['a'], r2['a'])))
+
+
+def drop_twins(pend):
+    """Waiting predictions saved twice for one game: the copy snapshotted last (the name on the board now) stays."""
+    by_lk = {}
+    for k, r in pend.items():
+        by_lk.setdefault(r['lk'], []).append(k)
+    gone = 0
+    for ks in by_lk.values():
+        if len(ks) < 2:
+            continue
+        ks.sort(key=lambda k: pend[k].get('u') or (pend[k].get('f') or [''])[0], reverse=True)
+        kept = []
+        for k in ks:
+            if any(twin_games(pend[k], pend[j]) for j in kept):
+                del pend[k]
+                gone += 1
+            else:
+                kept.append(k)
+    return gone
+
+
+def dedupe_graded(tr):
+    """Graded picks recorded twice for one game (before drop_twins): the later copy stays, and the level counts
+    are rebuilt from the picks when the picks still cover the whole record."""
+    P = tr.get('picks') or []
+    agg = tr['agg']
+    if not P or sum(v[0] for v in agg['tiers'].values()) != len(P):
+        return 0
+    rec = lambda p: {'lk': p[1], 'ko': p[2], 'h': p[3], 'a': p[4]}
+    drop = set()
+    for i in range(len(P)):
+        for j in range(i + 1, len(P)):
+            if j not in drop and i not in drop and P[i][5:7] == P[j][5:7] and twin_games(rec(P[i]), rec(P[j])):
+                drop.add(i)
+    if not drop:
+        return 0
+    tr['picks'] = [p for k, p in enumerate(P) if k not in drop]
+    tiers = {t: [0, 0, 0.0] for t in agg['tiers']}
+    for p in tr['picks']:
+        t = tiers.setdefault(p[12] or '-', [0, 0, 0.0])
+        t[0] += 1; t[1] += int(p[13]); t[2] = round(t[2] + p[9], 4)
+    agg['tiers'] = tiers
+    agg['n'] = max(0, agg['n'] - len(drop))
+    return len(drop)
+
+
 def track_update(doc, state):
     tr, repo = load_track(state)
+    n_dup = dedupe_graded(tr)
+    if n_dup:
+        log(f'track: {n_dup} graded pick(s) were the same game twice; removed and the level counts rebuilt')
+        tr['updated'] = iso(NOW)
+        tr['new'] = tr.get('new', 0) + 1
     agg = tr['agg']
     pend = state.setdefault('track_pending', {})
     open_ = state.setdefault('slips_open', [])
@@ -5537,6 +5967,7 @@ def track_update(doc, state):
             if ver:
                 rec['v'] = ver
             rec['st'] = 1 if m.get('st') else 0   # the learned blend was used (for the live check)
+            rec['u'] = iso(NOW)   # last snapshot
             if 'f' not in rec:   # the first prediction, kept as it was: time, pick, chance, price
                 rec['f'] = [iso(NOW), e['k'], round(e['pp'], 4), e['pr']]
             # the consensus now; at kick-off this is the closing consensus that value bets are measured against
@@ -5554,6 +5985,9 @@ def track_update(doc, state):
                     vbs[key] = [iso(NOW), price, p_, edge, bk]
             pend[mid] = rec
 
+        n_twins = drop_twins(pend)
+        if n_twins:
+            log(f'track: {n_twins} game(s) on the record twice under two spellings; the stale copy dropped')
         # 2) slips: keep the latest version for each day, freeze it once its first game kicks off
         for d in sorted(set(days) | set(eng['slips'])):
             rec = days.setdefault(d, {'latest': None, 'frozen': False})
@@ -5564,7 +5998,7 @@ def track_update(doc, state):
             if lat and (begun or d not in eng['slips']):
                 for s in lat:
                     if s['f'] and s['legs']:
-                        open_.append({'d': d, 't': s['t'], 'o': round(s['o'], 3), 'p': round(s['p'], 4),
+                        open_.append({'d': d, 't': s['t'], 'o': round(s['o'], 3), 'p': round(s['p'], 4), 'b': s.get('b', 1),
                                       'legs': [[l['id'], l['k'], l['h'], l['a'], l['ko'], l['pr'], None] for l in s['legs']]})
                 rec['frozen'] = True
             elif d in eng['slips']:
@@ -5670,8 +6104,8 @@ def track_update(doc, state):
             tr['slips'].append(s)
             if res == 'void':
                 agg['void'] += 1
-            else:
-                a = agg['slips'][s['t']]
+            else:   # slips from the old level-by-level builder count apart from the new ones (v62)
+                a = (agg['slips'] if s.get('b') == 2 else agg.setdefault('slips_v1', {t: [0, 0, 0.0, 0.0] for t in 'ABC'}))[s['t']]
                 a[0] += 1; a[1] += int(res == 'won'); a[2] = round(a[2] + (s['o'] - 1 if res == 'won' else -1), 3)
                 a[3] = round(a[3] + s['p'], 4)
             changed = True
@@ -5782,6 +6216,15 @@ NODE_FIT = ENGINE_LOAD + r"""
 const out = inp.map(([h, a, o]) => { const f = E.fit({ H: h, A: a, O: o }, [1.4, 1.1]); return [+f[0].toFixed(4), +f[1].toFixed(4)]; });
 process.stdout.write(JSON.stringify(out));
 """
+
+
+def engine_version():
+    """The engine version in the page this pipeline publishes (its VERSION line)."""
+    try:
+        m = re.search(r"const VERSION = '([^']+)'", INDEX_FILE.read_text(encoding='utf-8', errors='ignore')[:600000])
+        return m.group(1) if m else None
+    except OSError:
+        return None
 
 
 def run_node(script, payload, timeout=600):
@@ -6757,6 +7200,7 @@ FX_DEAD_GRID = [(b, thr) for thr in (0.005, 0.01, 0.02) for b in (-0.1, -0.05, 0
 FX_OPEN_GRID = [(b, thr) for thr in (0.005, 0.01, 0.02) for b in (0.03, 0.06, 0.1, 0.15)]
 FX_SIMS = 2000          # simulated seasons per past week (the live stakes use 10,000)
 FX_MIN_GAIN = 1e-5      # on the unseen season, the error must drop by at least this much a game
+FX_REST_ALLOWED = False  # see apply_tuning: the short-rest shift failed a seven-season test (exp16/rest.py)
 
 
 def tired(rest, t0):
@@ -7616,7 +8060,11 @@ def apply_tuning(state):
     MODEL_X = dict(t['params_x']) if t.get('on') and t.get('params_x') and (t.get('xg') or {}).get('on') else None
     MODEL_W = t.get('w') if t.get('w_on') else None
     f = t.get('fx') or {}
-    FX['rest'] = tuple(f['rest']['p']) if (f.get('rest') or {}).get('on') else None
+    # the short-rest shift stays off whatever one season's check says (v62): switched on from a 0.00013 gain on
+    # 2025/26 (b = -0.2, short-rested sides better than their prices), on seven seasons of prices it made results
+    # worse (-0.0026 a game over 3,288 games with one side short of rest; worse in five of the eight seasons), and
+    # live it moved a few prices by up to 12 points (Fluminense v Mirassol: the market's 60% home win read as 72%)
+    FX['rest'] = tuple(f['rest']['p']) if (f.get('rest') or {}).get('on') and FX_REST_ALLOWED else None
     FX['dead'] = tuple(f['dead']['p']) if (f.get('dead') or {}).get('on') else None
     FX['open'] = tuple(f['open']['p']) if (f.get('open') or {}).get('on') else None
     k = t.get('kal') or {}
@@ -8316,6 +8764,12 @@ def main():
         ol_note = safe(lambda: refresh_oldb(state), 'error')
         src['oldb'] = {'ok': ol_note != 'error', 'at': iso(NOW), 'note': ol_note}
         log('OpenLigaDB:', ol_note)
+    ts_note = safe(lambda: refresh_tsdb(state), 'error')   # the same leagues from TheSportsDB (no account needed)
+    tl = safe(lambda: ts_live(state, prev_matches), (0, 0))
+    if ts_note != 'error' and any(tl):
+        ts_note += f'; scores for {tl[0]} in play and {tl[1]} finished on the board'
+    src['tsdb'] = {'ok': ts_note != 'error', 'at': iso(NOW), 'note': ts_note}
+    log('TheSportsDB:', ts_note)
     af_note = safe(lambda: af_fill(state), 'error')   # African and Wikipedia-rated leagues from API-Football's day lists
     src.pop('africa', None)
     if af_note != 'error' and not state.get('af_lg') and not AF_KEY:
@@ -8357,7 +8811,8 @@ def main():
         log('results from The Odds API for', n_sc, 'competitions')
     track = safe(lambda: track_update(doc, state), None)
     safe(lambda: live_check(state), None)
-    if due(state, 'backtest', BT_EVERY_H) or not state.get('backtest') or retuned or 'mcal' not in state:
+    if due(state, 'backtest', BT_EVERY_H) or not state.get('backtest') or retuned or 'mcal' not in state or \
+            (state.get('backtest') or {}).get('ver') != engine_version():   # a new engine: replay it at once
         last['backtest'] = iso(NOW)
         mc = safe(lambda: fit_mcal(state), None)
         if mc:
