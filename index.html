@@ -253,6 +253,11 @@ h2 { font: 850 clamp(30px, calc(4.4vw / var(--z, 1)), 42px)/.95 var(--f-display)
 .seg button { transition: color .25s, transform .15s; }
 .lbl { font-size: 12px; color: var(--ink-3); font-weight: 600; letter-spacing: .02em; }
 .ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* v64: your own target odds, next to the presets */
+.tgt-own input { width: 6.4em; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 11px; background: var(--sunk); color: var(--ink); font: 600 13px var(--f-mono); font-variant-numeric: tabular-nums; }
+.tgt-own input::placeholder { color: var(--ink-3); font-family: var(--f-body); }
+.tgt-own.on input { background: var(--card); border-color: var(--ink-3); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.slip-rule { padding: 0 18px 10px; font-size: 12px; color: var(--ink-3); }
 
 /* ---------- match list ---------- */
 .comp { margin-top: 20px; }
@@ -2050,7 +2055,8 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
     <section id="v-slips" class="section" data-view="slips" hidden>
       <div class="sec-head">
         <div><h2 id="slipsTitle">Smart slips</h2><p class="sub" id="slipsSub">For the chosen day, the three likeliest combinations that still pay the target, no match in two of them. Kicked-off games removed.</p></div>
-        <div class="ctl"><span class="lbl sl-only">Target odds</span><div class="seg sl-only" id="target"></div><button type="button" class="btn listen-b sl-only" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
+        <div class="ctl"><span class="lbl sl-only">Target odds</span><div class="seg sl-only" id="target"></div><label class="tgt-own sl-only"><span class="sr">Your own target odds</span><input id="tgtIn" type="text" inputmode="decimal" autocomplete="off" maxlength="8" placeholder="Own odds"></label><button type="button" class="btn listen-b sl-only" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
+        <div class="ctl sl-only"><span class="lbl">Every leg at least</span><div class="seg" id="slipFloor" role="group" aria-label="Minimum chance for every leg"></div></div>
       </div>
       <div class="days" id="days-slips" role="group" aria-label="Day"></div>
       <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="men">Men’s football</option><option value="women">Women’s football</option><option value="priced">Matches with live prices</option></select></label></div>
@@ -2180,7 +2186,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
 /* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
 const ENGINE = (() => {
   // the engine's version, stamped on every prediction the track record keeps, so versions can be compared later
-  const VERSION = '2026-11-25';
+  const VERSION = '2026-11-27';
   const N = 11, RHO = -0.07, W_MKT = 0.8, W_EXT = 0.5, HAIR = 0.03;
   const M_DC = 0.05, M_EST = 0.06, M_DER = 0.065, STALE_H = 36;
   const TIERS = {
@@ -2488,35 +2494,41 @@ const ENGINE = (() => {
 
   function tierOf(p) { return p >= 0.82 ? 'A' : p >= 0.70 ? 'B' : p >= 0.58 ? 'C' : null; }
 
-  // Smart slips (v62). A slip lands only if every leg lands, so its chance is the product of its legs' chances.
+  // Smart slips (v64). A slip lands only if every leg lands, so its chance is the product of its legs' chances.
   // With the total odds fixed, that product is (1 / total odds) x the product of each leg's chance x price: a leg
-  // priced fairly has chance x price = 1, and a bookmaker's margin makes it less than 1, so every extra leg shaves
-  // the slip's chance. The builder therefore looks, over the whole day, for the combination whose chances multiply
-  // to the most while its prices reach the target: the fewest and fairest legs that get there, one leg a match.
-  // The three slips are the best, second-best and third-best such combinations, no match in two of them.
-  // Replayed on seven seasons of 19 leagues (1,927 match days, a typical bookmaker's prices), at 10 odds the old
-  // levelled slips landed 5.4% (Nearly definite, 22 legs on average), 6.9% (Highly possible, 10 legs) and 8.1%
-  // (Possible, 6 legs); these land about 9% each (SLIP_NOTE has the tested numbers for every target).
-  // Rating legs on more than their chance was tested too: the market's memory, the price outlook's forecast, recent
-  // shots on target, the price level, the model's uncertainty and the league's tier, together, on 741,780 legs,
-  // improved on the engine's chance by nothing measurable once the engine leans on the market (+0.012 per 1,000 in
-  // log loss), so legs are rated on their chance and price alone.
+  // priced fairly has chance x price = 1, and a bookmaker's margin makes it less than 1. The builder looks, over the
+  // whole day, for the combination whose chances multiply to the most while its prices reach the target, one leg a
+  // match, and makes three: the best, second-best and third-best, no match in two of them.
+  // v64 adds a floor: every leg at least as likely as a chosen minimum (50% by default: each leg more likely to land
+  // than not), and any target odds. Replayed on seven seasons of 19 leagues (1,927 match days, a typical bookmaker's
+  // prices), the margin a leg carries is about 5% from 1.2 to 2.0 and 8-10% beyond 2.5, while a leg under 1.3 buys so
+  // little price that it costs the most chance per unit of odds. So legs of 50%+ (about 1.4 to 1.9) reach a target
+  // almost as surely as the fewest, longest legs: at 10 odds 9.07% by the closing prices against 9.34% (4.6 legs
+  // against 2.7, the longest leg 1.85 against 4.02); at 5 odds 19.0% against 19.2%; at 20 odds 4.34% against 4.62%.
+  // A 60% floor costs more (8.5% at 10 odds, 6.2 legs) and legs under 1.3 cost the most (6.6%, 10.5 legs).
+  // Scoring legs on their cautious chance instead was tested too and did worse (8.93% at 10 odds); legs are rated on
+  // their chance (capped at the market's consensus) and price, and a leg whose cautious chance sits more than ten
+  // points under the floor (thin data) is left out.
   const SLIPS = { A: { name: 'Best chance' }, B: { name: 'Second best' }, C: { name: 'Third best' } };
-  const SLIP_MAX = 8, SLIP_GAMES = 70;
+  const SLIP_B = 3;   // the builder's generation, kept with each recorded slip
+  const SLIP_MAX = 16, SLIP_GAMES = 70;
+  const SLIP_FLOORS = [0.6, 0.5, 0], SLIP_FLOOR = 0.5;   // the minimum chance a leg needs, by setting (0: any)
+  const SLIP_T_MIN = 1.1, SLIP_T_MAX = 10000;
   // a guard for the live board, where a leg's chance can drift from the market's (a model share in a few competitions,
   // the track record's correction, which is fitted near 80% and stretches long shots): no leg counts as more likely
   // than the bookmakers' own consensus says, and no estimated price as better than a 5% margin allows. A real price
   // above the consensus's fair price still counts (that gap is real: it's what the value bets live on).
   const SLIP_MIN_P = 0.05;
   let SLIP_MEMO = { key: '', out: null };
-  // per match, the fairest leg in each price band (a short leg and a longer one both stay in play)
-  function slipLegs(m, a) {
+  // per match, the fairest leg in each price band that clears the floor (a short leg and a longer one both stay in play)
+  function slipLegs(m, a, floor) {
     if (!a || m.fr || m.clash) return [];
     const band = {};
     for (const s of a.sels) {
       const pr = s.pt || s.price;
       if (s.x || s.key === 'D' || !(pr >= 1.05) || !(s.pAdj >= SLIP_MIN_P)) continue;
       const q = Math.min(s.pAdj, s.real ? (s.pm > 0 ? s.pm : 1 / pr) : 1 / (pr * 1.05));   // the leg's chance for the slip
+      if (floor > 0 && (q < floor || (s.pLo != null && s.pLo < floor - 0.1))) continue;
       const lp = Math.log(pr), b = lp < 0.18 ? 0 : lp < 0.34 ? 1 : lp < 0.53 ? 2 : lp < 0.80 ? 3 : 4;
       const fair = Math.log(q) + lp;   // log(chance x price): 0 at a fair price, below 0 with a margin
       // the slip's copy of the leg carries the typical price (the best price anywhere stays on the match card)
@@ -2526,14 +2538,14 @@ const ENGINE = (() => {
   }
   // a knapsack over (odds step, legs used), match by match, in flat typed arrays (fast enough for a phone):
   // the most chance for every reachable total price, then the best total inside the target's window
-  function bestSlip(opts, target, banned) {
+  function bestSlip(opts, target, banned, step) {
     const WIN_LO = Math.log(target * 0.95), WIN_HI = Math.log(target * 1.10);
-    const NN = SLIP_MAX + 1, NB = Math.floor(WIN_HI / STEP) + 2, SZ = NB * NN;
+    const NN = SLIP_MAX + 1, NB = Math.floor(WIN_HI / step) + 2, SZ = NB * NN;
     const games = opts.filter((o) => !banned.has(o.m.id));
     let cur = new Float64Array(SZ).fill(-Infinity); cur[0] = 0;
     const choice = [], gsteps = [];
     for (const o of games) {
-      const st = o.legs.map((x) => [Math.round(x.lp / STEP), Math.log(x.s.pSlip)]).filter((x) => x[0] >= 1);
+      const st = o.legs.map((x) => [Math.round(x.lp / step), Math.log(x.s.pSlip)]).filter((x) => x[0] >= 1);
       const nxt = cur.slice(), ch = new Int8Array(SZ).fill(-1);
       for (let b = 0; b < NB; b++) {
         const row = b * NN;
@@ -2552,40 +2564,44 @@ const ENGINE = (() => {
     for (let b = 1; b < NB; b++) for (let n = 1; n <= SLIP_MAX; n++) {
       const v = cur[b * NN + n]; if (v === -Infinity) continue;
       if (b > bmax) bmax = b;
-      if (b * STEP >= WIN_LO - 1e-9 && b * STEP <= WIN_HI + 1e-9 && v > bv) { bv = v; best = b * NN + n; }
+      if (b * step >= WIN_LO - 1e-9 && b * step <= WIN_HI + 1e-9 && v > bv) { bv = v; best = b * NN + n; }
     }
     const feasible = best >= 0;
     if (!feasible && bmax > 0) for (let b = Math.max(1, bmax - 5); b <= bmax; b++) for (let n = 1; n <= SLIP_MAX; n++) { const v = cur[b * NN + n]; if (v > bv) { bv = v; best = b * NN + n; } }
     const legs = [];
     for (let g = games.length - 1, i = best; g >= 0 && i > 0; g--) {
       const k = choice[g][i]; if (k < 0) continue;
-      const o = games[g], x = o.legs.filter((y) => Math.round(y.lp / STEP) >= 1)[k];
+      const o = games[g], x = o.legs.filter((y) => Math.round(y.lp / step) >= 1)[k];
       legs.push({ m: o.m, a: o.a, s: x.s });
       i -= gsteps[g][k][0] * NN + 1;
     }
     return { feasible, legs: legs.sort((x, y) => (x.m.ko > y.m.ko ? 1 : x.m.ko < y.m.ko ? -1 : 0)) };
   }
-  // list: [{m, a}]; target: the combined odds aimed for. -> the three slips, best first
-  function buildSlips(list, target) {
-    target = target || 10;
-    const key = target + '|' + list.map(({ m, a }) => m.id + ':' + (a && a.top ? a.top.pAdj.toFixed(4) + a.top.price : '')).join(',');
+  // list: [{m, a}]; target: the combined odds aimed for (any value from 1.1 to 10,000); opts.floor: every leg's
+  // minimum chance (default 50%; 0 for any leg). -> the three slips, best first
+  function buildSlips(list, target, opts) {
+    target = Math.min(SLIP_T_MAX, Math.max(SLIP_T_MIN, +target || 10));
+    const floor = opts && opts.floor != null && isFinite(+opts.floor) ? Math.max(0, Math.min(0.9, +opts.floor)) : SLIP_FLOOR;
+    const key = target + '|' + floor + '|' + list.map(({ m, a }) => m.id + ':' + (a && a.top ? a.top.pAdj.toFixed(4) + a.top.price : '')).join(',');
     if (SLIP_MEMO.key === key) return SLIP_MEMO.out;
-    let opts = list.map(({ m, a }) => ({ m, a, legs: slipLegs(m, a) })).filter((o) => o.legs.length);
-    opts.forEach((o) => { o.top = Math.max(...o.legs.map((x) => x.fair)); });
-    opts.sort((x, y) => y.top - x.top);
-    opts = opts.slice(0, SLIP_GAMES);
+    // big targets need many bins: the step widens so a phone still builds in a blink (0.2% of the odds at most below 400)
+    const step = Math.max(STEP, Math.log(target * 1.1) / 3000);
+    let opts2 = list.map(({ m, a }) => ({ m, a, legs: slipLegs(m, a, floor) })).filter((o) => o.legs.length);
+    opts2.forEach((o) => { o.top = Math.max(...o.legs.map((x) => x.fair)); });
+    opts2.sort((x, y) => y.top - x.top);
+    opts2 = opts2.slice(0, SLIP_GAMES);
     const banned = new Set(), out = [];
     for (const t of ['A', 'B', 'C']) {
-      const r = bestSlip(opts, target, banned);
+      const r = bestSlip(opts2, target, banned, step);
       for (const l of r.legs) banned.add(l.m.id);
       const odds = r.legs.reduce((acc, l) => acc * l.s.price, 1), prob = r.legs.reduce((acc, l) => acc * l.s.pSlip, 1);
       out.push({ tier: t, name: SLIPS[t].name, feasible: r.feasible && r.legs.length > 0, legs: r.legs, odds: r.legs.length ? odds : 1, prob: r.legs.length ? prob : 0,
-        target, real: r.legs.filter((l) => l.s.real).length });
+        target, floor, real: r.legs.filter((l) => l.s.real).length });
     }
     SLIP_MEMO = { key, out };
     return out;
   }
-  function buildSlip(list, t, target) { return buildSlips(list, target)[{ A: 0, B: 1, C: 2 }[t] || 0]; }
+  function buildSlip(list, t, target, opts) { return buildSlips(list, target, opts)[{ A: 0, B: 1, C: 2 }[t] || 0]; }
 
   function value(list, minEdge) {
     const out = [];
@@ -2598,7 +2614,7 @@ const ENGINE = (() => {
 
   // a market's name for a match, for games the page has no analysis of any more (finished ones)
   function labelOf(key, m) { const f = [...LABELS, ...EXTRAS].find((x) => x[0] === key); return f ? f[1](m) : null; }
-  return { VERSION, analyse, buildSlip, buildSlips, SLIPS, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf, setRho, rhoFor, MV_SHOW, MV_AHEAD };
+  return { VERSION, analyse, buildSlip, buildSlips, SLIPS, SLIP_B, SLIP_FLOORS, SLIP_FLOOR, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf, setRho, rhoFor, MV_SHOW, MV_AHEAD };
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 
@@ -2627,13 +2643,17 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // phones get five tabs, the rest under More
   const NAV = [['home', 'Overview', 'i-home'], ['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['studio', 'Slips', 'i-ticket'], ['track', 'Lab', 'i-track'], ['tables', 'Leagues', 'i-table'], ['saved', 'Saved', 'i-bookmark']];
   const BNAV = ['home', 'matches', 'value', 'studio', 'more'];
-  const TARGETS = [2, 5, 10, 20];
+  const TARGETS = [2, 3, 5, 10, 20, 50];
+  // v64: every leg's minimum chance (default: more likely to land than not), and any target odds from 1.1 to 10,000
+  const SLIP_FLOOR_OPTS = [[0.6, '60%'], [0.5, '50%'], [0, 'Any']];
+  const tgtOk = (v) => isFinite(v) && v >= 1.1 && v <= 10000;
+  const tgtTxt = (v) => (Math.round(v * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
   const EDGES = [0.02, 0.04, 0.07];
 
   const S = {
     data: null, rows: [], byId: new Map(), cache: new Map(), now: Date.now(),
     tab: store.get('tab', 'home'), day: null, league: store.get('league', 'all'), q: '', sort: store.get('sort', 'ko'),
-    target: store.get('target', 10), scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), vsort: store.get('vsort', 'edge'), vseg: store.get('vseg', 'value'), minEdge: store.get('minEdge', 0.02),
+    target: tgtOk(+store.get('target', 10)) ? +store.get('target', 10) : 10, slipFloor: [0.6, 0.5, 0].includes(store.get('slipFloor', 0.5)) ? store.get('slipFloor', 0.5) : 0.5, scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), vsort: store.get('vsort', 'edge'), vseg: store.get('vseg', 'value'), minEdge: store.get('minEdge', 0.02),
     coupon: store.get('coupon', []), bank: store.get('bank', 100), stakeMode: store.get('stakeMode', 'qk'), tleague: store.get('tleague', null),
     open: null, shown: 60, lastFetch: null, lastOk: null, live: false, legacy: false, err: null,
     ready: false, token: 0, ver: 0, slipCache: new Map(), bad: 0, progress: null, scMem: new Map(),
@@ -3072,9 +3092,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // ---------------- hero ----------------
   function slipTier(dayKeyStr, target, scope, tier) {
     const open = S.rows.filter((r) => r.day === dayKeyStr && !r.started && r.a && inScope(r, scope));
-    const key = [S.ver, dayKeyStr, target, scope, tier, open.length].join('|');
+    const key = [S.ver, dayKeyStr, target, S.slipFloor, scope, tier, open.length].join('|');
     let v = S.slipCache.get(key);
-    if (!v) { v = ENGINE.buildSlip(open.map((r) => ({ m: r.m, a: r.a })), tier, target); S.slipCache.set(key, v); }
+    if (!v) { v = ENGINE.buildSlip(open.map((r) => ({ m: r.m, a: r.a })), tier, target, { floor: S.slipFloor }); S.slipCache.set(key, v); }
     return v;
   }
   function slipFor(dayKeyStr, target, scope) { return ['C', 'B', 'A'].map((t) => slipTier(dayKeyStr, target, scope, t)); }
@@ -3660,18 +3680,21 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     renderStudio(); $('#slipsTitle').textContent = goal ? 'Goal seek' : 'Smart slips';
     for (const el of [$('#days-slips'), $('#slips'), ...document.querySelectorAll('#v-slips .filters, #v-slips .sl-only')]) if (el) el.hidden = goal;
     $('#goalBox').hidden = !goal;
-    $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.' : 'For the chosen day, the three likeliest combinations that still pay the target, no match in two of them. A slip lands only if every leg does, so fewer and fairer legs beat many safe-looking ones. Priced at a typical bookmaker’s odds; kicked-off games removed.';
+    $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.' : 'For the chosen day, the three likeliest combinations that pay your target, no match in two of them, with every leg at least as likely as you choose. Legs of 50% and up reach a target almost as surely as the fewest, longest legs; very short legs cost the most. Priced at a typical bookmaker’s odds; kicked-off games removed.';
     if (goal) { renderGoal(); return; }
     if (S.day === 'all') S.day = pickDefaultDay();
     renderDays('days-slips', false);
     $('#target').innerHTML = TARGETS.map((t) => `<button type="button" data-target="${t}" aria-pressed="${S.target === t}"><span class="mono">${t}</span></button>`).join('');
+    const ti = $('#tgtIn');
+    if (ti) { const own = !TARGETS.includes(S.target); ti.parentNode.classList.toggle('on', own); if (document.activeElement !== ti) ti.value = own ? tgtTxt(S.target) : ''; }
+    $('#slipFloor').innerHTML = SLIP_FLOOR_OPTS.map(([f, l]) => `<button type="button" data-slipfloor="${f}" aria-pressed="${S.slipFloor === f}">${l}</button>`).join('');
     $('#scope').value = S.scope;
     const n = S.rows.filter((r) => r.day === S.day && !r.started && r.a && inScope(r, S.scope)).length;
     const box = $('#slips');
     if (!n) { box.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>No open games for this day</b>Pick another day, or widen the scope.</div>`; return; }
-    const want = [S.day, S.target, S.scope, S.ver].join('|');
+    const want = [S.day, S.target, S.slipFloor, S.scope, S.ver].join('|');
     S.slipWant = want;
-    const cached = ['A', 'B', 'C'].every((t) => S.slipCache.has([S.ver, S.day, S.target, S.scope, t, n].join('|')));
+    const cached = ['A', 'B', 'C'].every((t) => S.slipCache.has([S.ver, S.day, S.target, S.slipFloor, S.scope, t, n].join('|')));
     if (!cached) box.innerHTML = ['A', 'B', 'C'].map((t) => `<article class="slip"><div class="slip-h"><div class="name"><span class="tier tier-${t}">${t}</span>${esc(SLIP_NAME[t])}</div><div class="band">Building…</div></div></article>`).join('');
     setTimeout(async () => {
       const out = [];
@@ -3692,12 +3715,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="slip-h"><div class="name"><span class="tier tier-${s.tier}">${s.tier}</span>${esc(SLIP_NAME[s.tier])}</div>
         <div class="band">${s.tier === 'A' ? 'The likeliest way to reach the target' : s.tier === 'B' ? 'The likeliest without slip A’s matches' : 'The likeliest without A’s or B’s matches'}${oneIn ? ` · about 1 in ${oneIn}` : ''}</div>
         <div class="slip-nums"><div><div class="v">${s.legs.length ? odds(s.odds) : '–'}</div><div class="l">total odds</div></div><div><div class="v">${s.legs.length ? pct(s.prob, 1) : '–'}</div><div class="l">to land</div></div><div><div class="v">${s.legs.length}</div><div class="l">legs</div></div></div></div>
-        ${s.legs.length ? `<ol>${s.legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pSlip || l.s.pAdj)}${l.s.real ? (l.s.best > l.s.price + 0.005 ? ` · best ${odds(l.s.best)}` : '') : ' · est'}</small></span><span class="fxl">${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</span></li>`).join('')}</ol>` : '<p class="note" style="padding:0 18px 12px">No combination left for this slip today.</p>'}
-        <div class="slip-f"><span class="${s.feasible ? 'lbl' : 'w'}">${s.legs.length ? (s.feasible ? `${s.real}/${s.legs.length} legs at a typical bookmaker’s real price${ev != null ? ' · EV ' + sgn(ev, 0) : ''}` : `Can't reach ${s.target} with what's left; closest shown`) : ''}</span>
+        ${s.legs.length ? `<div class="slip-rule">${s.floor > 0 ? `Every leg ${pct(s.floor, 0)} or more` : 'Any leg'} · longest leg ${odds(Math.max(...s.legs.map((l) => l.s.price)))} · safest leg ${pct(Math.max(...s.legs.map((l) => l.s.pSlip || l.s.pAdj)), 0)}</div>` : ''}
+        ${s.legs.length ? `<ol>${s.legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pSlip || l.s.pAdj)}${l.s.real ? (l.s.best > l.s.price + 0.005 ? ` · best ${odds(l.s.best)}` : '') : ' · est'}</small></span><span class="fxl">${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</span></li>`).join('')}</ol>` : `<p class="note" style="padding:0 18px 12px">No combination left for this slip today${S.slipFloor > 0 ? ` with every leg ${pct(S.slipFloor, 0)}+: lower “Every leg at least” or pick another day` : ''}.</p>`}
+        <div class="slip-f"><span class="${s.feasible ? 'lbl' : 'w'}">${s.legs.length ? (s.feasible ? `${s.real}/${s.legs.length} legs at a typical bookmaker’s real price${ev != null ? ' · EV ' + sgn(ev, 0) : ''}` : `Can't reach ${tgtTxt(s.target)} ${s.floor > 0 ? `with legs of ${pct(s.floor, 0)}+ from what's left` : `with what's left`}; closest shown${s.floor > 0 ? '. Lower “Every leg at least” or pick another day' : ''}`) : ''}</span>
         <div class="slip-acts"><button type="button" class="btn" data-shareslip="${s.tier}" ${s.legs.length ? '' : 'disabled'} aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg>Share</button>
         <button type="button" class="btn pri" data-addslip="${s.tier}" ${s.legs.length ? '' : 'disabled'}>Add to coupon</button></div></div>
       </article>`;
-    }).join(''), ['sl', S.day, S.target, S.scope].join('|'), true);
+    }).join(''), ['sl', S.day, S.target, S.slipFloor, S.scope].join('|'), true);
     S.lastSlips = slips;
   }
 
@@ -4081,6 +4105,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // ideas tested on games the model never saw: what went live and what didn't, with the numbers
   const RESEARCH = [
+    ['kept', 'Slips: every leg at least 50% by default, any target odds', 'A leg carries about 5% of margin from 1.20 to 2.00 and 8–10% beyond 2.50, so legs of 1.4 to 1.9 reach a target almost as surely as two long ones, while legs under 1.3 cost the most. 1,927 match days replayed through the deployed builder, every target from 2 to 1,000 odds.', 'chance by the closing prices, legs of 50%+ against any legs: 5 odds 18.9% vs 19.1%; 10 odds 9.1% vs 9.4% (4.5 legs vs 2.4, longest 1.85 vs 4.4); 20 odds 4.3% vs 4.6%; 100 odds 0.78% vs 0.88%'],
+    ['kept', 'Legs of 60%+, on request', 'Every leg at least 60% likely (about 1.6 at most): more legs, a little less chance.', '10 odds: 8.5% by the closing prices with six legs, against 9.1% for 50%+'],
+    ['off', 'Very short legs, the “sure picks” way', 'Every leg capped at 1.30 or 1.40.', '10 odds: 6.6% (10.5 legs) and 7.6% (8.4 legs) by the closing prices, against 9.1%'],
+    ['off', 'Rating slip legs on their cautious chance', 'Each leg scored on its chance minus its uncertainty instead of its chance.', '10 odds, legs up to 2.0: 8.93% against 9.11% by the closing prices'],
+    ['kept', 'Short and long legs are stated equally honestly', 'The engine’s chance against what landed, by price band, on 684,647 legs.', 'landed ÷ stated 0.98 to 1.05 in every band from 1.0 to 4.5 and up; chance × price 0.95 up to 2.0, 0.92 from 2.5 to 4.5, 0.90 beyond'],
     ['kept', 'Pulse: game-by-game ratings blended into the season-long fit', 'An extended Kalman filter on log expected goals: each result moves a side’s attack and defence by how surprising it was and how sure the filter already was, and the league’s scoring level is a running average of about a season and a half. Blended with the season-long fit separately on the goal level and on the gap between the sides. Settings fitted on 37,681 games from July 2023 to June 2025 in 85 leagues; judged on the 30,371 from July 2025, replayed through the deployed code with two seasons of results, as the pipeline holds them.', 'unpriced leagues (21,531 games): 1X2 log loss 1.0056 → 1.0045 (95% range of the gain +0.0003 to +0.0018), over/under 2.5 0.6690 → 0.6647 (+0.0028 to +0.0057); main European leagues (8,840): 1X2 1.0178 → 1.0147 (+0.0019 to +0.0043), over/under 0.6877 → 0.6843 (+0.0021 to +0.0046)'],
     ['kept', 'Widening the gap between the sides', 'Favourites won about four points more often than the ratings said, at every level of confidence and in both kinds of league. The gap between two sides’ expected goals is now widened by a fifth (by 30% where shots count), around the home edge, so the goal level is untouched.', 'unpriced leagues, picks stated 70% or more: said 75.9%, won 79.4% before; said 76.6%, won 78.5% now, with a third more games reaching 70%'],
     ['kept', 'Promoted and relegated sides carried across divisions', 'A side moving up or down brings its rating from its old division through a fitted exchange rate (promoted: 90% of its rating, then a step down; relegated: 30% of it, then a step up), instead of one newcomer value for everyone. Sixteen pyramids, wherever the names match across divisions.', 'the pyramid leagues on the fitting seasons: 1.7121 → 1.7095 against the plain newcomer prior'],
@@ -4161,12 +4190,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       return `<tr><td><span class="tier tier-${t}">${t}</span>${SLIP_NAME[t]}</td><td>${r[0]}</td><td>${r[1]}</td><td>${r[0] ? pct(r[1] / r[0], 0) : '–'}</td><td class="hide-sm">${r[0] ? pct(r[3] / r[0], 1) : '–'}</td><td class="${r[2] > 0 ? 'edge-pos' : ''}">${r[0] ? (r[2] >= 0 ? '+' : '') + r[2].toFixed(2) : '–'}</td></tr>`;
     }).join('');
     const s1 = g.slips_v1, s1n = s1 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s1[t] || [0])[0]), 0) : 0, s1w = s1 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s1[t] || [0, 0])[1]), 0) : 0;
+    const s2 = g.slips_v2, s2n = s2 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s2[t] || [0])[0]), 0) : 0, s2w = s2 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s2[t] || [0, 0])[1]), 0) : 0;
     const recent = (T.open || []).slice(-4).reverse().concat((T.slips || []).slice(-8).reverse());
     return `<div class="tk-tiles" role="group" aria-label="Entry level">${tiles}</div>
       ${tkCard(T, X[S.tkT])}
       <div class="trk-grid">
         <div class="card"><h4>Slips at ${T.target || 10} odds <span>1 unit on each</span></h4>
           <div class="tt-wrap"><table class="tt"><thead><tr><th>Slip</th><th>Played</th><th>Won</th><th>Hit</th><th class="hide-sm">Said</th><th>Units</th></tr></thead><tbody>${slipRows}</tbody></table></div>
+          ${s2n ? `<p class="note">Before every leg had to be at least 50% likely (v64), ${s2n} slips were built from any legs and ${s2w} won; they are kept apart.</p>` : ''}
           ${s1n ? `<p class="note">Before the slip builder changed on 22 November, ${s1n} slips were built level by level and ${s1w} won; they are kept apart.</p>` : ''}
           ${g.void ? `<p class="note">${g.void} slips voided after a postponed game.</p>` : ''}
           ${recent.length ? `<div class="tk-sec"><h5>Latest slips</h5>${slipList(recent)}</div>` : ''}</div>
@@ -4403,7 +4434,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>Tiers use the <b>cautious chance</b>: the stated chance minus one standard deviation of it. The spread comes from the ratings' standard errors and the market's (fewer bookmakers or older prices mean more), mixed by their shares in the blend, so a pick resting on thin data or a thin market drops a tier. The top pick is the one with the highest cautious chance. On the match page, chances of 50% or more show their cautious value underneath.</p>
       <p><b>Nearly definite</b> picks have a cautious chance of 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. Picks lose a 3-point safety haircut when they rest on the model alone. When model and market disagree by more than 12 points the cautious chance loses another 3, and 1 more when prices are over a day and a half old; those two only make Statpad more careful about the tier, so the stated chance stays its best estimate (on three replayed seasons, picks that used to be cut for disagreement landed 85% of the time against a stated 81%). Big games between two top-six sides are kept out of the two safest tiers.</p>
       <h3>How slips are built</h3>
-      <p>A slip lands only if every leg lands, so its chance is the product of its legs' chances. With the total odds fixed, that product is one over the total odds, times each leg's chance × its price. A fairly priced leg has chance × price = 1; a bookmaker's margin makes it less than 1, and every extra leg multiplies that loss in. So a pile of “safe” legs is the least likely way to reach big odds: twenty legs at 1.12 each, all landing, is far less likely than three legs at 2.15. Smart slips therefore search the whole day for the combination whose chances multiply to the most while its prices still reach the target (the fewest and fairest legs that get there, one leg a match), using a typical bookmaker's price (the average across bookmakers), and build three: the best, the second best without the first one's matches, and the third best without either's. No leg counts as more likely than the bookmakers' own consensus says, so a chance Statpad's corrections have nudged above the market's can't win a leg its place. Replayed on seven seasons of 19 leagues (1,927 match days), at 10 odds the old slips, built level by level, had a chance by the closing prices of 3.4% (Nearly definite, 22 legs on average), 6.6% (Highly possible, 10 legs) and 8.0% (Possible, 6 legs), and landed 5.4%, 6.9% and 8.1%; the new ones have 9.4%, 9.3% and 9.4% and landed 10.3%, 9.6% and 10.7%, with two or three legs each. At 5 odds: from 9.9%, 15.2% and 17.2% to about 19.1%; at 2 odds from 39.9%, 45.9% and 47.7% to about 49.4%. About one in ten is the ceiling at 10 odds at a typical bookmaker's prices: the price itself says roughly how likely a slip is, and only a better price (shopping around: the best price anywhere took the new slips to about 11%) or a lower target raises it. Rating legs on more than their chance was tested too (the market's memory, the price outlook's forecast, recent shots on target, the price level, the model's uncertainty, the league's tier): on 741,780 replayed legs, once the market sets the chance, together they improved it by nothing measurable (+0.012 per 1,000 in log loss), so legs are judged on chance and price alone.</p>
+      <p>A slip lands only if every leg lands, so its chance is the product of its legs' chances. With the total odds fixed, that product is one over the total odds, times each leg's chance × its price. A fairly priced leg has chance × price = 1; a bookmaker's margin makes it less than 1, and every leg multiplies its loss in. On seven seasons of 19 leagues at a typical bookmaker's prices, that loss is about 5% a leg from 1.20 to 2.00 and 8 to 10% beyond 2.50, but a leg under 1.30 buys so little price that it costs the most chance for the odds it adds. So since v64 every leg must be at least 50% likely by default (more likely to land than not; you can choose 60%, or any leg), and you can type any target odds from 1.1 to 10,000. Smart slips search the whole day for the combination whose chances multiply to the most while its prices reach the target (one leg a match, at the average price across bookmakers), and build three: the best, the second best without the first one's matches, and the third best without either's. No leg counts as more likely than the bookmakers' own consensus says, and a leg whose cautious chance sits more than ten points under the minimum (thin data) is left out. Replayed through the deployed builder on 1,927 match days, the chance by the closing prices with legs of 50%+ against any legs: at 5 odds 18.9% against 19.1% (3.2 legs against 2.0); at 10 odds 9.1% against 9.4% (4.5 legs, the longest about 1.85, against 2.4 legs, the longest about 4.4); at 20 odds 4.3% against 4.6% (5.8 legs against 2.8); at 100 odds 0.78% against 0.88% (8.8 legs against 3.8). Legs of 60%+ cost a little more (8.5% at 10 odds, six legs), and legs capped at 1.30 the most (6.6%, ten legs). Whatever the legs, a slip's chance is set mostly by its target: the surest way to a safer slip is a lower target.</p>
       <h3>Self-tuning</h3>
       <p>${d.calib && d.calib.on ? `On, from ${d.calib.n} graded top picks.` : `Learning: ${(d.calib && d.calib.n) || 0} of ${(d.calib && d.calib.need) || 150} graded top picks.`} Every update compares the chances Statpad stated (before any correction) with what landed over the last 90 days, and fits a small correction on the log-odds scale. A prior centred on “no change” keeps the correction modest until there is plenty of evidence. The correction applies to stated chances, tiers and slips.</p>
       <h3>Tuning</h3>
@@ -10823,7 +10854,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function aSlip(d, target) {
     if (!d) return { lead: T('There are no games for a slip yet.', 'Hakuna mechi za kutosha kwa mkeka.') };
     const open = S.rows.filter((r) => r.day === d.key && !r.started && r.a).map((r) => ({ m: r.m, a: r.a }));
-    const best = ['A', 'B', 'C'].map((t) => ENGINE.buildSlip(open, t, target)).filter((x) => x.feasible && x.legs.length).sort((x, y) => y.prob - x.prob)[0];
+    const best = ['A', 'B', 'C'].map((t) => ENGINE.buildSlip(open, t, target, { floor: S.slipFloor })).filter((x) => x.feasible && x.legs.length).sort((x, y) => y.prob - x.prob)[0];
     if (!best) return { lead: T(`Statpad can't build a ${target}-odds slip from ${dayWord(d.key)}'s games.`, `Statpad haiwezi kutengeneza mkeka wa odds ${target} kwa mechi za ${dayWord(d.key)}.`) };
     S.askSlip = best;
     return { lead: T(`A ${target}-odds slip for ${dayWord(d.key)} (${best.name.toLowerCase()}): ${best.legs.length} picks, total odds ${odds(best.odds)}, about ${pct(best.prob, 1)} to land.`,
@@ -11055,7 +11086,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (has(/\b(value|edge|best price|overpriced|underpriced|thamani)\b/)) return set({ k: 'value' }, aValue(anyDay ? askDay(t) : null));
     const mt = t.match(/\bodds? (?:of )?(\d+(?:\.\d+)?)\b|\b(\d+(?:\.\d+)?) ?(?:x |-)?odds?\b/);
     if ((mt && !found.length) || has(/\b(slip|slips|acca|accumulator|multi ?bet|mkeka|tiketi|combo)\b/)) {
-      const tg = Math.min(500, Math.max(1.5, mt ? +(mt[1] || mt[2]) : S.target));
+      const tg = Math.min(10000, Math.max(1.1, mt ? +(mt[1] || mt[2]) : S.target));
       return set({ k: 'slip', tg }, aSlip(askDay(t), tg));
     }
     if (found.length) {
@@ -11580,7 +11611,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (ls.length) sl = { legs: ls.sort((x, y) => (x.m.ko > y.m.ko ? 1 : -1)), odds: ls.reduce((o, l) => o * l.s.price, 1), prob: ls.reduce((o, l) => o * l.s.pAdj, 1), name: T(`${ls.length}-leg slip`, `Mkeka wa machaguo ${ls.length}`) };
       if (sl && !legs && target && sl.odds < target * 0.9) { if (f.auto && f.days) return sSlip(Object.assign({}, f, { days: null, auto: false }), target, legs, alt); target = null; }
     } else {
-      const tg = target || S.target, opts = ['A', 'B', 'C'].map((t) => ENGINE.buildSlip(pool, t, tg)).filter((x) => x.feasible && x.legs.length).sort((x, y) => y.prob - x.prob);
+      const tg = target || S.target, opts = ['A', 'B', 'C'].map((t) => ENGINE.buildSlip(pool, t, tg, { floor: S.slipFloor })).filter((x) => x.feasible && x.legs.length).sort((x, y) => y.prob - x.prob);
       sl = opts[(alt || 0) % Math.max(1, opts.length)] || null;
       if (!sl && f.auto && f.days) return sSlip(Object.assign({}, f, { days: null, auto: false }), target, legs, alt);
       if (!sl) return vaSet({ kind: 'slip', f, target: tg }, { kind: 'slip', lead: T(`Statpad can't build a ${tg}-odds slip from ${vaScope(f)}'s games. Try smaller odds or more days.`, `Statpad haiwezi kutengeneza mkeka wa odds ${tg} kwa ${vaScope(f)}.`), chips: [T('Give me a 5 odds slip', 'Nipe mkeka wa odds 5'), T('This weekend', 'Wikendi hii')] });
@@ -11732,7 +11763,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     [/\b(handicap)\b/, ['A handicap gives one side a head start: Arsenal −1.5 wins only if Arsenal win by 2 or more; Chelsea +1.5 wins unless Chelsea lose by 2 or more.', 'Handicap inaipa timu moja faida: Arsenal −1.5 inashinda tu Arsenal wakishinda kwa magoli 2 au zaidi.']],
     [/\b(over under|over 2\.5 mean|over 1\.5 mean|what is over)\b/, ['Over 2.5 goals wins if there are 3 or more goals in the game; under 2.5 wins with 2 or fewer. The same idea for 1.5, 3.5 and so on.', 'Zaidi ya 2.5 inashinda kukiwa na magoli 3 au zaidi; chini ya 2.5 inashinda magoli 2 au chache.']],
     [/\b(both teams to score mean|what is btts|what is both teams)\b/, ['Both teams to score (GG) wins if each side scores at least once, whatever the result.', 'Timu zote kufunga (GG) inashinda kila timu ikifunga angalau goli moja.']],
-    [/\b(accumulator|multi bet|what is a slip|how do slips work|mkeka ni)\b/, ['A slip (accumulator) joins several picks into one bet: the odds multiply, and so do the chances, so every leg must land. Its chance is one over the total odds, times each leg\'s chance × price, and a bookmaker\'s margin makes that less than 1 for every leg, so piling up safe-looking legs is the least likely way to big odds. Statpad builds the three likeliest combinations at your target, the fewest and fairest legs that reach it, no match in two of them. On seven past seasons its 10-odds slips have about a 9% chance each by the closing prices, where the old safe-leg slips had 3% to 8%; about one in ten is the most 10 odds can be at a typical bookmaker.', 'Mkeka unaunganisha machaguo kadhaa kuwa bet moja: odds zinazidishana, na nafasi pia, kwa hiyo kila chaguo lazima lishinde. Statpad inatengeneza mikeka mitatu yenye nafasi kubwa zaidi kwa odds unazotaka: machaguo machache na ya haki zaidi, bila mechi moja kwenye mikeka miwili. Kwa odds 10, nafasi ni karibu moja kwa kumi.']],
+    [/\b(accumulator|multi bet|what is a slip|how do slips work|mkeka ni)\b/, ['A slip (accumulator) joins several picks into one bet: the odds multiply, and so do the chances, so every leg must land. At a given total odds the chance sits in a narrow band however the slip is split: about one in ten at 10 odds at a typical bookmaker. Statpad builds the three likeliest combinations at your target (any odds you type), no match in two of them, with every leg at least 50% likely by default (you can choose 60%, or any leg). On seven past seasons, 10-odds slips of 50%+ legs (four or five legs of about 1.4 to 1.9) had a 9.1% chance by the closing prices, against 9.3% for the fewest, longest legs; legs under 1.3 are the costliest way there (6.6%). To make a slip really safer, lower the target.', 'Mkeka unaunganisha machaguo kadhaa kuwa bet moja: odds zinazidishana, na nafasi pia, kwa hiyo kila chaguo lazima lishinde. Kwa odds fulani, nafasi inakaribiana vyovyote mkeka utakavyogawanywa: karibu moja kwa kumi kwa odds 10. Statpad inatengeneza mikeka mitatu yenye nafasi kubwa zaidi kwa odds unazoandika, kila chaguo likiwa na nafasi ya 50% au zaidi (unaweza kuchagua 60%, au yoyote). Ili mkeka uwe salama zaidi, punguza odds.']],
     [/\b(cash ?out|kutoa pesa)\b/, ['Cash-out is the bookmaker buying your bet back before it ends. Under Slips → My bets, Statpad shows what a running bet is worth on average from the live chances, so you can tell a fair offer from a poor one.', 'Cash-out ni mbeti kununua bet yako kabla haijaisha. Kwenye Slips → My bets, Statpad inaonyesha thamani ya bet yako sasa.']],
     [/\b(tax|kodi)\b/, ['Statpad takes off the tax on winnings you set under Bets (15% by default, Uganda\'s rate on winnings) when it works out returns and break-even odds.', 'Statpad inatoa kodi ya ushindi uliyoweka kwenye Bets (15% kwa kawaida) inapohesabu mapato.']],
     [/\b(log loss|brier)\b/, ['Log loss and the Brier score measure how good stated chances were: lower is better. Log loss punishes confident misses hardest. The Lab compares Statpad with the bookmakers on both.', 'Log loss na Brier zinapima ubora wa nafasi zilizotajwa: chini ni bora.']],
@@ -13067,6 +13098,17 @@ void main() {
       </tbody></table></div>
       <p class="note">Long shots buy odds with few legs, but each one rarely lands; safer legs need more of them, and every extra leg is another way to lose. Statpad finds the likeliest slip for each minimum so you can see what the trade costs. Tap a row to use it.</p></div>`;
   }
+  // your own target odds (v64): applied on Enter or when the box loses focus
+  function setOwnTarget(el) {
+    const raw = String(el.value || '').trim().replace(',', '.');
+    if (!raw) { el.parentNode.classList.toggle('on', !TARGETS.includes(S.target)); return; }
+    const v = Math.round(parseFloat(raw) * 100) / 100;
+    if (!tgtOk(v)) { toast('Type target odds between 1.1 and 10,000'); el.value = TARGETS.includes(S.target) ? '' : tgtTxt(S.target); return; }
+    if (v === S.target) return;
+    S.target = v; store.set('target', v); render();
+  }
+  document.addEventListener('change', (e) => { if (e.target.id === 'tgtIn') setOwnTarget(e.target); });
+  document.addEventListener('keydown', (e) => { if (e.target.id === 'tgtIn' && e.key === 'Enter') { e.preventDefault(); setOwnTarget(e.target); e.target.blur(); } });
   function renderGoal() {
     const box = $('#goalBox'); if (!box) return;
     const g = S.gs, cur = esc(S.bcfg.cur);
@@ -13423,7 +13465,7 @@ void main() {
 
   // ---------------- events ----------------
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-tab],[data-add],[data-open],[data-day],[data-target],[data-edge],[data-stake],[data-rm],[data-addslip],[data-shareslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn,#installBtn,#installTipX');
+    const t = e.target.closest('[data-tab],[data-add],[data-open],[data-day],[data-target],[data-slipfloor],[data-edge],[data-stake],[data-rm],[data-addslip],[data-shareslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn,#installBtn,#installTipX');
     if (!t) return;
     if (t.dataset.tab) { e.preventDefault(); setTab(t.dataset.tab); return; }
     if (t.dataset.add) { e.stopPropagation(); const [id, key] = t.dataset.add.split('|'); toggleCoupon(id, key); buzz(inCoupon(id, key) ? 12 : 6); if (inCoupon(id, key)) flyToBets(t); if (S.tab === 'coupon') renderCoupon(); if (key.startsWith('Q:')) paintQx(); return; }
@@ -13431,6 +13473,7 @@ void main() {
     if (t.dataset.open) { openMatch(t.dataset.open, t); return; }
     if (t.dataset.day) { if (S.day === t.dataset.day) { dayCentre(); return; } const ks = [...t.parentNode.querySelectorAll('[data-day]')].map((b) => b.dataset.day); MOTION_DX = Math.sign(ks.indexOf(t.dataset.day) - ks.indexOf(S.day)); S.day = t.dataset.day; S.shown = 60; buzz(5); render(); dayCentre(); setTimeout(() => { MOTION_DX = 0; }, 400); return; }
     if (t.dataset.target) { S.target = +t.dataset.target; store.set('target', S.target); render(); return; }
+    if (t.dataset.slipfloor != null) { S.slipFloor = +t.dataset.slipfloor; store.set('slipFloor', S.slipFloor); buzz(8); render(); return; }
     if (t.dataset.edge) { S.minEdge = +t.dataset.edge; store.set('minEdge', S.minEdge); renderValue(); return; }
     if (t.dataset.stake) { S.stakeMode = t.dataset.stake; store.set('stakeMode', S.stakeMode); renderCoupon(); return; }
     if (t.dataset.rm) { S.coupon.splice(+t.dataset.rm, 1); saveCoupon(); renderCoupon(); return; }

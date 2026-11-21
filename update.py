@@ -5792,7 +5792,7 @@ for (const m of inp.matches) {
 for (const [d, list] of Object.entries(byDay)) {
   out.slips[d] = ['C', 'B', 'A'].map((t) => {
     const sl = E.buildSlip(list, t, inp.target);
-    return { t, f: sl.feasible, o: sl.odds, p: sl.prob, b: E.buildSlips ? 2 : 1,
+    return { t, f: sl.feasible, o: sl.odds, p: sl.prob, b: E.SLIP_B || (E.buildSlips ? 2 : 1),
       legs: sl.legs.map((l) => ({ id: l.m.id, k: l.s.key, pr: l.s.price, pp: l.s.pSlip || l.s.pAdj, r: !!l.s.real, ko: l.m.ko, h: l.m.h, a: l.m.a })) };
   });
 }
@@ -6033,10 +6033,14 @@ def load_track(state):
     # records made before value bets, Brier scores and engine versions were kept
     for k, v in (('br', [0, 0.0, 0.0, 0.0]), ('vb', new_vb()), ('vbb', {}), ('ver', {})):
         tr['agg'].setdefault(k, v)
-    if tr['agg'].get('slips_b') != 2:   # v62: slips are built a new way; the old ones' results are kept apart
+    if tr['agg'].get('slips_b') not in (2, 3):   # v62: slips are built a new way; the old ones' results are kept apart
         tr['agg']['slips_v1'] = tr['agg'].get('slips') or {t: [0, 0, 0.0, 0.0] for t in 'ABC'}
         tr['agg']['slips'] = {t: [0, 0, 0.0, 0.0] for t in 'ABC'}
         tr['agg']['slips_b'] = 2
+    if tr['agg'].get('slips_b') == 2:   # v64: every leg at least 50% likely; the v62 slips' results are kept apart too
+        tr['agg']['slips_v2'] = tr['agg'].get('slips') or {t: [0, 0, 0.0, 0.0] for t in 'ABC'}
+        tr['agg']['slips'] = {t: [0, 0, 0.0, 0.0] for t in 'ABC'}
+        tr['agg']['slips_b'] = 3
     tr.setdefault('vbets', [])
     state['track'] = tr
     return tr, repo
@@ -6341,8 +6345,9 @@ def track_update(doc, state):
             tr['slips'].append(s)
             if res == 'void':
                 agg['void'] += 1
-            else:   # slips from the old level-by-level builder count apart from the new ones (v62)
-                a = (agg['slips'] if s.get('b') == 2 else agg.setdefault('slips_v1', {t: [0, 0, 0.0, 0.0] for t in 'ABC'}))[s['t']]
+            else:   # slips from older builders count apart from the current one (v62: level by level; v64: any legs)
+                b_ = s.get('b', 1)
+                a = (agg['slips'] if b_ == 3 else agg.setdefault('slips_v2' if b_ == 2 else 'slips_v1', {t: [0, 0, 0.0, 0.0] for t in 'ABC'}))[s['t']]
                 a[0] += 1; a[1] += int(res == 'won'); a[2] = round(a[2] + (s['o'] - 1 if res == 'won' else -1), 3)
                 a[3] = round(a[3] + s['p'], 4)
             changed = True
