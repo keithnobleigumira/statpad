@@ -569,6 +569,81 @@ canvas.shk-cv.big { height: min(calc(64vh / var(--z, 1)), 600px); border-radius:
 .gs-ch text { font: 500 11.5px var(--f-mono); font-variant-numeric: tabular-nums; fill: var(--ink-3); }
 .gs-ch .gr { stroke: var(--rule-2); stroke-width: 1; } .gs-ch .ln { fill: none; stroke: var(--cobalt); stroke-width: 2.5; } .gs-ch .ar { fill: color-mix(in srgb, var(--cobalt) 14%, transparent); }
 .gs-ch .gl { stroke: var(--red); stroke-dasharray: 4 4; } .gs-ch .gd { fill: var(--red); stroke: var(--card); stroke-width: 2; } .gs-ch .gt { fill: #fff; font-weight: 700; font-size: 12px; } .gs-ch .gb { fill: var(--red); }
+/* v68: Bankers and slips by certainty */
+.bk-wrap { display: grid; gap: 12px; }
+.bk-wrap > .card { margin: 0; min-width: 0; }
+@media (min-width: 900px) { .bk-wrap { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } .bk-wrap > .bk-full { grid-column: 1 / -1; } }
+.bk-dial { display: grid; gap: 4px; }
+.bk-g { width: 100%; max-width: 400px; height: auto; display: block; margin: 0 auto; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; overflow: visible; }
+.bk-g .bk-base { fill: none; stroke: var(--rule); stroke-width: 16; stroke-linecap: round; }
+.bk-g .bk-on { fill: none; stroke: url(#bkGrad); stroke-width: 16; stroke-linecap: round; transition: stroke-dasharray .6s var(--spring); }
+.bk-g .bk-tk { stroke: var(--ink-3); stroke-width: 1.5; stroke-linecap: round; } .bk-g .bk-tk.off { opacity: .3; }
+.bk-g .bk-tl { font: 600 11px var(--f-mono); font-variant-numeric: tabular-nums; fill: var(--ink-3); }
+.bk-g .bk-ol { font: 650 11px var(--f-mono); font-variant-numeric: tabular-nums; fill: var(--ink-2); }
+.bk-g .bk-big { font: 760 50px var(--f-display); font-stretch: 110%; letter-spacing: -.02em; font-variant-numeric: tabular-nums; fill: var(--ink); }
+.bk-g .bk-sm { font: 500 12.5px var(--f-body); fill: var(--ink-3); }
+.bk-g .bk-pay { font: 650 15px var(--f-mono); font-variant-numeric: tabular-nums; fill: var(--ink); }
+.bk-g .bk-kn { transform-box: view-box; transform-origin: 160px 170px; transition: transform .6s var(--spring); }
+.bk-g .bk-kn circle { fill: var(--card); stroke: var(--ink); stroke-width: 3.5; }
+.bk-rng { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; margin: 4px 0 0; background: transparent; cursor: pointer; }
+.bk-rng::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--pitch), var(--yellow) 55%, var(--red)); }
+.bk-rng::-moz-range-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--pitch), var(--yellow) 55%, var(--red)); }
+.bk-rng::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -9px; border-radius: 50%; background: var(--card); border: 3.5px solid var(--ink); box-shadow: 0 2px 8px rgba(0, 0, 0, .35); }
+.bk-rng::-moz-range-thumb { width: 19px; height: 19px; border-radius: 50%; background: var(--card); border: 3.5px solid var(--ink); }
+.bk-rng:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 4px; border-radius: 8px; }
+.bk-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-top: -2px; }
+.bk-proof { margin-top: 8px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--sunk); font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.bk-proof p { margin: 0 0 4px; } .bk-proof p:last-child { margin: 0; } .bk-proof b { color: var(--ink); }
+.bk-proof .bk-1in { color: var(--ink-3); font-size: 12.5px; }
+.bk-sn { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 6px; }
+.bk-sn div { display: grid; gap: 1px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--sunk); }
+.bk-sn b { font: 720 20px var(--f-display); font-variant-numeric: tabular-nums; } .bk-sn b.mono { font-family: var(--f-mono); font-weight: 650; }
+.bk-sn small { font-size: 11.5px; color: var(--ink-3); }
+.bk-slip .gs-legs li { cursor: pointer; } .bk-slip .gs-legs small .crp { margin-right: 4px; }
+.bk-slip .note { margin: 10px 0 0; }
+.bk-mins { margin: 0 0 6px; } .bk-mins .n { font: 650 10.5px/1 var(--f-body); font-variant-numeric: tabular-nums; padding: 3px 6px; border-radius: 99px; background: var(--sunk); color: var(--ink-2); margin-left: 6px; }
+.bk-mins [aria-pressed="true"] .n { background: var(--cobalt); color: var(--cobalt-ink); }
+.bk-rows { list-style: none; margin: 0; padding: 0; display: grid; }
+.bk-r { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto 30px; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--rule-2); cursor: pointer; }
+.bk-r:first-child { border-top: 0; }
+.bk-q { position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: conic-gradient(var(--pitch) calc(var(--q) * 1%), var(--sunk) 0); }
+.bk-q::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--card); }
+.bk-q b { position: relative; font: 720 15.5px var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.bk-q small { font-size: 9.5px; font-weight: 650; color: var(--ink-3); }
+.bk-m { display: grid; gap: 2px; min-width: 0; }
+.bk-m b { font-size: 14.5px; line-height: 1.25; }
+.bk-m .fxl, .bk-m small { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bk-m .crp { margin-right: 4px; }
+.bk-m .bk-ev { color: var(--ink-2); } .bk-ev i { font-style: normal; color: var(--pitch); font-weight: 700; }
+.bk-pr { text-align: right; font: 650 15px var(--f-mono); font-variant-numeric: tabular-nums; } .bk-pr small { display: block; font: 500 10px var(--f-mono); color: var(--ink-3); }
+.bk-r .add { margin: 0; }
+.bk-more { width: 100%; justify-content: center; margin-top: 8px; }
+.bk-list .note, .bk-rec .note { margin: 10px 0 0; }
+.bk-lg { display: flex; gap: 16px; font-size: 12px; color: var(--ink-3); margin: -4px 0 8px; } .bk-lg span { display: inline-flex; align-items: center; gap: 6px; }
+.bk-lg i, .bk-tr i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.bk-lg i.s, .bk-tr i.s { border: 2px solid var(--ink-2); background: var(--card); } .bk-lg i.g, .bk-tr i.g { background: var(--pitch); box-shadow: 0 0 0 2px var(--card); }
+.bk-recg { display: grid; gap: 14px; }
+@media (min-width: 900px) { .bk-full .bk-recg { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; } }
+.bk-recg h5 { margin: 0 0 6px; font: 650 13px var(--f-body); color: var(--ink-2); }
+.bk-dp { display: grid; }
+.bk-dr { display: grid; grid-template-columns: 60px minmax(0, 1fr) 76px; gap: 10px; align-items: center; min-height: 32px; }
+.bk-dr .l { font: 600 12.5px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.bk-tr { position: relative; height: 18px; margin: 0 6px; }
+.bk-tr::before { content: ""; position: absolute; left: -6px; right: -6px; top: 8px; height: 2px; background: var(--rule); border-radius: 1px; }
+.bk-tr b { position: absolute; top: 7px; height: 4px; border-radius: 2px; } .bk-tr b.up { background: color-mix(in srgb, var(--pitch) 55%, transparent); } .bk-tr b.dn { background: color-mix(in srgb, var(--red) 60%, transparent); }
+.bk-tr i { position: absolute; top: 3px; margin-left: -6px; }
+.bk-dr .v { font: 650 13px var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; line-height: 1.15; } .bk-dr .v small { display: block; font: 500 10.5px var(--f-body); color: var(--ink-3); }
+.bk-ax { display: grid; grid-template-columns: 60px minmax(0, 1fr) 76px; gap: 10px; } .bk-ax span:nth-child(2) { display: flex; justify-content: space-between; font: 500 10.5px var(--f-mono); color: var(--ink-3); }
+.bk-ax i { font-style: normal; }
+.bk-live { margin: 12px 0 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; } .bk-live b { color: var(--ink); }
+.bk-rcnt { list-style: none; margin: 10px 0 0; padding: 0; display: grid; }
+.bk-rcnt li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--rule-2); }
+.bankc { grid-area: bank; } .home-grid > .feed { grid-area: feed; } .home-grid > .nextk { grid-area: next; }
+.home-grid { grid-template-areas: "bank" "feed" "next"; }
+@media (min-width: 1100px) { .home-grid { grid-template-areas: "feed bank" "feed next"; } }
+.bankc .bk-r { grid-template-columns: 44px minmax(0, 1fr) auto 30px; padding: 9px 0; } .bankc .bk-q { width: 44px; height: 44px; }
+.bk-foot { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 10px 0 8px; border-top: 1px solid var(--rule-2); font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
+.bk-foot b { color: var(--ink); }
 /* Talk to Statpad */
 /* WhatsApp Status pack */
 .st-intro { margin-top: 0; }
@@ -1899,6 +1974,94 @@ svg.ic-star { fill: none; }   /* the star's inside is filled only when on */
 .mth-toc button { border: 1px solid var(--rule); background: var(--card); color: var(--ink-2); border-radius: 99px; padding: 6px 11px; font: 600 12.5px/1.2 var(--f-body); cursor: pointer; }
 .mth-toc button:hover { color: var(--ink); border-color: var(--ink-3); }
 .mth { content-visibility: auto; contain-intrinsic-size: auto 900px; scroll-margin-top: 76px; }
+/* ---------- v67: the rule tester ---------- */
+.rl-ctl { display: grid; gap: 12px; }
+@media (min-width: 1100px) {
+  #rulesBox { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 0 18px; align-items: start; }
+  #rulesBox > .rl-ctl { position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow-y: auto; }
+  #rulesBox > .rl-wait { grid-column: 1 / -1; }
+  #rulesBox .rl-chips.scroll { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+  #rlPill.rl-pill { display: none; }
+}
+.rl-row { display: grid; gap: 7px; }
+.rl-lab { font: 650 12.5px/1.2 var(--f-body); color: var(--ink-2); }
+.rl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rl-chips.scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 2px; }
+.rl-chips.scroll::-webkit-scrollbar { display: none; }
+.rl-chips button { flex: none; height: 34px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--rule); background: var(--card); color: var(--ink-2); font: 650 13px/1 var(--f-body); white-space: nowrap; cursor: pointer; }
+.rl-chips button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.rl-px { display: flex; gap: 10px; flex-wrap: wrap; }
+.rl-px label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.rl-px input, .rl-ctl select { height: 38px; border-radius: 10px; border: 1px solid var(--rule); background: var(--sunk); color: var(--ink); font: 650 14px/1 var(--f-body); padding: 0 10px; }
+.rl-px input { width: 92px; font-variant-numeric: tabular-nums; }
+.rl-ctl select { width: 100%; max-width: 360px; }
+#rlEdge.off { opacity: .45; }
+#rlEdge.off::after { content: 'Only with the best price: a typical bookmaker’s price is always below the fair price.'; font-size: 12px; color: var(--ink-3); }
+.rl-more { border-top: 1px solid var(--rule-2); padding-top: 10px; }
+.rl-more summary { cursor: pointer; font: 650 13.5px/1.3 var(--f-body); color: var(--ink); padding: 4px 0; }
+.rl-more[open] summary { margin-bottom: 10px; }
+.rl-more > .rl-row + .rl-row { margin-top: 12px; }
+.rl-mnote { margin: 8px 0 0; }
+.rl-wait { display: grid; justify-items: start; gap: 6px; }
+.rl-wait span { font-size: 13px; color: var(--ink-3); }
+.rl-spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--rule); border-top-color: var(--cobalt); animation: rlspin .9s linear infinite; }
+@keyframes rlspin { to { transform: rotate(360deg); } }
+.rl-v { margin-top: 14px; padding: 14px 16px; border-radius: var(--r); border: 1px solid var(--rule); background: var(--card); }
+.rl-v b { display: block; font: 750 17px/1.25 var(--f-display); }
+.rl-v p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.rl-v.good { background: var(--pitch-soft); border-color: color-mix(in srgb, var(--pitch) 45%, transparent); }
+.rl-v.mixed, .rl-v.luck { background: var(--yellow-soft); border-color: color-mix(in srgb, var(--yellow) 45%, transparent); }
+.rl-v.lose { background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+.rl-k { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+@media (min-width: 760px) { .rl-k { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.rl-t { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.rl-t span { font: 600 12.5px/1.2 var(--f-body); color: var(--ink-2); }
+.rl-t b { font: 750 24px/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.rl-t small { font-size: 12px; color: var(--ink-3); line-height: 1.35; }
+.rl-t.up b, .rl-tb .up, .rl-luck .up { color: var(--pitch); } .rl-t.dn b, .rl-tb .dn, .rl-luck .dn { color: var(--red); }
+.rl-luck i { font-style: normal; }
+.rl-cw { position: relative; margin-top: 10px; }
+.rl-svg { display: block; width: 100%; height: 190px; overflow: visible; touch-action: pan-y; cursor: crosshair; }
+.rl-line { fill: none; stroke: var(--cobalt); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.rl-zero { stroke: var(--ink-3); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .7; }
+.rl-sm { stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.rl-x { stroke: var(--ink); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.rl-yl { position: absolute; inset: 0 auto 0 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; font: 600 11px/1 var(--f-body); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.rl-yl span { background: color-mix(in srgb, var(--card) 80%, transparent); padding: 1px 3px; border-radius: 4px; }
+.rl-xl { position: relative; height: 16px; margin-top: 4px; font: 600 11px/1 var(--f-body); color: var(--ink-3); }
+.rl-xl span { position: absolute; top: 2px; white-space: nowrap; }
+.rl-xl span:not(:first-child) { transform: translateX(-50%); }
+.rl-tip { position: absolute; top: 4px; width: 180px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--rule); background: color-mix(in srgb, var(--card) 96%, transparent); box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .5); pointer-events: none; display: grid; gap: 3px; }
+.rl-tip b { font: 700 13px/1.2 var(--f-body); }
+.rl-tip small { font-size: 11.5px; line-height: 1.35; color: var(--ink-2); }
+.rl-r { display: flex; justify-content: space-between; gap: 14px; padding: 9px 0; border-top: 1px solid var(--rule-2); font-size: 13.5px; }
+
+.rl-r:first-of-type { border-top: 0; }
+.rl-r span { color: var(--ink-2); } .rl-r b { text-align: right; font-weight: 650; }
+@media (max-width: 520px) { .rl-r { display: grid; gap: 3px; } .rl-r b { text-align: left; } }
+.rl-tb { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.rl-tb th { text-align: right; font: 600 11.5px/1.2 var(--f-body); color: var(--ink-3); padding: 0 0 6px; }
+.rl-tb td { text-align: right; padding: 7px 0; border-top: 1px solid var(--rule-2); }
+.rl-tb th:first-child, .rl-tb td:first-child { text-align: left; }
+.rl-tb td + td, .rl-tb th + th { padding-left: 10px; }
+.rl-nl, .rl-ll { display: grid; margin: 4px -16px 0; }
+.rl-n, .rl-b { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 16px; border: 0; border-top: 1px solid var(--rule-2); background: none; color: var(--ink); text-align: left; font: inherit; width: 100%; }
+.rl-n { cursor: pointer; } .rl-n:hover { background: color-mix(in srgb, var(--sunk) 60%, transparent); }
+.rl-b { grid-template-columns: 24px minmax(0, 1fr) auto; }
+.rl-b .rs { width: 22px; height: 22px; border-radius: 6px; font-size: 10.5px; }
+.rl-nm, .rl-bm { display: grid; gap: 3px; min-width: 0; }
+.rl-nm b, .rl-bm b { font: 650 14px/1.25 var(--f-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rl-nm small, .rl-bm small { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rl-pr { font: 700 15px/1 var(--f-body); font-variant-numeric: tabular-nums; }
+.rl-foot { margin-top: 16px; display: grid; justify-items: start; gap: 4px; }
+#rlRes { transition: opacity .12s; } #rlRes.busy { opacity: .55; }
+.rl-in { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 16px; border: 1px dashed var(--rule); border-radius: var(--r); }
+.rl-in div { display: grid; gap: 3px; min-width: 0; flex: 1 1 220px; } .rl-in b { font: 700 14.5px/1.25 var(--f-body); } .rl-in span { font-size: 12.5px; color: var(--ink-3); }
+.rl-pill { position: fixed; z-index: 40; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px); opacity: 0; pointer-events: none; display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 99px; border: 1px solid var(--rule); background: color-mix(in srgb, var(--card) 96%, transparent); color: var(--ink); font: 600 13px/1 var(--f-body); box-shadow: 0 10px 26px -12px rgba(0, 0, 0, .55); transition: transform .2s, opacity .2s; white-space: nowrap; }
+.rl-pill.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.rl-pill b { font-weight: 750; } .rl-pill .up { color: var(--pitch); } .rl-pill .dn { color: var(--red); } .rl-pill i { font-style: normal; color: var(--cobalt); }
+@media (min-width: 980px) { .rl-pill { bottom: 24px; } }
+.card h4 span { font-weight: 500; }
 /* the Lab's long lists draw only near the screen */
 #trackBox .tk-cols > *, #trackBox .trk-grid > * { content-visibility: auto; contain-intrinsic-size: auto 700px; }
 
@@ -2128,6 +2291,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
     <section id="v-home" class="section" data-view="home" hidden>
       <div class="xp-row" id="explore" role="group" aria-label="More to explore"></div>
       <div class="home-grid">
+        <div class="card bankc" id="bankCard" hidden></div>
         <div class="card feed"><h2 class="h4">Intelligence feed <span id="feedAt"></span></h2><ol class="feed-l" id="feed"></ol></div>
         <div class="card nextk"><h2 class="h4">Next kick-offs <button type="button" class="lnk" data-tab="matches">All matches</button></h2><div id="nextList"></div></div>
       </div>
@@ -2159,6 +2323,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
         <label class="field" id="vsortL"><span class="sr">Sort</span><select id="vsort"><option value="edge">Biggest edge first</option><option value="opp">Best opportunity first</option><option value="ko">Kick-off order</option><option value="books">Most bookmakers first</option></select></label></div>
       <div id="radar"></div>
       <div class="vlist" id="valueList" style="margin-top:14px"></div>
+      <div class="rl-in"><div><b>Would this rule have paid?</b><span>Try it, or any rule of your own, on six seasons of real prices.</span></div><button type="button" class="btn" data-rlgo="0">Test the rule</button></div>
       <div class="mvlist" id="moversList" style="margin-top:14px" hidden></div>
     </section>
 
@@ -2173,7 +2338,8 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
       <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="men">Men’s football</option><option value="women">Women’s football</option><option value="priced">Matches with live prices</option></select></label></div>
       <div class="slips" id="slipsBox"></div>
       <div id="goalBox" hidden></div>
-      <div class="callout"><b>Read this before you stake.</b> A slip's hit chance is the product of its legs, and every leg can lose. The tiers only describe how likely each leg is; none of them is safe. Estimated prices (marked “est”) are what a fair book would offer. Check the real price before betting.</div>
+      <div id="bankBox" hidden></div>
+      <div class="callout"><b>Read this before you stake.</b> A slip's hit chance is the product of its legs, and every leg can lose. The tiers only describe how likely each leg is; none of them is safe. Estimated prices (marked “est”) are Statpad’s estimate of a bookmaker’s price, margin included. Check the real price before betting.</div>
     </section>
 
     <section id="v-coupon" class="section" data-view="coupon" hidden>
@@ -2188,6 +2354,13 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
         <div><h2>Performance Lab</h2><p class="sub">Is Statpad right, and do its value bets pay? Every prediction and value bet is saved before kick-off, graded after the final whistle, and never edited.</p></div>
       </div>
       <div id="trackBox"></div>
+    </section>
+
+    <section id="v-rules" class="section" data-view="rules" hidden>
+      <div class="sec-head">
+        <div><h2>Rule tester</h2><p class="sub" id="rulesSub">Pick what to bet on and when, and see what it would have made on every game of the last six seasons in 19 leagues, at the prices bookmakers really offered.</p></div>
+      </div>
+      <div id="rulesBox"></div>
     </section>
 
     <section id="v-tables" class="section" data-view="tables" hidden>
@@ -2723,9 +2896,145 @@ const ENGINE = (() => {
     return out.sort((x, y) => y.s.edge - x.s.edge);
   }
 
+  // ---------------- v68: bankers and slips by certainty ----------------
+  // A leg's chance for these: on a game with bookmakers' prices, the stated chance (four replayed seasons: picks it
+  // called 85-95% landed 87-95%; nothing learned on top of it did better), never above the bookmakers' own; on a game
+  // with none, the stated chance read through what such picks did in the weekly replay with the prices taken away
+  // (the 3-point haircut makes them land more often than they say). BANK holds that reading per market group, in
+  // bands of 2.5 points, with how many replayed picks each band rests on.
+  const BANK_G = { '1X': 'DC', X2: 'DC', H_O05: 'TS', A_O05: 'TS', H: 'W', A: 'W', O15: 'O15', U35: 'U35', O25: 'OU25', U25: 'OU25',
+    BTTS: 'BT', BTTS_N: 'BT', H_O15: 'T2', A_O15: 'T2' };
+  const BANK_B0 = 0.4, BANK_BW = 0.025, BANK_NB = Math.round((1 - BANK_B0) / BANK_BW) + 1, BANK_PRIOR = 50;
+  let BANK = null;
+  function setBank(t) { BANK = t && t.g ? t : null; }
+  const bankBand = (x) => Math.max(0, Math.min(BANK_NB - 1, Math.floor((x - BANK_B0) / BANK_BW + 1e-9)));
+  // counts {p|u: {group: [[n, hits, sum of chances] per band]}} -> {g: {p|u: {group: [[rate, n, hits] per band]}}}:
+  // each band's landed share, shrunk toward its stated chance (50 picks' worth), made to rise with the chance
+  function bankFit(counts) {
+    const g = {};
+    for (const v of ['p', 'u']) {
+      g[v] = {};
+      for (const [gr, bands] of Object.entries((counts && counts[v]) || {})) {
+        const blocks = [];
+        bands.forEach(([n, h, sum], i) => {
+          if (!n) return;
+          blocks.push({ r: (h + BANK_PRIOR * (sum / n)) / (n + BANK_PRIOR), w: n + BANK_PRIOR, ix: [i] });
+          while (blocks.length > 1 && blocks[blocks.length - 2].r > blocks[blocks.length - 1].r) {
+            const b = blocks.pop(), a = blocks.pop();
+            blocks.push({ r: (a.r * a.w + b.r * b.w) / (a.w + b.w), w: a.w + b.w, ix: a.ix.concat(b.ix) });
+          }
+        });
+        const out = bands.map(([n, h]) => [null, n, h]);
+        for (const b of blocks) for (const i of b.ix) out[i][0] = +b.r.toFixed(4);
+        g[v][gr] = out;
+      }
+    }
+    return { b0: BANK_B0, bw: BANK_BW, g };
+  }
+  // the reading at chance x, between band centres; null without a table, below its first band, or where the bands
+  // around x rest on no replayed picks (then the stated chance stands)
+  function bankRate(v, gr, x) {
+    const t = BANK && BANK.g[v] && BANK.g[v][gr]; if (!t || !(x >= BANK_B0)) return null;
+    const own = t[bankBand(x)]; if (!own || own[0] == null || own[1] < 20) return null;
+    const c = (x - BANK_B0) / BANK_BW - 0.5, i = Math.floor(c), f = Math.max(0, Math.min(1, c - i));
+    const ok = (k) => k >= 0 && k < t.length && t[k][0] != null && t[k][1] >= 20;
+    const lo = ok(i) ? t[i][0] : own[0], hi = ok(i + 1) ? t[i + 1][0] : own[0];
+    return lo + (hi - lo) * f;
+  }
+  function legChance(a, s) {
+    if (!BANK_G[s.key] || s.x) return null;
+    let q = s.pAdj;
+    if (!a.mkt) { const r = bankRate('u', BANK_G[s.key], s.pRaw != null ? s.pRaw : s.pAdj); if (r != null) q = r; }
+    if (s.real && s.pm > 0) q = Math.min(q, s.pm);
+    return q;
+  }
+  // how many replayed picks of this kind (market group, priced or not, the same 2.5-point band) and how many landed
+  function bankEvidence(a, s) {
+    const v = a.mkt ? 'p' : 'u', t = BANK && BANK.g[v] && BANK.g[v][BANK_G[s.key]]; if (!t) return null;
+    const row = t[bankBand(a.mkt ? s.pAdj : (s.pRaw != null ? s.pRaw : s.pAdj))];
+    return row && row[1] ? { n: row[1], hits: row[2] } : null;
+  }
+  // each game's surest leg (draws aside, price at least 1.05), surest first; min: the lowest chance listed
+  function bankers(list, min) {
+    const out = [];
+    for (const { m, a } of list) {
+      if (!a || m.fr || m.clash) continue;
+      let best = null;
+      for (const s of a.sels) {
+        if (s.x || s.key === 'D') continue;
+        const pr = s.pt || s.price; if (!(pr >= 1.05)) continue;
+        const q = legChance(a, s); if (q == null) continue;
+        if (!best || q > best.q + 1e-9 || (Math.abs(q - best.q) <= 1e-9 && pr > best.pr)) best = { m, a, s, q, pr };
+      }
+      if (best && best.q >= (min == null ? 0.8 : min)) out.push(Object.assign(best, { ev: bankEvidence(a, best.s) }));
+    }
+    return out.sort((x, y) => y.q - x.q || y.pr - x.pr || (x.m.ko > y.m.ko ? 1 : -1));
+  }
+  // slips by certainty: for every chance from 95% down to 20%, the slip that pays most and is still at least that
+  // likely (one leg per game, up to 8). A knapsack over the legs' cost in chance (-log, in steps of 0.005) and the
+  // number of legs, maximising the log of the price; margins compound, so it takes few legs unless it must.
+  const DIAL_D = 0.005, DIAL_MAXL = 8, DIAL_PMIN = 0.2;   // the page's dial goes down to 20%
+  let DIAL_MEMO = { key: '', out: null };
+  function dial(list) {
+    const key = (BANK ? BANK.at || 'b' : '-') + '|' + list.map(({ m, a }) => m.id + ':' + (a && a.top ? a.top.pAdj.toFixed(4) + a.top.price : '')).join(',');
+    if (DIAL_MEMO.key === key) return DIAL_MEMO.out;
+    const games = [];
+    for (const { m, a } of list) {
+      if (!a || m.fr || m.clash) continue;
+      const legs = [];
+      for (const s of a.sels) {
+        if (s.x || s.key === 'D') continue;
+        const pr = s.pt || s.price; if (!(pr >= 1.05)) continue;
+        const q = legChance(a, s); if (q == null || q < DIAL_PMIN) continue;
+        legs.push({ s, q, pr, c: Math.max(1, Math.ceil(-Math.log(q) / DIAL_D - 1e-9)), lp: Math.log(pr), fair: Math.log(q * pr) });   // rounded up: a slip is never less likely than its level
+      }
+      legs.sort((x, y) => y.fair - x.fair);
+      if (legs.length) games.push({ m, a, legs: legs.slice(0, 6) });
+    }
+    const B = Math.ceil(-Math.log(DIAL_PMIN) / DIAL_D), NL = DIAL_MAXL + 1, SZ = (B + 1) * NL;
+    let cur = new Float64Array(SZ).fill(-Infinity); cur[0] = 0;
+    const ch = [];
+    for (const g of games) {
+      const nxt = cur.slice(), c8 = new Int8Array(SZ).fill(-1);
+      g.legs.forEach((L, k) => {
+        for (let c = B - L.c; c >= 0; c--) {
+          const row = c * NL, row2 = (c + L.c) * NL;
+          for (let n = 0; n < DIAL_MAXL; n++) {
+            const v = cur[row + n]; if (v === -Infinity) continue;
+            const s2 = v + L.lp; if (s2 > nxt[row2 + n + 1]) { nxt[row2 + n + 1] = s2; c8[row2 + n + 1] = k; }
+          }
+        }
+      });
+      ch.push(c8); cur = nxt;
+    }
+    const bestAt = new Float64Array(B + 1).fill(-Infinity), argAt = new Int32Array(B + 1).fill(-1);
+    let bv = -Infinity, bi = -1;
+    for (let c = 0; c <= B; c++) { for (let n = 1; n < NL; n++) { const v = cur[c * NL + n]; if (v > bv + 1e-12) { bv = v; bi = c * NL + n; } } bestAt[c] = bv; argAt[c] = bi; }
+    const slipAt = (P) => {
+      const c = Math.max(0, Math.min(B, Math.floor(-Math.log(Math.max(DIAL_PMIN, Math.min(0.999, P))) / DIAL_D + 1e-9)));
+      let i = argAt[c]; if (i < 0) return null;
+      const legs = [];
+      for (let g = games.length - 1; g >= 0 && i > 0; g--) {
+        const k = ch[g][i]; if (k < 0) continue;
+        const L = games[g].legs[k];
+        legs.push({ m: games[g].m, a: games[g].a, s: Object.assign({}, L.s, { price: L.pr, best: L.s.price, pSlip: L.q }), q: L.q });
+        i -= L.c * NL + 1;
+      }
+      legs.sort((x, y) => (x.m.ko > y.m.ko ? 1 : x.m.ko < y.m.ko ? -1 : 0));
+      let prob = 1, odds = 1; for (const l of legs) { prob *= l.q; odds *= l.s.price; }
+      return { legs, prob, odds };
+    };
+    const frontier = [];
+    for (let c = 0; c <= B; c++) if (bestAt[c] > -Infinity && (!frontier.length || bestAt[c] > Math.log(frontier[frontier.length - 1][1]) + 1e-9)) frontier.push([Math.exp(-c * DIAL_D), Math.exp(bestAt[c])]);
+    const out = { frontier, slipAt, games: games.length };
+    DIAL_MEMO = { key, out };
+    return out;
+  }
+
   // a market's name for a match, for games the page has no analysis of any more (finished ones)
   function labelOf(key, m) { const f = [...LABELS, ...EXTRAS].find((x) => x[0] === key); return f ? f[1](m) : null; }
-  return { VERSION, analyse, buildSlip, buildSlips, SLIPS, SLIP_B, SLIP_FLOORS, SLIP_FLOOR, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf, setRho, rhoFor, MV_SHOW, MV_AHEAD };
+  return { VERSION, analyse, buildSlip, buildSlips, SLIPS, SLIP_B, SLIP_FLOORS, SLIP_FLOOR, value, tierOf, TIERS, markets, matrix, fit, setCalib, calib, getCalib: () => CAL, setMcal, mcal, MGROUP, labelOf, setRho, rhoFor, MV_SHOW, MV_AHEAD,
+    BANK_G, setBank, bankFit, bankRate, legChance, bankEvidence, bankers, dial, getBank: () => BANK };
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 
@@ -2749,10 +3058,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const longFmt = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   const ord = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
   const GROUPS = [['big', 'Big leagues'], ['cups', 'Europe & cups'], ['women', 'Women’s football'], ['intl', 'Internationals'], ['second', 'Second tiers'], ['more', 'More leagues']];
-  const TABS = [['home', 'Overview', 'i-home'], ['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['slips', 'Slips', 'i-ticket'], ['coupon', 'Bets', 'i-cart'], ['track', 'Lab', 'i-track'], ['tables', 'Leagues', 'i-table'], ['method', 'Method', 'i-info']];
+  const TABS = [['home', 'Overview', 'i-home'], ['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['slips', 'Slips', 'i-ticket'], ['coupon', 'Bets', 'i-cart'], ['track', 'Lab', 'i-track'], ['rules', 'Rule tester', 'i-filter'], ['tables', 'Leagues', 'i-table'], ['method', 'Method', 'i-info']];
   // what the navigation shows: Slip Studio holds the smart slips and the coupon, Saved is the coupon's My bets;
   // phones get five tabs, the rest under More
-  const NAV = [['home', 'Overview', 'i-home'], ['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['studio', 'Slips', 'i-ticket'], ['track', 'Lab', 'i-track'], ['tables', 'Leagues', 'i-table'], ['saved', 'Saved', 'i-bookmark']];
+  const NAV = [['home', 'Overview', 'i-home'], ['matches', 'Matches', 'i-ball'], ['value', 'Value', 'i-spark'], ['studio', 'Slips', 'i-ticket'], ['track', 'Lab', 'i-track'], ['rules', 'Rule tester', 'i-filter'], ['tables', 'Leagues', 'i-table'], ['saved', 'Saved', 'i-bookmark']];
   const BNAV = ['home', 'matches', 'value', 'studio', 'more'];
   const TARGETS = [2, 3, 5, 10, 20, 50];
   // v64: every leg's minimum chance (default: more likely to land than not), and any target odds from 1.1 to 10,000
@@ -2764,25 +3073,26 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const S = {
     data: null, rows: [], byId: new Map(), cache: new Map(), now: Date.now(),
     tab: store.get('tab', 'home'), day: null, league: store.get('league', 'all'), q: '', sort: store.get('sort', 'ko'),
-    target: tgtOk(+store.get('target', 10)) ? +store.get('target', 10) : 10, slipFloor: [0.6, 0.5, 0].includes(store.get('slipFloor', 0.5)) ? store.get('slipFloor', 0.5) : 0.5, scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), vsort: store.get('vsort', 'edge'), vseg: store.get('vseg', 'value'), minEdge: store.get('minEdge', 0.02),
+    target: tgtOk(+store.get('target', 10)) ? +store.get('target', 10) : 10, slipFloor: [0.6, 0.5, 0].includes(store.get('slipFloor', 0.5)) ? store.get('slipFloor', 0.5) : 0.5, bankP: [95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20].includes(+store.get('bankP', 80)) ? +store.get('bankP', 80) : 80, bankMin: [90, 85, 80].includes(+store.get('bankMin', 85)) ? +store.get('bankMin', 85) : 85, bkShown: 10, scope: store.get('scope', 'all'), vscope: store.get('vscope', 'all'), vsort: store.get('vsort', 'edge'), vseg: store.get('vseg', 'value'), minEdge: store.get('minEdge', 0.02),
     coupon: store.get('coupon', []), bank: store.get('bank', 100), stakeMode: store.get('stakeMode', 'qk'), tleague: store.get('tleague', null),
     open: null, shown: 60, lastFetch: null, lastOk: null, live: false, legacy: false, err: null,
     ready: false, token: 0, ver: 0, slipCache: new Map(), bad: 0, progress: null, scMem: new Map(),
   };
   if (!TABS.some((t) => t[0] === S.tab)) S.tab = 'home';
-  const hashTab = () => { const h = decodeURIComponent((location.hash || '').slice(1)); return h === 'saved' ? 'coupon' : h === 'studio' ? 'slips' : TABS.some((x) => x[0] === h) ? h : null; };
+  const hashTab = () => { const h = decodeURIComponent((location.hash || '').slice(1)).split('?')[0]; return h === 'saved' ? 'coupon' : h === 'studio' || h === 'bankers' ? 'slips' : TABS.some((x) => x[0] === h) ? h : null; };
   const hashMatch = () => { const h = decodeURIComponent((location.hash || '').slice(1)); return h.startsWith('m=') ? h.slice(2) : null; };
-  { const h = hashTab(); if (h) { S.tab = h; if (location.hash === '#saved') { S.bseg = 'mine'; try { localStorage.setItem('sp_bseg', '"mine"'); } catch (e) { /* */ } } } }
+  { const h = hashTab(); if (h) { S.tab = h; if (location.hash === '#saved') { S.bseg = 'mine'; try { localStorage.setItem('sp_bseg', '"mine"'); } catch (e) { /* */ } } if (location.hash === '#bankers') { try { localStorage.setItem('sp_sseg', '"bank"'); } catch (e) { /* */ } } } }
   S.pendOpen = hashMatch();
   S.follow = new Set(store.get('follow', []));   // v66: teams you follow, kept on this phone
   if (S.league === 'fav' && !S.follow.size) S.league = 'all';
+  S.rule = ruleFromHash() || ruleClean(store.get('rule', null));   // v67: the rule tester's rule (a #rules?… link carries one)
   // ---------------- v66: the phone's back button ----------------
   // Back closes whatever is open on top (a match or team page, More, search, the bet form, the assistant), then
   // returns from any section to the Overview, and only then leaves Statpad, as phone apps do. Every open overlay
   // owns one entry in the browser's history; closing it by its own button takes that entry away again. History
   // changes wait for each other, because the browser's own back step finishes a moment later.
   const H = { busy: false, q: [], t: 0 };
-  const tabURL = (t) => location.pathname + location.search + (t === 'home' ? '' : t === 'coupon' && S.bseg === 'mine' ? '#saved' : '#' + t);
+  const tabURL = (t) => location.pathname + location.search + (t === 'home' ? '' : t === 'coupon' && S.bseg === 'mine' ? '#saved' : t === 'rules' && S.rule ? '#rules?' + ruleQS(S.rule) : '#' + t);
   function hFlush() { while (!H.busy && H.q.length) { try { H.q.shift()(); } catch (e) { /* sandboxed */ } } }
   function hOp(fn) { if (H.busy) H.q.push(fn); else { try { fn(); } catch (e) { /* history unavailable in this frame */ } } }
   function hBack() { H.busy = true; clearTimeout(H.t); H.t = setTimeout(() => { if (H.busy) { H.busy = false; hFlush(); } }, 600); try { history.back(); } catch (e) { H.busy = false; } }
@@ -2838,6 +3148,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   addEventListener('hashchange', () => {   // a typed or followed link to a section or a match
     if (H.busy) return;
     const m = hashMatch(); if (m) { if (S.byId && S.byId.has(m)) openMatch(m); return; }
+    if (location.hash === '#bankers' && S.sseg !== 'bank') { S.sseg = 'bank'; store.set('sseg', 'bank'); if (S.tab === 'slips') renderSlips(); }
     const h = hashTab(); if (h && h !== S.tab && h !== S.toTab) setTab(h, { now: true });
   });
 
@@ -3223,13 +3534,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     $('#tape').hidden = (S.tab !== 'value' && S.tab !== 'home') || !S.data || !$('#tapeIn').children.length;
     renderStudio();
   }
-  // Slip Studio: one switcher over the smart slips, goal seek, the coupon, the slip checker and My bets
+  // Slip Studio: one switcher over the bankers, the smart slips, goal seek, the coupon, the slip checker and My bets
   function renderStudio() {
     const el = $('#studioBar'); if (!el) return;
     const on = S.tab === 'slips' || S.tab === 'coupon'; el.hidden = !on;
     const cc = S.coupon.length, ob = (S.bets || []).filter((b) => b.status === 'open').length;
-    const cur = S.tab === 'slips' ? (S.sseg === 'goal' ? 'goal' : 'slips') : ['coupon', 'mine', 'check'].includes(S.bseg) ? S.bseg : 'coupon';
-    const it = [['slips', 'sseg', 'Smart slips'], ['goal', 'sseg', 'Goal seek'], ['coupon', 'bseg', 'Your coupon', cc], ['check', 'bseg', 'Check a slip'], ['mine', 'bseg', 'My bets', ob]];
+    const cur = S.tab === 'slips' ? (S.sseg === 'goal' || S.sseg === 'bank' ? S.sseg : 'slips') : ['coupon', 'mine', 'check'].includes(S.bseg) ? S.bseg : 'coupon';
+    const it = [['bank', 'sseg', 'Bankers'], ['slips', 'sseg', 'Smart slips'], ['goal', 'sseg', 'Goal seek'], ['coupon', 'bseg', 'Your coupon', cc], ['check', 'bseg', 'Check a slip'], ['mine', 'bseg', 'My bets', ob]];
     const html = `<div class="seg studio-seg">${it.map(([k, at, l, n]) => `<button type="button" data-${at}="${k}" aria-pressed="${cur === k}">${l}${n ? `<span class="n">${n}</span>` : ''}</button>`).join('')}</div>`;
     if (el.dataset.k !== html) { el.innerHTML = html; el.dataset.k = html; }
     if (on && (S.tab === 'slips' || S.bseg !== 'mine')) S.studioTab = S.tab;
@@ -3237,6 +3548,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function goNav(k, el) {
     const tap = !!(el && el.closest && el.closest('#bnav, #sideNav')), o = { defer: true, tap, quiet: true };
     if (k === 'more') { openMore(el); return; }
+    if (k === 'bankers') { S.sseg = 'bank'; store.set('sseg', 'bank'); if (S.tab === 'slips') { renderSlips(); histTab('slips'); } else setTab('slips', o); return; }
     if (k === 'saved') { const was = S.bseg; S.bseg = 'mine'; store.set('bseg', 'mine'); loadResults(); if (S.tab === 'coupon') { if (was === 'mine' && tap) toTop(); renderCoupon(); renderNav(); histTab('coupon'); } else setTab('coupon', o); return; }
     if (k === 'studio') {
       const to = S.studioTab || (S.coupon.length ? 'coupon' : 'slips');
@@ -3254,7 +3566,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function renderMoreSheet() {
     $('#sheetTitle').textContent = 'More';
-    const it = [['track', 'i-track', 'Performance Lab', 'Every prediction graded after the final whistle'], ['tables', 'i-table', 'Leagues', 'Tables, team ratings and the season simulator'],
+    const it = [['track', 'i-track', 'Performance Lab', 'Every prediction graded after the final whistle'], ['rules', 'i-filter', 'Rule tester', 'Try a betting rule on six seasons of real prices'], ['tables', 'i-table', 'Leagues', 'Tables, team ratings and the season simulator'],
       ['saved', 'i-bookmark', 'Saved', 'Bets you placed, settled as results come in'], ['method', 'i-info', 'How it works', 'The model, the prices and the maths behind them'], ['display', 'i-sliders', 'Display', 'Theme, crests, live scores and motion']];
     const cur = navOf(S.tab);
     $('#sheetBody').innerHTML = `<div class="more-l">${it.map(([k, ic, l, d]) => `<button type="button" class="more-i" data-mgo="${k}"${k === cur ? ' aria-current="page"' : ''}><svg aria-hidden="true"><use href="#${ic}"/></svg><span><b>${l}</b><small>${d}</small></span></button>`).join('')}</div>`;
@@ -3387,6 +3699,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!S.mirAt) loadMir();
     renderExplore();
     renderYours();
+    renderBankCard();
     const items = feedItems();
     $('#feedAt').textContent = S.data ? `updated ${tFmt.format(Date.parse(S.data.generated))}` : '';
     morph($('#feed'), items.length ? items.map((x) => `<li><button type="button" class="feed-i t-${x.tone}" data-open="${esc(x.id)}"><span class="feed-ic"><svg aria-hidden="true"><use href="#${x.ic}"/></svg></span><span class="feed-b"><b>${esc(x.t)}</b><span>${esc(x.s)}</span><small>${esc(x.m)}</small></span><span class="feed-v">${esc(x.v)}</span></button></li>`).join('')
@@ -3884,12 +4197,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // ---------------- slips ----------------
   function renderSlips() {
     if (!S.ready) { showProgress(); return; }
-    const goal = S.sseg === 'goal';
-    renderStudio(); $('#slipsTitle').textContent = goal ? 'Goal seek' : 'Smart slips';
-    for (const el of [$('#days-slips'), $('#slipsBox'), ...document.querySelectorAll('#v-slips .filters, #v-slips .sl-only')]) if (el) el.hidden = goal;
-    $('#goalBox').hidden = !goal;
-    $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.' : 'The three likeliest slips for the day that pay your target, with every leg at least as likely as you choose and no game in more than one of them. Priced at a typical bookmaker’s odds; games that have kicked off drop out.';
+    const goal = S.sseg === 'goal', bank = S.sseg === 'bank';
+    renderStudio(); $('#slipsTitle').textContent = goal ? 'Goal seek' : bank ? 'Bankers' : 'Smart slips';
+    for (const el of [$('#slipsBox'), ...document.querySelectorAll('#v-slips .sl-only')]) if (el) el.hidden = goal || bank;
+    for (const el of [$('#days-slips'), ...document.querySelectorAll('#v-slips .filters')]) if (el) el.hidden = goal;
+    $('#goalBox').hidden = !goal; $('#bankBox').hidden = !bank;
+    $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.'
+      : bank ? 'Each game’s surest pick, and the slip that pays most while staying as sure as you set the dial. Every level is checked against a whole season of real results.'
+      : 'The three likeliest slips for the day that pay your target, with every leg at least as likely as you choose and no game in more than one of them. Priced at a typical bookmaker’s odds; games that have kicked off drop out.';
     if (goal) { renderGoal(); return; }
+    if (bank) { renderBank(); return; }
     if (S.day === 'all') S.day = pickDefaultDay();
     renderDays('days-slips', false);
     $('#target').innerHTML = TARGETS.map((t) => `<button type="button" data-target="${t}" aria-pressed="${S.target === t}"><span class="mono">${t}</span></button>`).join('');
@@ -3943,6 +4260,192 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       </article>`;
     }).join('') + (empty.length ? slipNone(empty) : ''), ['sl', S.day, S.target, S.slipFloor, S.scope].join('|'), true);
     S.lastSlips = slips;
+  }
+
+  // ---------------- v68: bankers and slips by certainty ----------------
+  // Each game's surest pick, and for any certainty from 95% down to 20% the slip that pays most while still being
+  // at least that likely. Unpriced games read their chance off last season's replay (what picks like them really did),
+  // so a banker's chance is one that has been checked, and every level of the dial has its own replayed record.
+  const BK_STOPS = [95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20];
+  const BK_MINS = [[90, '90%+'], [85, '85%+'], [80, '80%+']];
+  const BK_CX = 160, BK_CY = 170, BK_R = 128, BK_L = Math.PI * BK_R;
+  const bkAng = (P) => ((95 - P) / 75) * Math.PI;   // 0 at the left end (95%), pi at the right end (20%)
+  const bkPt = (P, r) => [BK_CX - r * Math.cos(bkAng(P)), BK_CY - r * Math.sin(bkAng(P))];
+  const bkSnap = (P) => BK_STOPS.reduce((a, b) => (Math.abs(b - P) < Math.abs(a - P) ? b : a), 80);
+  function bkOpen(dk, scope) { return S.rows.filter((r) => r.day === dk && !r.started && r.a && inScope(r, scope)).map((r) => ({ m: r.m, a: r.a })); }
+  function useBt() { if (ENGINE.setBank) ENGINE.setBank((S.bt && S.bt.bank) || null); S.btTried = true; }
+  const bkSeason = () => (S.bt && S.bt.bank && S.bt.bank.season) || (S.bt && S.bt.season) || 'last season';
+  // the replayed and live record of slips set to P%
+  function bkProofDial(P) {
+    const B = S.bt && S.bt.bank, r = B && B.dial && B.dial[P], L = S.track && S.track.agg && S.track.agg.dial && S.track.agg.dial['P' + P];
+    return { rep: r && r[0] ? { n: r[0], w: r[1], said: r[2] / r[0], odds: Math.exp(r[3] / r[0]), legs: r[4] / r[0] } : null,
+      live: L && L[0] ? { n: L[0], w: L[1], said: L[3] / L[0] } : null };
+  }
+  // bankers by how sure they were: the replay (priced and unpriced together) and the live record
+  function bkProofBands() {
+    const B = S.bt && S.bt.bank && S.bt.bank.bk, L = S.track && S.track.agg && S.track.agg.bank;
+    return [['90', '90%+'], ['85', '85–90%'], ['80', '80–85%']].map(([k, lab]) => {
+      let n = 0, w = 0, q = 0;
+      for (const v of ['p', 'u']) { const t = B && B[v] && B[v][k]; if (t) { n += t[0]; w += t[1]; q += t[2]; } }
+      const l = L && L[k];
+      return { k, lab, rep: n ? { n, w, said: q / n } : null, live: l && l[0] ? { n: l[0], w: l[1], said: l[2] / l[0] } : null };
+    });
+  }
+  const bkN = (n) => Number(n).toLocaleString('en-US');
+  function renderBank() {
+    const box = $('#bankBox'); if (!box) return;
+    if (!S.trackAt && !S.trackBusy) loadTrack(); else if (!S.bt && !S.btBusy && !S.btTried) loadBt();
+    if (S.day === 'all') S.day = pickDefaultDay();
+    renderDays('days-slips', false);
+    $('#scope').value = S.scope;
+    const list = bkOpen(S.day, S.scope);
+    if (!list.length) { morph(box, `<div class="empty-state"><b>No open games for this day</b>Pick another day, or widen the scope.</div>`, 'bk-none'); return; }
+    if (!S.btTried) { if (!box.querySelector('.bk-wrap')) morph(box, `<div class="empty-state"><b>Checking last season’s record…</b></div>`, 'bk-wait'); return; }
+    const want = [S.ver, S.day, S.scope, list.length, (ENGINE.getBank && ENGINE.getBank() || {}).at || '-'].join('|');
+    S.bkWant = want;
+    if (S.bkD && S.bkD.key === want) { paintBank(box, S.bkD.D, list); return; }
+    if (!box.querySelector('.bk-wrap')) morph(box, `<div class="bk-wrap"><div class="card bk-dial"><h4>How sure do you want to be?</h4><p class="note">Working out every slip from ${bkN(list.length)} games…</p></div></div>`, 'bk-build');
+    setTimeout(() => {
+      if (S.bkWant !== want) return;
+      const D = ENGINE.dial(list); S.bkD = { key: want, D };
+      if (S.tab === 'slips' && S.sseg === 'bank' && S.bkWant === want) paintBank(box, D, list);
+    }, 30);
+  }
+  function paintBank(box, D, list) {
+    const bankers = ENGINE.bankers(list, 0.8);
+    const avail = new Set(BK_STOPS.filter((p) => D.slipAt(p / 100)));
+    const first = !S.bkSwept && motionOK() && !document.hidden; S.bkSwept = true;
+    const P = S.bankP;
+    morph(box, `<div class="bk-wrap">
+      <div class="card bk-dial"><h4>How sure do you want to be?</h4>
+        ${bkGauge(D, avail, first ? 95 : P)}
+        <input type="range" class="bk-rng" id="bkRng" min="0" max="${BK_STOPS.length - 1}" step="1" value="${BK_STOPS.indexOf(P)}" aria-label="How sure the slip must be">
+        <div class="bk-ends" aria-hidden="true"><span>Surer</span><span>Pays more</span></div>
+        <div class="bk-proof" id="bkProof"></div></div>
+      <div class="card bk-slip" id="bkSlip"></div>
+      ${bkList(bankers)}
+      ${bkRecord()}
+    </div>`, 'bk:' + S.day + '|' + S.scope);
+    S.bkAvail = avail; S.bkDial = D; S.bkList = bankers;
+    bkSel(P, true);
+    if (first) requestAnimationFrame(() => requestAnimationFrame(() => bkKnob(S.bankP)));
+  }
+  function bkGauge(D, avail, P0) {
+    const tk = BK_STOPS.map((p) => { const big = p % 10 === 0 || p === 95, [x1, y1] = bkPt(p, BK_R + 13), [x2, y2] = bkPt(p, BK_R + (big ? 21 : 17));
+      return `<line class="bk-tk${avail.has(p) ? '' : ' off'}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`; }).join('');
+    const lab = [80, 60, 40].map((p) => { const [x, y] = bkPt(p, BK_R + 33); return `<text class="bk-tl" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle">${p}%</text>`; }).join('');
+    const pays = [80, 60, 40].map((p) => { const sl = D.slipAt(p / 100); if (!sl) return ''; const [x, y] = bkPt(p, BK_R - 31);
+      return `<text class="bk-ol" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle">${odds(sl.odds)}</text>`; }).join('');
+    const arc = `M${BK_CX - BK_R} ${BK_CY}A${BK_R} ${BK_R} 0 0 1 ${BK_CX + BK_R} ${BK_CY}`;
+    return `<svg class="bk-g" id="bkG" viewBox="0 0 320 206" role="img" aria-label="Certainty dial: from 95% sure on the left to 20% on the right; inside, what the 80%, 60% and 40% slips pay today">
+      <defs><linearGradient id="bkGrad" gradientUnits="userSpaceOnUse" x1="${BK_CX - BK_R}" y1="0" x2="${BK_CX + BK_R}" y2="0"><stop offset="0" style="stop-color:var(--pitch)"/><stop offset=".55" style="stop-color:var(--yellow)"/><stop offset="1" style="stop-color:var(--red)"/></linearGradient></defs>
+      <path class="bk-base" d="${arc}"/><path class="bk-on" id="bkOn" d="${arc}" style="stroke-dasharray:${((bkAng(P0) / Math.PI) * BK_L).toFixed(1)} ${(BK_L + 20).toFixed(1)}"/>
+      ${tk}${lab}${pays}
+      <text class="bk-tl" x="${BK_CX - BK_R}" y="${BK_CY + 28}" text-anchor="middle">95%</text><text class="bk-tl" x="${BK_CX + BK_R}" y="${BK_CY + 28}" text-anchor="middle">20%</text>
+      <text class="bk-big" id="bkBig" x="${BK_CX}" y="${BK_CY - 30}" text-anchor="middle">${P0}%</text>
+      <text class="bk-sm" x="${BK_CX}" y="${BK_CY - 10}" text-anchor="middle">sure the slip lands</text>
+      <text class="bk-pay" id="bkPay" x="${BK_CX}" y="${BK_CY + 22}" text-anchor="middle"></text>
+      <g class="bk-kn" id="bkKn" style="transform:rotate(${((bkAng(P0) * 180) / Math.PI).toFixed(2)}deg)"><circle cx="${BK_CX - BK_R}" cy="${BK_CY}" r="12"/></g>
+    </svg>`;
+  }
+  function bkKnob(P) {
+    const kn = $('#bkKn'), on = $('#bkOn'), big = $('#bkBig'); if (!kn) return;
+    kn.style.transform = `rotate(${((bkAng(P) * 180) / Math.PI).toFixed(2)}deg)`;
+    if (on) on.style.strokeDasharray = `${((bkAng(P) / Math.PI) * BK_L).toFixed(1)} ${(BK_L + 20).toFixed(1)}`;
+    if (big) big.textContent = P + '%';
+  }
+  // a new level: the knob, the readout, the record and the slip (the bankers list and the record card stay)
+  function bkSel(P, quiet) {
+    const D = S.bkDial; if (!D) return;
+    S.bankP = P; if (!quiet) store.set('bankP', P);
+    if (!quiet) bkKnob(P);
+    const sl = D.slipAt(P / 100), pay = $('#bkPay'), rng = $('#bkRng');
+    if (pay) pay.textContent = sl ? `pays ${odds(sl.odds)} · ${sl.legs.length} ${sl.legs.length === 1 ? 'leg' : 'legs'}` : 'no slip this sure today';
+    if (rng) { rng.value = BK_STOPS.indexOf(P); rng.setAttribute('aria-valuetext', `${P}% sure${sl ? `, pays ${odds(sl.odds)}` : ', no slip this sure today'}`); }
+    const pr = $('#bkProof'); if (pr) pr.innerHTML = bkProofHtml(P, sl);
+    const sc = $('#bkSlip'); if (sc) sc.innerHTML = bkSlipHtml(sl, P);
+  }
+  function bkProofHtml(P, sl) {
+    const { rep, live } = bkProofDial(P), out = [];
+    if (rep && rep.n >= 20) out.push(`<p><b>${esc(bkSeason())}, replayed:</b> slips set to ${P}% landed on ${bkN(rep.w)} of ${bkN(rep.n)} match days (<b>${pct(rep.w / rep.n, 0)}</b>), at typical odds of ${odds(rep.odds)}.</p>`);
+    else if (S.bt && S.bt.bank) out.push(`<p>Too few replayed match days reached ${P}% to check this level.</p>`);
+    else out.push(`<p>${S.btBusy && !S.btTried ? 'Loading last season’s replay…' : 'Last season’s replay appears after the next weekly run.'}</p>`);
+    if (live) out.push(`<p><b>Since tracking began:</b> ${bkN(live.w)} of ${bkN(live.n)} landed.</p>`);
+    if (sl) out.push(`<p class="bk-1in">Even at ${P}%, about 1 slip in ${Math.max(2, Math.round(1 / Math.max(0.01, 1 - sl.prob)))} still loses.</p>`);
+    return out.join('');
+  }
+  function bkSlipHtml(sl, P) {
+    if (!sl) {
+      const top = BK_STOPS.find((p) => S.bkAvail && S.bkAvail.has(p));
+      S.bankSlip = null;
+      return `<h4>Your ${P}% slip</h4><div class="empty-state"><b>No slip is ${P}% sure ${esc(dayLabel(S.day).toLowerCase() === 'today' ? 'today' : 'on ' + dayLabel(S.day))}</b>${top ? `The surest you can get is ${top}%: drag the dial right, or <button type="button" class="lnk" data-bkp="${top}">set it to ${top}%</button>.` : 'Pick another day, or widen the scope.'}</div>`;
+    }
+    const real = sl.legs.filter((l) => l.s.real).length;
+    S.bankSlip = Object.assign({ tier: 'P' + P, name: `${P}% sure`, head: `Slip ${P}% sure to land`, kick: `CERTAINTY ${P}%`, real, target: odds(sl.odds) }, sl);
+    const leg = (l) => `<li data-open="${esc(l.m.id)}"><div><b>${esc(l.s.label)}</b><small>${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</small>
+      <span class="gs-lp"><i style="width:${Math.round(l.q * 100)}%"></i></span></div><span class="gs-p">${pct(l.q)}</span><span class="mono">${odds(l.s.price)}${l.s.real ? '' : '<small class="gs-est">est</small>'}</span></li>`;
+    return `<h4>Your ${P}% slip <span>one pick per game</span></h4>
+      <div class="bk-sn"><div><b class="mono">${odds(sl.odds)}</b><small>total odds</small></div><div><b>${pct(sl.prob, 0)}</b><small>all land</small></div><div><b>${sl.legs.length}</b><small>${sl.legs.length === 1 ? 'leg' : 'legs'}</small></div></div>
+      <ul class="gs-legs">${sl.legs.map(leg).join('')}</ul>
+      <div class="gs-acts"><button type="button" class="btn pri" data-bkadd="1">Add to coupon</button><button type="button" class="btn" data-bkshare="1" aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg>Share</button></div>
+      <p class="note">${real}/${sl.legs.length} legs at a typical bookmaker’s real price${real < sl.legs.length ? '; “est” is Statpad’s estimate of one, margin included, so check yours' : ''}. From ${bkN(S.bkDial ? S.bkDial.games : 0)} open games; chances checked against ${esc(bkSeason())}.</p>`;
+  }
+  function bkRow(b, compact) {
+    const s = b.s, m = b.m, ev = b.ev, q = Math.round(b.q * 100), on = inCoupon(m.id, s.key);
+    const evTxt = ev && ev.n >= 20 ? `<i aria-hidden="true">✓</i> ${bkN(ev.hits)} of ${bkN(ev.n)} like it landed` : '';
+    return `<li class="bk-r" data-open="${esc(m.id)}"><span class="bk-q" style="--q:${q}"><b>${q}<small>%</small></b></span>
+      <span class="bk-m"><b>${esc(s.label)}</b><span class="fxl">${pair(m)}${tFmt.format(Date.parse(m.ko))} · ${esc(m.h)} v ${esc(m.a)}</span>${!compact && evTxt ? `<small class="bk-ev">${evTxt}</small>` : ''}</span>
+      <span class="bk-pr">${odds(b.pr)}${s.real ? '' : '<small>est</small>'}</span>
+      <button type="button" class="add" data-add="${esc(m.id)}|${esc(s.key)}" aria-pressed="${on}" aria-label="Add ${esc(s.label)} to coupon">${on ? '✓' : '+'}</button></li>`;
+  }
+  function bkList(bankers) {
+    const min = S.bankMin, cnt = BK_MINS.map(([v]) => bankers.filter((b) => b.q >= v / 100 - 1e-9).length);
+    const rows = bankers.filter((b) => b.q >= min / 100 - 1e-9), shown = rows.slice(0, S.bkShown);
+    return `<div class="card bk-list"><h4>Bankers <span>each game’s surest pick</span></h4>
+      <div class="seg bk-mins" role="group" aria-label="How sure">${BK_MINS.map(([v, l], i) => `<button type="button" data-bkmin="${v}" aria-pressed="${min === v}">${l}<span class="n">${cnt[i]}</span></button>`).join('')}</div>
+      ${rows.length ? `<ol class="bk-rows">${shown.map((b) => bkRow(b)).join('')}</ol>` : `<div class="empty-state"><b>No game is ${min}% sure ${esc(dayLabel(S.day) === 'Today' ? 'today' : 'on ' + dayLabel(S.day))}</b>${cnt.some((c) => c) ? 'Lower the bar above, or pick another day.' : 'Pick another day, or widen the scope.'}</div>`}
+      ${rows.length > shown.length ? `<button type="button" class="btn bk-more" data-bkmore="1">Show ${Math.min(10, rows.length - shown.length)} more of ${rows.length}</button>` : ''}
+      <p class="note">A banker is the pick in a game Statpad is surest of, draws left out and the price at least 1.05. “Like it” means the same kind of pick at about the same chance in ${esc(bkSeason())}, replayed over 19 leagues; for games without bookmaker prices, that record is the chance shown, so watch the live record below for leagues further afield.</p></div>`;
+  }
+  // the record as dot plots: what Statpad said (ring) against what landed (dot)
+  function bkDots(rows, lo, hi) {
+    const X = (v) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+    return `<div class="bk-dp">${rows.map((r) => {
+      const a = X(r.said), b = X(r.got), up = r.got >= r.said - 0.005;
+      return `<div class="bk-dr" data-tip="${esc(r.tip)}"><span class="l">${esc(r.lab)}</span><span class="bk-tr"><b class="${up ? 'up' : 'dn'}" style="left:${Math.min(a, b)}%;width:${Math.abs(a - b)}%"></b><i class="s" style="left:${a}%"></i><i class="g" style="left:${b}%"></i></span><span class="v">${pct(r.got, 0)}<small>${bkN(r.n)} ${r.unit}</small></span></div>`;
+    }).join('')}<div class="bk-ax"><span></span><span><i>${Math.round(lo * 100)}%</i><i>${Math.round(((lo + hi) / 2) * 100)}%</i><i>${Math.round(hi * 100)}%</i></span><span></span></div></div>`;
+  }
+  function bkRecord(lab) {
+    const B = S.bt && S.bt.bank, T = S.track;
+    if (!B) return `<div class="card bk-rec"><h4>Do the chances hold?</h4><p class="note">${S.btBusy && !S.btTried ? 'Loading last season’s replay…' : 'Last season’s replay appears after the next weekly run.'}</p></div>`;
+    const bands = bkProofBands().filter((x) => x.rep && x.rep.n >= 20);
+    const lv = [90, 80, 70, 60, 50, 40, 30, 20].map((P) => ({ P, r: bkProofDial(P).rep })).filter((x) => x.r && x.r.n >= 20);
+    const liveB = bkProofBands().filter((x) => x.live), liveD = [90, 80, 70, 60, 50].map((P) => ({ P, l: bkProofDial(P).live })).filter((x) => x.l);
+    const recent = ((T && T.bankers) || []).slice(-6).reverse();
+    return `<div class="card bk-rec${lab ? ' bk-full' : ''}"><h4>Do the chances hold? <span>${esc(bkSeason())} replayed, ${bkN(B.games || 0)} games</span></h4>
+      <div class="bk-lg" aria-hidden="true"><span><i class="s"></i>Statpad said</span><span><i class="g"></i>Landed</span></div>
+      <div class="bk-recg">
+      ${bands.length ? `<div><h5>Bankers, by how sure</h5>${bkDots(bands.map((x) => ({ lab: x.lab, said: x.rep.said, got: x.rep.w / x.rep.n, n: x.rep.n, unit: 'picks', tip: `Bankers at ${x.lab}: Statpad said ${pct(x.rep.said, 1)}, ${bkN(x.rep.w)} of ${bkN(x.rep.n)} landed (${pct(x.rep.w / x.rep.n, 1)})` })), 0.7, 1)}</div>` : ''}
+      ${lv.length ? `<div><h5>Slips, by the level set</h5>${bkDots(lv.map((x) => ({ lab: x.P + '%', said: x.r.said, got: x.r.w / x.r.n, n: x.r.n, unit: 'days', tip: `Slips set to ${x.P}%: Statpad said ${pct(x.r.said, 1)} on average, ${bkN(x.r.w)} of ${bkN(x.r.n)} landed, at typical odds of ${odds(x.r.odds)}` })), 0, 1)}</div>` : ''}
+      </div>
+      ${liveB.length || liveD.length ? `<p class="bk-live"><b>Live record:</b> ${liveB.map((x) => `bankers ${x.lab} ${bkN(x.live.w)}/${bkN(x.live.n)}`).concat(liveD.map((x) => `${x.P}% slips ${bkN(x.l.w)}/${bkN(x.l.n)}`)).join(' · ')}</p>` : `<p class="bk-live">The live record starts with the first graded bankers: each is saved before kick-off and never edited.</p>`}
+      ${recent.length ? `<ul class="bk-rcnt">${recent.map((b) => `<li class="${b[10] ? 'w' : 'l'}"><span class="wl ${b[10] ? 'w' : 'l'}">${b[10] ? 'Won' : 'Lost'}</span><span class="bk-m"><b>${esc(keyLabel(b[7], b[3], b[4]))}</b><small>${esc(b[3])} ${b[5]}–${b[6]} ${esc(b[4])}</small></span><span class="gs-p">${pct(b[8], 0)}</span></li>`).join('')}</ul>` : ''}
+      <p class="note">Each game of ${esc(bkSeason())} replayed with ratings from earlier games only, half the board without prices as on the live site. A check on the method, not a promise.</p>
+      ${lab ? `<div class="gs-acts"><button type="button" class="btn" data-gobank="${esc(dayKey(S.now))}">Open Bankers</button></div>` : ''}</div>`;
+  }
+  // the Overview's card: the surest three of the day
+  function renderBankCard() {
+    const el = $('#bankCard'); if (!el) return;
+    if (!S.ready || !S.btTried) { if (!S.btTried && !S.trackAt && !S.btBusy) loadTrack(); el.hidden = true; return; }
+    const ks = days().map((d) => d.key), today = dayKey(S.now);
+    let dk = null, bs = [];
+    for (const k of ks) { if (k < today) continue; bs = ENGINE.bankers(bkOpen(k, 'all'), 0.85); if (bs.length) { dk = k; break; } }
+    if (!dk) { el.hidden = true; return; }
+    el.hidden = false;
+    const b85 = bkProofBands().filter((x) => x.k !== '80' && x.rep), n = b85.reduce((a, x) => a + x.rep.n, 0), w = b85.reduce((a, x) => a + x.rep.w, 0);
+    morph(el, `<h2 class="h4">Bankers <span>${esc(dayLabel(dk))} · the surest picks</span></h2>
+      <ol class="bk-rows">${bs.slice(0, 3).map((b) => bkRow(b, true)).join('')}</ol>
+      <div class="bk-foot">${n >= 50 ? `<span>In ${esc(bkSeason())}, picks Statpad gave 85% or more landed <b>${pct(w / n, 0)}</b> of ${bkN(n)}.</span>` : '<span>Every banker is saved before kick-off and graded after.</span>'}<button type="button" class="btn" data-gobank="${esc(dk)}">All ${bs.length} bankers and safe slips</button></div>`, 'bankc:' + dk);
   }
 
   // ---------------- coupon ----------------
@@ -4056,7 +4559,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const TIER_NAME = { A: 'Nearly definite', B: 'Highly possible', C: 'Possible' };
   // slips since v62 are the best, second-best and third-best combinations (b: 2); older ones were built per level
   const SLIP_NAME = { A: 'Best chance', B: 'Second best', C: 'Third best' };
-  const slipName = (s) => (s && s.b === 2 ? SLIP_NAME[s.t] : `${TIER_NAME[s.t]} (old builder)`);
+  const slipName = (s) => (s && s.b === 4 ? `${String(s.t).slice(1)}% sure` : s && s.b >= 2 ? SLIP_NAME[s.t] : `${TIER_NAME[s.t]} (old builder)`);   // v68: the current builder (3) was being called old
   async function loadTrack(force) {
     if (S.trackBusy || (!force && S.trackAt && Date.now() - S.trackAt < 5 * 60e3)) return;
     if (S.track && vfSame('track') && (S.bt || !vfHas('backtest') || vfSame('backtest'))) { S.trackAt = Date.now(); return; }
@@ -4074,14 +4577,19 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         if (b.ok) { S.bt = await b.json(); if (want) S.got.backtest = want; }
       }
     } catch (e) { /* no backtest yet */ }
+    const fresh = !S.btTried || S.bkBt !== S.bt; useBt(); S.bkBt = S.bt;
     S.trackBusy = false; S.trackAt = Date.now();
     if (S.tab === 'track') renderTrack();
-    if (S.tab === 'home' && S.ready) renderHero();
+    if (S.tab === 'home' && S.ready) { renderHero(); renderBankCard(); }
+    if (S.tab === 'slips' && S.sseg === 'bank' && S.ready && fresh) renderSlips();
   }
   async function loadBt() {   // the weekly replay and the value-bet history, for the Value board's "past bets like this"
     S.btBusy = true;
     try { const b = await fetch(dataUrl('backtest', 600e3), dataOpts('backtest')); if (b.ok) S.bt = await b.json(); } catch (e) { /* none yet */ }
+    useBt(); S.bkBt = S.bt;
     if (S.tab === 'value' && S.bt) renderValue();
+    if (S.tab === 'slips' && S.sseg === 'bank' && S.ready) renderSlips();
+    if (S.tab === 'home' && S.ready) renderBankCard();
   }
   const rate = (w, n) => (n ? w / n : null);
   // one tracker per entry level: graded top picks (all-time counts, detail from the last 90 days), the
@@ -4293,7 +4801,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="tt-wrap" style="margin-top:12px"><table class="tt">${bandHead('By market')}<tbody>${kRows}</tbody></table></div>
         <p class="note">Every game of football-data.co.uk's main leagues: the best price it lists against the consensus with the margin taken off (Pinnacle counted three times), the same rule as the live board, with closing-line value against its closing prices. It needs no model, so nothing here was fitted to these seasons. Treat it as an upper bound: the best price often comes from a bookmaker that limits or closes winning accounts, some best prices last only minutes, and fewer games qualify each season as prices get sharper.</p></div>`;
     }
-    return `<div class="lab-cols">${liveCard}${histCard || '<div class="card lab-card"><h4>Past seasons</h4><p class="note">The five-season history appears after the site’s weekly replay has run.</p></div>'}</div>${stressCard(H)}`;
+    return `<div class="lab-cols">${liveCard}${histCard || '<div class="card lab-card"><h4>Past seasons</h4><p class="note">The five-season history appears after the site’s weekly replay has run.</p></div>'}</div>${stressCard(H)}
+      <div class="rl-in"><div><b>Your own rule</b><span>Change the price range, the market, the leagues or the seasons, and see what it would have made.</span></div><button type="button" class="btn" data-rlgo="0">Open the rule tester</button></div>`;
   }
   const verName = (v) => (v === 'pre' ? 'Before versions were kept' : /^\d{4}-\d{2}-\d{2}$/.test(v) ? 'Engine of ' + new Date(v + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : v);
   function labAccuracy(T) {
@@ -4310,7 +4819,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       return `<tr><td>${esc(verName(v))}</td><td>${x.n.toLocaleString('en-US')}</td><td>${x.ll && x.ll[0] ? `${(x.ll[1] / x.ll[0]).toFixed(3)} <small>v ${(x.ll[2] / x.ll[0]).toFixed(3)}</small>` : '–'}</td><td class="hide-sm">${x.br && x.br[0] ? `${(x.br[1] / x.br[0]).toFixed(3)} <small>v ${(x.br[2] / x.br[0]).toFixed(3)}</small>` : '–'}</td><td>${A[0] ? `${pct(A[1] / A[0], 0)} <small>said ${pct(A[2] / A[0], 0)}</small>` : '–'}</td><td>${s ? `${sgn(s.roi, 0)} <small>${s.n}</small>` : '–'}</td></tr>`; }).join('');
     const months = (T && T.ledger) || [];
     const ledger = `<div class="card"><h4>The ledger <span>never edited</span></h4>
-      <p class="note" style="margin-top:0">Every graded prediction and value bet is a row in a spreadsheet file, one per month, kept in the site's GitHub repository. Rows are only ever added: each one carries the engine version, the first prediction and the last before kick-off, the price, the closing fair chance and the result, so any change to the engine can be checked against what came before.</p>
+      <p class="note" style="margin-top:0">Every graded prediction, value bet and banker is a row in a spreadsheet file, one per month, kept in the site's GitHub repository. Rows are only ever added: each one carries the engine version, the first prediction and the last before kick-off, the price, the closing fair chance and the result, so any change to the engine can be checked against what came before.</p>
       ${months.length ? `<div class="lab-ledger">${months.map(([m, n]) => `<a class="btn" href="ledger/${esc(m)}.csv" download>${esc(new Date(m + '-15T12:00:00Z').toLocaleDateString(undefined, { month: 'long', year: 'numeric' }))}<small>${n.toLocaleString('en-US')} rows</small></a>`).join('')}</div>` : '<p class="note">The first month appears after the next save of the track record (every few hours).</p>'}</div>`;
     return `<div class="trk-grid">
       <div class="card"><h4>Statpad vs the market</h4>${acc}</div>
@@ -4325,6 +4834,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // ideas tested on games the model never saw: what went live and what didn't, with the numbers
   const RESEARCH = [
+    ['kept', 'A rule tester on six seasons (v67)', 'Every game of football-data’s 19 leagues since 2021/22 with the average, best and closing prices, packed into one 0.6 MB file the page unpacks itself; any rule tested in about 10–40 ms. The same reading of fair prices as the pipeline (the power method).', 'measured when it was built: the Value board’s rule +4.4% a bet on 3,011 bets, beating the closing price on 69%; betting only where Statpad’s own chance beat the best price by 3%, −15% on 1,449 bets of a 2025/26 replay (where the two disagree, the market has been right)'],
     ['kept', 'A quiet page when nothing is happening (v66)', 'Main-thread work per second with the phone left alone, processor slowed four times, on each section. The assistant’s orb kept animating while hidden: a scaling, clipped circle around a spinning sheen, repainted on every frame.', 'Overview 195 → 43 ms a second, Matches 206 → 58, Value 144 → 17, Lab 94 → 29'],
     ['kept', 'Taps answered on the next frame (v66)', 'Time from a tap to the next frame on screen, from the browser’s own Event Timing (the measure behind Google’s INP), processor slowed four times. The tab bar now lights up first and the section is drawn on the frame after; a match page shows its header first; the multiverse is built only once its tab is open.', 'tab bar 72–264 ms → 32–48 ms; opening a match 304 → 80 ms the first time, 96 → 48 after; Model tab 160–360 → 40–56 ms'],
     ['kept', 'Lighthouse after the changes (v66)', 'Lighthouse’s mobile audit, two runs of each version on the same live data.', 'performance 67–69 → 76–77; total blocking time 240–460 → 130–190 ms; layout shift 0.004–0.007 → 0.003–0.004; accessibility 100 both'],
@@ -4418,7 +4928,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }).join('');
     const s1 = g.slips_v1, s1n = s1 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s1[t] || [0])[0]), 0) : 0, s1w = s1 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s1[t] || [0, 0])[1]), 0) : 0;
     const s2 = g.slips_v2, s2n = s2 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s2[t] || [0])[0]), 0) : 0, s2w = s2 ? ['A', 'B', 'C'].reduce((a, t) => a + ((s2[t] || [0, 0])[1]), 0) : 0;
-    const recent = (T.open || []).slice(-4).reverse().concat((T.slips || []).slice(-8).reverse());
+    const own = (x) => x.b !== 4;   // v68: slips by certainty have their own card
+    const recent = (T.open || []).filter(own).slice(-4).reverse().concat((T.slips || []).filter(own).slice(-8).reverse());
     return `<div class="tk-tiles" role="group" aria-label="Entry level">${tiles}</div>
       ${tkCard(T, X[S.tkT])}
       <div class="trk-grid">
@@ -4428,7 +4939,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           ${s1n ? `<p class="note">Before the slip builder changed on 22 November, ${s1n} slips were built level by level and ${s1w} won; they are kept apart.</p>` : ''}
           ${g.void ? `<p class="note">${g.void} slips voided after a postponed game.</p>` : ''}
           ${recent.length ? `<div class="tk-sec"><h5>Latest slips</h5>${slipList(recent)}</div>` : ''}</div>
-      </div>`;
+      </div>
+      ${S.bt && S.bt.bank ? bkRecord(true) : ''}`;
   }
   function renderTrack() {
     const box = $('#trackBox');
@@ -4663,6 +5175,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p><b>Nearly definite</b> picks have a cautious chance of 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. Picks lose a 3-point safety haircut when they rest on the model alone. When model and market disagree by more than 12 points the cautious chance loses another 3, and 1 more when prices are over a day and a half old; those two only make Statpad more careful about the tier, so the stated chance stays its best estimate (on three replayed seasons, picks that used to be cut for disagreement landed 85% of the time against a stated 81%). Big games between two top-six sides are kept out of the two safest tiers.</p>
       <h3>How slips are built</h3>
       <p>A slip lands only if every leg lands, so its chance is the product of its legs' chances. With the total odds fixed, that product is one over the total odds, times each leg's chance × its price. A fairly priced leg has chance × price = 1; a bookmaker's margin makes it less than 1, and every leg multiplies its loss in. On seven seasons of 19 leagues at a typical bookmaker's prices, that loss is about 5% a leg from 1.20 to 2.00 and 8 to 10% beyond 2.50, but a leg under 1.30 buys so little price that it costs the most chance for the odds it adds. So since v64 every leg must be at least 50% likely by default (more likely to land than not; you can choose 60%, or any leg), and you can type any target odds from 1.1 to 10,000. Smart slips search the whole day for the combination whose chances multiply to the most while its prices reach the target (one leg a match, at the average price across bookmakers), and build three: the best, the second best without the first one's matches, and the third best without either's. No leg counts as more likely than the bookmakers' own consensus says, and a leg whose cautious chance sits more than ten points under the minimum (thin data) is left out. Replayed through the deployed builder on 1,927 match days, the chance by the closing prices with legs of 50%+ against any legs: at 5 odds 18.9% against 19.1% (3.2 legs against 2.0); at 10 odds 9.1% against 9.4% (4.5 legs, the longest about 1.85, against 2.4 legs, the longest about 4.4); at 20 odds 4.3% against 4.6% (5.8 legs against 2.8); at 100 odds 0.78% against 0.88% (8.8 legs against 3.8). Legs of 60%+ cost a little more (8.5% at 10 odds, six legs), and legs capped at 1.30 the most (6.6%, ten legs). Whatever the legs, a slip's chance is set mostly by its target: the surest way to a safer slip is a lower target.</p>
+      <h3>Bankers and sure slips</h3>
+      <p>Under <b>Slips → Bankers</b>, each game's banker is the pick Statpad is surest of, draws left out and the price at least 1.05; the list shows those of 80% or more, and the Overview the surest three. For a game with bookmaker prices the chance is Statpad's usual one, never above the bookmakers' own consensus. For a game without prices it comes from last season's replay: every pick of every game was also priced from the model alone, counted by kind (double chance, team to score, win, over 1.5, under 3.5, over or under 2.5, both teams to score, team 2+ goals) and by chance in steps of 2.5 points, and the share that landed is the chance shown, pulled towards the stated chance by 50 picks' worth and made to rise with it. Without prices Statpad takes a safety haircut, and such picks had been landing more often than stated. Each banker says how many picks like it there were and how many landed.</p>
+      <p>The <b>dial</b> sets how sure a slip must be, from 95% down to 20%. For each level Statpad searches every combination of one pick per game, up to 8 legs, for the one that pays most while its legs' chances still multiply to at least that level (prices are a typical bookmaker's, or Statpad's estimate of one with the margin in). Margins compound with every leg, so a sure slip has few legs; the numbers inside the dial are what the 80%, 60% and 40% slips pay that day. On the 2025/26 replay when this was built, with half of each day's games stripped of their prices as on the live board, slips set to 90% landed on 93% of the 86 days that had one, 80% on 82% of 204, 70% on 72% of 234, 50% on 55% and 20% on 24%; bankers stated at 85–90% landed 88% of 2,195 times and those of 90% or more 94% of 311. The weekly replay redoes all of this and the dial shows the latest. The live record keeps each game's banker as it stood at the last update before kick-off, and each day's 90, 80, 70, 60 and 50% slips, frozen when their first game starts, graded after the final whistle and never edited. None of it is a promise: a 90% banker still loses about one time in ten.</p>
       <h3>Self-tuning</h3>
       <p>${d.calib && d.calib.on ? `On, from ${d.calib.n} graded top picks.` : `Learning: ${(d.calib && d.calib.n) || 0} of ${(d.calib && d.calib.need) || 150} graded top picks.`} Every update compares the chances Statpad stated (before any correction) with what landed over the last 90 days, and fits a small correction on the log-odds scale. A prior centred on “no change” keeps the correction modest until there is plenty of evidence. The correction applies to stated chances, tiers and slips.</p>
       <h3>Tuning</h3>
@@ -4728,6 +5243,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>To find anything, use the search box at the top (press / on a computer): it finds teams, matches, competitions and sections. The address follows the section, so a link ending in #value opens the Value board; #slips, #track, #tables and #saved open the others. A match has its own address too: the share button at the top of a match page sends a link that opens that match (while it's on the board).</p>
       <h3>Getting around</h3>
       <p>The phone's back button (or back swipe) closes whatever is open on top first: a match or team page, More, the search, the bet form or the assistant. From any section it then goes back to the Overview, and only from the Overview does it leave Statpad. Each section keeps its place: scroll down Matches, look at the Value board, come back, and you're where you were, with as many games showing as before. Tap the tab you're already on to go back to its top. The tab bar lights up the moment you tap it and the section is drawn on the next frame, and a match page shows its header and tabs at once and fills in its cards a moment later, so a slow phone never seems to ignore a tap. The assistant's orb no longer moves while it's hidden: it used to keep a slow phone's processor about 14% busy on every page even when nobody was using it.</p>
+      <h3>Rule tester</h3>
+      <p>Under More, the rule tester tries any betting rule on every game of football-data.co.uk's 19 leagues since 2021/22 (about 36,000 games, this season so far included). You choose what to bet on (home, draw, away, over or under 2.5 goals, the favourite or the underdog), the price range, whether you get a typical bookmaker's price (the average of those listed) or the best on offer, how far above the fair price it must be, Statpad's own chance or edge (for the season the weekly replay covers, rebuilt week by week from earlier games only), the leagues and the seasons. It shows how many bets the rule made, how many won against how many the prices said would, the profit at 1 unit a bet or the bank staking 2% of it a bet, and the running profit bet by bet. Then the checks worth making before trusting any rule: how often a rule with no edge makes as much (one whose every bet wins exactly as often as its price says), how the prices compare with the closing prices (the market's last word before kick-off, and the clearest sign of a real edge), both halves of the record, season by season, league by league, and the worst run. It also lists the games on the board now that the rule would bet on, and a link carries the rule to anyone you send it to. Fair prices are the average price with the margin taken off by the power method, as everywhere else on the site. The games come in one packed file of about 0.6 MB, downloaded the first time you open the tester and refreshed weekly. You can ask the assistant too: "would backing home favourites under 1.60 have made money?", "do draws pay?", "does the Value board rule work?".</p>
+      <p>What it showed while being built: the Value board's rule (the best price at least 2% above the fair price) made +4.4% a bet over 3,011 bets and beat the closing price on 69% of them; nearly every simple rule at a typical bookmaker's price loses about what the margin costs; and betting wherever Statpad's own chance beat the best price lost heavily in the replayed season, because where Statpad and the market disagree, the market has usually been right. That is why the Value board measures prices against the bookmakers' consensus, not against Statpad's chance.</p>
       <h3>Teams you follow</h3>
       <p>Tap the star beside a team's name in a match's Teams tab, or Follow on its team page. Its next game (or the one it's playing, with the live score) then sits at the top of the Overview under Your teams, its name carries a small star in the match list, and Matches gets a Following filter for the chosen day or the whole week. The list is kept on this phone only. A match's Teams tab also shows both sides' last five results this season with the scores, each side's record at this venue (home games for the home side, away games for the away side) and the two sides' earlier meetings this season.</p>
       <p>Tap <b>Ask Statpad</b> on the Overview (or press Ctrl/⌘ K on a computer) and the assistant opens, listening. Tap its orb, at the top of the conversation, to tuck the conversation away: the orb then floats over every page, match and tool while you look around. Tap it to bring the conversation back, or press and hold it to talk straight away. Close the conversation (×, or say "bye") and the orb goes with it. Speak or type, in English or Kiswahili: it answers in the language you use. It listens until you've finished, sending your question once you've been quiet for 3 seconds (5, or only when you tap ✓, under its settings). It answers about games (who wins, why, how sure, goals, both teams to score, the likeliest score, who scores first, clean sheets, the best price), picks (safest, value, underdogs, likely draws, most goals, biggest games, by day, league, market or level), slips (any odds, any number of legs, from the picks it just listed, "another one", "make it safer"), turning a stake into a goal, teams (form, position, ratings, team news, next game, title chances, two teams side by side), league tables and races, live scores and shocks, your bets and budget, Statpad's record, odds arithmetic (what odds mean, payouts after tax, fractions), and how Statpad works, from this Method page. It keeps the thread: "and tomorrow?", "what about La Liga?", "why the second one?", "add it", "more" and "yes" all lean on what came before, and it knows what's on screen, so "who wins?" on a match page means that match. When a name fits two clubs it asks which. It can also act: open a match, team, tab, the shock map, Weekend miracles or the Status pack, add picks to the coupon, switch theme, set a budget or target odds, and remember your name and your team. When it opens something, it shrinks to a strip so the page shows, and stays there for the next question. While the page is open it also speaks up when a game in one of your open bets, your coupon or your team's game kicks off, has a goal or finishes, with your bet's chance from there. Answers can be read aloud: when you speak (the default), always, or never; in hands-free mode it listens again after each spoken answer, even tucked away, so a conversation needs no taps, and tapping the orb while it talks stops it. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so voice needs the internet and the microphone allowed for the site; everything after that runs on the page, from the same numbers as everything else, and nothing is sent anywhere. It doesn't know about things outside Statpad, and it says so.</p>
@@ -4870,6 +5388,409 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   document.addEventListener('click', (e) => { if (e.target.closest('#sheetShare')) { buzz(6); shareMatch(S.open); } });
 
+  // ---------------- v67: the rule tester ----------------
+  // Pick what to bet on and when; see what it would have made on every game of the last six seasons in football-data's
+  // 19 leagues (about 36,000 games), at the average or the best price bookmakers listed before kick-off, with the
+  // checks a professional would make before trusting it: how often a rule with no edge does as well, whether the
+  // prices beat the closing prices, both halves of the record, the worst run. The games come in one packed file
+  // (rules.bin, about 0.6 MB, refreshed weekly by the pipeline), downloaded the first time the tester opens.
+  /* RULES-CORE: pure functions, also run by the tests */
+  // implied chances -> fair chances by the power method (as the pipeline): each chance raised to the same power k so
+  // they add up to 1, k found by Newton's method on the logs (from k = 1 it closes in from below, in 4-6 steps)
+  const RLP = new Float64Array(3), RLL = new Float64Array(3);
+  function rlPowN(q, n) {   // q: n implied chances; the fair chances land in RLP
+    let s0 = 0; for (let j = 0; j < n; j++) { s0 += q[j]; RLL[j] = Math.log(q[j]); }
+    if (s0 <= 1) { for (let j = 0; j < n; j++) RLP[j] = q[j] / s0; return RLP; }
+    let k = 1;
+    for (let it = 0; it < 30; it++) {
+      let f = -1, d = 0; for (let j = 0; j < n; j++) { const t = Math.exp(k * RLL[j]); f += t; d += t * RLL[j]; }
+      if (f < 1e-13 && f > -1e-13) break;
+      const nk = k - f / d; if (!(nk > 0) || !isFinite(nk)) break;
+      if (Math.abs(nk - k) < 1e-12) { k = nk; break; }
+      k = nk;
+    }
+    let s = 0; for (let j = 0; j < n; j++) { RLP[j] = Math.exp(k * RLL[j]); s += RLP[j]; }
+    for (let j = 0; j < n; j++) RLP[j] /= s;
+    return RLP;
+  }
+  function rlPow(q) { const p = rlPowN(q, q.length); return Array.from(p.subarray(0, q.length)); }
+  function rlDecode(buf, lazy) {   // lazy: the per-game work is left to D.fill(from, to), so it can be done in slices
+    const u8 = new Uint8Array(buf);
+    if (u8.length < 8 || String.fromCharCode(u8[0], u8[1], u8[2], u8[3]) !== 'SPR1') throw new Error('not a rule file');
+    const hl = u8[4] | (u8[5] << 8) | (u8[6] << 16) | (u8[7] << 24);
+    const H = JSON.parse(new TextDecoder().decode(u8.subarray(8, 8 + hl)));
+    const n = H.n, C = {}; let o = 8 + hl;
+    for (const [name, w] of H.cols) {
+      const a = new Uint16Array(n); for (let i = 0; i < n; i++) a[i] = u8[o + i]; o += n;
+      if (w === 2) { for (let i = 0; i < n; i++) a[i] |= u8[o + i] << 8; o += n; }
+      C[name] = a;
+    }
+    const K = ['H', 'D', 'A', 'O', 'U'], day = new Int32Array(n), avg = {}, best = {}, fair = {}, clo = {}, mod = {};
+    for (const k of K) { avg[k] = new Float32Array(n); best[k] = new Float32Array(n); fair[k] = new Float32Array(n); clo[k] = new Float32Array(n).fill(NaN); mod[k] = new Float32Array(n); }
+    const cp = (k, i) => { const c = C['c' + k][i], a = C['a' + k][i]; return c && a ? (a + c - 32768) / 100 : 0; };
+    const q = new Float64Array(3);
+    let d = 0;
+    for (let i = 0; i < n; i++) { d += C.dd[i]; day[i] = d; }
+    const fill = (i0, i1) => { for (let i = i0; i < i1; i++) {
+      for (const k of K) { const a = C['a' + k][i]; avg[k][i] = a / 100; best[k][i] = a ? (a + C['b' + k][i]) / 100 : 0; }
+      if (C.aH[i] && C.aD[i] && C.aA[i]) { q[0] = 100 / C.aH[i]; q[1] = 100 / C.aD[i]; q[2] = 100 / C.aA[i]; const p = rlPowN(q, 3); fair.H[i] = p[0]; fair.D[i] = p[1]; fair.A[i] = p[2]; }
+      if (C.aO[i] && C.aU[i]) { q[0] = 100 / C.aO[i]; q[1] = 100 / C.aU[i]; const p = rlPowN(q, 2); fair.O[i] = p[0]; fair.U[i] = p[1]; }
+      const cH = cp('H', i), cD = cp('D', i), cA = cp('A', i), cO = cp('O', i), cU = cp('U', i);
+      if (cH > 1 && cD > 1 && cA > 1) { q[0] = 1 / cH; q[1] = 1 / cD; q[2] = 1 / cA; const p = rlPowN(q, 3); clo.H[i] = p[0]; clo.D[i] = p[1]; clo.A[i] = p[2]; }
+      if (cO > 1 && cU > 1) { q[0] = 1 / cO; q[1] = 1 / cU; const p = rlPowN(q, 2); clo.O[i] = p[0]; clo.U[i] = p[1]; }
+      if (C.mH[i]) { mod.H[i] = C.mH[i] / 1000; mod.D[i] = C.mD[i] / 1000; mod.A[i] = C.mA[i] / 1000; }
+      if (C.mO[i]) { mod.O[i] = C.mO[i] / 1000; mod.U[i] = 1 - C.mO[i] / 1000; }
+    } };
+    const ms = new Set(); for (let i = 0; i < n; i++) if (C.mH[i]) ms.add(C.s[i]);
+    if (!lazy) fill(0, n);
+    return { H, n, day, s: C.s, l: C.l, h: C.h, a: C.a, hg: C.hg, ag: C.ag, avg, best, fair, clo, mod, modelSeasons: [...ms].sort((x, y) => x - y), fill };
+  }
+  const RL_TOP5 = ['EPL', 'LaLiga', 'BUN', 'SA', 'L1'];
+  function rlLeagueOk(D, lg) {   // null: every league; else a lookup by league number
+    if (!lg || lg === 'all') return null;
+    const want = lg === 'top5' ? RL_TOP5 : lg === 'first' ? null : [lg], ok = new Uint8Array(D.H.leagues.length);
+    D.H.leagues.forEach(([k], i) => { if (lg === 'first' ? !/[234]$/.test(k) : want.includes(k)) ok[i] = 1; });
+    return ok;
+  }
+  function rlSeasonOk(D, ss) {
+    if (!ss || ss === 'all') return null;
+    const n = D.H.seasons.length, ok = new Uint8Array(n);
+    if (ss === 'last3') { for (let i = Math.max(0, n - 3); i < n; i++) ok[i] = 1; } else if (ss === 'model') { for (const i of D.modelSeasons) ok[i] = 1; } else ok[+ss] = 1;
+    return ok;
+  }
+  function rlWon(k, g, x) { return k === 'H' ? g > x : k === 'D' ? g === x : k === 'A' ? g < x : k === 'O' ? g + x > 2 : g + x < 3; }
+  // the bets a rule makes, in date order: [game, market, price, won, fair chance, closing fair chance, Statpad's chance]
+  function rlRun(D, R) {
+    const lgOk = rlLeagueOk(D, R.lg), ssOk = rlSeasonOk(D, R.ss), fixed = R.m === 'F' || R.m === 'G' ? null : [...R.m], bets = [];
+    const needM = R.sc != null || R.se != null;
+    for (let i = 0; i < D.n; i++) {
+      if ((lgOk && !lgOk[D.l[i]]) || (ssOk && !ssOk[D.s[i]])) continue;
+      let ks = fixed;
+      if (!ks) { const h = D.avg.H[i], a = D.avg.A[i]; if (!h || !a || h === a) continue; ks = [(h < a) === (R.m === 'F') ? 'H' : 'A']; }
+      for (const k of ks) {
+        const pr = R.pt === 'best' ? D.best[k][i] : D.avg[k][i];
+        if (!(pr > 1) || pr < R.lo || pr > R.hi) continue;
+        const f = D.fair[k][i]; if (!f) continue;
+        if (R.e != null && pr * f - 1 < R.e) continue;
+        const mp = D.mod[k][i];
+        if (needM && !mp) continue;
+        if (R.sc != null && mp < R.sc) continue;
+        if (R.se != null && mp * pr - 1 < R.se) continue;
+        bets.push([i, k, pr, rlWon(k, D.hg[i], D.ag[i]) ? 1 : 0, f, D.clo[k][i], mp]);
+      }
+    }
+    return bets;
+  }
+  function rlPhi(z) {   // the standard normal distribution (Abramowitz and Stegun 7.1.26)
+    const x = Math.abs(z) / Math.SQRT2, t = 1 / (1 + 0.3275911 * x);
+    const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return z >= 0 ? (1 + y) / 2 : (1 - y) / 2;
+  }
+  function rlStats(D, bets) {
+    const n = bets.length, o = { n, w: 0, pl: 0, exp: 0, v0: 0, sp: 0, fh: 0, cn: 0, cs: 0, cw: 0, curve: new Float32Array(n), dd: 0, streak: 0, by: {}, lg: {}, bank: 100, bdd: 0 };
+    let peak = 0, run = 0, cum = 0, bank = 100, bpk = 100;
+    for (let j = 0; j < n; j++) {
+      const [i, , pr, w, f, c] = bets[j], p = w ? pr - 1 : -1;
+      o.w += w; cum += p; o.exp += f * pr - 1; o.v0 += pr - 1; o.sp += pr; o.fh += f;
+      if (cum > peak) peak = cum; else if (peak - cum > o.dd) o.dd = peak - cum;
+      run = w ? 0 : run + 1; if (run > o.streak) o.streak = run;
+      if (c === c && c > 0) { const v = pr * c - 1; o.cn++; o.cs += v; if (v > 0) o.cw++; }
+      const st = bank * 0.02; bank += w ? st * (pr - 1) : -st; if (bank > bpk) bpk = bank; else if (1 - bank / bpk > o.bdd) o.bdd = 1 - bank / bpk;
+      const b = o.by[D.s[i]] || (o.by[D.s[i]] = [0, 0, 0]); b[0]++; b[1] += w; b[2] += p;
+      const l = o.lg[D.l[i]] || (o.lg[D.l[i]] = [0, 0, 0]); l[0]++; l[1] += w; l[2] += p;
+      o.curve[j] = cum;
+    }
+    o.pl = cum; o.bank = bank;
+    o.roi = n ? cum / n : 0; o.expRoi = n ? o.exp / n : 0; o.hit = n ? o.w / n : 0; o.fhit = n ? o.fh / n : 0; o.avgPr = n ? o.sp / n : 0;
+    o.z = o.v0 > 0 ? cum / Math.sqrt(o.v0) : 0; o.pLuck = 1 - rlPhi(o.z);
+    o.clv = o.cn ? o.cs / o.cn : null; o.clvWin = o.cn ? o.cw / o.cn : null;
+    const h = n >> 1; let h1 = 0, h2 = 0;
+    for (let j = 0; j < n; j++) { const b = bets[j], p = b[3] ? b[2] - 1 : -1; if (j < h) h1 += p; else h2 += p; }
+    o.h1 = h ? h1 / h : null; o.h2 = n - h ? h2 / (n - h) : null;
+    return o;
+  }
+  // the honest reading of a result, in plain words: [kind, headline, explanation]
+  function rlVerdict(o) {
+    const P = (x) => `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(1)}%`;
+    if (o.n < 30) return ['few', 'Too few bets to tell', `${o.n} bet${o.n === 1 ? '' : 's'} in six seasons. Widen the price range or the leagues; under a hundred bets, luck swamps everything.`];
+    const clvOk = o.clv != null && o.clv > 0, halves = o.h1 > 0 && o.h2 > 0;
+    if (o.roi > 0) {
+      if (o.pLuck < 0.05 && clvOk && halves) return ['good', 'Holds up', `${P(o.roi)} a bet, in both halves of the record, at prices that beat the closing prices, and a rule with no edge does this well only ${pctTxt(o.pLuck)} of the time. Past results still promise nothing; stake small and keep checking it.`];
+      if (o.pLuck < 0.05) return ['mixed', 'Profitable, with a warning', `${P(o.roi)} a bet, and a rule with no edge does this well only ${pctTxt(o.pLuck)} of the time, but ${!clvOk ? 'the closing prices don’t back it up (the market didn’t move your way), which is how lucky runs usually look' : 'it made money in only one half of the record'}.`];
+      return ['luck', 'Could easily be luck', `${P(o.roi)} a bet, but a rule with no edge at all does this well ${pctTxt(o.pLuck)} of the time over ${o.n.toLocaleString()} bets.${clvOk ? ' The prices did beat the closing prices, which is a good sign worth watching.' : ''}`];
+    }
+    const gap = o.roi - o.expRoi, sd = Math.sqrt(o.v0) / o.n;
+    if (Math.abs(gap) < 2 * sd) return ['lose', 'Loses about what the margin costs', `${P(o.roi)} a bet; the bookmakers’ margin on these prices alone costs ${P(o.expRoi)}. No edge either way: results landed as the prices said.`];
+    return ['lose', gap < 0 ? 'Loses more than the margin' : 'Loses, but less than the margin', `${P(o.roi)} a bet against ${P(o.expRoi)} from the margin alone. ${gap < 0 ? 'These bets landed less often than the prices said.' : 'These bets landed more often than the prices said, just not enough to beat the margin.'}`];
+  }
+  function pctTxt(p) { return p < 0.001 ? 'under 0.1%' : p < 0.01 ? (p * 100).toFixed(1) + '%' : Math.round(p * 100) + '%'; }
+  /* /RULES-CORE */
+
+  function ruleDefaults() { return { m: 'H', pt: 'avg', lo: 1.5, hi: 2.5, e: null, sc: null, se: null, lg: 'all', ss: 'all', st: 'flat' }; }
+  function ruleClean(r) {
+    const d = ruleDefaults(), o = Object.assign({}, d, r || {});
+    o.m = /^(F|G|[HDAOU]{1,5})$/.test(o.m) ? o.m : d.m;
+    o.pt = o.pt === 'best' ? 'best' : 'avg';
+    o.lo = Math.min(100, Math.max(1.01, +o.lo || d.lo)); o.hi = Math.min(100, Math.max(o.lo, +o.hi || d.hi));
+    for (const k of ['e', 'sc', 'se']) o[k] = o[k] == null || o[k] === '' || !isFinite(+o[k]) ? null : +o[k];
+    o.st = o.st === 'pct' ? 'pct' : 'flat';
+    return o;
+  }
+  function ruleQS(r) {
+    const q = [`m=${r.m}`, `pt=${r.pt}`, `lo=${+r.lo.toFixed(2)}`, `hi=${+r.hi.toFixed(2)}`];
+    if (r.e != null) q.push(`e=${Math.round(r.e * 100)}`); if (r.sc != null) q.push(`sc=${Math.round(r.sc * 100)}`); if (r.se != null) q.push(`se=${Math.round(r.se * 100)}`);
+    if (r.lg !== 'all') q.push(`lg=${encodeURIComponent(r.lg)}`); if (r.ss !== 'all') q.push(`ss=${r.ss}`); if (r.st !== 'flat') q.push('st=pct');
+    return q.join('&');
+  }
+  function ruleFromHash() {
+    const h = decodeURIComponent((location.hash || '').slice(1)); if (!h.startsWith('rules?')) return null;
+    const q = new URLSearchParams(h.slice(6)), r = {};
+    for (const [k, v] of q) r[k] = ['e', 'sc', 'se'].includes(k) ? +v / 100 : v;
+    return ruleClean(r);
+  }
+  const RL_MK = [['H', 'Home'], ['D', 'Draw'], ['A', 'Away'], ['O', 'Over 2.5'], ['U', 'Under 2.5'], ['F', 'Favourite'], ['G', 'Underdog']];
+  const RL_PRESETS = [
+    ['The Value board’s rule', { m: 'HDAOU', pt: 'best', lo: 1.01, hi: 5.5, e: 0.02, sc: null, se: null }],
+    ['Short favourites', { m: 'F', pt: 'avg', lo: 1.2, hi: 1.6, e: null, sc: null, se: null }],
+    ['Big underdogs', { m: 'G', pt: 'avg', lo: 5, hi: 100, e: null, sc: null, se: null }],
+    ['Draws at 3.00–3.60', { m: 'D', pt: 'avg', lo: 3, hi: 3.6, e: null, sc: null, se: null }],
+    ['Overs at 1.70–2.10', { m: 'O', pt: 'avg', lo: 1.7, hi: 2.1, e: null, sc: null, se: null }],
+    ['Statpad’s 70%+ picks', { m: 'HAOU', pt: 'avg', lo: 1.01, hi: 100, e: null, sc: 0.7, se: null }],
+    ['Where Statpad beats the price', { m: 'HDAOU', pt: 'best', lo: 1.01, hi: 100, e: null, sc: null, se: 0.03 }],
+  ];
+  function rulesLoad() {
+    S.rl = S.rl || {};
+    if (S.rl.D || S.rl.p) return S.rl.p;
+    S.rl.err = null;
+    S.rl.p = (async () => {
+      if (typeof DecompressionStream !== 'function') throw new Error('old');
+      const r = await fetch('rules.bin', { cache: 'no-cache' });
+      if (!r.ok) throw new Error(r.status === 404 ? 'missing' : 'net');
+      const buf = await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      const D = rlDecode(buf, true), tick = () => new Promise((res) => setTimeout(res, 0));
+      for (let i = 0; i < D.n; i += 4000) { await tick(); D.fill(i, Math.min(D.n, i + 4000)); }   // slices of ~30 ms on a slow phone
+      return D;
+    })().then((D) => { S.rl.D = D; S.rl.p = null; S.rl.memo = null; if (S.tab === 'rules') renderRules(); return D; },
+      (e) => { S.rl.p = null; S.rl.err = e && e.message || 'net'; if (S.tab === 'rules') renderRules(); });
+    return S.rl.p;
+  }
+  const rlKey = (R) => [R.m, R.pt, R.lo, R.hi, R.e, R.sc, R.se, R.lg, R.ss].join('|');
+  function ruleSet(patch, quiet) {
+    S.rule = ruleClean(Object.assign({}, S.rule, patch)); store.set('rule', S.rule);
+    if (S.tab === 'rules') { try { history.replaceState(history.state, '', tabURL('rules')); } catch (e) { /* */ } }
+    if (!quiet) buzz(5);
+    // the buttons answer on this frame; the results (about 80 ms of work on a slow phone) on the next, dimmed meanwhile
+    rlSyncCtl();
+    const res = $('#rlRes'); if (res) res.classList.add('busy');
+    cancelAnimationFrame(S.rlRaf); S.rlRaf = requestAnimationFrame(() => setTimeout(() => { renderRulesRes(); if (res) res.classList.remove('busy'); }, 0));
+  }
+  function renderRules() {
+    const box = $('#rulesBox'); if (!box) return;
+    if (!S.rl || !S.rl.D) {
+      if (!S.rl || (!S.rl.p && !S.rl.err)) rulesLoad();
+      const e = S.rl && S.rl.err;
+      morph(box, e ? `<div class="card empty rl-wait"><b>${e === 'old' ? 'This browser can’t unpack the games' : e === 'missing' ? 'The games are being prepared' : 'Couldn’t download the games'}</b>${e === 'old' ? 'The rule tester needs a recent browser (Chrome 80, Safari 16.4 or newer).' : e === 'missing' ? 'The next data run builds them (it takes a run or two after an update). Try again in a few minutes.' : 'Check the connection and try again.'}${e !== 'old' ? '<div><button type="button" class="btn" data-rlretry="1">Try again</button></div>' : ''}</div>`
+        : `<div class="card rl-wait"><div class="rl-spin" aria-hidden="true"></div><b>Downloading six seasons of games</b><span>About 0.6 MB, once a week; kept on this phone after that.</span></div>`, 'rl-w:' + (e || ''));
+      return;
+    }
+    if (!box.querySelector('.rl-ctl')) { box.innerHTML = rlCtlHTML() + '<div id="rlRes" aria-live="polite"></div>'; rlSyncCtl(); }
+    renderRulesRes();
+  }
+  function rlCtlHTML() {
+    const D = S.rl.D, H = D.H, ms = D.modelSeasons.map((i) => H.seasons[i]).join(', ');
+    const chips = (attr, items, cls = '') => `<div class="rl-chips${cls}" role="group">${items.map(([v, l]) => `<button type="button" data-${attr}="${v}" aria-pressed="false">${l}</button>`).join('')}</div>`;
+    return `<div class="card rl-ctl">
+      <div class="rl-row rl-pre"><span class="rl-lab">Start from</span>${chips('rlpre', RL_PRESETS.map(([l], i) => [i, esc(l)]), ' scroll')}</div>
+      <div class="rl-row"><span class="rl-lab">Bet on</span>${chips('rlm', RL_MK)}</div>
+      <div class="rl-row"><span class="rl-lab">Price</span><div class="rl-px"><label>from <input id="rlLo" type="number" inputmode="decimal" step="0.05" min="1.01" max="100" aria-label="Lowest price"></label><label>to <input id="rlHi" type="number" inputmode="decimal" step="0.05" min="1.01" max="100" aria-label="Highest price"></label></div></div>
+      <div class="rl-row"><span class="rl-lab">Price you get</span>${chips('rlpt', [['avg', 'A typical bookmaker’s'], ['best', 'The best on offer']])}</div>
+      <div class="rl-row" id="rlEdge"><span class="rl-lab">Above the fair price by</span>${chips('rle', [['', 'Any'], ['0', '0%+'], ['0.02', '2%+'], ['0.05', '5%+'], ['0.1', '10%+']])}</div>
+      <details class="rl-more"${S.rule.sc != null || S.rule.se != null || S.rule.lg !== 'all' || S.rule.ss !== 'all' || S.rule.st !== 'flat' ? ' open' : ''}><summary>Statpad’s chance, leagues, seasons and stakes</summary>
+        <div class="rl-row"><span class="rl-lab">Statpad’s chance at least</span>${chips('rlsc', [['', 'Any'], ['0.5', '50%'], ['0.6', '60%'], ['0.7', '70%'], ['0.8', '80%']])}</div>
+        <div class="rl-row"><span class="rl-lab">Statpad’s edge at least</span>${chips('rlse', [['', 'Any'], ['0', '0%'], ['0.05', '5%'], ['0.1', '10%']])}</div>
+        <p class="note rl-mnote">Statpad’s own chances exist for ${ms || 'the replayed season'} (rebuilt week by week from earlier games only), so a rule that uses them is tested on ${D.modelSeasons.length === 1 ? 'that season' : 'those seasons'} alone.</p>
+        <div class="rl-row"><span class="rl-lab">Leagues</span><select id="rlLg" aria-label="Leagues"><option value="all">All ${H.leagues.length} leagues</option><option value="top5">The top five</option><option value="first">Top divisions only</option>${H.leagues.map(([k, nm, c]) => `<option value="${esc(k)}">${esc(nm)} · ${esc(c)}</option>`).join('')}</select></div>
+        <div class="rl-row"><span class="rl-lab">Seasons</span><select id="rlSs" aria-label="Seasons"><option value="all">All ${H.seasons.length} (${esc(H.seasons[0])} to now)</option><option value="last3">The last three</option>${H.seasons.map((x, i) => `<option value="${i}">${esc(x)}${i === H.seasons.length - 1 ? ' so far' : ''}</option>`).join('')}</select></div>
+        <div class="rl-row"><span class="rl-lab">Stakes</span>${chips('rlst', [['flat', '1 unit a bet'], ['pct', '2% of the bank']])}</div>
+      </details>
+    </div>`;
+  }
+  function rlSyncCtl() {
+    const R = S.rule, box = $('#rulesBox'); if (!box || !box.querySelector('.rl-ctl')) return;
+    const set = (attr, fn) => { for (const b of box.querySelectorAll(`[data-${attr}]`)) b.setAttribute('aria-pressed', String(!!fn(b.dataset[attr.replace(/-([a-z])/g, (m, c) => c.toUpperCase())]))); };
+    const pre = RL_PRESETS.findIndex(([, p]) => Object.keys(p).every((k) => (p[k] == null ? R[k] == null : String(p[k]) === String(R[k]))));
+    set('rlpre', (v) => +v === pre);
+    set('rlm', (v) => (v === 'F' || v === 'G' ? R.m === v : R.m !== 'F' && R.m !== 'G' && R.m.includes(v)));
+    set('rlpt', (v) => v === R.pt);
+    set('rle', (v) => (v === '' ? R.e == null : R.e != null && Math.abs(+v - R.e) < 1e-9));
+    set('rlsc', (v) => (v === '' ? R.sc == null : R.sc != null && Math.abs(+v - R.sc) < 1e-9));
+    set('rlse', (v) => (v === '' ? R.se == null : R.se != null && Math.abs(+v - R.se) < 1e-9));
+    set('rlst', (v) => v === R.st);
+    const lo = $('#rlLo'), hi = $('#rlHi');
+    if (lo && document.activeElement !== lo) lo.value = R.lo.toFixed(2);
+    if (hi && document.activeElement !== hi) hi.value = R.hi.toFixed(2);
+    const lg = $('#rlLg'); if (lg) lg.value = R.lg; const ss = $('#rlSs'); if (ss) ss.value = String(R.ss);
+    const ed = $('#rlEdge'); if (ed) ed.classList.toggle('off', R.pt !== 'best');
+  }
+  const rlP = (x, d = 1) => `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(d)}%`;
+  const rlU = (x) => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)}`;
+  const rlMkName = (D, i, k) => { const t = D.H.teams[D.l[i]]; return k === 'H' ? `${t[D.h[i]]} to win` : k === 'A' ? `${t[D.a[i]]} to win` : k === 'D' ? 'Draw' : k === 'O' ? 'Over 2.5 goals' : 'Under 2.5 goals'; };
+  const rlDate = (D, i, o) => new Date(Date.parse(D.H.d0) + D.day[i] * 864e5).toLocaleDateString(undefined, o || { day: 'numeric', month: 'short', year: 'numeric' });
+  function renderRulesRes() {
+    const res = $('#rlRes'); if (!res || !S.rl || !S.rl.D) return;
+    const D = S.rl.D, R = S.rule, key = rlKey(R);
+    if (!S.rl.memo || S.rl.memo.key !== key) { const bets = rlRun(D, R); S.rl.memo = { key, bets, o: rlStats(D, bets) }; }
+    const { bets, o } = S.rl.memo, [kind, head, why] = rlVerdict(o), H = D.H;
+    const nSeas = Object.keys(o.by).length || 1, flat = R.st === 'flat';
+    const tile = (l, v, sub, cls = '') => `<div class="rl-t${cls}"><span>${l}</span><b>${v}</b><small>${sub}</small></div>`;
+    const seasons = Object.entries(o.by).sort((x, y) => x[0] - y[0]);
+    const lgs = Object.entries(o.lg).sort((x, y) => y[1][0] - x[1][0]).slice(0, 10);
+    const now = rlNow(R);
+    let html = `<div class="rl-v ${kind}"><b>${head}</b><p>${why}</p></div>
+      <div class="rl-k">${tile('Bets', o.n.toLocaleString(), `about ${Math.round(o.n / nSeas).toLocaleString()} a season`)}
+        ${tile('Won', o.n ? pct(o.hit, 1) : '–', o.n ? `the prices said ${pct(o.fhit, 1)}` : 'no bets')}
+        ${flat ? tile('Profit', o.n ? rlU(o.pl) + ' u' : '–', o.n ? `staking 1 unit a bet, avg price ${o.avgPr.toFixed(2)}` : '', o.pl > 0 ? ' up' : o.pl < 0 ? ' dn' : '')
+          : tile('Bank', o.n ? `${o.bank < 10 ? o.bank.toFixed(1) : Math.round(o.bank).toLocaleString()}` : '–', o.n ? `from 100, staking 2% of it each bet; deepest fall ${pct(o.bdd, 0)}` : '', o.bank > 100 ? ' up' : o.bank < 100 ? ' dn' : '')}
+        ${tile('Return a bet', o.n ? rlP(o.roi) : '–', o.n ? `fair prices said ${rlP(o.expRoi)}` : '', o.roi > 0 ? ' up' : o.roi < 0 ? ' dn' : '')}</div>`;
+    if (o.n) {
+      html += `<div class="card rl-ch"><h4>Profit, bet by bet <span>units, 1 a bet, in date order</span></h4>${rlChart(D, bets, o)}</div>
+      <div class="card rl-luck"><h4>Luck or edge?</h4>
+        ${o.pl > 0 ? `<div class="rl-r"><span>A rule with no edge makes this much</span><b>${pctTxt(o.pLuck)} of the time</b></div>` : `<div class="rl-r"><span>Return against what the fair prices said</span><b>${rlP(o.roi)} against ${rlP(o.expRoi)} a bet</b></div>`}
+        <div class="rl-r"><span>Against the closing prices</span><b>${o.clv == null ? 'not listed for these games' : `${rlP(o.clv)} a bet, beat on ${pct(o.clvWin, 0)} of bets`}</b></div>
+        <div class="rl-r"><span>First and second half of the record</span><b><i class="${o.h1 > 0 ? 'up' : 'dn'}">${o.h1 == null ? '–' : rlP(o.h1)}</i> then <i class="${o.h2 > 0 ? 'up' : 'dn'}">${o.h2 == null ? '–' : rlP(o.h2)}</i></b></div>
+        <div class="rl-r"><span>Worst run</span><b>${o.streak} lost in a row; deepest fall ${o.dd.toFixed(1)} units</b></div>
+        <p class="note">The closing price is the last price before kick-off, when the most money and news are in: bets that regularly beat it are the clearest sign of a real edge. A rule with no edge is one whose every bet wins exactly as often as its price says.</p></div>
+      <div class="card rl-seas"><h4>Season by season</h4><table class="rl-tb"><thead><tr><th>Season</th><th>Bets</th><th>Won</th><th>Profit</th><th>A bet</th></tr></thead><tbody>
+        ${seasons.map(([si, [n, w, pl]]) => `<tr><td>${esc(H.seasons[si])}${+si === H.seasons.length - 1 ? ' so far' : ''}</td><td>${n.toLocaleString()}</td><td>${pct(w / n, 0)}</td><td class="${pl > 0 ? 'up' : pl < 0 ? 'dn' : ''}">${rlU(pl)}</td><td class="${pl > 0 ? 'up' : pl < 0 ? 'dn' : ''}">${rlP(pl / n)}</td></tr>`).join('')}
+        </tbody></table><p class="note">${seasons.filter(([, v]) => v[2] > 0).length} of ${seasons.length} seasons in profit.</p></div>
+      ${lgs.length > 1 ? `<div class="card rl-lgs"><h4>By league <span>the ${lgs.length} with most bets</span></h4><table class="rl-tb"><thead><tr><th>League</th><th>Bets</th><th>Won</th><th>A bet</th></tr></thead><tbody>
+        ${lgs.map(([li, [n, w, pl]]) => `<tr><td>${esc(H.leagues[li][1])}</td><td>${n.toLocaleString()}</td><td>${pct(w / n, 0)}</td><td class="${pl > 0 ? 'up' : pl < 0 ? 'dn' : ''}">${rlP(pl / n)}</td></tr>`).join('')}
+        </tbody></table><p class="note">Small samples swing wildly: a league with a few dozen bets says very little.</p></div>` : ''}`;
+    }
+    html += `<div class="card rl-now"><h4>On the board now <span>games this rule would bet on, in the same leagues</span></h4>${now.length ? `<div class="rl-nl">${now.slice(0, 12).map(({ r, k, pr, mp }) => `<button type="button" class="rl-n" data-open="${esc(r.m.id)}"><span class="rl-nm"><b>${esc(k === 'H' ? r.m.h + ' to win' : k === 'A' ? r.m.a + ' to win' : k === 'D' ? 'Draw' : k === 'O' ? 'Over 2.5 goals' : 'Under 2.5 goals')}</b><small>${esc(r.m.h)} v ${esc(r.m.a)} · ${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}${mp ? ` · Statpad ${pct(mp, 0)}` : ''}</small></span><span class="rl-pr">${pr.toFixed(2)}</span></button>`).join('')}</div>${now.length > 12 ? `<p class="note">and ${now.length - 12} more.</p>` : ''}`
+      : `<p class="note">${S.rows && S.rows.length ? 'None of the games on the board right now fit this rule with the prices listed.' : 'The board is still loading.'}</p>`}
+      <p class="note">Prices on the board are the bookmakers’ current ones, which move until kick-off.</p></div>`;
+    if (o.n) html += `<div class="card rl-last"><h4>The last ${Math.min(12, o.n)} bets</h4><div class="rl-ll">${bets.slice(-12).reverse().map(([i, k, pr, w]) => { const t = H.teams[D.l[i]]; return `<div class="rl-b"><span class="rs ${w ? 'W' : 'L'}">${w ? 'W' : 'L'}</span><span class="rl-bm"><b>${esc(rlMkName(D, i, k))}</b><small>${esc(t[D.h[i]])} ${D.hg[i]}–${D.ag[i]} ${esc(t[D.a[i]])} · ${esc(rlDate(D, i))}</small></span><span class="rl-pr">${pr.toFixed(2)}</span></div>`; }).join('')}</div></div>`;
+    html += `<div class="rl-foot"><button type="button" class="btn" data-rlshare="1"><svg aria-hidden="true"><use href="#i-share"/></svg>Share this rule</button>
+      <p class="note">${D.n.toLocaleString()} games with prices from football-data.co.uk, ${esc(H.seasons[0])} to ${esc(rlDate(D, D.n - 1))}. Fair prices are the average price with the bookmakers’ margin taken off (the power method); 1 unit a bet, settled at full time. Results in the past say nothing certain about the future, and the best price on offer is often at a bookmaker you can’t use.</p></div>`;
+    morph(res, html, 'rlr');
+    rlChartWire(); rlPill(o);
+  }
+  // while the controls fill the screen, a small summary floats above the tab bar; tapping it shows the results
+  function rlPill(o) {
+    let p = $('#rlPill');
+    if (!p) { p = document.createElement('button'); p.type = 'button'; p.id = 'rlPill'; p.className = 'rl-pill'; document.body.appendChild(p);
+      p.addEventListener('click', () => { const v = document.querySelector('#rlRes .rl-v'); if (v) { buzz(5); window.scrollTo({ top: v.getBoundingClientRect().top + scrollY - 70, behavior: motionOK() ? 'smooth' : 'auto' }); } }); }
+    if (o) p.innerHTML = `<b>${o.n.toLocaleString()} bets</b><span class="${o.roi > 0 ? 'up' : o.roi < 0 ? 'dn' : ''}">${o.n ? rlP(o.roi) + ' a bet' : 'no bets'}</span><i>See results</i>`;
+    const v = document.querySelector('#rlRes .rl-v');
+    if (v && !S.rlIO && 'IntersectionObserver' in window) S.rlIO = new IntersectionObserver((es) => { for (const e of es) S.rlBelow = !e.isIntersecting && e.boundingClientRect.top > 0; rlPillShow(); });
+    if (v && S.rlIO && S.rlIOel !== v) { S.rlIO.disconnect(); S.rlIO.observe(v); S.rlIOel = v; }
+    rlPillShow();
+  }
+  function rlPillShow() { const p = $('#rlPill'); if (p) p.classList.toggle('on', (S.toTab || S.tab) === 'rules' && !!S.rlBelow); }
+  function rlChart(D, bets, o) {
+    const W = 640, Hh = 190, n = bets.length, c = o.curve;
+    let mn = 0, mx = 0; for (let j = 0; j < n; j++) { if (c[j] < mn) mn = c[j]; if (c[j] > mx) mx = c[j]; }
+    const pad = (mx - mn) * 0.08 || 1, y0 = mn - pad, y1 = mx + pad, X = (j) => (n < 2 ? W / 2 : (j / (n - 1)) * W), Y = (v) => Hh - ((v - y0) / (y1 - y0)) * Hh;
+    // at most ~600 points: each bucket keeps its lowest and highest so no run is hidden
+    const pts = []; const step = Math.max(1, Math.ceil(n / 300));
+    for (let j = 0; j < n; j += step) { let lo = j, hi = j; for (let q = j; q < Math.min(n, j + step); q++) { if (c[q] < c[lo]) lo = q; if (c[q] > c[hi]) hi = q; } for (const q of lo < hi ? [lo, hi] : [hi, lo]) pts.push(`${X(q).toFixed(1)},${Y(c[q]).toFixed(1)}`); }
+    if (n > 1) pts.push(`${X(n - 1).toFixed(1)},${Y(c[n - 1]).toFixed(1)}`);
+    // season boundaries
+    const marks = []; let prev = -1;
+    for (let j = 0; j < n; j++) { const s = D.s[bets[j][0]]; if (s !== prev) { marks.push([j, s]); prev = s; } }
+    const end = c[n - 1];
+    return `<div class="rl-cw"><svg class="rl-svg" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" role="img" aria-label="Running profit over ${n} bets, ending at ${rlU(end)} units">
+        ${marks.slice(1).map(([j]) => `<line class="rl-sm" x1="${X(j).toFixed(1)}" x2="${X(j).toFixed(1)}" y1="0" y2="${Hh}"/>`).join('')}
+        <line class="rl-zero" x1="0" x2="${W}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>
+        <polyline class="rl-line${end >= 0 ? ' up' : ' dn'}" points="${pts.join(' ')}"/>
+        <line class="rl-x" x1="0" x2="0" y1="0" y2="${Hh}" hidden/></svg>
+      <div class="rl-yl"><span>${rlU(mx)}</span><span>${rlU(mn)}</span></div>
+      <div class="rl-tip" hidden></div></div>
+      <div class="rl-xl">${(() => { let last = -1; return marks.map(([j, s]) => { const x = (n < 2 ? 0.5 : j / (n - 1)) * 100; if (last >= 0 && x - last < 9) return ''; last = x; return `<span style="left:${x.toFixed(2)}%">${esc(D.H.seasons[s].replace(/^20(\d\d)\/(\d\d)$/, '$1/$2'))}</span>`; }).join(''); })()}</div>
+      <p class="note">Ends at <b>${rlU(end)} units</b> after ${n.toLocaleString()} bets; vertical lines mark new seasons. Touch the line to read any point.</p>`;
+  }
+  function rlChartWire() {
+    const cw = document.querySelector('#rlRes .rl-cw'); if (!cw || cw._w) return; cw._w = 1;
+    const svg = cw.querySelector('svg'), x = cw.querySelector('.rl-x'), tip = cw.querySelector('.rl-tip');
+    const show = (ev) => {
+      const m = S.rl && S.rl.memo; if (!m || !m.bets.length) return;
+      const rc = svg.getBoundingClientRect(), f = Math.min(1, Math.max(0, (ev.clientX - rc.left) / rc.width)), j = Math.round(f * (m.bets.length - 1));
+      const [i, k, pr, w] = m.bets[j], D = S.rl.D, t = D.H.teams[D.l[i]], xx = (m.bets.length < 2 ? 0.5 : j / (m.bets.length - 1)) * 640;
+      x.setAttribute('x1', xx); x.setAttribute('x2', xx); x.hidden = false;
+      tip.textContent = ''; const b = document.createElement('b'); b.textContent = `${rlU(m.o.curve[j])} units after bet ${(j + 1).toLocaleString()}`;
+      const sm = document.createElement('small'); sm.textContent = `${rlDate(D, i)} · ${t[D.h[i]]} v ${t[D.a[i]]} · ${rlMkName(D, i, k)} at ${pr.toFixed(2)}, ${w ? 'won' : 'lost'}`;
+      tip.append(b, sm); tip.hidden = false; tip.style.left = Math.min(Math.max(0, f * rc.width - 90), rc.width - 180) + 'px';
+    };
+    const hide = () => { x.hidden = true; tip.hidden = true; };
+    svg.addEventListener('pointermove', show); svg.addEventListener('pointerdown', show); svg.addEventListener('pointerleave', hide);
+  }
+  // the same rule on today's board: bookmakers' current prices, the same fair-price reading, the same leagues
+  function rlNow(R) {
+    if (!S.rows || !S.rl || !S.rl.D) return [];
+    const D = S.rl.D, keys = new Set(D.H.leagues.map((x) => x[0])), lgOk = rlLeagueOk(D, R.lg), now = Date.now(), out = [];
+    const allowed = (lk) => { const i = D.H.leagues.findIndex((x) => x[0] === lk); return i >= 0 && (!lgOk || lgOk[i]); };
+    for (const r of S.rows) {
+      if (r.started || r.ko <= now || !keys.has(r.m.lk) || !allowed(r.m.lk)) continue;
+      const mk = r.m.mkt; if (!mk || !mk.avg || mk.avg.length < 3 || !mk.avg.every((x) => x > 1)) continue;
+      const ou = mk.ou || {}, avg = { H: mk.avg[0], D: mk.avg[1], A: mk.avg[2], O: ou.avg && ou.avg[0], U: ou.avg && ou.avg[1] };
+      const best = { H: (mk.best || [])[0], D: (mk.best || [])[1], A: (mk.best || [])[2], O: ou.best && ou.best[0], U: ou.best && ou.best[1] };
+      const f3 = rlPow([1 / avg.H, 1 / avg.D, 1 / avg.A]), f2 = avg.O > 1 && avg.U > 1 ? rlPow([1 / avg.O, 1 / avg.U]) : null;
+      const fair = { H: f3[0], D: f3[1], A: f3[2], O: f2 && f2[0], U: f2 && f2[1] };
+      const a = r.a, o25 = a && a.sels ? a.sels.find((s) => s.key === 'O25') : null;
+      const mod = a ? { H: a.p.H, D: a.p.D, A: a.p.A, O: o25 ? o25.p : null, U: o25 ? 1 - o25.p : null } : {};
+      let ks = R.m === 'F' || R.m === 'G' ? [(avg.H < avg.A) === (R.m === 'F') ? 'H' : 'A'] : [...R.m];
+      if ((R.m === 'F' || R.m === 'G') && avg.H === avg.A) ks = [];
+      for (const k of ks) {
+        const pr = R.pt === 'best' ? best[k] || avg[k] : avg[k], f = fair[k], mp = mod[k];
+        if (!(pr > 1) || !f || pr < R.lo || pr > R.hi) continue;
+        if (R.e != null && pr * f - 1 < R.e) continue;
+        if ((R.sc != null || R.se != null) && !mp) continue;
+        if (R.sc != null && mp < R.sc) continue;
+        if (R.se != null && mp * pr - 1 < R.se) continue;
+        out.push({ r, k, pr, f, mp });
+      }
+    }
+    return out.sort((x, y) => x.r.ko - y.r.ko);
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-rlpre], [data-rlm], [data-rlpt], [data-rle], [data-rlsc], [data-rlse], [data-rlst], [data-rlretry], [data-rlshare], [data-rlgo]');
+    if (!t) return;
+    const d = t.dataset;
+    if (d.rlretry) { S.rl = null; renderRules(); return; }
+    if (d.rlgo != null) { S.rule = ruleClean(Object.assign({}, S.rule, RL_PRESETS[+d.rlgo][1])); store.set('rule', S.rule); delete S.place.rules; setTab('rules', { defer: true }); rlSyncCtl(); return; }
+    if (d.rlshare) { rlShare(); return; }
+    if (d.rlpre != null) { ruleSet(RL_PRESETS[+d.rlpre][1]); return; }
+    if (d.rlm) {
+      const v = d.rlm, R = S.rule;
+      if (v === 'F' || v === 'G') { ruleSet({ m: v }); return; }
+      let m = R.m === 'F' || R.m === 'G' ? '' : R.m;
+      m = m.includes(v) ? m.replace(v, '') : m + v;
+      ruleSet({ m: 'HDAOU'.split('').filter((c) => m.includes(c)).join('') || v }); return;
+    }
+    if (d.rlpt) { ruleSet({ pt: d.rlpt }); return; }
+    if (d.rle != null) { ruleSet({ e: d.rle === '' ? null : +d.rle }); return; }
+    if (d.rlsc != null) { ruleSet({ sc: d.rlsc === '' ? null : +d.rlsc }); return; }
+    if (d.rlse != null) { ruleSet({ se: d.rlse === '' ? null : +d.rlse }); return; }
+    if (d.rlst) { ruleSet({ st: d.rlst }); }
+  });
+  let rlT = 0;
+  document.addEventListener('input', (e) => {
+    const t = e.target; if (t.id !== 'rlLo' && t.id !== 'rlHi') return;
+    clearTimeout(rlT); rlT = setTimeout(() => { const v = parseFloat(String(t.value).replace(',', '.')); if (v >= 1.01 && v <= 100) ruleSet(t.id === 'rlLo' ? { lo: v, hi: Math.max(v, S.rule.hi) } : { hi: v, lo: Math.min(v, S.rule.lo) }, true); }, 350);
+  });
+  document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.id === 'rlLg') ruleSet({ lg: t.value }); else if (t.id === 'rlSs') ruleSet({ ss: t.value });
+    else if (t.id === 'rlLo' || t.id === 'rlHi') { rlSyncCtl(); }
+  });
+  async function rlShare() {
+    const url = location.origin + location.pathname + '#rules?' + ruleQS(S.rule), o = S.rl && S.rl.memo && S.rl.memo.o;
+    const text = o ? `My betting rule on Statpad's rule tester: ${o.n.toLocaleString()} bets over six seasons, ${rlP(o.roi)} a bet.` : 'A betting rule on Statpad’s rule tester.';
+    if (navigator.share) { try { await navigator.share({ title: 'A betting rule · Statpad', text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); toast('Link copied'); } catch (e) { toast('Copy not available here'); }
+  }
+
   // ---------------- render orchestration ----------------
   function render() {
     if (S.tab === 'track') { renderNav(); renderTrack(); return; }
@@ -4883,6 +5804,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     else if (S.tab === 'coupon') renderCoupon();
     else if (S.tab === 'tables') renderTables();
     else if (S.tab === 'method') renderMethod();
+    else if (S.tab === 'rules') renderRules();
     if (S.open) renderSheet();
   }
   // v66: every section keeps its place. Leaving one remembers how far down it was and how many games it showed;
@@ -4891,6 +5813,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   S.place = {};
   function navMark(t) {
     { const p = document.getElementById('mthTop'); if (p) p.classList.toggle('on', t === 'method' && !!S.mthOff); }
+    { const p = document.getElementById('rlPill'); if (p) p.classList.toggle('on', t === 'rules' && !!S.rlBelow); }
     const cur = navOf(t), on = (k) => k === cur || (k === 'more' && !BNAV.includes(cur));
     for (const b of document.querySelectorAll('#bnav [data-nav], #sideNav [data-nav]')) { if (on(b.dataset.nav)) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }
     $('#bnav').style.setProperty('--i', Math.max(0, BNAV.findIndex(on)));
@@ -4968,10 +5891,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const dateTxt = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(yy, mo - 1, dd, 12));
     font(`500 22px ${SF.m}`); x.textAlign = 'right'; x.fillStyle = MUT;
     x.fillText(dateTxt.toUpperCase(), W - P, my + 22);
-    x.fillStyle = COB; x.fillText(`TIER ${s.tier} · ${String(s.name || '').toUpperCase()}`, W - P, my + 56);
+    x.fillStyle = COB; x.fillText(s.kick || `TIER ${s.tier} · ${String(s.name || '').toUpperCase()}`, W - P, my + 56);
     // headline
     x.textAlign = 'left'; x.textBaseline = 'alphabetic';
-    font(`600 30px ${SF.b}`); x.fillStyle = MUT; x.fillText(`${s.target}-odds slip`, P, 238);
+    font(`600 30px ${SF.b}`); x.fillStyle = MUT; x.fillText(s.head || `${s.target}-odds slip`, P, 238);
     font(`500 132px ${SF.m}`); x.fillStyle = INK; x.fillText(odds(s.odds), P - 4, 370);
     const ow = x.measureText(odds(s.odds)).width;
     font(`500 24px ${SF.m}`); x.fillStyle = MUT; x.fillText('TOTAL ODDS', P, 412);
@@ -4995,13 +5918,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         font(`500 25px ${SF.b}`); x.fillStyle = MUT; x.fillText(fitText(x, `${m.h} v ${m.a}`, leftW - pw), P + pw, y + 78);
         font(`500 19px ${SF.m}`); x.fillStyle = DIM; x.fillText(fitText(x, `${when} · ${lgName(m.lk)}`.toUpperCase(), leftW), P, y + 110);
         font(`500 40px ${SF.m}`); x.fillStyle = INK; x.textAlign = 'right'; x.fillText(odds(l.s.price), W - P, y + 46);
-        font(`500 21px ${SF.m}`); x.fillStyle = l.s.real ? MUT : DIM; x.fillText(`${pct(l.s.pAdj)}${l.s.real ? '' : ' · EST'}`, W - P, y + 82);
+        font(`500 21px ${SF.m}`); x.fillStyle = l.s.real ? MUT : DIM; x.fillText(`${pct(l.s.pSlip || l.s.pAdj)}${l.s.real ? '' : ' · EST'}`, W - P, y + 82);
       } else {
         font(`650 30px ${SF.b}`); x.fillStyle = INK; x.fillText(fitText(x, l.s.label, leftW), P, y + 38);
         const pw = stPair(x, cr, m, P, y + 65, 26) + 8;
         font(`500 22px ${SF.b}`); x.fillStyle = MUT; x.fillText(fitText(x, `${when} · ${m.h} v ${m.a}`, leftW - pw), P + pw, y + 72);
         font(`500 34px ${SF.m}`); x.fillStyle = INK; x.textAlign = 'right'; x.fillText(odds(l.s.price), W - P, y + 42);
-        font(`500 19px ${SF.m}`); x.fillStyle = l.s.real ? MUT : DIM; x.fillText(`${pct(l.s.pAdj)}${l.s.real ? '' : ' · EST'}`, W - P, y + 72);
+        font(`500 19px ${SF.m}`); x.fillStyle = l.s.real ? MUT : DIM; x.fillText(`${pct(l.s.pSlip || l.s.pAdj)}${l.s.real ? '' : ' · EST'}`, W - P, y + 72);
       }
       x.textAlign = 'left';
       if (i < n - 1) { x.fillStyle = 'rgba(143,161,153,.16)'; x.fillRect(P, y + ROW - 1, W - 2 * P, 1.5); }
@@ -11669,7 +12592,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const SW_VERB = /^(wa|a|i|ni|tu|m|u|ki|zi|li)(na|ta|me|li|ki)[a-z]{3,}(je|ni|wa|a|e|i)$/;
   function vaLangOf(q) {
     if (/^\s*(habari\w*|mambo|jambo|hujambo|niaje|shikamoo|asante( sana)?|kwaheri|salamu|karibu|sawa|ndio|hapana)[\s!.?]*$/i.test(q)) return 'sw';
-    const t = ' ' + String(q).toLowerCase() + ' ', s = (t.match(SW_MARK) || []).length, e = (t.match(EN_MARK) || []).length;
+    // names that happen to contain Swahili words ("La Liga", "Ligue 1") don't count as Swahili
+    const t = ' ' + String(q).toLowerCase().replace(/\b(la ?liga|ligue ?[12]|serie [ab]|la galaxy)\b/g, ' ') + ' ', s = (t.match(SW_MARK) || []).length, e = (t.match(EN_MARK) || []).length;
     const sv = String(q).toLowerCase().split(/[^a-z]+/).filter((w) => SW_VERB.test(w) && !/^(wanted|another|insider|island|minute|animal|united|mention|miami|ateliers)/.test(w)).length;
     const s2 = s + sv;
     return (s2 >= 2 && s2 > e) || (s2 >= 1 && e === 0) ? 'sw' : e >= 2 && e > s2 ? 'en' : null;
@@ -12145,6 +13069,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
 
   // ---------------- knowledge: how Statpad works, from the Method text and a short glossary ----------------
   const VA_KB = [
+    [/\b(what is|whats|what s|what are|meaning of|define|explain|maana ya|ni nini)\b.*\bbankers?\b|\bbankers?\b.*\b(mean|means|ni nini)\b/, ['A banker is the pick in a game Statpad is surest of (draws aside, price at least 1.05). Under Slips → Bankers you get the day\'s bankers, each with how picks like it did last season, and a dial: set how sure you want a slip to be, from 95% to 20%, and Statpad builds the one that pays most at that level. Even a 90% banker loses about one time in ten.', 'Banker ni chaguo ambalo Statpad ina uhakika nalo zaidi katika mechi. Kwenye Slips → Bankers kuna bankers za siku na kipimo: chagua uhakika unaotaka, Statpad itatengeneza mkeka unaolipa zaidi. Hata banker ya 90% hupoteza mara moja kati ya kumi.']],
     [/\b(clv|closing line)\b/, ['Closing-line value compares the price taken with the bookmakers\' fair price at kick-off. Beating the close regularly is the best early sign of a real edge.', 'Closing-line value inalinganisha bei uliyochukua na bei ya haki wakati wa kuanza mechi.']],
     [/\b(what is|whats|what s|what does|meaning of|define|explain|maana ya|ni nini)\b.*\bvalue\b|\bvalue bet\b|\bthamani ni\b/, ['A value bet is a price higher than the real chance deserves. If Statpad says 50%, fair odds are 2.00; a bookmaker offering 2.20 is value (10% over fair). Value wins over many bets, not on every bet: a value pick can still be unlikely.', 'Bet ya thamani ni bei iliyo juu kuliko nafasi halisi. Statpad ikisema 50%, odds za haki ni 2.00; mbeti akitoa 2.20 hiyo ni thamani. Thamani inaleta faida kwa bet nyingi, si kila bet.']],
     [/\b(edge)\b/, ['Edge is how much a price beats Statpad\'s fair odds: price × chance − 1. A 2.20 price on a 50% chance is a 10% edge.', 'Edge ni kiasi ambacho bei inazidi odds za haki za Statpad: bei × nafasi − 1.']],
@@ -12236,7 +13161,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (v.kind === 'match' && v.r.a) return [T('Who wins?', 'Nani atashinda?'), T('Why this pick?', 'Kwa nini chaguo hili?'), T('Both teams to score?', 'Timu zote kufunga?'), T('Best odds?', 'Odds bora?')];
     if (v.kind === 'team') return [T(`How are ${v.name} doing?`, `${v.name} wanaendeleaje?`), T('Team news', 'Habari za timu'), T('Title chances', 'Nafasi ya ubingwa')];
     const live = S.rows.some((r) => r.started && liveNow(r.m.id) && !liveNow(r.m.id).ft);
-    const base = [T('Safest picks today', 'Machaguo salama ya leo'), T('Give me a 10 odds slip', 'Nipe mkeka wa odds 10'), live ? T("What's live?", 'Zipi zinaendelea?') : T('Biggest games this weekend', 'Mechi kubwa wikendi'), exampleMatch()];
+    const base = [T('Safest picks today', 'Machaguo salama ya leo'), T('A slip that’s 80% sure', 'Mkeka wa uhakika wa 80%'), T('Give me a 10 odds slip', 'Nipe mkeka wa odds 10'), live ? T("What's live?", 'Zipi zinaendelea?') : T('Biggest games this weekend', 'Mechi kubwa wikendi'), exampleMatch()];
     if (v.tab === 'value') base.unshift(T('Explain value bets', 'Eleza bet za thamani')); else if (v.tab === 'track') base.unshift(T('How accurate is Statpad?', 'Statpad ina usahihi gani?')); else if (v.tab === 'coupon') base.unshift(T('How are my bets doing?', 'Bet zangu zinaendeleaje?')); else if (v.tab === 'tables') base.unshift(T('Who will win the Premier League?', 'Nani atashinda Premier League?'));
     return base.slice(0, 5);
   }
@@ -12249,7 +13174,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return { kind: 'help', lead: T("Here's what I can do. Just ask the way you'd ask a friend; I follow the conversation, so \"and tomorrow?\" or \"why the second one?\" work too.", 'Haya ndiyo ninayoweza. Uliza kama unavyomuuliza rafiki; nafuata mazungumzo, kwa hiyo "na kesho?" au "kwa nini la pili?" vinafanya kazi.'),
       items: [T('Games: who wins, why, how sure, goals, both teams to score, exact score, best odds, team news', 'Mechi: nani atashinda, kwa nini, uhakika, magoli, timu zote kufunga, matokeo, odds bora, habari za timu'),
         T('Picks: safest, value, underdogs, likeliest draws, most goals, by day, league or market', 'Machaguo: salama, thamani, timu dhaifu, sare, magoli mengi, kwa siku, ligi au soko'),
-        T('Slips: any odds, any number of legs, "another one", "make it safer", turn 10,000 into 500,000', 'Mikeka: odds yoyote, idadi yoyote ya machaguo, "mwingine", geuza elfu kumi kuwa laki tano'),
+        T('Slips: any odds, any number of legs, "a slip that\'s 80% sure", "another one", "make it safer", turn 10,000 into 500,000', 'Mikeka: odds yoyote, idadi yoyote ya machaguo, "mkeka wa uhakika wa 80%", "mwingine", geuza elfu kumi kuwa laki tano'),
         T('Teams and leagues: form, position, tables, title and relegation chances, compare two teams', 'Timu na ligi: fomu, nafasi, msimamo, ubingwa na kushuka daraja, linganisha timu mbili'),
         T('Live scores and shocks, your bets and budget, the track record, odds maths, how Statpad works', 'Matokeo ya moja kwa moja, bet zako, rekodi, hesabu za odds, jinsi Statpad inavyofanya kazi'),
         T('Do things: "open Arsenal v Chelsea", "go to the Lab", "add it to my coupon", "dark mode", "my team is Arsenal", "call me Sam"', 'Fanya mambo: "fungua Arsenal dhidi ya Chelsea", "nipeleke Lab", "weka kwenye kuponi", "timu yangu ni Arsenal"')],
@@ -12277,7 +13202,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
 
   // ---------------- doing things ----------------
-  const VA_TABS = [[/\b(matches|home|dashboard|fixtures|mechi zote|nyumbani)\b/, 'matches'], [/\b(value( bets?)?( tab| page)?|thamani)\b/, 'value'], [/\b(slips?( tab| page)?|accumulators?|mikeka)\b/, 'slips'], [/\b(bets|coupon|betslip|my bets|bet zangu|kuponi)\b/, 'coupon'], [/\b(lab|track record|performance|record|rekodi)\b/, 'track'], [/\b(tables?|standings|league table|msimamo)\b/, 'tables'], [/\b(method|how it works|about|settings help)\b/, 'method']];
+  const VA_TABS = [[/\b(rule tester|test(er)? (a |my )?rules?|backtest\w*)\b/, 'rules'], [/\b(matches|home|dashboard|fixtures|mechi zote|nyumbani)\b/, 'matches'], [/\b(value( bets?)?( tab| page)?|thamani)\b/, 'value'], [/\b(slips?( tab| page)?|accumulators?|mikeka)\b/, 'slips'], [/\b(bets|coupon|betslip|my bets|bet zangu|kuponi)\b/, 'coupon'], [/\b(lab|track record|performance|record|rekodi)\b/, 'track'], [/\b(tables?|standings|league table|msimamo)\b/, 'tables'], [/\b(method|how it works|about|settings help)\b/, 'method']];
   function vaGoTab(tab) { if (S.open) closeSheet(); setTab(tab); vaPeek(true); }
   function sCommand(t, E) {
     if (/\b(what s|whats|what is|show|list|what do i have) (in )?my (coupon|betslip|bet slip)\b|\bkuponi yangu\b/.test(t)) { const c = S.coupon.map((x) => { const r = S.byId.get(x.id), s = r && r.a && vaSel(r.a, x.key); return s ? `${s.label} (${r.m.h} v ${r.m.a}) ${odds(s.price)}` : null; }).filter(Boolean);
@@ -12336,6 +13261,79 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
 
   // ---------------- the conversation: understand, keep the thread, answer ----------------
   // a yes or a no to what Statpad just offered
+  // v67: "would backing home favourites under 1.60 in the Premier League have made money?", "do draws pay?", "does the
+  // Value board's rule work?": the question becomes a rule, the rule tester runs it on six seasons, and the answer is
+  // its numbers and its honest reading. Follow-ups change the last rule ("and at the best price?", "only La Liga?").
+  // v68: "a slip that's 80% sure", "safe slip", "open bankers": the certainty dial, set and opened
+  function vaBankQ(raw, t, E) {
+    if (/^(what (is|are|does|do)|what s|whats|define|meaning of|explain|how (does|do|is|are))\b/.test(t)) return null;
+    const pm = /(\d{2})\s*(?:%|percent\b|per ?cent\b)/i.exec(raw) || /\basilimia (\d{2})\b/.exec(t), slipW = /\b(slip|slips|accumulator|acca|multi ?bet|mkeka|combo)\b/.test(t);
+    const sureW = /\b(sure|surer|surest|safe|safer|safest|certain|low risk|salama|uhakika)\b/.test(t);
+    const openW = /\b(bankers? (page|view|tab|section)|(open|show)( me)? (the )?bankers|certainty dial|slips? by certainty)\b/.test(t);
+    if (!(openW || (slipW && (sureW || pm)))) return null;
+    if (E.legs || (E.target && !pm)) return null;   // "a 3-leg safe slip", "a safe 5 odds slip": the slip builder's job
+    const dk = (E.days && E.days[0]) || pickDefaultDay() || dayKey(Date.now());
+    const P = pm ? bkSnap(Math.max(20, Math.min(95, +pm[1]))) : /\b(safest|surest)\b/.test(t) ? 90 : S.bankP || 80;
+    const go = () => { if (S.open) closeSheet(); S.sseg = 'bank'; store.set('sseg', 'bank'); S.day = dk; S.bankP = P; store.set('bankP', P); setTab('slips'); vaPeek(true); };
+    if (openW && !slipW && !pm) return { kind: 'cmd', lead: T('Opening Bankers: each game’s surest pick, and the dial for a slip as sure as you want.', 'Nafungua Bankers: chaguo salama zaidi la kila mechi, na mkeka wa uhakika unaotaka.'), go };
+    const list = bkOpen(dk, 'all');
+    if (!list.length) return { kind: 'cmd', lead: T(`No open games ${dayWord(dk)} to build from. Here are the bankers for the days ahead.`, `Hakuna mechi ${dayWord(dk)}. Hizi ni za siku zijazo.`), go };
+    const sl = ENGINE.dial(list).slipAt(P / 100), rep = bkProofDial(P).rep;
+    const proof = rep && rep.n >= 20 ? T(` Last season, slips set to ${P}% landed on ${pct(rep.w / rep.n, 0)} of ${rep.n} match days.`, ` Msimu uliopita, mikeka ya ${P}% ilishinda siku ${pct(rep.w / rep.n, 0)} kati ya ${rep.n}.`) : '';
+    if (!sl) return { kind: 'cmd', lead: T(`No slip is ${P}% sure ${dayWord(dk)}. The dial shows the surest you can get.`, `Hakuna mkeka wa ${P}% ${dayWord(dk)}. Angalia kipimo.`), go };
+    const legs = sl.legs.map((l) => `${l.s.label}${l.s.label.includes(l.m.h) || l.s.label.includes(l.m.a) ? '' : ` in ${l.m.h} v ${l.m.a}`} (${odds(l.s.price)})`).join(', ');
+    return { kind: 'cmd', lead: T(`The best slip at least ${P}% sure ${dayWord(dk)}: ${sl.legs.length} ${sl.legs.length === 1 ? 'leg' : 'legs'} at total odds ${odds(sl.odds)}, about ${pct(sl.prob, 0)} to land: ${legs}.${proof} Even so, about 1 in ${Math.max(2, Math.round(1 / Math.max(0.01, 1 - sl.prob)))} lose.`,
+      `Mkeka bora wenye uhakika wa angalau ${P}% ${dayWord(dk)}: machaguo ${sl.legs.length}, odds ${odds(sl.odds)}, nafasi karibu ${pct(sl.prob, 0)}: ${legs}.${proof}`), go };
+  }
+  async function vaRuleQ(t, E) {
+    const C = VA.ctx, follow = C.kind === 'rule' && C.rule && t.split(' ').length <= 9 && /^(and|what about|how about|only|just|at|with|in|for|same|na|je)\b|\b(best (price|odds)|typical|average price|seasons?|league|liga|draws?|home|away|favou?rites?|underdogs?|overs?|unders?|between|under|over)\b/.test(t);
+    const histQ = /\b(would|does|do|did|has|have|is|are|will)\b.*\b(pay|paid|pays|profit\w*|make money|made money|worth it|work|works|worked|win money|lose money|lost money|in the long run|long term|over (the )?(last )?(\w+ )?seasons?)\b|\b(backtest\w*|back test|historically|strategy|system|in the past)\b/.test(t);
+    if (!histQ && !follow) return null;
+    // a "team" that is really part of a league's name ("La Liga" read as Liga de Quito) doesn't make it a team question
+    const tw = E.team ? ckPlain(E.team).toLowerCase().split(' ')[0] : '';
+    const teamQ = E.team && !(/\bla ?liga\b/.test(t) && tw === 'liga') && !(E.leagues.length && ckPlain(lgName(E.leagues[0])).toLowerCase().split(/\s+/).includes(tw));
+    if (E.fx || teamQ) return null;   // one team's games: not something the tester splits out
+    let m = null;
+    if (/\bover (2\.5|2 and a half|two and a half)|\bovers\b/.test(t)) m = 'O'; else if (/\bunder (2\.5|2 and a half|two and a half)|\bunders\b/.test(t)) m = 'U';
+    const u = t.replace(/\b(over|under) (2\.5|2 and a half|two and a half)( goals)?\b/g, ' ');
+    if (!m && /\bhome favou?rites?\b/.test(u)) m = 'H'; else if (!m && /\baway favou?rites?\b/.test(u)) m = 'A';
+    if (!m) { if (/\b(draws?|sare)\b/.test(u)) m = 'D'; else if (/\b(underdogs?|long shots?|outsiders?)\b/.test(u)) m = 'G'; else if (/\b(favou?rites?|bankers?)\b/.test(u)) m = 'F'; else if (/\b(home (sides?|teams?|wins?)|at home|the home side|nyumbani)\b/.test(u)) m = 'H'; else if (/\b(away (sides?|teams?|wins?)|on the road|ugenini)\b/.test(u)) m = 'A'; }
+    const vb = /\b(value board|value bets?|value rule)\b/.test(u), mine = /\b(your|statpad s|statpads|statpad) (picks?|tips?|predictions?)\b/.test(u);
+    if (!m && !vb && !mine && !follow) return null;
+    const R = follow && !vb && !mine ? Object.assign({}, C.rule) : Object.assign(ruleDefaults(), { lo: 1.01, hi: 100 });
+    if (vb) Object.assign(R, RL_PRESETS[0][1]); else if (mine) Object.assign(R, { m: 'HAOU', sc: 0.7, se: null, e: null });
+    if (m) { R.m = m; if (follow && !vb && !mine) { R.lo = 1.01; R.hi = 100; } }
+    const num = '(\\d{1,2}(?:\\.\\d{1,2})?)';
+    let x;
+    if ((x = u.match(new RegExp(`\\b(?:between|from)\\s+(?:odds\\s+(?:of\\s+)?)?${num}\\s+(?:and|to)\\s+${num}`)))) { R.lo = +x[1]; R.hi = +x[2]; }
+    else if ((x = u.match(new RegExp(`\\b${num}\\s*(?:-|to)\\s*${num}\\b`))) && +x[1] >= 1.01 && +x[2] > +x[1]) { R.lo = +x[1]; R.hi = +x[2]; }
+    if ((x = u.match(new RegExp(`\\b(?:under|below|less than|up to|at most|shorter than)\\s+(?:odds\\s+(?:of\\s+)?)?${num}`))) && +x[1] > 1) R.hi = +x[1];
+    if ((x = u.match(new RegExp(`\\b(?:over|above|more than|at least|bigger than|longer than)\\s+(?:odds\\s+(?:of\\s+)?)?${num}`))) && +x[1] > 1) R.lo = +x[1];
+    if (/\bbest (price|odds)\b/.test(t)) R.pt = 'best'; else if (/\b(typical|average|normal) (price|odds|bookmaker)\b/.test(t)) { R.pt = 'avg'; R.e = null; }
+    let D = S.rl && S.rl.D;
+    if (!D) { try { D = await rulesLoad(); } catch (e) { D = null; } D = S.rl && S.rl.D; }
+    if (!D) return { kind: 'rule', lead: T('The rule tester’s six seasons of games aren’t available right now. Try again in a little while.', 'Michezo ya misimu sita haipatikani sasa hivi. Jaribu tena baadaye.') };
+    if (/\b(top five|top 5|big five|big 5)\b/.test(t)) R.lg = 'top5';
+    else if (/\b(all|every|any) (the )?leagues?\b/.test(t)) R.lg = 'all';
+    else if (E.leagues.length && D.H.leagues.some((l) => l[0] === E.leagues[0])) R.lg = E.leagues[0];
+    const ns = D.H.seasons.length;
+    if (/\blast season\b|\bmsimu uliopita\b/.test(t)) R.ss = String(ns - 2); else if (/\bthis season\b|\bmsimu huu\b/.test(t)) R.ss = String(ns - 1);
+    else if (/\b(last|past) (3|three) seasons\b/.test(t)) R.ss = 'last3'; else if (/\b(all|six|6) seasons\b/.test(t)) R.ss = 'all';
+    const Rc = ruleClean(R), bets = rlRun(D, Rc), o = rlStats(D, bets), [, head, why] = rlVerdict(o);
+    const mkW = { H: 'home sides', D: 'draws', A: 'away sides', O: 'over 2.5 goals', U: 'under 2.5 goals', F: 'the favourite', G: 'the underdog' };
+    const what = Rc.m.length > 1 && Rc.m !== 'F' && Rc.m !== 'G' ? Rc.m.split('').map((k) => mkW[k]).join(', ') : mkW[Rc.m];
+    const px = Rc.lo <= 1.01 && Rc.hi >= 100 ? 'at any price' : Rc.lo <= 1.01 ? `at ${Rc.hi.toFixed(2)} or less` : Rc.hi >= 100 ? `at ${Rc.lo.toFixed(2)} or more` : `at ${Rc.lo.toFixed(2)}–${Rc.hi.toFixed(2)}`;
+    const lgW = Rc.lg === 'all' ? `in all ${D.H.leagues.length} leagues` : Rc.lg === 'top5' ? 'in the top five leagues' : Rc.lg === 'first' ? 'in the top divisions' : `in ${(D.H.leagues.find((l) => l[0] === Rc.lg) || [, Rc.lg])[1]}`;
+    const ssW = Rc.ss === 'all' ? `${D.H.seasons[0]} to now` : Rc.ss === 'last3' ? 'the last three seasons' : D.H.seasons[+Rc.ss] || '';
+    const extra = [Rc.pt === 'best' ? 'the best price on offer' : 'a typical bookmaker’s price', Rc.e != null ? `${Math.round(Rc.e * 100)}%+ above the fair price` : '', Rc.sc != null ? `Statpad ${Math.round(Rc.sc * 100)}%+` : '', Rc.se != null ? `Statpad’s edge ${Math.round(Rc.se * 100)}%+` : ''].filter(Boolean).join(', ');
+    const lead = o.n ? T(`Backing ${what} ${px} ${lgW}, ${ssW} (${extra}): ${o.n.toLocaleString()} bets, ${pct(o.hit, 1)} won, ${rlP(o.roi)} a bet (${rlU(o.pl)} units). ${head}.`,
+      `Kuweka ${what} ${px}: beti ${o.n.toLocaleString()}, ${pct(o.hit, 1)} zilishinda, ${rlP(o.roi)} kwa kila beti (${rlU(o.pl)} units). ${head}.`)
+      : T(`No bets fit that rule (${what} ${px} ${lgW}, ${ssW}). Try a wider price range.`, 'Hakuna beti zinazolingana na sheria hiyo. Jaribu bei pana zaidi.');
+    const items = o.n ? [why, o.clv != null ? `Against the closing prices: ${rlP(o.clv)} a bet, beaten on ${pct(o.clvWin, 0)} of bets.` : '', `${Object.values(o.by).filter((v) => v[2] > 0).length} of ${Object.keys(o.by).length} seasons in profit; worst run ${o.streak} lost in a row.`].filter(Boolean) : [];
+    const qs = ruleQS(Rc);
+    return vaSet({ kind: 'rule', rule: Rc }, { kind: 'rule', lead, items, acts: [[T('Open in the rule tester', 'Fungua kwenye kipima sheria'), `data-vagorule="${esc(qs)}"`]],
+      chips: [Rc.pt === 'best' ? T('And at a typical bookmaker?', 'Na kwa bei ya kawaida?') : T('And at the best price?', 'Na kwa bei bora?'), Rc.lg === 'all' ? T('Only the Premier League?', 'Ligi Kuu ya England pekee?') : T('In all leagues?', 'Ligi zote?'), T('What about draws?', 'Je, sare?'), T('Does the Value board rule work?', 'Je, sheria ya Value board inafanya kazi?')] });
+  }
   function vaPending(t) {
     const P = VA.ctx.pending; if (!P) return null;
     if (/^(yes|yeah|yep|yup|sure|ok|okay|please|go on|go ahead|do it|of course|ndio|ndiyo|sawa|haya|naam|bila shaka)\b/.test(t) && t.split(' ').length <= 4) { VA.ctx.pending = null; return P.yes(); }
@@ -12391,6 +13389,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       return { kind: 'clarify', lead: T(`Which one: ${choices.join(', or ')}?`, `Ipi: ${choices.join(', au ')}?`), chips: choices, ask: true };
     }
     const cmd = await sCommand(t, E); if (cmd) return cmd;
+    const rq = await vaRuleQ(t, E); if (rq) return rq;
+    const bq = vaBankQ(raw, t, E); if (bq) return bq;
     // "what is…", "what does … mean", "how do you…": the glossary and the Method text first
     const defn = /^(what (is|are|does|do)|what s|whats|define|meaning of|explain|tell me (about|what)|how (does|do|is|are)|why (do|does|is|are)|ni nini|maana ya|eleza)\b|\b(mean|means|meaning|stand for|maana yake)\b/.test(t) && !E.found.length && !/\b(today|tomorrow|tonight|weekend|right now|leo|kesho)\b/.test(t) && !/^how (are|is) (my|arsenal|the \w+ doing)/.test(t) && !/\b(safest|best bets?|surest|tips|picks|which (game|team|bet)|slip|score in|score of)\b/.test(t);
     if (defn || has(/\b(guarantee\w*|fixed match\w*|sure win|100 ?%|100 percent|never lose|win every time|always win)\b/)) { const kb = sKnow(raw, t, !defn); if (kb) return kb; }
@@ -12721,7 +13721,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function renderAskSheet() { closeSheet(); vaOpen(); }
   function renderAskLog() { vaRender(); }
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-ask],[data-vaq],[data-vasay],[data-valang],[data-vavoice],[data-vapeek],[data-vaclose],[data-vaopen],[data-vaaddall],[data-vatable],[data-askslip],[data-askbets],[data-askgo],[data-vaset],[data-vaopt],#vaMicBtn'); if (!t) return;
+    const t = e.target.closest('[data-ask],[data-vaq],[data-vasay],[data-valang],[data-vavoice],[data-vapeek],[data-vaclose],[data-vaopen],[data-vaaddall],[data-vatable],[data-askslip],[data-askbets],[data-askgo],[data-vaset],[data-vaopt],[data-vagorule],#vaMicBtn'); if (!t) return;
     if (t.dataset.ask != null) { e.stopPropagation(); openAsk(t, t.dataset.ask === 'listen'); return; }
     if (!t.closest('#va')) return;
     e.stopPropagation();
@@ -12746,6 +13746,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (t.dataset.askbets) { if (S.open) closeSheet(); S.bseg = 'mine'; store.set('bseg', 'mine'); setTab('coupon'); vaPeek(true); return; }
     if (t.dataset.askgo === 'goal') { if (S.open) closeSheet(); S.sseg = 'goal'; store.set('sseg', 'goal'); setTab('slips'); vaPeek(true); return; }
     if (t.dataset.askgo) { vaGoTab(t.dataset.askgo); }
+    if (t.dataset.vagorule) { const q = new URLSearchParams(t.dataset.vagorule), r = {}; for (const [k, v] of q) r[k] = ['e', 'sc', 'se'].includes(k) ? +v / 100 : v; S.rule = ruleClean(r); store.set('rule', S.rule); delete S.place.rules; rlSyncCtl(); if (S.tab === 'rules') renderRulesRes(); vaGoTab('rules'); }
   }, true);
   // links in an answer that lead elsewhere on the site shrink the panel so the page shows
   document.addEventListener('click', (e) => { if (VA.peek && e.target.closest('#va .va-lead')) vaPeek(false); });
@@ -13372,7 +14373,7 @@ void main() {
   const GS_KEYS = new Set(['H', 'D', 'A', 'O25', 'U25', '1X', 'X2']);
   S.gs = Object.assign({ stake: 10000, goal: 500000, days: 1, value: false, floor: 0.4 }, store.get('goalseek', {}));
   if (!GS_FLOORS.some(([f]) => f === S.gs.floor)) S.gs.floor = 0.4;
-  S.sseg = store.get('sseg', 'slips') === 'goal' ? 'goal' : 'slips';
+  { const v = store.get('sseg', 'bank'); S.sseg = v === 'goal' || v === 'bank' ? v : 'slips'; }   // v68: Bankers first for anyone new
   function gsOdds(stake, goal, tax) { return 1 + (goal / stake - 1) / Math.max(0.05, 1 - tax); }   // tax is taken off the winnings
   function gsRows(days) {
     const now = Date.now(), ks = days === 1 ? [dayKey(now)] : Array.from({ length: days }, (_, i) => dayKey(now + i * 86400e3));
@@ -13565,6 +14566,29 @@ void main() {
     if (t.dataset.gsadd) { const m = S.gsLast; if (!m) return; for (const l of m.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: null, from: 'goal' }); saveCoupon(); toast(`${m.legs.length} legs added to the coupon`); return; }
     if (t.dataset.gssay) { const m = S.gsLast; if (!m) return; speak('Goal seek', [`To turn ${S.gs.stake.toLocaleString('en-US')} into ${S.gs.goal.toLocaleString('en-US')}, the likeliest slip has ${m.legs.length} legs at total odds of ${odds(m.odds)}, and the chance they all land is ${fmtGs(m.prob).replace('%', ' percent')}.`, ...m.legs.map((l, i) => `${i + 1}: ${l.s.label}, in ${l.m.h} against ${l.m.a}, at ${odds(l.price)}, ${Math.round(l.pc * 100)} percent.`)]); }
   });
+  // v68: the Bankers view's controls
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-bkmin],[data-bkmore],[data-bkadd],[data-bkshare],[data-bkp],[data-gobank],#bkG'); if (!t) return;
+    // the list's own controls redraw the list alone
+    const relist = () => { const el = document.querySelector('#bankBox .bk-list'); if (el && S.bkList) { MT.innerHTML = bkList(S.bkList); el.replaceWith(MT.content.firstElementChild); MT.innerHTML = ''; } else renderSlips(); };
+    if (t.dataset.bkmin) { S.bankMin = +t.dataset.bkmin; store.set('bankMin', S.bankMin); S.bkShown = 10; buzz(6); relist(); return; }
+    if (t.dataset.bkmore) { S.bkShown += 10; relist(); return; }
+    if (t.dataset.bkp) { bkSel(+t.dataset.bkp); buzz(6); return; }
+    if (t.dataset.bkadd) {
+      const s = S.bankSlip; if (!s) return;
+      for (const l of s.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: l.s.real && l.s.best ? l.s.price : null, from: s.tier });
+      saveCoupon(); buzz(12); flyToBets(t); toast(`${s.legs.length} ${s.legs.length === 1 ? 'leg' : 'legs'} added to the coupon`); return;
+    }
+    if (t.dataset.bkshare) { if (S.bankSlip) shareSlip(S.bankSlip, S.day); return; }
+    if (t.dataset.gobank) { if (S.open) closeSheet(); S.sseg = 'bank'; store.set('sseg', 'bank'); S.day = t.dataset.gobank; setTab('slips'); return; }
+    if (t.id === 'bkG') {   // a tap on the dial sets the nearest level
+      const ctm = t.getScreenCTM && t.getScreenCTM(); if (!ctm) return;
+      const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+      let a = Math.atan2(BK_CY - pt.y, BK_CX - pt.x); if (a < 0) a = a < -Math.PI / 2 ? Math.PI : 0;
+      const P = bkSnap(95 - (a / Math.PI) * 75); if (P !== S.bankP) { bkSel(P); buzz(6); }
+    }
+  });
+  document.addEventListener('input', (e) => { if (e.target.id !== 'bkRng') return; const P = BK_STOPS[+e.target.value]; if (P != null && P !== S.bankP) { bkSel(P); buzz(4); } });
 
   // ---------------- headline games, competition chips, motion helpers ----------------
   const longDay = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
@@ -13586,7 +14610,7 @@ void main() {
       for (const r of ms) out.push({ k: 'm', id: r.m.id, html: `${pair(r.m)}<span class="pal-t"><b>${esc(r.m.h)} v ${esc(r.m.a)}</b><small>${esc(lgName(r.m.lk))}, ${isLive(r) ? 'live now' : r.started ? 'kicked off' : esc(dayLabel(r.day)) + ' ' + tFmt.format(r.ko)}</small></span>${r.a && !r.started ? `<span class="pal-v">${pct(r.a.p.H)} <i>${pct(r.a.p.D)}</i> ${pct(r.a.p.A)}</span>` : ''}` });
       if (q) for (const k of [...new Set(S.rows.map((r) => r.m.lk))].filter((k) => fold(lgName(k)).includes(q)).slice(0, 4)) out.push({ k: 'l', lk: k, html: `${lgIcon(k, 'sm')}<span class="pal-t"><b>${esc(lgName(k))}</b><small>${S.rows.filter((r) => r.m.lk === k && !r.started).length} fixtures coming up</small></span>` });
     }
-    const pages = [['home', 'Overview', 'i-home'], ['matches', 'Matches', 'i-ball'], ['value', 'Value board', 'i-spark'], ['studio', 'Slip Studio', 'i-ticket'], ['track', 'Performance Lab', 'i-track'], ['tables', 'Leagues and tables', 'i-table'], ['saved', 'Saved bets', 'i-bookmark'], ['method', 'How it works', 'i-info']];
+    const pages = [['home', 'Overview', 'i-home'], ['matches', 'Matches', 'i-ball'], ['value', 'Value board', 'i-spark'], ['studio', 'Slip Studio', 'i-ticket'], ['bankers', 'Bankers and sure slips', 'i-target'], ['track', 'Performance Lab', 'i-track'], ['tables', 'Leagues and tables', 'i-table'], ['saved', 'Saved bets', 'i-bookmark'], ['method', 'How it works', 'i-info']];
     for (const [k, l, ic] of pages) if (!q || fold(l).includes(q)) out.push({ k: 'p', nav: k, html: `<span class="pal-ic"><svg aria-hidden="true"><use href="#${ic}"/></svg></span><span class="pal-t"><b>${l}</b></span>` });
     PAL.items = out; PAL.i = 0;
     $('#palList').innerHTML = out.length ? out.map((x, i) => `<li role="option" id="pal${i}" aria-selected="${i === 0}" data-pal="${i}" class="pal-${x.k}">${x.html}</li>`).join('') : `<li class="pal-none">Nothing matches “${esc(raw)}”. Try a team’s name.</li>`;

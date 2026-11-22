@@ -15,6 +15,7 @@ The site is a single page (`index.html`). A GitHub Action (`update.py`) keeps it
 | `track.json` | The track record. The workflow creates it and commits it; don't edit it by hand. |
 | `ledger/` | Every graded prediction and value bet, one CSV file per month. The workflow creates and commits it; rows are only ever added. GitHub shows each file as a table. |
 | `backtest.json`, `results.json`, `live.json`, `miracles.json`, `teams/` | Made by the workflow on each publish (last season replayed with the tuning; recent final scores; live scores; the latest weekend's rarest results; one file per league for team pages and the season simulator). Nothing to upload. |
+| `rules.bin` | Made by the workflow weekly: every game of football-data's 19 leagues since 2021/22, packed for the rule tester (about 0.6 MB). Nothing to upload. |
 | `sw.js`, `manifest.webmanifest` | Let people install Statpad as an app (phone, tablet or computer), open it instantly and offline. `sw.js` also keeps crests and flags on the phone after the first download. |
 | `v.json` | Made by the workflow on each publish: a few hundred bytes naming the version of each data file, so open pages know what changed without downloading it. |
 | `crests/` | Club crests and competition logos: one sheet per competition in `crests/s/`, big single crests for match pages. The workflow makes them on each publish; nothing to upload. |
@@ -483,6 +484,62 @@ The closing price is still well ahead of any results-only model, which is why pr
 
 Code: `pulse_run`, `pulse_carry`, `pulse_blend`, `PULSE`, `PULSE_BLEND`, `PYRAMIDS` in `update.py`.
 `PULSE_ON = False` gives v62's ratings exactly.
+
+## Bankers and sure slips (v68)
+
+Slip Studio opens on **Bankers**: each game's surest pick, and a dial that builds the slip paying the most while staying as sure as you set it. Every number on it is checked against a whole replayed season.
+
+- **Bankers.** Each game's banker is the pick Statpad is surest of, draws left out and the price at least 1.05, with 90%+, 85%+ and 80%+ filters. Each row says how many picks like it there were in the replayed season and how many landed ("129 of 134 like it landed"). The Overview shows the surest three of the day.
+- **Chances that have been checked.** For a game with bookmaker prices the chance is Statpad's usual one, capped at the bookmakers' consensus. For a game without prices it is read off the replay: every pick of every game is also priced from the model alone, counted by kind (double chance, team to score, win, over 1.5, under 3.5, over/under 2.5, both teams to score, team 2+ goals) and by chance in 2.5-point steps, and the share that landed (shrunk towards the stated chance by 50 picks' worth and made to rise with it) is the chance shown. Without prices Statpad takes a safety haircut, and such picks had been landing more often than stated.
+- **The dial**, 95% down to 20% in steps of 5: drag the slider or tap the dial. For each level Statpad searches every combination of one pick per game, up to 8 legs, for the slip that pays most while its legs' chances still multiply to at least that level (a knapsack over each leg's cost in chance, in steps of 0.005 rounded up, so a slip is never less likely than its level; each game's six fairest legs; checked against brute force in the unit test). Margins compound with every leg, so sure slips are short. Inside the dial: what the 80%, 60% and 40% slips pay that day. Under it: how slips set to that level did in the replay and live, and "even at 80%, about 1 slip in 5 still loses".
+- **The record.** A dot plot of said against landed for the bankers by band and for the slips by level, the live record, and the latest graded bankers. The same card is in the Lab under Levels.
+- **Tracked live.** The pipeline keeps each game's banker as it stood at its last snapshot before kick-off, and each day's 90, 80, 70, 60 and 50% slips (frozen when their first game kicks off, like the smart slips). Bankers are graded into `agg.bank` (by band: n, won, sum of chances) and listed in `bankers` (90 days, the last 300 published); the slips into `agg.dial`, apart from the smart slips. Each banker is a row in the ledger (kind `banker`).
+- **The assistant**: "a slip that's 80% sure", "safe slip for tomorrow", "mkeka wa uhakika wa 80%", "open bankers", "what is a banker".
+
+**The replay** (in the weekly backtest, `backtest.json` → `bank`, about 7 KB): the band table, the bankers' record by band, and every dial level's record on match days built like the live board (half of each day's games without their prices). When it was built, on 2025/26 (6,104 games in 19 leagues):
+
+| | Statpad said | Landed | |
+|---|---|---|---|
+| Bankers 90%+ | 91% | 94% | 311 picks |
+| Bankers 85–90% | 87% | 88% | 2,195 picks |
+| Bankers 80–85% | 82% | 83% | 3,095 picks |
+| Slips set to 90% | 91% | 93% | 86 days (typical odds 1.06) |
+| Slips set to 80% | 82% | 82% | 204 days (1.16) |
+| Slips set to 70% | 71% | 72% | 234 days (1.39) |
+| Slips set to 50% | 52% | 55% | 234 days (1.93) |
+| Slips set to 30% | 32% | 31% | 234 days (3.28) |
+| Slips set to 20% | 23% | 24% | 234 days (4.82) |
+
+The live board has five or six times as many games a day as the replay's 19 leagues, so its slips at each level pay more. What the research behind it found: the engine is well calibrated at high chances on priced games; learned re-rankers added nothing on priced games and only about a point on unpriced ones; so the gain is in choosing the surest leg, proving it, and building certainty-first slips, not in a cleverer model.
+
+**Also in v68:** the Lab's latest slips no longer call the current builder's slips "old builder"; estimated prices are described as what they are (Statpad's estimate of a bookmaker's price, margin included).
+
+## Rule tester (v67)
+
+Under More (and from the Value board and the Lab): try any betting rule on every game of football-data.co.uk's 19 leagues since 2021/22, about 36,000 games with this season so far, at the prices bookmakers really offered.
+
+- **The rule.** What to bet on (home, draw, away, over or under 2.5, the favourite, the underdog, or several at once), the price range, a typical bookmaker's price (the average listed) or the best on offer, how far above the fair price, Statpad's own chance or edge (for the replayed season), leagues (all, the top five, top divisions, or one) and seasons. Seven ready-made starting points, including the Value board's own rule.
+- **The answer.** Bets, won against what the prices said, profit at 1 unit a bet (or the bank at 2% a bet), the running profit bet by bet (touch it to read any point), and a plain verdict: *Holds up*, *Profitable, with a warning*, *Could easily be luck*, *Loses about what the margin costs*, *Loses more than the margin*, or *Too few bets to tell*.
+- **The checks.** How often a rule with no edge makes as much (a normal approximation: profit over the square root of the sum of price minus one), the prices against the closing prices (closing-line value, and how often it was beaten), both halves of the record, season by season, league by league, the worst losing run and the deepest fall.
+- **Now.** The games on the board that the rule would bet on, with today's prices.
+- **Sharing.** The address carries the rule (`#rules?m=HDAOU&pt=best&lo=1.01&hi=5.5&e=2`); a share button sends it.
+- **The assistant** answers rule questions by running the tester: "would backing home favourites under 1.60 have made money?", "do draws pay?", "and at the best price?", "only La Liga?", "does the Value board rule work?".
+
+**The data.** The pipeline packs the games into `rules.bin` (about 0.6 MB, gzip, column by column: scores, average prices for home, draw, away, over and under 2.5, how far the best price was above each, the average closing prices, and Statpad's replayed chances), weekly and after each replay. The page unpacks it itself (DecompressionStream) and takes the margin off with the power method, the pipeline's own; the unit test checks 400 games against football-data's rows and the page's fair and closing chances against the pipeline's to a millionth. On a phone slowed four times: about a second to open (in slices, so it never freezes), any rule answered in 40–60 ms.
+
+**What it showed** (when it was built):
+
+| Rule | Bets | Return a bet | Beat the closing price | Verdict |
+|---|---|---|---|---|
+| The Value board's rule (best price 2%+ above fair, up to 5.50) | 3,011 | +4.4% | 69% of bets | Holds up |
+| Short favourites, 1.20–1.60 | 6,089 | −0.8% | 30% | Loses, but less than the margin |
+| Big underdogs, 5.00+ | 8,315 | −23.6% | 13% | Loses more than the margin |
+| Draws at 3.00–3.60 | 20,509 | −3.2% | 4% | Loses, but less than the margin |
+| Overs at 1.70–2.10 | 17,770 | −4.8% | 11% | Loses about what the margin costs |
+| Statpad's 70%+ picks (2025/26) | 532 | −0.8% | 20% | Loses about what the margin costs |
+| Where Statpad's chance beats the best price by 3% (2025/26 replay) | 1,449 | −15.1% | 40% | Loses more than the margin |
+
+The last line is worth knowing: where Statpad and the market disagree, the market has usually been right (Statpad said 27%, the market 25%, and 23% landed). That's why the Value board compares prices with the bookmakers' consensus rather than with Statpad's own chance, and why its picks are best read as probabilities, not as a source of edge over the closing price.
 
 ## Getting around, teams you follow and a quieter page (v66)
 

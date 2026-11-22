@@ -1861,6 +1861,12 @@ def fd_close(row):
     return {k: round(v, 4) for k, v in out.items()}
 
 
+def fd_close_avg(row):
+    """The average closing prices for home, draw, away, over and under 2.5 (None where not listed)."""
+    v = [fnum(col(row, k)) for k in ('AvgCH', 'AvgCD', 'AvgCA', 'AvgC>2.5', 'AvgC<2.5')]
+    return [x if x and x > 1 else None for x in v] if any(v) else None
+
+
 def load_fd_fixtures():
     out = []
     upd = iso(NOW)
@@ -5771,6 +5777,7 @@ const E = mod.exports;
 const inp = JSON.parse(fs.readFileSync(inPath, 'utf8'));
 if (E.setCalib) E.setCalib(inp.calib && inp.calib.on ? inp.calib : null);
 if (E.setMcal) E.setMcal(inp.mcal || null);
+if (E.setBank) E.setBank(inp.bank || null);
 const now = Date.parse(inp.now);
 let fmt;
 try { fmt = new Intl.DateTimeFormat('en-CA', { timeZone: inp.tz, year: 'numeric', month: '2-digit', day: '2-digit' }); }
@@ -5787,6 +5794,7 @@ for (const m of inp.matches) {
     t: a.top && a.top.pLo != null ? a.tier : undefined, pl: a.top && a.top.pLo != null ? a.top.pLo : undefined,
     vb: E.value([{ m, a }], inp.vb_min || 0.02).map((v) => [v.s.key, v.s.price, +v.s.p.toFixed(4), +v.s.edge.toFixed(4), v.s.bk || null]),
   };
+  if (E.bankers) { const b = E.bankers([{ m, a }], 0.8)[0]; if (b) out.picks[m.id].bk = [b.s.key, +b.q.toFixed(4), +b.pr.toFixed(3)]; }
   if (Date.parse(m.ko) > now) { const d = fmt.format(new Date(m.ko)); (byDay[d] = byDay[d] || []).push({ m, a }); }
 }
 for (const [d, list] of Object.entries(byDay)) {
@@ -5795,13 +5803,22 @@ for (const [d, list] of Object.entries(byDay)) {
     return { t, f: sl.feasible, o: sl.odds, p: sl.prob, b: E.SLIP_B || (E.buildSlips ? 2 : 1),
       legs: sl.legs.map((l) => ({ id: l.m.id, k: l.s.key, pr: l.s.price, pp: l.s.pSlip || l.s.pAdj, r: !!l.s.real, ko: l.m.ko, h: l.m.h, a: l.m.a })) };
   });
+  // v68: the day's slips by certainty, recorded like the others (frozen when their first game kicks off)
+  if (E.dial) {
+    const D = E.dial(list);
+    for (const P of [0.9, 0.8, 0.7, 0.6, 0.5]) {
+      const sl = D.slipAt(P); if (!sl || !sl.legs.length) continue;
+      out.slips[d].push({ t: 'P' + Math.round(P * 100), f: true, o: sl.odds, p: sl.prob, b: 4,
+        legs: sl.legs.map((l) => ({ id: l.m.id, k: l.s.key, pr: l.s.price, pp: l.q, r: !!l.s.real, ko: l.m.ko, h: l.m.h, a: l.m.a })) });
+    }
+  }
 }
 out.ver = E.VERSION || null;
 process.stdout.write(JSON.stringify(out));
 """
 
 
-def run_engine(doc):
+def run_engine(doc, bank=None):
     import shutil
     import subprocess
     import tempfile
@@ -5813,7 +5830,7 @@ def run_engine(doc):
         js, inp = Path(td) / 'engine_run.js', Path(td) / 'in.json'
         js.write_text(NODE_ENGINE)
         inp.write_text(json.dumps({'now': iso(NOW), 'tz': TRACK_TZ, 'target': TRACK_TARGET, 'matches': doc['matches'],
-                                   'calib': doc.get('calib'), 'mcal': doc.get('mcal'), 'vb_min': VB_MIN}))
+                                   'calib': doc.get('calib'), 'mcal': doc.get('mcal'), 'vb_min': VB_MIN, 'bank': bank}))
         r = subprocess.run([node, str(js), str(INDEX_FILE), str(inp)], capture_output=True, text=True, timeout=300)
         if r.returncode != 0:
             log('track: engine failed', (r.stderr or '')[-300:])
@@ -6183,8 +6200,9 @@ def track_update(doc, state):
     pend = state.setdefault('track_pending', {})
     open_ = state.setdefault('slips_open', [])
     days = state.setdefault('slip_days', {})
-    eng = run_engine(doc)
+    eng = run_engine(doc, (state.get('backtest') or {}).get('bank'))
     by_id = {m['id']: m for m in doc['matches']}
+    bankers_log = tr.setdefault('bankers', [])
     r4 = lambda xs: [round(x, 4) for x in xs] if xs else None
 
     # 1) snapshot every open match (the last snapshot before kick-off is the one that gets graded)
@@ -6203,6 +6221,11 @@ def track_update(doc, state):
             if 't' in e:
                 rec['t'] = e['t']
                 rec['pl'] = round(e['pl'], 4)
+            if e.get('bk'):   # v68: the game's banker, as it stood at the last snapshot before kick-off
+                rec['bk'] = e['bk']
+                rec.setdefault('bkf', [iso(NOW), e['bk'][0], e['bk'][1], e['bk'][2]])
+            else:
+                rec.pop('bk', None)
             if rec.get('op') is None and best:
                 rec['op'] = best
             if ver:
@@ -6309,6 +6332,14 @@ def track_update(doc, state):
             vb_add(V['vb'], okv, vpr, vclv)
             tr['vbets'].append([mid, rec['lk'], rec['ko'], rec['h'], rec['a'], hs, as_, key, vpr, vbk, vedge, vp, int(bool(okv)), vclv, t0, ver_r])
             buf.append(ledger_row('value', rec, hs, as_, ver_r, key, vp, None, vpr, True, vbk, vedge, [t0, key, vp, vpr], okv, vclv, None))
+        if rec.get('bk'):   # v68: bankers, by how sure they were
+            bkey, bq, bpr = rec['bk']
+            okb = settle(bkey, hs, as_)
+            if okb is not None:
+                bb = agg.setdefault('bank', {'80': [0, 0, 0.0], '85': [0, 0, 0.0], '90': [0, 0, 0.0]})['90' if bq >= 0.9 else '85' if bq >= 0.85 else '80']
+                bb[0] += 1; bb[1] += int(bool(okb)); bb[2] = round(bb[2] + bq, 4)
+                bankers_log.append([mid, rec['lk'], rec['ko'], rec['h'], rec['a'], hs, as_, bkey, bq, bpr, int(bool(okb))])
+                buf.append(ledger_row('banker', rec, hs, as_, ver_r, bkey, bq, None, bpr, False, None, None, rec.get('bkf'), okb, None, None))
         clv = None
         side = {'H': 0, 'D': 1, 'A': 2}.get(rec['k'])
         if side is not None and rec.get('r') and rec.get('op') and rec.get('cl') and rec['cl'][side] > 1:
@@ -6347,7 +6378,10 @@ def track_update(doc, state):
                 agg['void'] += 1
             else:   # slips from older builders count apart from the current one (v62: level by level; v64: any legs)
                 b_ = s.get('b', 1)
-                a = (agg['slips'] if b_ == 3 else agg.setdefault('slips_v2' if b_ == 2 else 'slips_v1', {t: [0, 0, 0.0, 0.0] for t in 'ABC'}))[s['t']]
+                if b_ == 4:   # v68: slips by certainty, by the certainty aimed for
+                    a = agg.setdefault('dial', {}).setdefault(s['t'], [0, 0, 0.0, 0.0])
+                else:
+                    a = (agg['slips'] if b_ == 3 else agg.setdefault('slips_v2' if b_ == 2 else 'slips_v1', {t: [0, 0, 0.0, 0.0] for t in 'ABC'}))[s['t']]
                 a[0] += 1; a[1] += int(res == 'won'); a[2] = round(a[2] + (s['o'] - 1 if res == 'won' else -1), 3)
                 a[3] = round(a[3] + s['p'], 4)
             changed = True
@@ -6359,6 +6393,7 @@ def track_update(doc, state):
     keep_day = (NOW - timedelta(days=TRACK_KEEP_DAYS)).strftime('%Y-%m-%d')
     tr['slips'] = [s for s in tr['slips'] if s['d'] >= keep_day]
     tr['vbets'] = [v for v in tr['vbets'] if v[2] >= keep_from]
+    tr['bankers'] = [b for b in tr.get('bankers', []) if b[2] >= keep_from]
     if changed:
         tr['updated'] = iso(NOW)
         tr['new'] = tr.get('new', 0) + 1
@@ -6383,7 +6418,7 @@ def track_update(doc, state):
     pub = {'app': 'Statpad', 'schema': 1, 'since': tr['since'], 'updated': tr['updated'], 'saved_at': tr.get('saved_at'),
            'tz': TRACK_TZ, 'target': TRACK_TARGET, 'agg': agg, 'picks': tr['picks'], 'slips': tr['slips'],
            'open': open_, 'pending': len(pend), 'pend_t': pend_t, 'waiting': waiting[:150],
-           'vbets': tr['vbets'], 'vwait': vwait[:120], 'vopen': vopen, 'ver': ver, 'vb_min': VB_MIN}
+           'vbets': tr['vbets'], 'vwait': vwait[:120], 'vopen': vopen, 'ver': ver, 'vb_min': VB_MIN, 'bankers': tr.get('bankers', [])[-300:]}
     # commit to the repo: new grades at most every few hours, and a keep-alive commit regardless
     saved = parse_iso(tr['saved_at']) if tr.get('saved_at') else None
     keepalive = repo is None or saved is None or NOW - saved >= timedelta(days=KEEPALIVE_DAYS)
@@ -6443,12 +6478,59 @@ for (const m of inp.matches) {
   out.picks[m.id] = { k: a.top ? a.top.key : null, pp: a.top ? a.top.pAdj : null, pr: a.top ? a.top.price : null,
     t: a.top ? a.tier : null, ok: ob ? ob.key : null, op: ob ? ob.pAdj : null,
     p: [a.p.H, a.p.D, a.p.A], m: a.mkt ? a.mkt.p : null, pm: a.pMod ? [a.pMod.H, a.pMod.D, a.pMod.A] : null };
+  { const o = a.sels.find((s) => s.key === 'O25'); if (o && o.p != null) out.picks[m.id].o = +o.p.toFixed(4); }
   for (const v of E.value([{ m, a }], inp.vb_min || 0.02)) out.value.push([m.id, v.s.key, v.s.price, v.s.p, +v.s.edge.toFixed(4)]);
   const d = m.ko.slice(0, 10); (byDay[d] = byDay[d] || []).push({ m, a });
 }
 for (const [d, list] of Object.entries(byDay)) {
   out.slips[d] = ['C', 'B', 'A'].map((t) => { const sl = E.buildSlip(list, t, inp.target);
     return { t, f: sl.feasible, o: sl.odds, p: sl.prob, legs: sl.legs.map((l) => [l.m.id, l.s.key]) }; });
+}
+// v68: bankers and slips by certainty. Every leg's chance, as priced and with the prices taken away (as for the
+// games on the live board that have none), counted against the score in bands; the bands become the reading the
+// page uses for unpriced games; then each game's banker and each day's slips by certainty, graded.
+if (E.bankFit && inp.res) {
+  const won = (k, h, a) => { const t = h + a; return { H: h > a, A: a > h, '1X': h >= a, X2: a >= h, O15: t > 1, O25: t > 2, U25: t < 3, U35: t < 4,
+    BTTS: h > 0 && a > 0, BTTS_N: !(h > 0 && a > 0), H_O05: h > 0, A_O05: a > 0, H_O15: h > 1, A_O15: a > 1 }[k]; };
+  const NB = Math.round((1 - 0.4) / 0.025) + 1, cnt = { p: {}, u: {} }, both = [];
+  for (const m of inp.matches) {
+    const r = inp.res[m.id]; if (!r) continue;
+    let ap = null, au = null;
+    try { ap = E.analyse(m, Date.parse(m.ko) - 3600e3); au = E.analyse(Object.assign({}, m, { mkt: null }), Date.parse(m.ko) - 3600e3); } catch (err) { continue; }
+    if (!ap || !au) continue;
+    both.push({ m, ap, au, r });
+    for (const [v, a] of [['p', ap], ['u', au]]) for (const s of a.sels) {
+      const gr = E.BANK_G[s.key]; if (!gr || s.x || !((s.pt || s.price) >= 1.05)) continue;
+      const x = v === 'p' ? s.pAdj : (s.pRaw != null ? s.pRaw : s.pAdj); if (x < 0.4) continue;
+      const b = Math.min(NB - 1, Math.floor((x - 0.4) / 0.025 + 1e-9));
+      const t = (cnt[v][gr] = cnt[v][gr] || Array.from({ length: NB }, () => [0, 0, 0]))[b];
+      t[0]++; t[1] += won(s.key, r[0], r[1]) ? 1 : 0; t[2] = +(t[2] + x).toFixed(4);
+    }
+  }
+  const bank = E.bankFit(cnt); E.setBank(bank);
+  const bk = { p: {}, u: {} }, days = {}, dl = {};
+  const band = (q) => (q >= 0.9 ? '90' : q >= 0.85 ? '85' : '80');
+  let hsh = 0;
+  for (const { m, ap, au, r } of both) {
+    for (const [v, a] of [['p', ap], ['u', au]]) {
+      const b = E.bankers([{ m, a }], 0.8)[0]; if (!b) continue;
+      const t = (bk[v][band(b.q)] = bk[v][band(b.q)] || [0, 0, 0]); t[0]++; t[1] += won(b.s.key, r[0], r[1]) ? 1 : 0; t[2] = +(t[2] + b.q).toFixed(4);
+    }
+    // a board like the live one: about half the games without prices
+    hsh = 0; for (const ch of m.id) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
+    const d = m.ko.slice(0, 10); (days[d] = days[d] || []).push({ m, a: hsh % 2 ? au : ap, r });
+  }
+  const PS = [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2];   // every stop on the page's dial
+  for (const list of Object.values(days)) {
+    const D = E.dial(list), byId = {}; for (const x of list) byId[x.m.id] = x.r;
+    for (const P of PS) {
+      const sl = D.slipAt(P); if (!sl || !sl.legs.length) continue;
+      const ok = sl.legs.every((l) => won(l.s.key, byId[l.m.id][0], byId[l.m.id][1]));
+      const t = (dl[Math.round(P * 100)] = dl[Math.round(P * 100)] || [0, 0, 0, 0, 0]);
+      t[0]++; t[1] += ok ? 1 : 0; t[2] = +(t[2] + sl.prob).toFixed(4); t[3] = +(t[3] + Math.log(sl.odds)).toFixed(4); t[4] += sl.legs.length;
+    }
+  }
+  out.bank = Object.assign(bank, { bk, dial: dl, games: both.length });
 }
 out.ver = E.VERSION || null;
 process.stdout.write(JSON.stringify(out));
@@ -6509,6 +6591,7 @@ def fd_season(lk, code):
                     mk = fd_market(row, None)
                     if mk:
                         mk['cl'] = fd_close(row)   # closing consensus, for closing-line value in the replay
+                        mk['cla'] = fd_close_avg(row)   # the closing average prices themselves (the rule tester)
                     rows.append((d, h, a, int(hg), int(ag), fnum(col(row, 'HST')), fnum(col(row, 'AST')),
                                  mk, uk_to_utc(d, col(row, 'Time')), xg_for(lk, d, h, a)))   # football-data times are UK time
         _FD_SEASONS[key] = rows
@@ -8567,6 +8650,92 @@ def value_history():
             'by_season': by_s, 'by_kind': by_k, 'curve': thin_curve(curve), 'leagues': sum(1 for c in L.values() if c['fd']), 'stress': stress}
 
 
+RULES_SEASONS = 6        # this season so far and the five before it
+# columns of the rule tester's file: name, bytes (1 or 2, stored as low bytes then high bytes, which packs better)
+RULES_COLS = (('dd', 2), ('s', 1), ('l', 1), ('h', 1), ('a', 1), ('hg', 1), ('ag', 1),
+              ('aH', 2), ('aD', 2), ('aA', 2), ('aO', 2), ('aU', 2),
+              ('bH', 2), ('bD', 2), ('bA', 2), ('bO', 2), ('bU', 2),
+              ('cH', 2), ('cD', 2), ('cA', 2), ('cO', 2), ('cU', 2),
+              ('mH', 2), ('mD', 2), ('mA', 2), ('mO', 2))
+
+
+def rules_data(state):
+    """Every game of this season so far and the five before it in football-data's main leagues, for the page's rule
+    tester (about 36,000 games, half a megabyte): the score, the average prices before kick-off for home, draw, away,
+    over and under 2.5, how far the best price was above each, the average closing prices, and Statpad's own chances
+    where the weekly replay has them. The page takes the margin off the average prices itself (the power method, as
+    here), so its fair prices and closing fair prices are read the same way.
+    Packed column by column, games in date order, gzip-compressed: 'SPR1', the length of a JSON header, the header,
+    then each column's low bytes and (for two-byte columns) its high bytes. dd: days since the game before; a..: price
+    x100 (0 missing); b..: best minus average x100; c..: closing minus average x100 plus 32768 (0 missing); m..: chance
+    x1000 (0 missing); h, a: the team's number within its league's list."""
+    import gzip
+    t0 = time.time()
+    mp = state.get('bt_model') or {}
+    games, seasons = [], []
+    for k in range(RULES_SEASONS - 1, -1, -1):
+        code = season_code(NOW, k)
+        n0 = len(games)
+        for lk, c in L.items():
+            if not c['fd']:
+                continue
+            for d, h, a, hg, ag, _hs, _as, mk, ko in (r[:9] for r in fd_season(lk, code)):
+                if not mk or not mk.get('avg'):
+                    continue
+                day = d.date() if hasattr(d, 'date') else d
+                mid = f"{lk}-{(ko or d):%Y%m%d}-{slug(h)}-{slug(a)}"
+                games.append((day, len(seasons), lk, h, a, hg, ag, mk, mp.get(mid)))
+        if len(games) > n0:
+            seasons.append(season_name(code))
+    if len(games) < 500:
+        log('rule tester: not enough games', len(games))
+        return None
+    order = list(L)
+    games.sort(key=lambda g: (g[0], order.index(g[2]), g[3]))
+    lgs = sorted({g[2] for g in games}, key=order.index)
+    li = {k: i for i, k in enumerate(lgs)}
+    teams = {k: [] for k in lgs}
+    ti = {}
+    for g in games:
+        for t in (g[3], g[4]):
+            if (g[2], t) not in ti:
+                ti[(g[2], t)] = len(teams[g[2]])
+                teams[g[2]].append(t)
+    pr = lambda x: max(0, min(65535, int(round(x * 100)))) if x and x > 1 else 0
+    ch = lambda x: max(0, min(65535, int(round(x * 1000)))) if x else 0
+    cols = {name: [] for name, _ in RULES_COLS}
+    prev, n_model = games[0][0], 0
+    for day, si, lk, h, a, hg, ag, mk, m in games:
+        ou = mk.get('ou') or {}
+        avg = list(mk['avg']) + list(ou.get('avg') or [None, None])
+        best = list(mk.get('best') or [None] * 3) + list(ou.get('best') or [None, None])
+        cla = mk.get('cla') or [None] * 5
+        av = [pr(x) for x in avg]
+        vals = [min(65535, (day - prev).days), si, li[lk], min(255, ti[(lk, h)]), min(255, ti[(lk, a)]), min(255, hg), min(255, ag)] + av
+        vals += [max(0, pr(b) - x) if x and pr(b) else 0 for b, x in zip(best, av)]
+        vals += [max(1, min(65535, pr(c) - x + 32768)) if x and pr(c) else 0 for c, x in zip(cla, av)]
+        vals += [ch(x) for x in m] if m else [0, 0, 0, 0]
+        n_model += bool(m)
+        for (name, _), v in zip(RULES_COLS, vals):
+            cols[name].append(v)
+        prev = day
+    head = {'app': 'Statpad', 'v': 2, 'at': iso(NOW), 'd0': games[0][0].isoformat(), 'n': len(games), 'seasons': seasons,
+            'leagues': [[k, L[k]['name'], L[k]['country']] for k in lgs], 'teams': [teams[k] for k in lgs],
+            'model_season': (state.get('backtest') or {}).get('season') if n_model else None, 'n_model': n_model,
+            'cols': [[name, w] for name, w in RULES_COLS]}
+    hb = json.dumps(head, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+    body = bytearray(b'SPR1') + len(hb).to_bytes(4, 'little') + hb
+    for name, w in RULES_COLS:
+        v = cols[name]
+        body += bytes(x & 255 for x in v)
+        if w == 2:
+            body += bytes(x >> 8 for x in v)
+    out = gzip.compress(bytes(body), 9, mtime=0)
+    log(f'rule tester: {len(games)} games, {len(seasons)} seasons, {len(lgs)} leagues, Statpad\'s chances on {n_model}, '
+        f'{len(out) // 1024} KB ({time.time() - t0:.0f} s)')
+    return out
+
+
 def run_backtest(state):
     numpy_lib(True)   # heavy fitting ahead: fast maths if it can be had
     t0 = time.time()
@@ -8576,7 +8745,8 @@ def run_backtest(state):
     if len(ms) < 200:
         log('backtest: not enough games with prices', len(ms))
         return None
-    eng = run_node(NODE_BT, {'target': TRACK_TARGET, 'matches': ms, 'mcal': public_mcal(state), 'vb_min': VB_MIN})
+    eng = run_node(NODE_BT, {'target': TRACK_TARGET, 'matches': ms, 'mcal': public_mcal(state), 'vb_min': VB_MIN,
+                             'res': {mid: list(r) for mid, r in res.items()}})
     if not eng:
         return None
     agg = new_agg()
@@ -8634,10 +8804,21 @@ def run_backtest(state):
             won = all(settle(k, *res[i]) for i, k in s_['legs'])
             a = agg['slips'][s_['t']]
             a[0] += 1; a[1] += int(won); a[2] = round(a[2] + (s_['o'] - 1 if won else -1), 3); a[3] = round(a[3] + s_['p'], 4)
+    if eng.get('bank'):   # v68: the bankers' reading for unpriced games, and the replay's proof for bankers and slips by certainty
+        bank = eng['bank']
+        bank.update({'at': iso(NOW), 'season': label})
     out = {'app': 'Statpad', 'season': label, 'at': iso(NOW), 'games': len(ms), 'leagues': len({m['lk'] for m in ms}),
            'skip_weeks': BT_SKIP_WEEKS, 'target': TRACK_TARGET, 'model': MODEL, 'wm': MODEL_W or W_DEFAULT, 'agg': agg, 'ver': eng.get('ver'),
            'vb_min': VB_MIN,
            'by_league': dict(sorted(by_lg.items(), key=lambda x: -x[1][0]))}
+    if eng.get('bank'):
+        out['bank'] = eng['bank']
+        b = eng['bank']
+        log('backtest: bankers ' + ', '.join(f"{v}{k}+ {t[1]}/{t[0]}" for v in ('p', 'u') for k, t in sorted((b.get('bk') or {}).get(v, {}).items()))
+            + ' | slips by certainty ' + ', '.join(f"{k}%: {t[1]}/{t[0]}" for k, t in sorted((b.get('dial') or {}).items(), key=lambda x: -int(x[0]))))
+    # Statpad's own chances for home, draw, away and over 2.5 in each replayed game (the rule tester's model column)
+    out['_mp'] = {mid: [round(x, 3) for x in e['p']] + [round(e['o'], 3) if e.get('o') is not None else None]
+                  for mid, e in eng['picks'].items() if e.get('p')}
     log(f"backtest: {label}, {len(ms)} games in {out['leagues']} leagues (ratings {t1 - t0:.0f} s, total {time.time() - t0:.0f} s)")
     return out
 
@@ -9054,8 +9235,10 @@ def main():
         log('results from The Odds API for', n_sc, 'competitions')
     track = safe(lambda: track_update(doc, state), None)
     safe(lambda: live_check(state), None)
+    ran_bt = False
     if due(state, 'backtest', BT_EVERY_H) or not state.get('backtest') or retuned or 'mcal' not in state or \
-            (state.get('backtest') or {}).get('ver') != engine_version():   # a new engine: replay it at once
+            (state.get('backtest') or {}).get('ver') != engine_version() or 'bt_model' not in state or \
+            not (state.get('backtest') or {}).get('bank'):   # a new engine (or no bankers' reading yet): replay it at once
         last['backtest'] = iso(NOW)
         mc = safe(lambda: fit_mcal(state), None)
         if mc:
@@ -9065,14 +9248,29 @@ def main():
             state.setdefault('mcal', {})
         bt = safe(lambda: run_backtest(state), None)
         if bt:
+            state['bt_model'] = bt.pop('_mp', None) or {}
             state['backtest'] = bt
             changed = True
+            ran_bt = True
     if due(state, 'vhist', BT_EVERY_H if state.get('vhist') else 6):   # weekly; every 6 hours until the first one works
         last['vhist'] = iso(NOW)
         vh = safe(lambda: value_history(), None)
         if vh:
             state['vhist'] = vh
             changed = True
+    # the rule tester's games: weekly, and after each replay (for Statpad's chances), but not in a run that has just
+    # replayed a season (the downloads wait for the next run, a few minutes later); a failed attempt waits 3 hours
+    rules_file = STATE_DIR / 'rules.bin'
+    rules_need = not rules_file.exists() or state.get('rules_bt') != (state.get('backtest') or {}).get('at')
+    if not ran_bt and (due(state, 'rules', BT_EVERY_H) or (rules_need and due(state, 'rules', 3))):
+        last['rules'] = iso(NOW)
+        rd = safe(lambda: rules_data(state), None)
+        if rd:
+            rules_file.write_bytes(rd)
+            state['rules_bt'] = (state.get('backtest') or {}).get('at')
+            changed = True
+    if rules_file.exists():
+        (OUT_DIR / 'rules.bin').write_bytes(rules_file.read_bytes())
     if state.get('backtest'):
         (OUT_DIR / 'backtest.json').write_text(json.dumps(dict(state['backtest'], tune=public_tune(state), vh=state.get('vhist'),
                                                                lc=state.get('live_check'), au=state.get('autopsy')),
@@ -9191,6 +9389,9 @@ def write_version(doc, body):
         f = OUT_DIR / f'{name}.json'
         if f.exists():
             ver[name] = h(f.read_text())
+    rb = OUT_DIR / 'rules.bin'   # the rule tester's games (binary)
+    if rb.exists():
+        ver['rules'] = hashlib.sha1(rb.read_bytes()).hexdigest()[:12]
     (OUT_DIR / 'v.json').write_text(json.dumps(ver, separators=(',', ':')))
 
 
