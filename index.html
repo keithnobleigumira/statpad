@@ -918,6 +918,12 @@ details.xm .note { margin: 0 0 10px; }
 #betsSeg { flex: none; }
 .add { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--rule); background: var(--paper); display: grid; place-items: center; font-weight: 700; color: var(--cobalt); margin-left: auto; }
 .add[aria-pressed="true"] { background: var(--cobalt); color: var(--cobalt-ink); border-color: var(--cobalt); }
+.add { position: relative; } .add::after { content: ""; position: absolute; inset: -7px; }   /* v69: a 44px target for a 30px button */
+.bk-r:focus-visible, .gs-legs li:focus-visible, .slip ol li:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; border-radius: 8px; }
+.sum-row .oneIn { display: block; font: 500 11.5px var(--f-body); color: var(--ink-3); text-align: right; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.soon { font: 600 11px var(--f-body); color: var(--yellow); margin-left: 6px; white-space: nowrap; } .fxl .soon { margin-left: 4px; }
+.btn.done { background: color-mix(in srgb, var(--pitch) 18%, transparent); border-color: color-mix(in srgb, var(--pitch) 55%, transparent); color: var(--ink); }
 .spark { width: 100%; height: 120px; display: block; }
 .spark text { font: 500 10px var(--f-mono); font-variant-numeric: tabular-nums; fill: var(--ink-3); }
 .note { font-size: 12.5px; color: var(--ink-2); margin: 10px 0 0; }
@@ -1012,6 +1018,8 @@ footer { border-top: 1px solid var(--rule); margin-top: 48px; padding: 22px 0 30
 footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
 .toast { position: fixed; z-index: 70; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: .2s; }
 .toast.show { opacity: 1; transform: translateX(-50%); }
+.toast.act { pointer-events: auto; padding: 6px 6px 6px 16px; display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
+.toast-undo { border: 0; border-radius: 99px; padding: 7px 14px; min-height: 34px; background: var(--paper); color: var(--ink); font: 700 13px var(--f-body); cursor: pointer; }
 .itip { position: fixed; z-index: 72; left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); max-width: 440px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px;
   background: var(--card); border: 1px solid var(--rule); border-radius: 16px; box-shadow: 0 18px 40px -18px rgba(13, 24, 19, .45); }
 .itip[hidden] { display: none; }
@@ -2314,7 +2322,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
 
     <section id="v-value" class="section" data-view="value" hidden>
       <div class="sec-head">
-        <div><h2 id="valTitle">Value board</h2><p class="sub" id="valSub">Bets where the best price on offer pays more than it should. Only real prices appear here.</p></div>
+        <div><h2 id="valTitle">Value board</h2><p class="sub" id="valSub">Prices that pay more than they should. Statpad works out a fair price from all the bookmakers (their margin taken off) and lists the prices above it: an edge of +5% pays 5% more than fair. Only real bookmaker prices appear here.</p></div>
         <div class="ctl"><div class="seg" id="valSeg" role="group" aria-label="Value bets or market movers"><button type="button" data-vseg="value" aria-pressed="true">Value bets</button><button type="button" data-vseg="movers" aria-pressed="false">Market movers</button></div>
         <span class="lbl" id="minEdgeL">Min edge</span><div class="seg" id="minEdge"></div></div>
       </div>
@@ -2470,7 +2478,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
 /* Statpad engine: Dixon-Coles goals model anchored to market consensus. Runs in the browser and in node. */
 const ENGINE = (() => {
   // the engine's version, stamped on every prediction the track record keeps, so versions can be compared later
-  const VERSION = '2026-11-27';
+  const VERSION = '2026-11-29';
   const N = 11, RHO = -0.07, W_MKT = 0.8, W_EXT = 0.5, HAIR = 0.03;
   const M_DC = 0.05, M_EST = 0.06, M_DER = 0.065, STALE_H = 36;
   const TIERS = {
@@ -2503,17 +2511,37 @@ const ENGINE = (() => {
     return s;
   }
   const CORNERS = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+  const GOALK = { O15: 1, O25: 1, U25: 1, U35: 1, BTTS: 1, BTTS_N: 1, H_O05: 1, A_O05: 1, H_O15: 1, A_O15: 1 }, CARE_NOOU = 0.02;
   // per-market correction, fitted by the site's weekly replay of past seasons and kept only for the kinds of
   // market where it predicted a season it never saw better: log-odds(true) = a + b * log-odds(model)
   let MCAL = null;
   const MGROUP = (k) => (k === 'H' || k === 'A' ? 'HA' : k === 'D' ? 'D' : k === '1X' || k === 'X2' ? 'DC' : k === 'O15' || k === 'O25' || k === 'U25' || k === 'U35' ? 'OU'
     : k === 'BTTS' || k === 'BTTS_N' ? 'BTTS' : /^[HA]_O\d5$/.test(k) ? 'TG' : 'CB');
   function setMcal(c) { MCAL = c && typeof c === 'object' ? c : null; }
+  // v69: the "no" side of a pair (under, both teams to score: no) is corrected as one minus its "yes" side, so the
+  // pair still adds up to 100% (a shared correction used to move both the same way: over and under could reach 101%)
+  const FLIP = { BTTS_N: 'BTTS', U25: 'O25', U35: 'O25' };   // each with a "yes" market of its group
   // a correction for this kind of market in this kind of league (top, second tier, other) wins over the market's own
   function mcal(p, key, lk) {
+    if (FLIP[key] && p > 0 && p < 1) return 1 - mcal1(1 - p, key, lk);
+    return mcal1(p, key, lk);
+  }
+  function mcal1(p, key, lk) {
     const g = MCAL && MCAL._g && lk ? MCAL._g[lk] : null;
     const c = MCAL && ((g && MCAL[MGROUP(key) + '|' + g]) || MCAL[MGROUP(key)]);
     if (!c || !(p > 0) || !(p < 1)) return p;
+    const q = Math.min(0.995, Math.max(0.005, p)), z = c[0] + c[1] * Math.log(q / (1 - q));
+    return 1 / (1 + Math.exp(-z));
+  }
+  // v69: games with no price at all, read from the ratings alone, get their own correction (fitted by the same weekly
+  // replay on its games with the prices taken away, kept per kind of market only where it read a season it never saw
+  // better), in place of the flat 3-point cut: on four replayed seasons the cut took 3 points off every market, a 10%
+  // long shot as much as a 90% favourite, so the three results of a game added up to 91%, and it read the results
+  // worse than no cut at all (log loss 0.6224 against 0.6198 a market; a fitted correction 0.6181)
+  function ucal(p, key) {
+    const c = MCAL && MCAL['U|' + MGROUP(key)];
+    if (!c || !(p > 0) || !(p < 1)) return null;
+    if (FLIP[key]) { const v = ucal(1 - p, FLIP[key]); return v == null ? null : 1 - v; }   // as one minus the pair's "yes" side
     const q = Math.min(0.995, Math.max(0.005, p)), z = c[0] + c[1] * Math.log(q / (1 - q));
     return 1 / (1 + Math.exp(-z));
   }
@@ -2533,28 +2561,36 @@ const ENGINE = (() => {
   const rhoOk = (r) => typeof r === 'number' && r > -0.35 && r < 0.2;
   function rhoFor(lk) { const r = RHO_L && (RHO_L[lk] != null ? RHO_L[lk] : RHO_L._); return rhoOk(r) ? r : RHO; }
   function pois(l) { const p = new Float64Array(N); p[0] = Math.exp(-l); for (let k = 1; k < N; k++) p[k] = p[k - 1] * l / k; return p; }
+  // v69: one buffer for the grid (its rows are views of it) and the sum taken as it is built: a third fewer passes
+  // and one allocation instead of twelve
+  const PA = new Float64Array(N), PB = new Float64Array(N);
   function matrix(lh, la, rho) {
-    const R = rhoOk(rho) ? rho : RHO;
-    const a = pois(lh), b = pois(la), M = []; let s = 0;
-    for (let i = 0; i < N; i++) { const r = new Float64Array(N); for (let j = 0; j < N; j++) r[j] = a[i] * b[j]; M.push(r); }
-    M[0][0] *= 1 - lh * la * R; M[0][1] *= 1 + lh * R; M[1][0] *= 1 + la * R; M[1][1] *= 1 - R;
-    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) s += M[i][j];
-    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) M[i][j] /= s;
+    const R = rhoOk(rho) ? rho : RHO, a = PA, b = PB;
+    a[0] = Math.exp(-lh); b[0] = Math.exp(-la);
+    for (let k = 1; k < N; k++) { a[k] = a[k - 1] * lh / k; b[k] = b[k - 1] * la / k; }
+    const buf = new Float64Array(N * N); let s = 0;
+    for (let i = 0, o = 0; i < N; i++) { const ai = a[i]; for (let j = 0; j < N; j++, o++) { const v = ai * b[j]; buf[o] = v; s += v; } }
+    const c00 = buf[0] * -lh * la * R, c01 = buf[1] * lh * R, c10 = buf[N] * la * R, c11 = buf[N + 1] * -R;
+    buf[0] += c00; buf[1] += c01; buf[N] += c10; buf[N + 1] += c11; s += c00 + c01 + c10 + c11;
+    const inv = 1 / s; for (let o = 0; o < N * N; o++) buf[o] *= inv;
+    const M = new Array(N); for (let i = 0; i < N; i++) M[i] = buf.subarray(i * N, i * N + N);
     return M;
   }
+  // v69: the overs read off the goals totals instead of five comparisons a cell
   function markets(M) {
-    const p = { H: 0, D: 0, A: 0, BTTS: 0, H_O05: 0, A_O05: 0, H_O15: 0, A_O15: 0 }; const over = [0, 0, 0, 0, 0];
+    let H = 0, D = 0, A = 0, BT = 0, h0 = 0, a0 = 0, h1 = 0, a1 = 0;
     const tot = new Float64Array(7);
-    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
-      const v = M[i][j];
-      if (i > j) p.H += v; else if (i === j) p.D += v; else p.A += v;
-      for (let k = 0; k < 5; k++) if (i + j > k) over[k] += v;
-      tot[Math.min(6, i + j)] += v;
-      if (i > 0 && j > 0) p.BTTS += v;
-      if (i > 0) p.H_O05 += v; if (j > 0) p.A_O05 += v; if (i > 1) p.H_O15 += v; if (j > 1) p.A_O15 += v;
-    }
-    p['1X'] = p.H + p.D; p.X2 = p.A + p.D; p['12'] = p.H + p.A;
-    p.O15 = over[1]; p.O25 = over[2]; p.O35 = over[3]; p.O45 = over[4]; p.U25 = 1 - over[2]; p.U35 = 1 - over[3]; p.BTTS_N = 1 - p.BTTS;
+    for (let i = 0; i < N; i++) { const row = M[i]; for (let j = 0; j < N; j++) {
+      const v = row[j];
+      if (i > j) H += v; else if (i === j) D += v; else A += v;
+      tot[i + j < 6 ? i + j : 6] += v;
+      if (i > 0) { h0 += v; if (j > 0) BT += v; if (i > 1) h1 += v; }
+      if (j > 0) { a0 += v; if (j > 1) a1 += v; }
+    } }
+    const o5 = tot[5] + tot[6], o4 = o5 + tot[4], o3 = o4 + tot[3], o2 = o3 + tot[2], o1 = o2 + tot[1];
+    const p = { H, D, A, BTTS: BT, H_O05: h0, A_O05: a0, H_O15: h1, A_O15: a1 };
+    p['1X'] = H + D; p.X2 = A + D; p['12'] = H + A;
+    p.O15 = o2; p.O25 = o3; p.O35 = o4; p.O45 = o5; p.U25 = 1 - o3; p.U35 = 1 - o4; p.BTTS_N = 1 - BT;
     p.tot = Array.from(tot);
     return p;
   }
@@ -2597,15 +2633,75 @@ const ENGINE = (() => {
     under += d00 + (K >= 1 ? d01 + d10 : 0) + (K >= 2 ? d11 : 0);
     return [H / s, A / s, 1 - under / s];
   }
-  // fit expected goals to target probabilities {H, A, O (over the goals line L, 2.5 unless given; optional)}
+  // v69: the fifteen main markets of a corrected grid in one pass, with no grid built: the uncertainty corners
+  // (four extra grids a game) were a third of a game's analysis. Same numbers as markets(matrix()) to rounding.
+  const CK = ['H', 'D', 'A', '1X', 'X2', 'O15', 'O25', 'U25', 'U35', 'BTTS', 'BTTS_N', 'H_O05', 'A_O05', 'H_O15', 'A_O15'];
+  const CA = new Float64Array(N), CBf = new Float64Array(N);
+  function mk15(lh, la, rho) {
+    const R = rhoOk(rho) ? rho : RHO, a = CA, b = CBf;
+    a[0] = Math.exp(-lh); b[0] = Math.exp(-la);
+    for (let k = 1; k < N; k++) { a[k] = a[k - 1] * lh / k; b[k] = b[k - 1] * la / k; }
+    let tot = 0, H = 0, D = 0, o1 = 0, o2 = 0, o3 = 0, bt = 0, h0 = 0, a0 = 0, h1 = 0, a1 = 0;
+    for (let i = 0; i < N; i++) {
+      const ai = a[i];
+      for (let j = 0; j < N; j++) {
+        let v = ai * b[j];
+        if (i < 2 && j < 2) v *= i === 0 ? (j === 0 ? 1 - lh * la * R : 1 + lh * R) : (j === 0 ? 1 + la * R : 1 - R);
+        tot += v; const g = i + j;
+        if (i > j) H += v; else if (i === j) D += v;
+        if (g > 1) { o1 += v; if (g > 2) { o2 += v; if (g > 3) o3 += v; } }
+        if (i > 0) { h0 += v; if (j > 0) bt += v; if (i > 1) h1 += v; }
+        if (j > 0) { a0 += v; if (j > 1) a1 += v; }
+      }
+    }
+    H /= tot; D /= tot; const A = 1 - H - D;
+    o1 /= tot; o2 /= tot; o3 /= tot; bt /= tot;
+    return { H, D, A, '1X': H + D, X2: A + D, O15: o1, O25: o2, U25: 1 - o2, U35: 1 - o3, BTTS: bt, BTTS_N: 1 - bt, H_O05: h0 / tot, A_O05: a0 / tot, H_O15: h1 / tot, A_O15: a1 / tot };
+  }
+  // fit expected goals to target probabilities {H, A, O (over the goals line L, 2.5 unless given; optional)}.
+  // v69: Levenberg-Marquardt on the log expected goals (a Gauss-Newton step from a finite-difference Jacobian,
+  // damped when a step doesn't lower the error) instead of a Nelder-Mead simplex: it reaches the same least-squares
+  // fit, or a closer one, in 3-6 steps of 3 grid summaries where the simplex took about 160, so a priced game is
+  // analysed several times faster on the phone and in every replay. Falls back to the simplex if it ever stalls.
+  const LO_X = Math.log(0.02), HI_X = Math.log(7);
   function fit(t, start, rho) {
     const L = t.L === 1.5 || t.L === 3.5 || t.L === 4.5 ? t.L : 2.5;
-    const f = (x) => {
-      const q = quick(Math.exp(x[0]), Math.exp(x[1]), rho, L);
-      return (q[0] - t.H) ** 2 + (q[1] - t.A) ** 2 + (t.O != null ? 0.5 * (q[2] - t.O) ** 2 : 0);
-    };
-    const x = nelder(f, [Math.log(start[0]), Math.log(start[1])]);
-    return [Math.exp(x[0]), Math.exp(x[1])];
+    const wO = t.O != null ? Math.SQRT1_2 : 0;
+    const res = (x, y, r) => { const q = quick(Math.exp(x), Math.exp(y), rho, L); r[0] = q[0] - t.H; r[1] = q[1] - t.A; r[2] = wO ? wO * (q[2] - t.O) : 0; return r[0] * r[0] + r[1] * r[1] + r[2] * r[2]; };
+    let x = Math.max(LO_X, Math.min(HI_X, Math.log(start[0]))), y = Math.max(LO_X, Math.min(HI_X, Math.log(start[1]))), lam = 1e-4;
+    const r = [0, 0, 0], rx = [0, 0, 0], ry = [0, 0, 0], rt = [0, 0, 0];
+    let F = res(x, y, r), ok = isFinite(F), done = !(F > 1e-22);
+    for (let it = 0; ok && !done && it < 60; it++) {
+      const h = 1e-6;
+      res(x + h, y, rx); res(x, y + h, ry);
+      const j0 = (rx[0] - r[0]) / h, j1 = (rx[1] - r[1]) / h, j2 = (rx[2] - r[2]) / h;
+      const k0 = (ry[0] - r[0]) / h, k1 = (ry[1] - r[1]) / h, k2 = (ry[2] - r[2]) / h;
+      const A11 = j0 * j0 + j1 * j1 + j2 * j2, A12 = j0 * k0 + j1 * k1 + j2 * k2, A22 = k0 * k0 + k1 * k1 + k2 * k2;
+      const g1 = j0 * r[0] + j1 * r[1] + j2 * r[2], g2 = k0 * r[0] + k1 * r[1] + k2 * r[2];
+      if (Math.abs(g1) + Math.abs(g2) < 1e-13) { done = true; break; }   // the least-squares point: nothing left to gain
+      let moved = false;
+      for (let tries = 0; tries < 12; tries++) {
+        const a11 = A11 * (1 + lam), a22 = A22 * (1 + lam), det = a11 * a22 - A12 * A12;
+        if (!(Math.abs(det) > 1e-300)) { lam *= 10; continue; }
+        const dx = -(a22 * g1 - A12 * g2) / det, dy = -(a11 * g2 - A12 * g1) / det;
+        // steps of at most 1 in log expected goals, inside 0.02-7 goals: past that the 11-goal grid's cut-off makes false fits
+        const sx = Math.max(LO_X, Math.min(HI_X, x + Math.max(-1, Math.min(1, dx)))) - x, sy = Math.max(LO_X, Math.min(HI_X, y + Math.max(-1, Math.min(1, dy)))) - y;
+        const Ft = res(x + sx, y + sy, rt);
+        if (Ft < F) {
+          x += sx; y += sy; F = Ft; r[0] = rt[0]; r[1] = rt[1]; r[2] = rt[2]; lam = Math.max(1e-9, lam / 5); moved = true;
+          if (Math.abs(sx) + Math.abs(sy) < 1e-10 || F < 1e-22) done = true;
+          break;
+        }
+        lam *= 8;
+      }
+      if (!moved) { done = Math.abs(g1) + Math.abs(g2) < 1e-9 || x <= LO_X || x >= HI_X || y <= LO_X || y >= HI_X; break; }
+    }
+    if (!ok || !done || !isFinite(x) || !isFinite(y)) {   // it stalled (never seen in tests): the simplex, keeping the better of the two
+      const f = (v) => { const q = quick(Math.exp(v[0]), Math.exp(v[1]), rho, L); return (q[0] - t.H) ** 2 + (q[1] - t.A) ** 2 + (t.O != null ? 0.5 * (q[2] - t.O) ** 2 : 0); };
+      const v = nelder(f, ok && isFinite(x) && isFinite(y) ? [x, y] : [Math.log(start[0]), Math.log(start[1])]);
+      if (!(ok && isFinite(F) && isFinite(x) && isFinite(y)) || f(v) < F) { x = v[0]; y = v[1]; }
+    }
+    return [Math.exp(x), Math.exp(y)];
   }
   const blend = (a, b, w) => Math.exp(w * Math.log(a) + (1 - w) * Math.log(b));
   const r2 = (x) => Math.max(1.01, Math.round(x * 100) / 100);
@@ -2647,13 +2743,42 @@ const ENGINE = (() => {
     ['BTTS&O25', () => 'Both teams score & over 2.5 goals', CB, (i, j) => i > 0 && j > 0 && i + j > 2],
     ['D&U25', () => 'Draw & under 2.5 goals (0–0 or 1–1)', CB, (i, j) => i === j && i + j < 3],
   ];
+  // v69: every grid-based extra summed in one pass over the grid (it walked the grid once per extra, 20 times a game)
+  const XK = ['AH_H-1.5', 'AH_A+1.5', 'AH_A-1.5', 'AH_H+1.5', 'H&O15', 'H&O25', 'H&BTTS', 'H&U35', 'H_NIL', 'A&O15', 'A&O25', 'A&BTTS', 'A&U35', 'A_NIL', '1X&U35', 'X2&U35', '1X&BTTS', 'X2&BTTS', 'BTTS&O25', 'D&U25'];
+  const XI = EXTRAS.map((x) => XK.indexOf(x[0])), XV = new Float64Array(XK.length), XS = new Float64Array(EXTRAS.length);
+  function extraSums(M) {
+    const v = XV; v.fill(0);
+    for (let i = 0; i < N; i++) {
+      const row = M[i];
+      for (let j = 0; j < N; j++) {
+        const c = row[j]; if (!(c > 0)) continue;
+        const g = i + j, d = i - j, bt = i > 0 && j > 0;
+        if (d >= 2) v[0] += c;    // home -1.5
+        if (d >= -1) v[3] += c;   // home +1.5 (doesn't lose by 2+)
+        if (d <= 1) v[1] += c;
+        if (d <= -2) v[2] += c;
+        if (d > 0) { if (g > 1) v[4] += c; if (g > 2) v[5] += c; if (j > 0) v[6] += c; if (g < 4) v[7] += c; if (j === 0) v[8] += c; }
+        else if (d < 0) { if (g > 1) v[9] += c; if (g > 2) v[10] += c; if (i > 0) v[11] += c; if (g < 4) v[12] += c; if (i === 0) v[13] += c; }
+        if (d >= 0 && g < 4) v[14] += c;
+        if (d <= 0 && g < 4) v[15] += c;
+        if (bt) { if (d >= 0) v[16] += c; if (d <= 0) v[17] += c; if (g > 2) v[18] += c; }
+        if (d === 0 && g < 3) v[19] += c;
+      }
+    }
+    for (let k = 0; k < EXTRAS.length; k++) {
+      if (XI[k] >= 0) XS[k] = v[XI[k]];
+      else if (EXTRAS[k][3]) { let t = 0; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if (EXTRAS[k][3](i, j)) t += M[i][j]; XS[k] = t; }
+    }
+    return XS;
+  }
   function extras(m, M, p) {
-    const out = [];
-    for (const [key, lab, group, f] of EXTRAS) {
+    const out = [], sums = extraSums(M);
+    for (let ix = 0; ix < EXTRAS.length; ix++) {
+      const [key, lab, group] = EXTRAS[ix];
       let prob = 0;
       if (key === 'DNB_H') prob = p.H / (p.H + p.A);
       else if (key === 'DNB_A') prob = p.A / (p.H + p.A);
-      else for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if (f(i, j)) prob += M[i][j];
+      else prob = sums[ix];
       if (!(prob > 0.002 && prob < 0.995)) continue;
       out.push({ key, label: lab(m), group, p: prob, pRaw: prob, pAdj: prob, sd: 0, pLo: prob, tier: null, fair: 1 / prob, price: r2(1 / (prob * (1 + M_X))), real: false, bk: null, edge: null, x: true });
     }
@@ -2720,13 +2845,19 @@ const ENGINE = (() => {
     else if (src === 'external') { sh = Math.hypot((1 - W_EXT) * ls[0], W_EXT * SIG_EXT); sa = Math.hypot((1 - W_EXT) * ls[1], W_EXT * SIG_EXT); }
     else if (src === 'memory') { const n = Array.isArray(m.mn) ? m.mn : [3, 3]; sh = Math.hypot(memSig(n[0]), m.thin ? 0.05 : 0, m.xm ? 0.10 : 0); sa = Math.hypot(memSig(n[1]), m.thin ? 0.05 : 0, m.xm ? 0.10 : 0); }
     else [sh, sa] = ls;
-    const pc = CORNERS.map(([u, v]) => markets(matrix(lh * Math.exp(u * sh), la * Math.exp(v * sa), rho)));
+    const pc = CORNERS.map(([u, v]) => mk15(lh * Math.exp(u * sh), la * Math.exp(v * sa), rho));
 
     let best = null, bi = -1;
     // value is measured against the bookmakers' own consensus with the margin taken off (Pinnacle weighted three
     // times), not Statpad's fitted chance: on the replayed 2025/26 season, edges against the fitted chance came
     // mostly from the small gaps between a two-number scoreline model and the market's own draw and goals prices,
     // and those 1,909 bets lost 7.3%; edges against the consensus gained on five past seasons and beat the close
+    let uc = false;   // v69: any chance read through the unpriced correction
+    // v69: a price with no over/under line leaves the goals level a guess from the 1X2 alone: goal markets then get two
+    // points more caution (their cautious chance only). Replayed with the over/under taken away, the goal picks in the
+    // top tier landed 87.5% (2024/25) and 89.0% (2025/26) with a third more of them let in; with the caution, 89.4%
+    // and 90.5%, and about as many as with the line
+    const noOU = !!(mk && !(mk.ou && mk.ou.pO > 0) && gl == null);
     const sels = LABELS.map(([key, lab, group]) => {
       const prob = p[key]; let price, real = false, bk = null, pm = null;
       const i = { H: 0, D: 1, A: 2 }[key];
@@ -2742,9 +2873,11 @@ const ENGINE = (() => {
       } else if (i != null) price = 1 / (prob * (1 + M_EST));
       else price = 1 / (prob * (1 + M_DER));
       price = real ? price : r2(price);
-      const pRaw = Math.max(0, mcal(prob, key, m.lk) - hair), pAdj = calib(pRaw);
+      const u = src === 'model' ? ucal(prob, key) : null;   // v69: the ratings alone, corrected as replayed (the flat cut otherwise)
+      if (u != null) uc = true;
+      const pRaw = u != null ? Math.max(0, u - (hair - HAIR)) : Math.max(0, mcal(prob, key, m.lk) - hair), pAdj = calib(pRaw);
       const sd = Math.sqrt(pc.reduce((acc, c) => acc + (c[key] - prob) ** 2, 0) / 4);
-      const pLo = Math.max(0, pAdj - care - Z_LO * sd);
+      const pLo = Math.max(0, pAdj - care - (noOU && GOALK[key] ? CARE_NOOU : 0) - Z_LO * sd);
       const s = { key, label: lab(m), group, p: prob, pRaw, pAdj, sd, pLo, tier: tierOf(pLo), fair: real && pm ? 1 / pm : 1 / prob, price, pt: pt || price, real, bk, pm,
         edge: real ? (pm || prob) * price - 1 : null };
       return s;
@@ -2773,7 +2906,7 @@ const ENGINE = (() => {
     const scores = [];
     for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) scores.push([i, j, M[i][j]]);
     scores.sort((x, y) => y[2] - x[2]);
-    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, stale, sig: [sh, sa], wm: src === 'blend' ? wm : null, fx, rho, st: !!(st && src === 'blend'), sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5), outlook, gl };
+    return { id: m.id, lh, la, M, p, pMod, mkt: mk, src, diverge, hair, ageH, stale, uc, sig: [sh, sa], wm: src === 'blend' ? wm : null, fx, rho, st: !!(st && src === 'blend'), sels, top: best, tier: best ? best.tier : null, scores: scores.slice(0, 5), outlook, gl };
   }
 
   function tierOf(p) { return p >= 0.82 ? 'A' : p >= 0.70 ? 'B' : p >= 0.58 ? 'C' : null; }
@@ -3761,11 +3894,15 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const el = $('#' + id); if (!el) return;
     const ds = days();
     let h = ds.map((d) => {
-      const n = S.rows.filter((r) => r.day === d.key && !r.started).length;
-      return `<button type="button" class="day${n ? '' : ' empty'}" data-day="${d.key}" aria-pressed="${S.day === d.key}"><div class="d1">${esc(dayLabel(d.key))}</div><div class="d2">${dFmt.format(d.d)} · ${n}</div></button>`;
+      const all = S.rows.filter((r) => r.day === d.key), n = all.filter((r) => !r.started).length, gone = all.length - n;
+      // v69: on a day under way, the number is the games still to come (the competition chips count them all)
+      return `<button type="button" class="day${n ? '' : ' empty'}" data-day="${d.key}" aria-pressed="${S.day === d.key}" title="${n} to come${gone ? `, ${gone} started or finished` : ''}"><div class="d1">${esc(dayLabel(d.key))}</div><div class="d2">${dFmt.format(d.d)} · ${n}${gone ? ' to come' : ''}</div></button>`;
     }).join('');
     if (allowAll) h = `<button type="button" class="day" data-day="all" aria-pressed="${S.day === 'all'}"><div class="d1">All week</div><div class="d2">${S.rows.filter((r) => !r.started).length} games</div></button>` + h;
     el.innerHTML = h;
+    // v69: a later day chosen (from a button elsewhere) is brought into view in the strip, without moving the page
+    const on = el.querySelector('[aria-pressed="true"]');
+    if (on && el.scrollWidth > el.clientWidth + 4) { const x = on.offsetLeft - el.offsetLeft - (el.clientWidth - on.offsetWidth) / 2; if (on.offsetLeft - el.offsetLeft + on.offsetWidth > el.scrollLeft + el.clientWidth || on.offsetLeft - el.offsetLeft < el.scrollLeft) el.scrollLeft = Math.max(0, x); }
   }
 
   // ---------------- matches ----------------
@@ -3780,12 +3917,51 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function filtered() {
     const q = fold(S.q.trim());
-    return S.rows.filter((r) => {
+    const base = S.rows.filter((r) => {
       if (S.league === 'live') { if (!isLive(r)) return false; } else if (S.day !== 'all' && r.day !== S.day) return false;
       if (S.league === 'fav') { if (!S.follow.has(r.m.h) && !S.follow.has(r.m.a)) return false; }
       else if (S.league !== 'all' && S.league !== 'live') { if (S.league.startsWith('g:')) { if (lgInfo(r.m.lk).group !== S.league.slice(2)) return false; } else if (r.m.lk !== S.league) return false; }
-      if (q && !fold(r.m.h + ' ' + r.m.a + ' ' + lgName(r.m.lk)).includes(q)) return false;
       return true;
+    });
+    S.qFuzzy = false;
+    if (!q) return base;
+    const hit = base.filter((r) => fold(r.m.h + ' ' + r.m.a + ' ' + lgName(r.m.lk)).includes(q));
+    if (hit.length || q.length < 3) return hit;
+    // v69: a typo still finds the team ("arsnal", "barcelna", "man untd"): close spellings, flagged as such
+    const fz = base.filter((r) => fuzzyHit(r.m.h + ' ' + r.m.a + ' ' + lgName(r.m.lk), q));
+    S.qFuzzy = fz.length > 0;
+    return fz;
+  }
+  // v69: a search that finds nothing here, but would on another day or in another competition, says so with a button
+  function qElsewhere() {
+    const q = fold(S.q.trim()); if (!q || !S.rows) return '';
+    const hit = S.rows.filter((r) => fold(r.m.h + ' ' + r.m.a + ' ' + lgName(r.m.lk)).includes(q) || (q.length >= 3 && fuzzyHit(r.m.h + ' ' + r.m.a, q)));
+    if (!hit.length) return '';
+    const r = hit.sort((x, y) => (x.started - y.started) || x.ko - y.ko)[0];
+    return `<div class="slip-acts" style="margin-top:10px;justify-content:center"><button type="button" class="btn pri" data-qall="1">Show ${hit.length === 1 ? `${esc(r.m.h)} v ${esc(r.m.a)}, ${esc(dayLabel(r.day))}` : `all ${hit.length} games`}</button></div>`;
+  }
+  // every word typed is within one or two letters (by length) of a word, or the start of one, in the text
+  function editDist(a, b, cap) {
+    if (Math.abs(a.length - b.length) > cap) return cap + 1;
+    let prev2 = null, prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i]; let lo = i;
+      for (let j = 1; j <= b.length; j++) {
+        let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (prev2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, prev2[j - 2] + 1);   // swapped letters
+        cur.push(v); if (v < lo) lo = v;
+      }
+      if (lo > cap) return cap + 1;
+      prev2 = prev; prev = cur;
+    }
+    return prev[b.length];
+  }
+  function fuzzyHit(text, q) {
+    const words = fold(text).split(/[^a-z0-9]+/).filter(Boolean);
+    return q.split(/\s+/).filter(Boolean).every((w) => {
+      if (w.length < 3) return words.some((x) => x.startsWith(w));
+      const cap = w.length >= 7 ? 2 : 1;
+      return words.some((x) => x.startsWith(w) || editDist(w, x, cap) <= cap || (x.length > w.length && editDist(w, x.slice(0, w.length), cap) <= cap));
     });
   }
   function maxEdge(r) { return r.a ? Math.max(-1, ...r.a.sels.filter((s) => s.real).map((s) => s.edge)) : -1; }
@@ -3812,7 +3988,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function fxCard(r) {
     const { m, a } = r;
     const LN = r.started ? liveNow(m.id) : null, lp = LN ? liveP(r, LN) : null;
-    const status = LN && LN.ft ? `<span class="badge b-done" data-livebadge="${esc(m.id)}">${liveTxt(m.id)}</span>` : r.live ? `<span class="badge b-live" data-livebadge="${esc(m.id)}">${liveTxt(m.id) || 'Live'}</span>` : r.started ? `<span class="badge b-done" data-livebadge="${esc(m.id)}">Started</span>` : '';
+    const status = LN && LN.ft ? `<span class="badge b-done" data-livebadge="${esc(m.id)}">${liveTxt(m.id)}</span>` : r.live ? `<span class="badge b-live" data-livebadge="${esc(m.id)}">${liveTxt(m.id) || 'Live'}</span>` : r.started ? `<span class="badge b-done" data-livebadge="${esc(m.id)}">${(() => { const k = Math.round((Date.now() - r.ko) / 60e3); return k >= 1 && k < 150 ? `Kicked off ${k} min ago` : 'Started'; })()}</span>` : '';   // v69
     const pb = lp || (a ? a.p : null);
     const bar = pb ? `<div class="pbar${lp ? ' live' : ''}" aria-hidden="true" data-livebar="${esc(m.id)}"><i class="h" style="width:${pb.H * 100}%"></i><i class="d" style="width:${pb.D * 100}%"></i><i class="a" style="width:${pb.A * 100}%"></i></div>` : '';
     const btn = (k, lab) => {
@@ -3825,7 +4001,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const scs = (i) => (sc ? `<span class="sc${was && sc[i] > was[i] ? ' up' : ''}">${sc[i]}</span>` : '');
     const pick = a && a.top ? `<span class="pick"><span class="tier tier-${a.tier || 'C'}">${pct(a.top.pAdj)}</span><b>${esc(a.top.label)}</b> · ${odds(a.top.price)}${a.top.real ? '' : ' est'}</span>` : `<span class="pick">No prediction yet: no ratings or prices</span>`;
     return `<article class="fx${r.live && !(LN && LN.ft) ? ' is-live' : ''}" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}">
-      <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${stakeBadge(m)}${a && !realMkt(m) ? (a.src === 'memory' ? '<span class="badge b-mem" title="No bookmaker price yet: priced from the market\'s memory of both sides">Market memory</span>' : '<span class="badge b-est">Model only</span>') : ''}${newsBadge(m)}</div>
+      <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${!r.started ? soonSpan(r.ko) : ''}${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${stakeBadge(m)}${a && !realMkt(m) ? (a.src === 'memory' ? '<span class="badge b-mem" title="No bookmaker price yet: priced from the market\'s memory of both sides">Market memory</span>' : '<span class="badge b-est" title="No bookmaker price yet: Statpad\'s chances come from its own ratings, corrected by how such games went last season">No price yet</span>') : ''}${newsBadge(m)}</div>
       <div class="fx-teams">
         <div class="tm"><span class="pos">${m.ph || ''}</span>${crest(m.h, m.lk)}<span class="nm${S.follow.has(m.h) ? ' fol' : ''}">${esc(m.h)}</span>${formDots(m.fh)}<span class="xg">${a ? a.lh.toFixed(2) : ''}</span>${scs(0)}</div>
         <div class="tm"><span class="pos">${m.pa || ''}</span>${crest(m.a, m.lk)}<span class="nm${S.follow.has(m.a) ? ' fol' : ''}">${esc(m.a)}</span>${formDots(m.fa)}<span class="xg">${a ? a.la.toFixed(2) : ''}</span>${scs(1)}</div>
@@ -3855,7 +4031,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!rows.length) {
       if (!S.mirAt) loadMir();
       renderExplore();
-      morph(box, `<div class="empty-state"><b>${S.league === 'live' ? 'No games in play' : S.league === 'fav' ? 'None of your teams play this day' : 'No matches here'}</b>${S.league === 'live' ? 'Live games show here from kick-off. Pick “All” to see the day’s fixtures.' : S.league === 'fav' ? 'Pick “All week” to see all their games, or “All” for every game this day.' : S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`, ['list', S.day, S.league, S.sort].join('|'), true); return;
+      morph(box, `<div class="empty-state"><b>${S.league === 'live' ? 'No games in play' : S.league === 'fav' ? 'None of your teams play this day' : 'No matches here'}</b>${S.league === 'live' ? 'Live games show here from kick-off. Pick “All” to see the day’s fixtures.' : S.league === 'fav' ? 'Pick “All week” to see all their games, or “All” for every game this day.' : S.q ? `Nothing matches that search${S.day === 'all' ? '' : ' for this day'}.${qElsewhere()}` : 'Try another day or competition.'}</div>`, ['list', S.day, S.league, S.sort].join('|'), true); return;
     }
     S.shk.games = shockGames(); S.shk.key = (S.shk.key || 0) + 1; S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
     let html = '';
@@ -3882,7 +4058,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       html += `<div class="comp"><div class="comp-list">${sorted.slice(0, S.shown).map((r) => fxCard(r).replace('<div class="fx-meta">', `<div class="fx-meta"><span>${esc(lgName(r.m.lk))}</span>`)).join('')}</div></div>`;
       if (rows.length > S.shown) html += `<button class="more-btn" type="button" data-more="1">Show more</button>`;
     }
-    morph(box, html, ['list', S.day, S.league, S.sort].join('|'), true); shkAttach();
+    morph(box, (S.qFuzzy ? `<p class="note fz-note">No exact match for “${esc(S.q.trim())}”: these are the closest spellings.</p>` : '') + html, ['list', S.day, S.league, S.sort].join('|'), true); shkAttach();
   }
 
   // ---------------- detail sheet ----------------
@@ -4021,8 +4197,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const chips = [];
     chips.push({ blend: [a.st ? (a.wm > 1 ? 'Learned blend: a step past the bookmakers, away from the model' : `Learned blend: model ${Math.round((1 - a.wm) * 100)}% · market ${Math.round(a.wm * 100)}%`) : `Model ${Math.round((1 - (a.wm || 0.8)) * 100)}% · market ${Math.round((a.wm || 0.8) * 100)}%`, ''], market: [a.gl ? `Market-implied, goals level ${Math.round(a.gl * 100)}% from the market's memory: no over/under price for this game` : 'Market-implied', ''], model: ['Model only: no prices yet', 'warn'], memory: [m.caf ? 'No price yet: rated from CAF Champions League and Confederation Cup results, each club its country\'s strength plus its own' : m.mo ? 'No price yet: a club here plays in a league Statpad doesn\'t rate, so it is rated from its European results against sides Statpad does rate' : m.xm ? 'Market memory across leagues: no price yet, so each side is read from the closing prices of its recent league games, with league strengths fitted from cup results' : 'Market memory: no price for this game yet, so Statpad reads both sides from the closing prices of their recent games', ''], external: ['External forecast blend', ''] }[a.src]);
     if (a.top && a.top.sd != null) chips.push([`Top pick ${pct(a.top.pAdj)}, cautious ${pct(a.top.pLo)}: ${a.tier ? TIER_NAME[a.tier] : 'below the tiers'}`, a.top.pAdj - a.top.pLo > 0.05 ? 'warn' : '']);
-    if (m.mkt) chips.push([`${m.mkt.n > 1 ? m.mkt.n + ' bookmakers' : m.mkt.src === 'football-data' ? 'Average of bookmakers' : 'Single price feed'}${a.ageH != null ? ' · ' + (a.ageH < 1 ? 'fresh' : a.ageH < 48 ? Math.round(a.ageH) + ' h old' : Math.round(a.ageH / 24) + ' d old') + (a.stale ? ', refresh due' : '') : ''}`, a.stale ? 'warn' : '']);
-    if (a.hair > 0) chips.push([`Safety haircut −${Math.round(a.hair * 100)} pts on picks`, 'warn']);
+    if (m.mkt) chips.push([`${m.mkt.n > 1 ? m.mkt.n + ' bookmakers' : m.mkt.src === 'football-data' ? 'Average of bookmakers' : 'Single price feed'}${r.started ? ' · as they stood at kick-off' : a.ageH != null ? ' · ' + (a.ageH < 1 ? 'fresh' : a.ageH < 48 ? Math.round(a.ageH) + ' h old' : Math.round(a.ageH / 24) + ' d old') + (a.stale ? ', refresh due' : '') : ''}`, a.stale && !r.started ? 'warn' : '']);
+    if (a.uc) chips.push([`No bookmaker price: chances from the ratings, corrected by how such games really went last season${a.hair > 0.03 ? ` (and −${Math.round((a.hair - 0.03) * 100)} pts for caution)` : ''}`, 'warn']);
+    else if (a.hair > 0) chips.push([`Safety haircut −${Math.round(a.hair * 100)} pts on picks`, 'warn']);
     if (a.diverge != null && a.diverge > 0.12) chips.push([`Model and market disagree by ${Math.round(a.diverge * 100)} pts`, 'warn']);
     if (m.clash) chips.push(['Big game: kept out of the two safest slip tiers', 'warn']);
     if (m.fr) chips.push(['Friendly: rotated line-ups, extra caution and kept out of the two safest tiers', 'warn']);
@@ -4142,7 +4319,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     for (const b of document.querySelectorAll('[data-vseg]')) b.setAttribute('aria-pressed', String(b.dataset.vseg === (mv ? 'movers' : 'value')));
     $('#valTitle').textContent = mv ? 'Market movers' : 'Value board';
     $('#valSub').textContent = mv ? 'The biggest moves in the bookmakers’ average prices since Statpad first saw them. A shortening price usually means money is coming in, often from sharp bettors; a drifting price means the opposite. Statpad’s chances follow the market, so these are the games where its numbers moved most.'
-      : 'Bets where the best price on offer pays more than it should. Statpad takes the bookmakers\' consensus, removes their margin to get a fair price, and lists the prices above it. Edge is how far above: +5% pays 5% more than fair. Only real prices appear here.';
+      : 'Prices that pay more than they should. Statpad works out a fair price from all the bookmakers (their margin taken off) and lists the prices above it: an edge of +5% pays 5% more than fair. Only real bookmaker prices appear here.';
     $('#minEdge').hidden = mv; $('#minEdgeL').hidden = mv; $('#valueList').hidden = mv; $('#moversList').hidden = !mv; $('#vsortL').hidden = mv; $('#radar').hidden = mv;
     $('#vscope').value = S.vscope;
     if (mv) { renderMovers(); return; }
@@ -4184,10 +4361,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const warn = thin ? 'One bookmaker only: the fair price rests on its own margin' : old ? 'Old prices: the best price may have gone' : '';
       const band = s.edge >= 0.07 ? '7' : s.edge >= 0.04 ? '4' : '2', bh = H && H.bands ? vbStat(H.bands[band]) : null;
       return `<div class="vrow${warn ? ' vwarn' : ''}" data-open="${esc(m.id)}" tabindex="0">
-        <div><div class="fxl">${esc(lgName(m.lk))} · ${esc(dayLabel(dayKey(ko)))} ${tFmt.format(ko)}</div><div class="sel">${esc(s.label)}</div><div class="fxl">${pair(m)}${esc(m.h)} v ${esc(m.a)}</div></div>
+        <div><div class="fxl">${esc(lgName(m.lk))} · ${esc(dayLabel(dayKey(ko)))} ${tFmt.format(ko)}${soonSpan(+ko, true)}</div><div class="sel">${esc(s.label)}</div><div class="fxl">${pair(m)}${esc(m.h)} v ${esc(m.a)}</div></div>
         <div class="edge"><div class="v">${sgn(s.edge)}</div><div class="l">edge</div><div class="opp-w">${oppRing(o)}<small>${oppWord(o)}</small></div><button type="button" class="add" style="margin-top:8px" data-add="${esc(m.id)}|${s.key}" aria-pressed="${inCoupon(m.id, s.key)}" aria-label="Add to coupon">${inCoupon(m.id, s.key) ? '✓' : '+'}</button></div>
         <div class="ebar"><i style="width:${(s.edge / emax) * 100}%"></i></div>
-        <div class="nums"><span>Best <b>${odds(s.price)}</b>${s.bk ? ' at ' + esc(s.bk) : ''}</span>${avg > 1 && Math.abs(s.price / avg - 1) >= 0.005 ? `<span>Average <b>${odds(avg)}</b> (best is ${sgn(s.price / avg - 1, 0)})</span>` : ''}<span>Fair <b>${odds(s.fair)}</b></span><span>Fair chance <b>${pct(s.pm || s.p)}</b></span><span>¼ Kelly <b>${Math.min(5, Math.max(0, kelly) * 25).toFixed(1)}%</b> of bank</span></div>
+        <div class="nums"><span>Best <b>${odds(s.price)}</b>${s.bk ? ' at ' + esc(s.bk) : ''}</span>${avg > 1 && Math.abs(s.price / avg - 1) >= 0.005 ? `<span>Average <b>${odds(avg)}</b> (best is ${sgn(s.price / avg - 1, 0)})</span>` : ''}<span>Fair <b>${odds(s.fair)}</b></span><span>Fair chance <b>${pct(s.pm || s.p)}</b></span><span>¼ Kelly <b>${Math.min(5, Math.max(0, kelly) * 25).toFixed(1)}%</b> of bank${S.bank > 0 && kelly > 0 ? ` (${cashFmt(S.bank * Math.min(0.05, Math.max(0, kelly) * 0.25))} of ${cashFmt(S.bank)})` : ''}</span></div>
         <div class="vchips">${chips.map((c) => `<span class="chip">${esc(c)}</span>`).join('')}${mv}${warn ? `<span class="chip warn">${esc(warn)}</span>` : ''}</div>
         ${bh && bh.n >= 30 ? `<div class="vpast">Past bets like this (${esc(BAND_NAME[band].toLowerCase())}): <b class="${bh.roi >= 0 ? 'pl-pos' : 'pl-neg'}">${sgn(bh.roi)}</b> a unit over ${bh.n.toLocaleString('en-US')} bets, 95% range ${rPct(bh.lo)} to ${rPct(bh.hi)}; ${pct(bh.hr, 0)} won.</div>` : ''}
       </div>`;
@@ -4203,7 +4380,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     for (const el of [$('#days-slips'), ...document.querySelectorAll('#v-slips .filters')]) if (el) el.hidden = goal;
     $('#goalBox').hidden = !goal; $('#bankBox').hidden = !bank;
     $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.'
-      : bank ? 'Each game’s surest pick, and the slip that pays most while staying as sure as you set the dial. Every level is checked against a whole season of real results.'
+      : bank ? 'The safest pick in every game, and a dial: choose how sure your slip must be and Statpad builds the one that pays most. Every level was checked on last season’s real results.'
       : 'The three likeliest slips for the day that pay your target, with every leg at least as likely as you choose and no game in more than one of them. Priced at a typical bookmaker’s odds; games that have kicked off drop out.';
     if (goal) { renderGoal(); return; }
     if (bank) { renderBank(); return; }
@@ -4253,12 +4430,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="band">${s.tier === 'A' ? 'The likeliest way to reach the target' : s.tier === 'B' ? 'The likeliest without slip A’s matches' : 'The likeliest without A’s or B’s matches'}${oneIn ? ` · about 1 in ${oneIn}` : ''}</div>
         <div class="slip-nums"><div><div class="v">${s.legs.length ? odds(s.odds) : '–'}</div><div class="l">total odds</div></div><div><div class="v">${s.legs.length ? pct(s.prob, 1) : '–'}</div><div class="l">to land</div></div><div><div class="v">${s.legs.length}</div><div class="l">legs</div></div></div></div>
         ${s.legs.length ? `<div class="slip-rule">${s.floor > 0 ? `Every leg ${pct(s.floor, 0)} or more` : 'Any leg'} · longest leg ${odds(Math.max(...s.legs.map((l) => l.s.price)))} · safest leg ${pct(Math.max(...s.legs.map((l) => l.s.pSlip || l.s.pAdj)), 0)}</div>` : ''}
-        ${s.legs.length ? `<ol>${s.legs.map((l) => `<li data-open="${esc(l.m.id)}"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pSlip || l.s.pAdj)}${l.s.real ? (l.s.best > l.s.price + 0.005 ? ` · best ${odds(l.s.best)}` : '') : ' · est'}</small></span><span class="fxl">${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</span></li>`).join('')}</ol>` : `<p class="note" style="padding:0 18px 12px">No combination left for this slip today${S.slipFloor > 0 ? ` with every leg ${pct(S.slipFloor, 0)}+: lower “Every leg at least” or pick another day` : ''}.</p>`}
+        ${s.legs.length ? `<ol>${s.legs.map((l) => `<li data-open="${esc(l.m.id)}" tabindex="0"><span class="sel">${esc(l.s.label)}</span><span class="pr">${odds(l.s.price)}<small>${pct(l.s.pSlip || l.s.pAdj)}${l.s.real ? (l.s.best > l.s.price + 0.005 ? ` · best ${odds(l.s.best)}` : '') : ' · est'}</small></span><span class="fxl">${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))}${soonSpan(Date.parse(l.m.ko), true)} · ${esc(l.m.h)} v ${esc(l.m.a)}</span></li>`).join('')}</ol>` : `<p class="note" style="padding:0 18px 12px">No combination left for this slip today${S.slipFloor > 0 ? ` with every leg ${pct(S.slipFloor, 0)}+: lower “Every leg at least” or pick another day` : ''}.</p>`}
         <div class="slip-f"><span class="${s.feasible ? 'lbl' : 'w'}">${s.legs.length ? (s.feasible ? `${s.real}/${s.legs.length} legs at a typical bookmaker’s real price${ev != null ? ' · EV ' + sgn(ev, 0) : ''}` : `Can't reach ${tgtTxt(s.target)} ${s.floor > 0 ? `with legs of ${pct(s.floor, 0)}+ from what's left` : `with what's left`}; closest shown${s.floor > 0 ? '. Lower “Every leg at least” or pick another day' : ''}`) : ''}</span>
         <div class="slip-acts"><button type="button" class="btn" data-shareslip="${s.tier}" ${s.legs.length ? '' : 'disabled'} aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg>Share</button>
-        <button type="button" class="btn pri" data-addslip="${s.tier}" ${s.legs.length ? '' : 'disabled'}>Add to coupon</button></div></div>
+        <button type="button" class="btn pri" data-addslip="${s.tier}" data-legs="${esc(s.legs.map((l) => l.m.id + '|' + l.s.key).join(','))}" ${s.legs.length ? '' : 'disabled'}>Add to coupon</button></div></div>
       </article>`;
     }).join('') + (empty.length ? slipNone(empty) : ''), ['sl', S.day, S.target, S.slipFloor, S.scope].join('|'), true);
+    slipBtnSync(box);
     S.lastSlips = slips;
   }
 
@@ -4321,7 +4499,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         ${bkGauge(D, avail, first ? 95 : P)}
         <input type="range" class="bk-rng" id="bkRng" min="0" max="${BK_STOPS.length - 1}" step="1" value="${BK_STOPS.indexOf(P)}" aria-label="How sure the slip must be">
         <div class="bk-ends" aria-hidden="true"><span>Surer</span><span>Pays more</span></div>
-        <div class="bk-proof" id="bkProof"></div></div>
+        <div class="bk-proof" id="bkProof"></div><span class="sr-only" id="bkSay" aria-live="polite"></span></div>
       <div class="card bk-slip" id="bkSlip"></div>
       ${bkList(bankers)}
       ${bkRecord()}
@@ -4362,8 +4540,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const sl = D.slipAt(P / 100), pay = $('#bkPay'), rng = $('#bkRng');
     if (pay) pay.textContent = sl ? `pays ${odds(sl.odds)} · ${sl.legs.length} ${sl.legs.length === 1 ? 'leg' : 'legs'}` : 'no slip this sure today';
     if (rng) { rng.value = BK_STOPS.indexOf(P); rng.setAttribute('aria-valuetext', `${P}% sure${sl ? `, pays ${odds(sl.odds)}` : ', no slip this sure today'}`); }
+    const say = $('#bkSay'); if (say && !quiet) say.textContent = `${P}% sure: ${sl ? `${sl.legs.length} ${sl.legs.length === 1 ? 'leg' : 'legs'}, total odds ${odds(sl.odds)}` : 'no slip this sure today'}`;   // v69
     const pr = $('#bkProof'); if (pr) pr.innerHTML = bkProofHtml(P, sl);
-    const sc = $('#bkSlip'); if (sc) sc.innerHTML = bkSlipHtml(sl, P);
+    const sc = $('#bkSlip'); if (sc) { sc.innerHTML = bkSlipHtml(sl, P); slipBtnSync(sc); }
   }
   function bkProofHtml(P, sl) {
     const { rep, live } = bkProofDial(P), out = [];
@@ -4382,28 +4561,34 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     const real = sl.legs.filter((l) => l.s.real).length;
     S.bankSlip = Object.assign({ tier: 'P' + P, name: `${P}% sure`, head: `Slip ${P}% sure to land`, kick: `CERTAINTY ${P}%`, real, target: odds(sl.odds) }, sl);
-    const leg = (l) => `<li data-open="${esc(l.m.id)}"><div><b>${esc(l.s.label)}</b><small>${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))} · ${esc(l.m.h)} v ${esc(l.m.a)}</small>
-      <span class="gs-lp"><i style="width:${Math.round(l.q * 100)}%"></i></span></div><span class="gs-p">${pct(l.q)}</span><span class="mono">${odds(l.s.price)}${l.s.real ? '' : '<small class="gs-est">est</small>'}</span></li>`;
+    const leg = (l) => `<li data-open="${esc(l.m.id)}" tabindex="0"><div><b>${esc(l.s.label)}</b><small>${pair(l.m)}${tFmt.format(Date.parse(l.m.ko))}${soonSpan(Date.parse(l.m.ko), true)} · ${esc(l.m.h)} v ${esc(l.m.a)}</small>
+      <span class="gs-lp"><i style="width:${Math.round(l.q * 100)}%"></i></span></div><span class="gs-p">${pct(l.q)}</span><span class="mono">${odds(l.s.price)}${l.s.real ? '' : '<small class="gs-est" title="No bookmaker price yet: Statpad’s estimate of a typical bookmaker’s price, margin included. Check yours before betting.">est</small>'}</span></li>`;
     return `<h4>Your ${P}% slip <span>one pick per game</span></h4>
       <div class="bk-sn"><div><b class="mono">${odds(sl.odds)}</b><small>total odds</small></div><div><b>${pct(sl.prob, 0)}</b><small>all land</small></div><div><b>${sl.legs.length}</b><small>${sl.legs.length === 1 ? 'leg' : 'legs'}</small></div></div>
       <ul class="gs-legs">${sl.legs.map(leg).join('')}</ul>
-      <div class="gs-acts"><button type="button" class="btn pri" data-bkadd="1">Add to coupon</button><button type="button" class="btn" data-bkshare="1" aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg>Share</button></div>
+      <div class="gs-acts"><button type="button" class="btn pri" data-bkadd="1" data-legs="${esc(sl.legs.map((l) => l.m.id + '|' + l.s.key).join(','))}">Add to coupon</button><button type="button" class="btn" data-bkshare="1" aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg>Share</button></div>
       <p class="note">${real}/${sl.legs.length} legs at a typical bookmaker’s real price${real < sl.legs.length ? '; “est” is Statpad’s estimate of one, margin included, so check yours' : ''}. From ${bkN(S.bkDial ? S.bkDial.games : 0)} open games; chances checked against ${esc(bkSeason())}.</p>`;
   }
   function bkRow(b, compact) {
     const s = b.s, m = b.m, ev = b.ev, q = Math.round(b.q * 100), on = inCoupon(m.id, s.key);
     const evTxt = ev && ev.n >= 20 ? `<i aria-hidden="true">✓</i> ${bkN(ev.hits)} of ${bkN(ev.n)} like it landed` : '';
-    return `<li class="bk-r" data-open="${esc(m.id)}"><span class="bk-q" style="--q:${q}"><b>${q}<small>%</small></b></span>
-      <span class="bk-m"><b>${esc(s.label)}</b><span class="fxl">${pair(m)}${tFmt.format(Date.parse(m.ko))} · ${esc(m.h)} v ${esc(m.a)}</span>${!compact && evTxt ? `<small class="bk-ev">${evTxt}</small>` : ''}</span>
-      <span class="bk-pr">${odds(b.pr)}${s.real ? '' : '<small>est</small>'}</span>
+    return `<li class="bk-r" data-open="${esc(m.id)}" tabindex="0" aria-label="${q}% ${esc(s.label)}, ${esc(m.h)} v ${esc(m.a)}"><span class="bk-q" style="--q:${q}"><b>${q}<small>%</small></b></span>
+      <span class="bk-m"><b>${esc(s.label)}</b><span class="fxl">${pair(m)}${tFmt.format(Date.parse(m.ko))}${soonSpan(Date.parse(m.ko), true)} · ${esc(m.h)} v ${esc(m.a)}</span>${!compact && evTxt ? `<small class="bk-ev">${evTxt}</small>` : ''}</span>
+      <span class="bk-pr">${odds(b.pr)}${s.real ? '' : '<small title="No bookmaker price yet: Statpad’s estimate of a typical bookmaker’s price, margin included. Check yours before betting.">est</small>'}</span>
       <button type="button" class="add" data-add="${esc(m.id)}|${esc(s.key)}" aria-pressed="${on}" aria-label="Add ${esc(s.label)} to coupon">${on ? '✓' : '+'}</button></li>`;
+  }
+  // v69: the nearest later day with bankers at this level, as a button
+  function bkNextDay(min) {
+    const ks = days().map((d) => d.key);
+    for (const k of ks.slice(ks.indexOf(S.day) + 1)) { const n = ENGINE.bankers(bkOpen(k, S.scope), min / 100).length; if (n) return `<div class="slip-acts" style="margin-top:10px"><button type="button" class="btn" data-day="${esc(k)}">${esc(dayLabel(k))}: ${n} ${n === 1 ? 'banker' : 'bankers'}</button></div>`; }
+    return '';
   }
   function bkList(bankers) {
     const min = S.bankMin, cnt = BK_MINS.map(([v]) => bankers.filter((b) => b.q >= v / 100 - 1e-9).length);
     const rows = bankers.filter((b) => b.q >= min / 100 - 1e-9), shown = rows.slice(0, S.bkShown);
     return `<div class="card bk-list"><h4>Bankers <span>each game’s surest pick</span></h4>
       <div class="seg bk-mins" role="group" aria-label="How sure">${BK_MINS.map(([v, l], i) => `<button type="button" data-bkmin="${v}" aria-pressed="${min === v}">${l}<span class="n">${cnt[i]}</span></button>`).join('')}</div>
-      ${rows.length ? `<ol class="bk-rows">${shown.map((b) => bkRow(b)).join('')}</ol>` : `<div class="empty-state"><b>No game is ${min}% sure ${esc(dayLabel(S.day) === 'Today' ? 'today' : 'on ' + dayLabel(S.day))}</b>${cnt.some((c) => c) ? 'Lower the bar above, or pick another day.' : 'Pick another day, or widen the scope.'}</div>`}
+      ${rows.length ? `<ol class="bk-rows">${shown.map((b) => bkRow(b)).join('')}</ol>` : `<div class="empty-state"><b>No game is ${min}% sure ${esc(dayLabel(S.day) === 'Today' ? 'today' : 'on ' + dayLabel(S.day))}</b>${cnt.some((c) => c) ? 'Lower the bar above, or pick another day.' : 'Pick another day, or widen the scope.'}${bkNextDay(min)}</div>`}
       ${rows.length > shown.length ? `<button type="button" class="btn bk-more" data-bkmore="1">Show ${Math.min(10, rows.length - shown.length)} more of ${rows.length}</button>` : ''}
       <p class="note">A banker is the pick in a game Statpad is surest of, draws left out and the price at least 1.05. “Like it” means the same kind of pick at about the same chance in ${esc(bkSeason())}, replayed over 19 leagues; for games without bookmaker prices, that record is the chance shown, so watch the live record below for leagues further afield.</p></div>`;
   }
@@ -4449,12 +4634,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
 
   // ---------------- coupon ----------------
-  function couponRows() {
+  function couponRows() {   // v69: in kick-off order, the next game first
     return S.coupon.map((c) => {
       const r = S.byId.get(c.id); if (!r || !r.a) return null;
       const s = r.a.sels.find((x) => x.key === c.key) || gridSel(r, c.key); if (!s) return null;
       return { c, r, s, price: c.price > 1 ? c.price : s.price };
-    }).filter(Boolean);
+    }).filter(Boolean).sort((x, y) => x.r.ko - y.r.ko);
   }
   function renderCoupon() {
     const seg = ['coupon', 'mine', 'check'].includes(S.bseg) ? S.bseg : 'coupon', open = (S.bets || []).filter((b) => b.status === 'open').length;
@@ -4470,7 +4655,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!S.ready) { showProgress(); return; }
     const rows = couponRows();
     const box = $('#couponBox');
-    if (!rows.length) { box.innerHTML = `<div class="empty-state"><b>Your coupon is empty</b>Tap a price on any match, or add a whole slip from Smart slips.</div>`; return; }
+    if (!rows.length) { box.innerHTML = `<div class="empty-state"><b>Your coupon is empty</b>Tap a price on any match, or add a whole slip from Bankers or Smart slips.<div class="slip-acts" style="margin-top:12px;justify-content:center"><button type="button" class="btn pri" data-sseg="bank">Bankers</button><button type="button" class="btn" data-sseg="slips">Smart slips</button><button type="button" class="btn" data-tab="matches">Matches</button></div></div>`; return; }   // v69: the way to fill it
     const tOdds = rows.reduce((a, x) => a * x.price, 1), tP = couponChance(rows);
     const ev = tP * tOdds - 1, b = tOdds - 1, kelly = b > 0 ? Math.max(0, (b * tP - (1 - tP)) / b) : 0;
     const frac = { flat: 0.01, qk: Math.min(0.05, kelly * 0.25), hk: Math.min(0.05, kelly * 0.5) }[S.stakeMode];
@@ -4478,31 +4663,44 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const ids = rows.map((x) => x.c.id), dup = ids.length !== new Set(ids).size;
     const started = rows.some((x) => x.r.started);
     box.innerHTML = `<div class="cp">
-      <div class="comp-list">${rows.map((x, i) => `<div class="cp-item"><span class="sel">${esc(x.s.label)}</span><span class="fxl">${pair(x.r.m)}${esc(x.r.m.h)} v ${esc(x.r.m.a)} · ${esc(dayLabel(x.r.day))} ${tFmt.format(x.r.ko)} · ${pct(x.s.p)}${x.s.real ? '' : ' · est price'}</span>
-        <input type="text" inputmode="decimal" value="${odds(x.price)}" data-price="${i}" aria-label="Price for ${esc(x.s.label)}"><button type="button" class="x" data-rm="${i}" aria-label="Remove">✕</button></div>`).join('')}</div>
+      <div class="comp-list">${rows.map((x, i) => `<div class="cp-item"><span class="sel">${esc(x.s.label)}</span><span class="fxl">${pair(x.r.m)}${esc(x.r.m.h)} v ${esc(x.r.m.a)} · ${esc(dayLabel(x.r.day))} ${tFmt.format(x.r.ko)}${x.r.started ? '' : soonSpan(+x.r.ko, true)} · ${pct(legP(x))}${x.s.real ? '' : ' · est price'}</span>
+        <input type="text" inputmode="decimal" value="${odds(x.price)}" data-price="${esc(x.c.id + '|' + x.c.key)}" aria-label="Price for ${esc(x.s.label)}"><button type="button" class="x" data-rm="${esc(x.c.id + '|' + x.c.key)}" aria-label="Remove ${esc(x.s.label)}">✕</button></div>`).join('')}</div>
       <div class="card" style="margin-top:0"><div class="sum">
         <div class="sum-row big"><span>Total odds</span><b>${odds(tOdds)}</b></div>
-        <div class="sum-row"><span>Chance to land (Statpad)</span><b>${pct(tP, 1)}</b></div>
+        <div class="sum-row"><span>Chance to land (Statpad)</span><b>${pct(tP, 1)}${tP > 0 && tP < 0.98 ? ` <small class="oneIn">${tP >= 0.5 ? `loses about 1 time in ${Math.max(2, Math.round(1 / (1 - tP)))}` : `lands about 1 time in ${Math.max(2, Math.round(1 / tP))}`}</small>` : ''}</b></div>
         <div class="sum-row"><span>Expected value</span><b class="${ev > 0 ? 'edge-pos' : ''}">${sgn(ev)}</b></div>
-        ${dup ? `<div class="note" style="margin:0">Picks from the same match are linked, so their chance is worked out together from that match's scoreline grid (${pct(rows.reduce((a, x) => a * x.s.p, 1), 1)} if they were independent).</div>` : ''}
-        ${started ? '<div class="warnline">A pick on this coupon has already kicked off.</div>' : ''}
-        <label class="lbl" for="bank">Bankroll</label><div class="inp"><input id="bank" type="text" inputmode="decimal" value="${esc(S.bank)}"></div>
+        ${dup ? `<div class="note" style="margin:0">Picks from the same match are linked, so their chance is worked out together from that match's scoreline grid (${pct(rows.reduce((a, x) => a * legP(x), 1), 1)} if they were independent).</div>` : ''}
+        ${started ? `<div class="warnline">${rows.filter((x) => x.r.started).map((x) => `${esc(x.s.label)} (${esc(x.r.m.h)} v ${esc(x.r.m.a)})`).join(', ')} ${rows.filter((x) => x.r.started).length > 1 ? 'have' : 'has'} already kicked off, so most bookmakers won't take ${rows.filter((x) => x.r.started).length > 1 ? 'them' : 'it'} at this price. <button type="button" class="lnk" data-rmstarted="1">Remove ${rows.filter((x) => x.r.started).length > 1 ? 'them' : 'it'}</button></div>` : ''}
+        <label class="lbl" for="bank">Bankroll</label><div class="inp"><input id="bank" type="text" inputmode="decimal" value="${esc(S.bank >= 1000 ? Math.round(S.bank).toLocaleString('en-US') : S.bank)}"></div>
         <span class="lbl">Staking</span><div class="seg" id="stakeMode">${[['flat', 'Flat 1%'], ['qk', '¼ Kelly'], ['hk', '½ Kelly']].map(([k, l]) => `<button type="button" data-stake="${k}" aria-pressed="${S.stakeMode === k}">${l}</button>`).join('')}</div>
-        <div class="sum-row"><span>Suggested stake</span><b>${stake.toFixed(2)}</b></div>
-        <div class="sum-row"><span>Returns if it lands</span><b>${(stake * tOdds).toFixed(2)}</b></div>
+        <div class="sum-row"><span>Suggested stake</span><b>${cashFmt(stake)}</b></div>
+        <div class="sum-row"><span>Returns if it lands</span><b>${cashFmt(stake * tOdds)}</b></div>
         ${S.stakeMode !== 'flat' && kelly <= 0 ? '<div class="warnline">Kelly says no stake: these prices are below Statpad\'s fair odds.</div>' : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn pri" id="saveToBets">Save to My bets</button><button type="button" class="btn" id="copyCoupon">Copy coupon</button><button type="button" class="btn" id="clearCoupon">Clear</button></div>
       </div></div></div>`;
   }
   // the coupon's chance: picks from different matches multiply; picks from the same match are linked (over 2.5 and
   // both teams to score land together more often than apart), so they're added up together on that match's grid
+  // v69: a leg's chance on the coupon is the one Statpad states everywhere else (corrected, and for bankable picks the
+  // banker's checked chance), not the raw grid number: a slip from the dial showed one chance there and another here
+  // v69: amounts the way people write them: 50,000 not 50000.00 (cents only for small bankrolls), and the bankroll box
+  // takes 50,000 / 50 000 / 50k / 1.5m as typed (a comma was read as a decimal point: 50,000 became 50)
+  function cashFmt(v) { return !isFinite(v) ? '–' : Math.abs(v) >= 1000 || S.bank >= 1000 ? Math.round(v).toLocaleString('en-US') : v.toFixed(2); }
+  function parseMoney(t) {
+    let x = String(t || '').trim().toLowerCase().replace(/\s+/g, ''), k = 1;
+    if (/[km]$/.test(x)) { k = x.endsWith('k') ? 1e3 : 1e6; x = x.slice(0, -1); }
+    if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(x)) x = x.replace(/,/g, '');   // thousands separators
+    else x = x.replace(',', '.');
+    const v = parseFloat(x); return v > 0 ? v * k : NaN;
+  }
+  function legP(x) { const q = x.r.a && ENGINE.legChance ? ENGINE.legChance(x.r.a, x.s) : null; return q != null ? q : x.s.pAdj != null ? x.s.pAdj : x.s.p; }
   function couponChance(rows) {
     const byM = new Map();
     for (const x of rows) { const k = x.r.m.id; if (!byM.has(k)) byM.set(k, []); byM.get(k).push(x); }
     let p = 1;
     for (const list of byM.values()) {
       const fns = list.map((x) => settleFn(x.s.key)), M = list[0].r.a && list[0].r.a.M;
-      if (list.length === 1 || !M || fns.some((f) => !f)) { p *= list.reduce((a, x) => a * x.s.p, 1); continue; }
+      if (list.length === 1 || !M || fns.some((f) => !f)) { p *= list.reduce((a, x) => a * legP(x), 1); continue; }
       let w = 0, v = 0;   // v: cells where a draw-no-bet pick is refunded and the rest land
       for (let i = 0; i < M.length; i++) for (let j = 0; j < M.length; j++) {
         const o = fns.map((f) => f(i, j));
@@ -4512,10 +4710,24 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     }
     return p;
   }
-  function saveCoupon() { store.set('coupon', S.coupon); renderNav(); }
+  function saveCoupon() { store.set('coupon', S.coupon); renderNav(); slipBtnSync(); }
+  // v69: a slip's "Add to coupon" says when all its legs are already in the coupon, and then opens it (no doubles)
+  function slipBtnSync(root) {
+    for (const b of (root || document).querySelectorAll('[data-legs]')) {
+      const legs = b.dataset.legs.split(',').filter(Boolean).map((x) => x.split('|'));
+      const all = legs.length > 0 && legs.every(([id, k]) => inCoupon(id, k));
+      if (b.classList.contains('done') === all) continue;
+      b.classList.toggle('done', all); b.classList.toggle('pri', !all);
+      b.textContent = all ? 'In your coupon · Open' : 'Add to coupon';
+    }
+  }
+  function openCoupon() { if (S.open) closeSheet(); S.bseg = 'coupon'; store.set('bseg', 'coupon'); if (S.tab === 'coupon') renderCoupon(); else setTab('coupon'); }
+  // v69: how soon a game kicks off, for the next three hours (kept current by a timer below)
+  function soonTxt(ko) { const d = (ko - Date.now()) / 60e3; return d <= 0 || d > 180 ? '' : d < 1 ? 'kicking off' : d < 60 ? `in ${Math.round(d)} min` : `in ${Math.floor(d / 60)} h ${Math.round(d % 60)} min`; }
+  function soonSpan(ko, inline) { const t = soonTxt(ko); return t ? `<span class="soon" data-soon="${ko}">${inline ? ' · ' : ''}${t}</span>` : ''; }
   function toggleCoupon(id, key) {
     const i = S.coupon.findIndex((c) => c.id === id && c.key === key);
-    if (i >= 0) { S.coupon.splice(i, 1); toast('Removed from coupon'); } else { S.coupon.push({ id, key, price: null }); toast('Added to coupon'); }
+    if (i >= 0) { const prev = S.coupon.slice(); S.coupon.splice(i, 1); toast('Removed from coupon', couponUndo(prev)); } else { S.coupon.push({ id, key, price: null }); toast(`Added · ${S.coupon.length} in your coupon`, S.tab === 'coupon' ? null : openCoupon, 'View'); }   // v69: one tap to the coupon
     saveCoupon();
     for (const b of document.querySelectorAll(`[data-add="${CSS.escape(id + '|' + key)}"]`)) { const on = inCoupon(id, key); b.setAttribute('aria-pressed', on); if (b.classList.contains('add')) b.textContent = on ? '✓' : '+'; }
   }
@@ -4918,7 +5130,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       return `<button type="button" class="tk-tile tk-${t}" data-tk="${t}" aria-pressed="${S.tkT === t}">
         <span class="tk-name"><i></i>${esc(TIER_NAME[t])}</span>
         <span class="tk-big mono">${!x.n ? '–' : x.n < 10 ? `${x.w}/${x.n}` : pct(x.hr, 0)}</span>
-        <span class="tk-sm">${x.n ? `${x.w} of ${x.n} landed · said ${pct(x.said, 0)}` : 'none graded yet'}</span>
+        <span class="tk-sm">${x.n ? `${x.w} of ${x.n} landed · said ${pct(x.said, 0)}${x.w < x.n ? ` · 1 in ${Math.max(2, Math.round(x.n / (x.n - x.w)))} lost` : ''}` : 'none graded yet'}</span>
         <span class="tk-sm">${wn ? `${wn} waiting` : '&nbsp;'}</span>
         ${x.n ? `<span class="hit"><i style="width:${x.hr * 100}%"></i><b style="left:calc(${x.said * 100}% - 1px)"></b></span>` : ''}</button>`;
     }).join('');
@@ -5056,6 +5268,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function tuneCard() {
     const c = (S.data && S.data.calib) || null;
     if (!c) return '';
+    if (!c.on && c.check && (c.n || 0) >= (c.need || 150)) {   // v69: enough picks, but the correction didn't earn its place
+      const [l0, l1, nk] = c.check;
+      return `<div class="card"><h4>Self-tuning <span>checked · standing aside</span></h4>
+        <p class="note">Statpad fitted a correction on its older ${c.n - nk} graded top picks and tried it on the newest ${nk}, which it never saw. It read them ${l1 > l0 ? 'worse' : 'no better'} than the chances as stated (log loss ${l1.toFixed(4)} against ${l0.toFixed(4)}), so the stated chances are used as they are. The check runs again on every update.</p></div>`;
+    }
     if (!c.on) {
       const n = c.n || 0, need = c.need || 150;
       return `<div class="card"><h4>Self-tuning <span>learning</span></h4>
@@ -5172,14 +5389,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p><b>More of the world.</b> Women's football (the Women's Super League, Liga F, Première Ligue, Frauen-Bundesliga, NWSL and the Women's Champions League), the A-League, K League 1, Brazil's Série B, Chile, Colombia, South Africa, the Libertadores and the Sudamericana. Where ESPN has them, the last two seasons of results build the ratings, and fixtures come with DraftKings' prices. Women's sides carry "Women" in their names and are only ever matched with other women's sides. Competitions with fewer than 150 games behind their ratings, or a game priced by one bookmaker alone, take a 2-point safety haircut.</p>
       <h3>Confidence tiers</h3>
       <p>Tiers use the <b>cautious chance</b>: the stated chance minus one standard deviation of it. The spread comes from the ratings' standard errors and the market's (fewer bookmakers or older prices mean more), mixed by their shares in the blend, so a pick resting on thin data or a thin market drops a tier. The top pick is the one with the highest cautious chance. On the match page, chances of 50% or more show their cautious value underneath.</p>
-      <p><b>Nearly definite</b> picks have a cautious chance of 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. Picks lose a 3-point safety haircut when they rest on the model alone. When model and market disagree by more than 12 points the cautious chance loses another 3, and 1 more when prices are over a day and a half old; those two only make Statpad more careful about the tier, so the stated chance stays its best estimate (on three replayed seasons, picks that used to be cut for disagreement landed 85% of the time against a stated 81%). Big games between two top-six sides are kept out of the two safest tiers.</p>
+      <p><b>Nearly definite</b> picks have a cautious chance of 82% or more, <b>Highly possible</b> 70–82%, and <b>Possible</b> 58–70%. When a game has no bookmaker price and rests on the ratings alone, its chances go through a correction fitted each week on last season's replay with the prices taken away (one per kind of market, kept only where it read the following season better than the old flat 3-point cut, which it did for all six kinds; the "no" side of a pair is corrected as one minus its "yes" side, so they still add up to 100%). When a price has no over/under line, goal picks get 2 more points of caution on their cautious chance, since the goals level is then a guess from the 1X2 alone. When model and market disagree by more than 12 points the cautious chance loses another 3, and 1 more when prices are over a day and a half old; those two only make Statpad more careful about the tier, so the stated chance stays its best estimate (on three replayed seasons, picks that used to be cut for disagreement landed 85% of the time against a stated 81%). Big games between two top-six sides are kept out of the two safest tiers.</p>
       <h3>How slips are built</h3>
       <p>A slip lands only if every leg lands, so its chance is the product of its legs' chances. With the total odds fixed, that product is one over the total odds, times each leg's chance × its price. A fairly priced leg has chance × price = 1; a bookmaker's margin makes it less than 1, and every leg multiplies its loss in. On seven seasons of 19 leagues at a typical bookmaker's prices, that loss is about 5% a leg from 1.20 to 2.00 and 8 to 10% beyond 2.50, but a leg under 1.30 buys so little price that it costs the most chance for the odds it adds. So since v64 every leg must be at least 50% likely by default (more likely to land than not; you can choose 60%, or any leg), and you can type any target odds from 1.1 to 10,000. Smart slips search the whole day for the combination whose chances multiply to the most while its prices reach the target (one leg a match, at the average price across bookmakers), and build three: the best, the second best without the first one's matches, and the third best without either's. No leg counts as more likely than the bookmakers' own consensus says, and a leg whose cautious chance sits more than ten points under the minimum (thin data) is left out. Replayed through the deployed builder on 1,927 match days, the chance by the closing prices with legs of 50%+ against any legs: at 5 odds 18.9% against 19.1% (3.2 legs against 2.0); at 10 odds 9.1% against 9.4% (4.5 legs, the longest about 1.85, against 2.4 legs, the longest about 4.4); at 20 odds 4.3% against 4.6% (5.8 legs against 2.8); at 100 odds 0.78% against 0.88% (8.8 legs against 3.8). Legs of 60%+ cost a little more (8.5% at 10 odds, six legs), and legs capped at 1.30 the most (6.6%, ten legs). Whatever the legs, a slip's chance is set mostly by its target: the surest way to a safer slip is a lower target.</p>
       <h3>Bankers and sure slips</h3>
       <p>Under <b>Slips → Bankers</b>, each game's banker is the pick Statpad is surest of, draws left out and the price at least 1.05; the list shows those of 80% or more, and the Overview the surest three. For a game with bookmaker prices the chance is Statpad's usual one, never above the bookmakers' own consensus. For a game without prices it comes from last season's replay: every pick of every game was also priced from the model alone, counted by kind (double chance, team to score, win, over 1.5, under 3.5, over or under 2.5, both teams to score, team 2+ goals) and by chance in steps of 2.5 points, and the share that landed is the chance shown, pulled towards the stated chance by 50 picks' worth and made to rise with it. Without prices Statpad takes a safety haircut, and such picks had been landing more often than stated. Each banker says how many picks like it there were and how many landed.</p>
       <p>The <b>dial</b> sets how sure a slip must be, from 95% down to 20%. For each level Statpad searches every combination of one pick per game, up to 8 legs, for the one that pays most while its legs' chances still multiply to at least that level (prices are a typical bookmaker's, or Statpad's estimate of one with the margin in). Margins compound with every leg, so a sure slip has few legs; the numbers inside the dial are what the 80%, 60% and 40% slips pay that day. On the 2025/26 replay when this was built, with half of each day's games stripped of their prices as on the live board, slips set to 90% landed on 93% of the 86 days that had one, 80% on 82% of 204, 70% on 72% of 234, 50% on 55% and 20% on 24%; bankers stated at 85–90% landed 88% of 2,195 times and those of 90% or more 94% of 311. The weekly replay redoes all of this and the dial shows the latest. The live record keeps each game's banker as it stood at the last update before kick-off, and each day's 90, 80, 70, 60 and 50% slips, frozen when their first game starts, graded after the final whistle and never edited. None of it is a promise: a 90% banker still loses about one time in ten.</p>
       <h3>Self-tuning</h3>
-      <p>${d.calib && d.calib.on ? `On, from ${d.calib.n} graded top picks.` : `Learning: ${(d.calib && d.calib.n) || 0} of ${(d.calib && d.calib.need) || 150} graded top picks.`} Every update compares the chances Statpad stated (before any correction) with what landed over the last 90 days, and fits a small correction on the log-odds scale. A prior centred on “no change” keeps the correction modest until there is plenty of evidence. The correction applies to stated chances, tiers and slips.</p>
+      <p>${d.calib && d.calib.on ? `On, from ${d.calib.n} graded top picks.` : d.calib && d.calib.check && d.calib.n >= (d.calib.need || 150) ? `Standing aside: it didn't beat the stated chances on the newest picks.` : `Learning: ${(d.calib && d.calib.n) || 0} of ${(d.calib && d.calib.need) || 150} graded top picks.`} Every update compares the chances Statpad stated (before any correction) with what landed over the last 90 days, and fits a small correction on the log-odds scale. A prior centred on “no change” keeps the correction modest until there is plenty of evidence, and it is fitted on the older two thirds of those picks and switched on only if it reads the newest third, which it never saw, better than the stated chances. The correction applies to stated chances, tiers and slips.</p>
       <h3>Tuning</h3>
       <p>Once a month Statpad tunes its settings on the main European leagues: how fast old games fade, how much last season counts, how hard teams are pulled towards average, how much shots on target count, how far below average promoted sides start, and the bookmakers' share of the blend. It searches on two past seasons, then checks on the last full season and this season's games so far, which the search never saw, after blending with the market as the site does; including this season means a change that helped last year but hurts now stays off. New settings are switched on only if they beat the old ones there. Leagues without shot counts get their own goals-only settings. Then, one at a time and each on top of the last: Elo, the game-by-game ratings, the draw correction per league, the learned blend, and fatigue and motivation, each switched on only if it also lowers the error on the unseen season. The Lab shows the settings and the before-and-after error.</p>
       <p>The search is Bayesian: it fits a smooth stand-in for the error over all the settings at once from every setting tried so far, and tries next wherever the expected improvement is largest, stopping when nothing is expected to help. The fits themselves run as vector maths (NumPy, fetched on the runs that need it; plain Python if that fails), the same fits to the fifth decimal, about five times faster. A month's tuning now tries around 160 settings in about a minute, where it used to manage 47 in a minute and a half; on its own that found settings about as good as before, and the time it frees is what the newer stages run in.</p>
@@ -5847,7 +6064,21 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (o.defer && !document.hidden) requestAnimationFrame(() => setTimeout(go, 0)); else go();
   }
   let toastT;
-  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1600); }
+  // v69: a toast can carry an Undo (removals and clearing the coupon), and then stays up long enough to reach it
+  let toastUndo = null;
+  function toast(msg, undo, label) {
+    const t = $('#toast'); toastUndo = typeof undo === 'function' ? undo : null;
+    t.textContent = msg;
+    if (toastUndo) { const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-undo'; b.textContent = label || 'Undo'; b.dataset.undo = '1'; t.append(' ', b); }
+    t.classList.toggle('act', !!toastUndo); t.classList.add('show'); clearTimeout(toastT);
+    toastT = setTimeout(() => { t.classList.remove('show'); toastUndo = null; }, toastUndo ? 5000 : 1600);
+  }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest || !e.target.closest('[data-undo]') || !toastUndo) return;
+    const f = toastUndo; toastUndo = null; clearTimeout(toastT); $('#toast').classList.remove('show'); f(); buzz(8);
+  });
+  // undo for the coupon: puts back the legs exactly as they were (prices and where they came from too)
+  function couponUndo(prev) { return () => { S.coupon = prev; saveCoupon(); if (S.tab === 'coupon') renderCoupon(); for (const b of document.querySelectorAll('[data-add]')) { const [id, k] = b.dataset.add.split('|'); const on = inCoupon(id, k); b.setAttribute('aria-pressed', on); if (b.classList.contains('add')) b.textContent = on ? '✓' : '+'; } toast('Back in your coupon'); }; }
 
   // ---------------- share a slip as an image ----------------
   const SF = { d: '"Big Shoulders", "Arial Narrow", sans-serif', b: '"Bricolage Grotesque", system-ui, -apple-system, sans-serif', m: '"Big Shoulders", "Arial Narrow", sans-serif' };
@@ -8656,7 +8887,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return {
       odds: rows.reduce((a, x) => a * x.price, 1), stake: null, bk: S.bcfg.bk || '', code: '', bonus: null, src,
       legs: rows.map((x) => ({ id: x.c.id, key: x.c.key, label: x.s.label, h: x.r.m.h, a: x.r.m.a, ko: x.r.m.ko, lk: x.r.m.lk, ev: x.r.m.ev || null,
-        p: x.s.p, price: x.price, res: null, lh: x.r.a ? +x.r.a.lh.toFixed(3) : null, la: x.r.a ? +x.r.a.la.toFixed(3) : null })),
+        p: legP(x), price: x.price, res: null, lh: x.r.a ? +x.r.a.lh.toFixed(3) : null, la: x.r.a ? +x.r.a.la.toFixed(3) : null })),
     };
   }
   function openBetForm() {
@@ -13069,6 +13300,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
 
   // ---------------- knowledge: how Statpad works, from the Method text and a short glossary ----------------
   const VA_KB = [
+    [/\b(what is|whats|what s|what does|meaning of|explain|ni nini)\b.*\b(est|estimated|no price yet|model only)\b|\b(est|no price yet)\b.*\b(mean|means)\b/, ['"Est" means there is no bookmaker price for that pick yet, so Statpad shows its estimate of what a typical bookmaker would offer, margin included: check the real price before betting. "No price yet" on a game means none of its markets has a bookmaker price, so the chances come from Statpad\'s own ratings, corrected by how such games really went last season.', '"Est" ina maana hakuna bei ya bookmaker bado; Statpad inaonyesha makadirio yake. Angalia bei halisi kabla ya kubeti.']],
     [/\b(what is|whats|what s|what are|meaning of|define|explain|maana ya|ni nini)\b.*\bbankers?\b|\bbankers?\b.*\b(mean|means|ni nini)\b/, ['A banker is the pick in a game Statpad is surest of (draws aside, price at least 1.05). Under Slips → Bankers you get the day\'s bankers, each with how picks like it did last season, and a dial: set how sure you want a slip to be, from 95% to 20%, and Statpad builds the one that pays most at that level. Even a 90% banker loses about one time in ten.', 'Banker ni chaguo ambalo Statpad ina uhakika nalo zaidi katika mechi. Kwenye Slips → Bankers kuna bankers za siku na kipimo: chagua uhakika unaotaka, Statpad itatengeneza mkeka unaolipa zaidi. Hata banker ya 90% hupoteza mara moja kati ya kumi.']],
     [/\b(clv|closing line)\b/, ['Closing-line value compares the price taken with the bookmakers\' fair price at kick-off. Beating the close regularly is the best early sign of a real edge.', 'Closing-line value inalinganisha bei uliyochukua na bei ya haki wakati wa kuanza mechi.']],
     [/\b(what is|whats|what s|what does|meaning of|define|explain|maana ya|ni nini)\b.*\bvalue\b|\bvalue bet\b|\bthamani ni\b/, ['A value bet is a price higher than the real chance deserves. If Statpad says 50%, fair odds are 2.00; a bookmaker offering 2.20 is value (10% over fair). Value wins over many bets, not on every bet: a value pick can still be unlikely.', 'Bet ya thamani ni bei iliyo juu kuliko nafasi halisi. Statpad ikisema 50%, odds za haki ni 2.00; mbeti akitoa 2.20 hiyo ni thamani. Thamani inaleta faida kwa bet nyingi, si kila bet.']],
@@ -13270,6 +13502,18 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const pm = /(\d{2})\s*(?:%|percent\b|per ?cent\b)/i.exec(raw) || /\basilimia (\d{2})\b/.exec(t), slipW = /\b(slip|slips|accumulator|acca|multi ?bet|mkeka|combo)\b/.test(t);
     const sureW = /\b(sure|surer|surest|safe|safer|safest|certain|low risk|salama|uhakika)\b/.test(t);
     const openW = /\b(bankers? (page|view|tab|section)|(open|show)( me)? (the )?bankers|certainty dial|slips? by certainty)\b/.test(t);
+    // v69: "bankers today", "show me the bankers": the same list the Bankers page shows, with each one's checked chance
+    if (/\bbankers?\b/.test(t) && !slipW && !pm && !openW && !E.team && !E.fx) {
+      const dk0 = (E.days && E.days[0]) || pickDefaultDay() || dayKey(Date.now());
+      const bs = ENGINE.bankers(bkOpen(dk0, 'all'), 0.8).slice(0, E.n || 5);
+      if (!bs.length) return null;   // none at 80%+: the usual safest picks answer instead
+      const items = bs.map((b) => T(`${pct(b.q, 0)}: ${b.s.label}${b.s.label.includes(b.m.h) || b.s.label.includes(b.m.a) ? '' : ` in ${b.m.h} v ${b.m.a}`} at ${odds(b.pr)}${b.s.real ? '' : ' (est)'}${b.ev && b.ev.n >= 20 ? `, ${b.ev.hits} of ${b.ev.n} like it landed last season` : ''}.`,
+        `${pct(b.q, 0)}: ${b.s.label}, odds ${odds(b.pr)}${b.ev && b.ev.n >= 20 ? `, ${b.ev.hits} kati ya ${b.ev.n} kama hii zilishinda msimu uliopita` : ''}.`));
+      return vaSet({ kind: 'picks', list: bs.map((b) => b.m.id), match: bs[0].m.id, picks: bs.map((b) => [b.m.id, b.s.key]) }, { kind: 'picks',
+        lead: T(`The surest picks ${dayWord(dk0)}, each checked against last season:`, `Machaguo salama zaidi ${dayWord(dk0)}:`), items,
+        tail: T('Even a 90% banker loses about one time in ten.', 'Hata banker ya 90% hupoteza mara moja kati ya kumi.'),
+        acts: [[T('Add all to coupon', 'Weka yote kwenye kuponi'), 'data-vaaddall="1"'], [T('Open Bankers', 'Fungua Bankers'), `data-gobank="${dk0}"`]] });
+    }
     if (!(openW || (slipW && (sureW || pm)))) return null;
     if (E.legs || (E.target && !pm)) return null;   // "a 3-leg safe slip", "a safe 5 odds slip": the slip builder's job
     const dk = (E.days && E.days[0]) || pickDefaultDay() || dayKey(Date.now());
@@ -14575,12 +14819,13 @@ void main() {
     if (t.dataset.bkmore) { S.bkShown += 10; relist(); return; }
     if (t.dataset.bkp) { bkSel(+t.dataset.bkp); buzz(6); return; }
     if (t.dataset.bkadd) {
+      if (t.classList.contains('done')) { openCoupon(); return; }
       const s = S.bankSlip; if (!s) return;
       for (const l of s.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: l.s.real && l.s.best ? l.s.price : null, from: s.tier });
-      saveCoupon(); buzz(12); flyToBets(t); toast(`${s.legs.length} ${s.legs.length === 1 ? 'leg' : 'legs'} added to the coupon`); return;
+      saveCoupon(); buzz(12); flyToBets(t); toast(`${s.legs.length} ${s.legs.length === 1 ? 'leg' : 'legs'} added · ${S.coupon.length} in your coupon`, openCoupon, 'View'); return;
     }
     if (t.dataset.bkshare) { if (S.bankSlip) shareSlip(S.bankSlip, S.day); return; }
-    if (t.dataset.gobank) { if (S.open) closeSheet(); S.sseg = 'bank'; store.set('sseg', 'bank'); S.day = t.dataset.gobank; setTab('slips'); return; }
+    if (t.dataset.gobank) { if (S.open) closeSheet(); if (t.closest('#va') && typeof vaPeek === 'function') vaPeek(true); S.sseg = 'bank'; store.set('sseg', 'bank'); S.day = t.dataset.gobank; setTab('slips'); return; }
     if (t.id === 'bkG') {   // a tap on the dial sets the nearest level
       const ctm = t.getScreenCTM && t.getScreenCTM(); if (!ctm) return;
       const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
@@ -14606,7 +14851,9 @@ void main() {
   function palRender() {
     const raw = $('#palQ').value.trim(), q = fold(raw), out = [];
     if (S.rows && S.rows.length) {
-      const ms = S.rows.filter((r) => !q || fold(r.m.h + ' ' + r.m.a).includes(q)).sort((x, y) => (isLive(y) - isLive(x)) || (x.started - y.started) || x.ko - y.ko).slice(0, q ? 8 : 4);
+      let ms0 = S.rows.filter((r) => !q || fold(r.m.h + ' ' + r.m.a).includes(q));
+      if (!ms0.length && q.length >= 3) ms0 = S.rows.filter((r) => fuzzyHit(r.m.h + ' ' + r.m.a, q));   // v69: typos too
+      const ms = ms0.sort((x, y) => (isLive(y) - isLive(x)) || (x.started - y.started) || x.ko - y.ko).slice(0, q ? 8 : 4);
       for (const r of ms) out.push({ k: 'm', id: r.m.id, html: `${pair(r.m)}<span class="pal-t"><b>${esc(r.m.h)} v ${esc(r.m.a)}</b><small>${esc(lgName(r.m.lk))}, ${isLive(r) ? 'live now' : r.started ? 'kicked off' : esc(dayLabel(r.day)) + ' ' + tFmt.format(r.ko)}</small></span>${r.a && !r.started ? `<span class="pal-v">${pct(r.a.p.H)} <i>${pct(r.a.p.D)}</i> ${pct(r.a.p.A)}</span>` : ''}` });
       if (q) for (const k of [...new Set(S.rows.map((r) => r.m.lk))].filter((k) => fold(lgName(k)).includes(q)).slice(0, 4)) out.push({ k: 'l', lk: k, html: `${lgIcon(k, 'sm')}<span class="pal-t"><b>${esc(lgName(k))}</b><small>${S.rows.filter((r) => r.m.lk === k && !r.started).length} fixtures coming up</small></span>` });
     }
@@ -14663,14 +14910,14 @@ void main() {
   function spotCard(r) {
     const { m, a } = r, LN = r.started ? liveNow(m.id) : null, lp = LN ? liveP(r, LN) : null, p = lp || a.p;
     const intl = lgInfo(m.lk).group === 'intl';
-    const t = r.started ? `<span class="t${LN && LN.ft ? '' : ' lv'}">${esc(LN ? (LN.ft ? 'Full time' : LN.st === 'HT' ? 'Half time' : Math.floor(LN.min) + "'") : 'Live')}</span>` : `<span class="t">${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}</span>`;
+    const t = r.started ? `<span class="t${LN && LN.ft ? '' : ' lv'}">${esc(LN ? (LN.ft ? 'Full time' : LN.st === 'HT' ? 'Half time' : Math.floor(LN.min) + "'") : 'Live')}</span>` : `<span class="t">${esc(dayLabel(r.day))} ${tFmt.format(r.ko)}${soonSpan(+r.ko)}</span>`;
     const row = (n, ps, side, v) => `<div class="bug-r"><span class="bug-k ${side}">${esc(code3(n))}</span>${crest(n, m.lk, 'sm')}<b>${esc(n)}</b>${ps && !intl ? `<small>${ord(ps)}</small>` : ''}<span class="bug-v${LN ? ' sc' : ''}">${v}</span></div>`;
     const v = (i, k) => (LN ? String(i ? LN.a : LN.h) : pct(p[k]));
     return `<article class="spot${kitClash(m.h, m.a) ? ' kit-clash' : ''}" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}" data-tch="${esc(m.h)}" data-tca="${esc(m.a)}" style="--th:${teamCol(m.h)};--ta:${teamCol(m.a)}">
       <div class="spot-top">${lgIcon(m.lk, 'xs')}<span class="lgn">${esc(lgName(m.lk))}</span>${t}</div>
       <div class="bug">${row(m.h, m.ph, 'h', v(0, 'H'))}${row(m.a, m.pa, 'a', v(1, 'A'))}</div>
       <div class="spot-p"><div class="pbar kit" aria-hidden="true"><i class="h" style="width:${p.H * 100}%"></i><i class="d" style="width:${p.D * 100}%"></i><i class="a" style="width:${p.A * 100}%"></i></div>
-        <div class="spot-pl">${LN ? `<span>Now ${pct(p.H)}, draw ${pct(p.D)}, ${pct(p.A)}</span>` : `<span>Draw ${pct(p.D)}</span>`}<span>Expected goals ${a.lh.toFixed(1)}–${a.la.toFixed(1)}</span></div></div>
+        <div class="spot-pl">${LN ? `<span>Now: ${esc(code3(m.h))} ${pct(p.H)} · draw ${pct(p.D)} · ${esc(code3(m.a))} ${pct(p.A)}</span>` : `<span>Draw ${pct(p.D)}</span>`}<span>Expected goals ${a.lh.toFixed(1)}–${a.la.toFixed(1)}</span></div></div>
       ${a.top ? `<div class="spot-pick"><span class="tier tier-${a.tier || 'C'}">${pct(a.top.pAdj)}</span><span><b>${esc(a.top.label)}</b> at ${odds(a.top.price)}${a.top.real ? '' : ' est'}</span></div>` : ''}
     </article>`;
   }
@@ -14884,7 +15131,7 @@ void main() {
 
   // ---------------- events ----------------
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-tab],[data-add],[data-open],[data-day],[data-target],[data-slipfloor],[data-edge],[data-stake],[data-rm],[data-addslip],[data-shareslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn,#installBtn,#installTipX');
+    const t = e.target.closest('[data-tab],[data-add],[data-open],[data-day],[data-target],[data-slipfloor],[data-edge],[data-stake],[data-rm],[data-rmstarted],[data-qall],[data-addslip],[data-shareslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn,#installBtn,#installTipX');
     if (!t) return;
     if (t.dataset.tab) { e.preventDefault(); setTab(t.dataset.tab, { defer: true, tap: !!t.closest('#bnav, #sideNav') }); return; }
     if (t.dataset.add) { e.stopPropagation(); const [id, key] = t.dataset.add.split('|'); toggleCoupon(id, key); buzz(inCoupon(id, key) ? 12 : 6); if (inCoupon(id, key)) flyToBets(t); if (S.tab === 'coupon') renderCoupon(); if (key.startsWith('Q:')) paintQx(); return; }
@@ -14895,7 +15142,11 @@ void main() {
     if (t.dataset.slipfloor != null) { S.slipFloor = +t.dataset.slipfloor; store.set('slipFloor', S.slipFloor); buzz(8); render(); return; }
     if (t.dataset.edge) { S.minEdge = +t.dataset.edge; store.set('minEdge', S.minEdge); renderValue(); return; }
     if (t.dataset.stake) { S.stakeMode = t.dataset.stake; store.set('stakeMode', S.stakeMode); renderCoupon(); return; }
-    if (t.dataset.rm) { S.coupon.splice(+t.dataset.rm, 1); saveCoupon(); renderCoupon(); return; }
+    // v69: legs are named by game and pick, not by their place in the list (a game that had left the board shifted the
+    // places, so the cross could remove the leg below the one tapped)
+    if (t.dataset.rm) { const prev = S.coupon.slice(), i = S.coupon.findIndex((c) => c.id + '|' + c.key === t.dataset.rm); if (i >= 0) S.coupon.splice(i, 1); saveCoupon(); renderCoupon(); toast('Removed from coupon', couponUndo(prev)); return; }
+    if (t.dataset.qall) { S.day = 'all'; S.league = 'all'; store.set('league', 'all'); renderMatches(); return; }
+    if (t.dataset.rmstarted) { const st = new Set(couponRows().filter((x) => x.r.started).map((x) => x.c.id + '|' + x.c.key)); const prev = S.coupon.slice(); S.coupon = S.coupon.filter((c) => !st.has(c.id + '|' + c.key)); saveCoupon(); renderCoupon(); toast(`Removed ${st.size} started ${st.size === 1 ? 'game' : 'games'}`, couponUndo(prev)); return; }
     if (t.dataset.more) { S.shown += 60; renderMatches(); return; }
     if (t.dataset.shareslip) {
       const h = t.dataset.shareslip === 'hero' ? S.heroSlip : null;
@@ -14906,23 +15157,24 @@ void main() {
     if (t.id === 'installBtn') { installApp(); return; }
     if (t.id === 'installTipX') { $('#installTip').hidden = true; store.set('itipSeen', 1); return; }
     if (t.dataset.addslip) {
+      if (t.classList.contains('done')) { openCoupon(); return; }
       const s = (S.lastSlips || []).find((x) => x.tier === t.dataset.addslip); if (!s) return;
       for (const l of s.legs) if (!inCoupon(l.m.id, l.s.key)) S.coupon.push({ id: l.m.id, key: l.s.key, price: l.s.real && l.s.best ? l.s.price : null, from: s.tier });
-      saveCoupon(); toast(`${s.legs.length} legs added to coupon`); return;
+      saveCoupon(); toast(`${s.legs.length} legs added · ${S.coupon.length} in your coupon`, openCoupon, 'View'); return;
     }
     if (t.id === 'copyCoupon') {
       const rows = couponRows(); const tot = rows.reduce((a, x) => a * x.price, 1);
-      const txt = rows.map((x) => `${x.r.m.h} v ${x.r.m.a} (${dayLabel(x.r.day)} ${tFmt.format(x.r.ko)}): ${x.s.label} @ ${odds(x.price)}`).join('\n') + `\nTotal odds ${odds(tot)} · Statpad`;
+      const txt = rows.map((x) => `${x.r.m.h} v ${x.r.m.a} (${dayLabel(x.r.day)} ${tFmt.format(x.r.ko)}): ${x.s.label} @ ${odds(x.price)}`).join('\n') + `\nTotal odds ${odds(tot)} · Statpad gives it ${pct(couponChance(rows), 0)} to land`;   // v69: the chance travels with it
       (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Coupon copied'), () => toast('Copy not available here'));
       return;
     }
-    if (t.id === 'clearCoupon') { S.coupon = []; saveCoupon(); renderCoupon(); return; }
+    if (t.id === 'clearCoupon') { const prev = S.coupon.slice(); S.coupon = []; saveCoupon(); renderCoupon(); if (prev.length) toast(`Cleared ${prev.length} ${prev.length === 1 ? 'leg' : 'legs'}`, couponUndo(prev)); return; }   // v69: one tap clears, Undo brings it back
     if (t.id === 'scrim' || t.id === 'sheetClose') { closeSheet(); return; }
     if (t.id === 'themeBtn') { openDisplay(t); return; }
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && S.open) closeSheet();
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.fx,.vrow')) { e.preventDefault(); openMatch(e.target.dataset.open, e.target); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.fx,.vrow,.spot,li[data-open]')) { e.preventDefault(); openMatch(e.target.dataset.open, e.target); }   // v69: bankers and slip legs too
   });
   $('#q').addEventListener('input', (e) => { S.q = e.target.value; S.shown = 60; renderMatches(); });
   $('#league').addEventListener('change', (e) => { S.league = e.target.value; store.set('league', S.league); S.shown = 60; renderMatches(); });
@@ -14932,8 +15184,8 @@ void main() {
   $('#vsort').addEventListener('change', (e) => { S.vsort = e.target.value; store.set('vsort', S.vsort); renderValue(); });
   $('#tleague').addEventListener('change', (e) => { S.tleague = e.target.value; store.set('tleague', S.tleague); renderTables(); });
   document.addEventListener('change', (e) => {
-    if (e.target.dataset.price != null) { const i = +e.target.dataset.price, v = parseFloat(String(e.target.value).replace(',', '.')); if (S.coupon[i]) { S.coupon[i].price = v > 1 ? v : null; saveCoupon(); renderCoupon(); } }
-    if (e.target.id === 'bank') { const v = parseFloat(String(e.target.value).replace(',', '.')); S.bank = v > 0 ? v : 100; store.set('bank', S.bank); renderCoupon(); }
+    if (e.target.dataset.price != null) { const i = S.coupon.findIndex((c) => c.id + '|' + c.key === e.target.dataset.price), v = parseFloat(String(e.target.value).replace(',', '.')); if (S.coupon[i]) { S.coupon[i].price = v > 1 ? v : null; saveCoupon(); renderCoupon(); } }
+    if (e.target.id === 'bank') { const v = parseMoney(e.target.value); S.bank = v > 0 ? v : 100; store.set('bank', S.bank); renderCoupon(); }
   });
 
   // ---------------- loading & live updates ----------------
@@ -15117,6 +15369,11 @@ void main() {
     else S.tkMore = true;
     renderTrack();
   });
+  document.addEventListener('focusin', (e) => { const t = e.target; if (t && t.matches && t.matches('#bank,[data-price],#tgtIn')) setTimeout(() => { try { t.select(); } catch (er) { /* */ } }, 0); });   // v69: tap a number to replace it
+  setInterval(() => {   // v69: countdowns to kick-off stay current
+    if (document.hidden) return;
+    for (const el of document.querySelectorAll('[data-soon]')) { const t = soonTxt(+el.dataset.soon); el.textContent = t ? (el.closest('.fxl') ? ' · ' : '') + t : ''; }
+  }, 30e3);
   setTimeout(() => { loadLive(true); esTick(); }, 3000);
   setTimeout(() => loadResults(true), 2500);
   setInterval(async () => {   // games kick off and finish: re-sort, but redraw only when something moved (v61)

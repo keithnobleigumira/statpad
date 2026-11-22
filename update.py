@@ -312,14 +312,29 @@ def demargin(odds):
     if sum(q) <= 1:
         s = sum(q)
         return [x / s for x in q]
-    lo, hi = 1.0, 4.0
-    for _ in range(50):
+    # v69: Newton's method on the power (the sum of q^k falls smoothly as k grows, so it converges in 3-5 steps where
+    # halving the interval took 50): the same chances to 1e-12, and it runs for every price of every game, every run
+    lq = [math.log(x) for x in q]
+    k = 1.0
+    for _ in range(30):
+        pw = [math.exp(k * l) for l in lq]
+        f = sum(pw) - 1
+        if abs(f) < 1e-13:
+            break
+        d = sum(p_ * l for p_, l in zip(pw, lq))
+        if d >= 0:
+            break
+        k = min(4.0, max(1.0, k - f / d))
+    if not abs(sum(math.exp(k * l) for l in lq) - 1) < 1e-9:   # never seen: the old halving
+        lo, hi = 1.0, 4.0
+        for _ in range(50):
+            k = (lo + hi) / 2
+            if sum(x ** k for x in q) > 1:
+                lo = k
+            else:
+                hi = k
         k = (lo + hi) / 2
-        if sum(x ** k for x in q) > 1:
-            lo = k
-        else:
-            hi = k
-    p = [x ** ((lo + hi) / 2) for x in q]
+    p = [math.exp(k * l) for l in lq]
     s = sum(p)
     return [x / s for x in p]
 EXCHANGES = {'betfair_ex_eu', 'betfair_ex_uk', 'betfair_ex_au', 'matchbook', 'smarkets'}
@@ -733,29 +748,35 @@ def kalman_run(games, K, sw=0.0, nt=0.12, sx=0.0):
     conv0, cx0 = shot_scales(gs, sw, sx)
     S, pre, n_g = {}, {}, 0
     alpha = 1 / 400   # the league's scoring rate: a running average over roughly a season
+    # v69: days as plain numbers worked out once, and the maths looked up once (the same filter, about twice as fast)
+    t_ref = gs[0][0]
+    exp, sqrt, log_ = math.exp, math.sqrt, math.log
+    mixing = bool(conv0 or cx0)
     for g in gs:
         d, h, a, hg, ag, cur = g[:6]
+        dd = (d - t_ref).total_seconds() / 86400
         for t in (h, a):
             st = S.get(t)
             if st is None:
                 x = nt if cur and prev_any else 0.0
-                S[t] = st = [-x, x, p0, p0, d, cur]
+                S[t] = st = [-x, x, p0, p0, dd, cur]
             elif cur and not st[5]:   # a new season: ratings drift back a little and grow less sure
                 st[0] *= ps
                 st[1] *= ps
                 st[2] += qs
                 st[3] += qs
                 st[5] = True
-            dt = max(0.0, (d - st[4]).total_seconds() / 86400)
-            st[2] += q * dt
-            st[3] += q * dt
-            st[4] = d
+            dt = dd - st[4]
+            if dt > 0:
+                st[2] += q * dt
+                st[3] += q * dt
+            st[4] = dd
         H, A = S[h], S[a]
-        mu, hm = math.log(ma), math.log(mh / ma)
-        eh, ea = mu + hm + H[0] + A[1], mu + A[0] + H[1]
-        lh, la = math.exp(eh), math.exp(ea)
-        pre[(d, h, a)] = (lh, la, math.sqrt(H[2] + A[3]), math.sqrt(A[2] + H[3]))
-        yh, ya = goal_mix(g, sw, sx, conv0, cx0) if conv0 or cx0 else (hg, ag)
+        mu = log_(ma)
+        hm = log_(mh) - mu
+        lh, la = exp(mu + hm + H[0] + A[1]), exp(mu + A[0] + H[1])
+        pre[(d, h, a)] = (lh, la, sqrt(H[2] + A[3]), sqrt(A[2] + H[3]))
+        yh, ya = goal_mix(g, sw, sx, conv0, cx0) if mixing else (hg, ag)
         # one Newton step from the prior for each side's goals (Poisson, log link), uncertainty kept per rating
         sh_, sa_ = H[2] + A[3], A[2] + H[3]
         gh, ga = (yh - lh) / (1 + lh * sh_), (ya - la) / (1 + la * sa_)
@@ -781,7 +802,7 @@ def kalman_run(games, K, sw=0.0, nt=0.12, sx=0.0):
     cur_t = [t for t, st in S.items() if st[5]] or list(S)
     ca = sum(S[t][0] for t in cur_t) / len(cur_t)
     cd = sum(S[t][1] for t in cur_t) / len(cur_t)
-    final = {t: [st[0] - ca, st[1] - cd, st[2], st[3], st[4]] for t, st in S.items()}
+    final = {t: [st[0] - ca, st[1] - cd, st[2], st[3], t_ref + timedelta(days=st[4])] for t, st in S.items()}
     return pre, final, (math.log(ma) + ca + cd, math.log(mh / ma))
 
 
@@ -1171,6 +1192,7 @@ def _scale_np(np, Wa, n, pa, pd, att, dfn, mu, home, K, cur_ix, sh, sa):
     epa, epd = K * np.exp(np.array(pa)), K * np.exp(np.array(pd))
     att, dfn = np.array(att, dtype=float), np.array(dfn, dtype=float)
     cur = np.array(cur_ix, dtype=np.intp)
+    nc = float(len(cur))
     for _ in range(200):
         g0 = math.exp(mu + home / 2)
         emh, em = math.exp(mu + home), math.exp(mu)
@@ -1180,8 +1202,8 @@ def _scale_np(np, Wa, n, pa, pd, att, dfn, mu, home, K, cur_ix, sh, sa):
         ea_ = np.exp(new_att)
         den = bc(A, w * emh * ea_[H], n) + bc(H, w * em * ea_[A], n)
         new_dfn = np.log((num_d + g0 * epd) / (den + K * g0))
-        new_att -= new_att[cur].mean()
-        new_dfn -= new_dfn[cur].mean()
+        new_att -= new_att[cur].sum() / nc   # v69: sum / count, not .mean() (the same number, a fraction of the overhead)
+        new_dfn -= new_dfn[cur].sum() / nc
         eh = float((w * np.exp(new_att[H] + new_dfn[A])).sum())
         ea = float((w * np.exp(new_att[A] + new_dfn[H])).sum())
         new_mu = math.log(sa / ea)
@@ -1235,6 +1257,7 @@ def fit_series(games, teams, cuts, P):
     cum_x = np.cumsum(HX + AX)
     xi, K, sw, sx = math.log(2) / P['hl'], P['k'], P.get('sw') or 0.0, P.get('sx') or 0.0
     cur_set = [ix[t] for t in teams if t in ix]
+    prev = None   # v69: the previous cut's ratings as arrays, for the warm start (no walk through a dict of names)
     for i, cut in enumerate(cuts):
         m = int(np.searchsorted(day, (cut - t_ref).total_seconds() / 86400, 'left'))
         if m < 20:
@@ -1262,20 +1285,26 @@ def fit_series(games, teams, cuts, P):
         mu = math.log(max(0.3, sa / s_w))
         home = math.log(max(0.3, sh / s_w)) - mu
         att, dfn = pa.copy(), pd.copy()
-        if init:
-            mu, home = init['mu'], init['home']
-            for t, (a_, d_) in init['teams'].items():
-                if t in ix:
-                    att[ix[t]], dfn[ix[t]] = a_, d_
+        if prev is not None:
+            mu, home = prev[0], prev[1]
+            ps = prev[4]
+            att[ps], dfn[ps] = prev[2][ps], prev[3][ps]
         cur_ix = [j for j in cur_set if seen[j]] or [j for j in range(n) if seen[j]]
         Wa = np.column_stack((h, a, hg, ag, w))
         mu, home, att, dfn, ia, idf = _scale_np(np, Wa, n, pa, pd, att, dfn, mu, home, K, cur_ix, sh, sa)
         g0 = math.exp(mu + home / 2)
-        present = [t for t in names if seen[ix[t]]]
-        rt = {'mu': round(mu, 5), 'home': round(home, 5), 'games': m,
-              'teams': {t: [round(float(att[ix[t]]), 5), round(float(dfn[ix[t]]), 5)] for t in present},
-              'se': {t: [round(1 / math.sqrt(ia[ix[t]] + K * g0), 4), round(1 / math.sqrt(idf[ix[t]] + K * g0), 4)] for t in present}}
-        out[i], init = rt, rt
+        mu, home = round(mu, 5), round(home, 5)
+        att, dfn = np.round(att, 5), np.round(dfn, 5)   # as the dicts below hold them, so the next warm start is the same
+        prev = (mu, home, att, dfn, seen)
+        pres = np.flatnonzero(seen)
+        ar, dr = att[pres].tolist(), dfn[pres].tolist()
+        sa_ = np.round(1 / np.sqrt(np.asarray(ia)[pres] + K * g0), 4).tolist()
+        sd_ = np.round(1 / np.sqrt(np.asarray(idf)[pres] + K * g0), 4).tolist()
+        nm = [names[j] for j in pres]
+        rt = {'mu': mu, 'home': home, 'games': m,
+              'teams': {t: [x, y] for t, x, y in zip(nm, ar, dr)},
+              'se': {t: [x, y] for t, x, y in zip(nm, sa_, sd_)}}
+        out[i] = rt
     return out
 
 
@@ -1711,7 +1740,7 @@ def refresh_stakes(state, doc):
         state['stakes_seen'] = sorted(ids)
         state['stakes_teams'] = state.get('teams_sig')
         jobs, meta = stakes_jobs(state, doc)
-        got = run_node(NODE_SIM, {'engine': True, 'now': iso(NOW), 'jobs': jobs}, timeout=300) if jobs else []
+        got = run_node_jobs(NODE_SIM, {'engine': True, 'now': iso(NOW)}, jobs, max(1, -(-len(jobs) // min(4, os.cpu_count() or 1))), timeout=300) if jobs else []   # v69: side by side
         if got is not None:
             cache = {}
             for (lk, mids), res in zip(meta, got):
@@ -4218,7 +4247,7 @@ def fit_calib(picks):
     keep it modest until the evidence is strong. Published as a, b with log-odds(landed) = a + b * log-odds(stated)."""
     x0 = math.log(3)   # log-odds of 75%
     xs, ys = [], []
-    for p in picks:
+    for p in sorted(picks, key=lambda p: str(p[2] or '')):   # oldest first, for the check below
         raw = p[18] if len(p) > 18 and p[18] is not None else p[9]
         if raw is None:
             continue
@@ -4229,6 +4258,28 @@ def fit_calib(picks):
     out = {'on': False, 'n': n, 'need': CAL_MIN}
     if n < CAL_MIN:
         return out
+    # v69: like every other correction, it has to earn its place on picks it never saw: fitted on the older two
+    # thirds, measured on the newest third, and switched on only if it reads those better than the stated chances.
+    # On the live record of November 2026 it read them worse on every split tried (0.4636 -> 0.4645 a pick on the
+    # newest half), so it had been pulling good chances down
+    k = (2 * n) // 3
+    c_, b_ = _calib_cb(xs[:k], ys[:k], x0)
+    ll = lambda c, b: -sum(math.log(max(1e-12, (lambda q: q if y else 1 - q)(1 / (1 + math.exp(-(x0 + c + b * (x - x0))))))) for x, y in zip(xs[k:], ys[k:])) / max(1, n - k)
+    l0, l1 = ll(0.0, 1.0), ll(c_, b_)
+    out['check'] = [round(l0, 5), round(l1, 5), n - k]
+    if not l1 < l0 - CAL_MIN_GAIN:
+        return out
+    c, b = _calib_cb(xs, ys, x0)
+    c, b = max(-0.6, min(0.6, c)), max(0.7, min(1.3, b))
+    out.update({'on': True, 'a': round(x0 + c - b * x0, 4), 'b': round(b, 4), 'shift': round(c, 4)})
+    return out
+
+
+CAL_MIN_GAIN = 1e-4   # log loss a pick on the held-out newest third
+
+
+def _calib_cb(xs, ys, x0):
+    """The shift c at 75% and the stretch b, held towards no change by the priors."""
     c, b, sc, sb = 0.0, 1.0, CAL_PRIOR ** 2, (CAL_PRIOR * 0.8) ** 2
     for _ in range(40):
         gc, gb, hcc, hcb, hbb = -c / sc, -(b - 1) / sb, -1 / sc, 0.0, -1 / sb
@@ -4248,9 +4299,7 @@ def fit_calib(picks):
         c, b = c - dc, b - db
         if abs(dc) + abs(db) < 1e-9:
             break
-    c, b = max(-0.6, min(0.6, c)), max(0.7, min(1.3, b))
-    out.update({'on': True, 'a': round(x0 + c - b * x0, 4), 'b': round(b, 4), 'shift': round(c, 4)})
-    return out
+    return c, b
 
 
 # ----------------------------------------------------------------------------------------------
@@ -6783,12 +6832,27 @@ def dc_grid_np(np, lh, la, rho=None, n=11):
 
 
 def dc_probs_np(np, lh, la, rho=None, n=11):
-    """dc_probs for many games at once (arrays of expected goals; rho a number or an array). (H, D, A, over 2.5)."""
-    G = dc_grid_np(np, lh, la, rho, n)
-    _, _, df, sm = _GRID_NP[n]
-    H = (G * (df > 0)).sum(axis=(1, 2))
-    D = (G * (df == 0)).sum(axis=(1, 2))
-    U = (G * (sm < 3)).sum(axis=(1, 2))
+    """dc_probs for many games at once (arrays of expected goals; rho a number or an array). (H, D, A, over 2.5).
+    v69: from the two goal distributions directly (home wins as each home score times the away chances below it, the
+    draw correction on its four cells added on), never building the games x 11 x 11 grid: the same numbers to 1e-15,
+    about ten times faster, and it is the inner loop of every tuning stage."""
+    rho = RHO_DC if rho is None else rho
+    if n not in _GRID_NP:
+        dc_grid_np(np, [1.0], [1.0], rho, n)
+    k, lgf, _, _ = _GRID_NP[n]
+    lh, la = np.atleast_1d(np.asarray(lh, dtype=float)), np.atleast_1d(np.asarray(la, dtype=float))
+    ph = np.exp(-lh[:, None] + np.log(lh)[:, None] * k - lgf)
+    pa = np.exp(-la[:, None] + np.log(la)[:, None] * k - lgf)
+    c00 = ph[:, 0] * pa[:, 0] * (-lh * la * rho)
+    c01 = ph[:, 0] * pa[:, 1] * (lh * rho)
+    c10 = ph[:, 1] * pa[:, 0] * (la * rho)
+    c11 = ph[:, 1] * pa[:, 1] * (-rho)
+    S = ph.sum(1) * pa.sum(1) + c00 + c01 + c10 + c11
+    ca = np.cumsum(pa, axis=1)
+    H = (ph[:, 1:] * ca[:, :-1]).sum(1) + c10
+    D = (ph * pa).sum(1) + c00 + c11
+    U = (ph[:, 0] * (pa[:, 0] + pa[:, 1] + pa[:, 2]) + ph[:, 1] * (pa[:, 0] + pa[:, 1]) + ph[:, 2] * pa[:, 0]) + c00 + c01 + c10 + c11
+    H, D, U = H / S, D / S, U / S
     return H, D, 1 - H - D, 1 - U
 
 
@@ -7608,13 +7672,35 @@ def past_stakes_jobs(lk, sf, n_sims=FX_SIMS):
     return jobs, keys
 
 
+def run_node_jobs(script, payload, jobs, chunk=150, timeout=600):
+    """v69: a node script over a list of independent jobs, split into chunks run side by side on the runner's cores
+    (each job keeps its own seed, so the results are exactly those of one run, in order). None if any chunk fails."""
+    parts = [jobs[i:i + chunk] for i in range(0, len(jobs), chunk)]
+    if not parts:
+        return []
+    workers = max(1, min(4, os.cpu_count() or 1, len(parts)))
+    run = lambda part: run_node(script, dict(payload, jobs=part), timeout=timeout)
+    if workers == 1:
+        got = [run(p_) for p_ in parts]
+    else:
+        from concurrent.futures import ThreadPoolExecutor   # the work is in the node processes: threads only wait
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            got = list(ex.map(run, parts))
+    if any(g is None for g in got):
+        return None
+    return [x for g in got for x in g]
+
+
 def run_past_stakes(jobs, keys):
     """The largest swing (any zone) for each side of each measured game: (lk, date, home, away) -> (home, away)."""
     out = {}
-    for i in range(0, len(jobs), 150):   # in batches, to keep each node run's input small
-        got = run_node(NODE_SIM, {'engine': False, 'jobs': jobs[i:i + 150]}, timeout=600)
-        if got is None:
-            return None
+    cores = max(1, min(4, os.cpu_count() or 1))
+    chunk = max(20, min(150, -(-len(jobs) // (2 * cores))))   # even batches, two per core
+    got_all = run_node_jobs(NODE_SIM, {'engine': False}, jobs, chunk)   # v69: batches side by side
+    if got_all is None:
+        return None
+    for i in range(0, len(jobs), 150):
+        got = got_all[i:i + 150]
         for ks, res in zip(keys[i:i + 150], got):
             if res:
                 for k, sides in zip(ks, res):
@@ -8068,13 +8154,33 @@ def fit_elo(tr_rows, ck_rows, lam_ck, w):
             lh, la = elo_mix(r[0], r[1], el, v)
             tot += lh - r[2] * math.log(lh) + la - r[3] * math.log(la)
         return tot
+    np = numpy_lib()
+
+    def ll_grid(rows, gi, combos):
+        # v69: every (slope, shift, share) of the grid at once on arrays, the same sums as ll_goals a row at a time
+        dr = np.array([r[10][gi] for r in rows]) / 400
+        hm, am = np.array([r[11][0] for r in rows]), np.array([r[11][1] for r in rows])
+        l0h, l0a = np.log([r[0] for r in rows]), np.log([r[1] for r in rows])
+        hg, ag = np.array([r[2] for r in rows], dtype=float), np.array([r[3] for r in rows], dtype=float)
+        out = []
+        for b, c, v in combos:
+            leh, lea = np.log(hm) + b * dr + c, np.log(am) - b * dr + c
+            lh, la = v * l0h + (1 - v) * leh, v * l0a + (1 - v) * lea
+            out.append(float((np.exp(lh) - hg * lh + np.exp(la) - ag * la).sum()))
+        return out
     best = None
     for gi in range(len(ELO_GRID)):
         rows = [r for r in tr_rows if len(r) > 11 and r[10][gi] is not None]
         if len(rows) < 2000:
             continue
-        bc = min(((ll_goals(rows, gi, b / 100, c / 100, 0.0), b / 100, c / 100) for b in range(30, 101, 5) for c in range(-8, 9, 4)))
-        bv = min(((ll_goals(rows, gi, bc[1], bc[2], v / 10), v / 10) for v in range(3, 10)))
+        g1 = [(b / 100, c / 100, 0.0) for b in range(30, 101, 5) for c in range(-8, 9, 4)]
+        if np:
+            bc = min((x, b, c) for x, (b, c, _) in zip(ll_grid(rows, gi, g1), g1))
+            g2 = [(bc[1], bc[2], v / 10) for v in range(3, 10)]
+            bv = min((x, v) for x, (_, _, v) in zip(ll_grid(rows, gi, g2), g2))
+        else:
+            bc = min(((ll_goals(rows, gi, b, c, 0.0), b, c) for b, c, _ in g1))
+            bv = min(((ll_goals(rows, gi, bc[1], bc[2], v / 10), v / 10) for v in range(3, 10)))
         if best is None or bv[0] < best[0]:
             best = (bv[0], gi, bc[1], bc[2], bv[1])
     if not best:
@@ -8166,13 +8272,29 @@ def fit_kalman(ti, ci, P, tr_rows, ck_rows, lam_ck, w, mod_tr, mod_ck, P_x=None)
     share it gets next to the model by the error on them. mod_tr / mod_ck: the model's numbers so far (after Elo)."""
     t0 = time.time()
     keys_t = [r[9] for r in tr_rows]
+    pool = _pool()   # v69: the leagues side by side, as the settings search does (it ran one league at a time)
 
     def preds(idx, K):
         out = {}
+        args = []
         for i in idx:
             Q = P_x if P_x and _TUNE_LKS[i] in XG_SLUGS else P
-            out.update(_kal_job(i, K, Q.get('sw') or 0.0, Q.get('nt', NEW_TEAM_PRIOR[1]), Q.get('sx') or 0.0))
+            args.append((i, K, Q.get('sw') or 0.0, Q.get('nt', NEW_TEAM_PRIOR[1]), Q.get('sx') or 0.0))
+        for r in _pmap(pool, _kal_star, args):
+            out.update(r)
         return out
+    try:
+        return _fit_kalman(preds, keys_t, ti, ci, tr_rows, ck_rows, lam_ck, w, mod_tr, mod_ck, t0)
+    finally:
+        if pool:
+            pool.shutdown()
+
+
+def _kal_star(arg):
+    return _kal_job(*arg)
+
+
+def _fit_kalman(preds, keys_t, ti, ci, tr_rows, ck_rows, lam_ck, w, mod_tr, mod_ck, t0):
 
     def score(K):
         kp = preds(ti, K)
@@ -8835,11 +8957,16 @@ const out = [];
 for (const m of inp.matches) {
   let a = null; try { a = E.analyse(m, Date.parse(m.ko) - 3600e3); } catch (err) { a = null; }
   if (!a) continue;
-  out.push([m.id, a.sels.filter((s) => !s.x).map((s) => [s.key, +s.p.toFixed(4)])]);
+  // v69: and the same game with its prices taken away, read from the ratings alone (for the unpriced correction)
+  let u = null; try { u = E.analyse(Object.assign({}, m, { mkt: null }), Date.parse(m.ko) - 3600e3); } catch (err) { u = null; }
+  out.push([m.id, a.sels.filter((s) => !s.x).map((s) => [s.key, +s.p.toFixed(4)]),
+    u && u.src === 'model' ? u.sels.filter((s) => !s.x).map((s) => [s.key, +s.p.toFixed(4)]) : null]);
 }
 process.stdout.write(JSON.stringify(out));
 """
 MCAL_MIN_GAIN = 2e-5     # log loss per selection on the unseen season
+MCAL_FLIP = {'BTTS_N', 'U25', 'U35'}   # v69: the "no" side of a pair, corrected as one minus its "yes" side
+UNPRICED_CUT = 0.03      # the engine's flat cut for games read from the ratings alone (HAIR), what the v69 correction must beat
 
 
 def mcal_group(k):
@@ -8881,7 +9008,7 @@ def logit_ll(xs, a=0.0, b=1.0):
 
 def fit_mcal(state):
     t0 = time.time()
-    data, seg = {}, {}
+    data, seg, data_u = {}, {}, {}
     labels = []
     for back, tag in ((2, 'fit'), (1, 'check')):
         code, prev = season_code(NOW, back), season_code(NOW, back + 1)
@@ -8899,14 +9026,19 @@ def fit_mcal(state):
         if not out:
             return None
         lk_of = {m['id']: m['lk'] for m in ms}
-        for mid, sels in out:
+        for mid, sels, *more in out:
             hs, as_ = res[mid]
+            for k, p in (more[0] if more and more[0] else []):   # v69: the ratings alone
+                w = settle(k, hs, as_)
+                if w is not None:
+                    data_u.setdefault(mcal_group(k), {}).setdefault(tag, []).append((min(0.995, max(0.005, p)), 1 if w else 0, k in MCAL_FLIP))
             for k, p in sels:
                 w = settle(k, hs, as_)
                 if w is None:
                     continue
                 q = min(0.995, max(0.005, p))
-                data.setdefault(mcal_group(k), {}).setdefault(tag, []).append((math.log(q / (1 - q)), 1 if w else 0))
+                f = k in MCAL_FLIP   # v69: the "no" side of a pair is fitted as its "yes" side, so the pair keeps adding up to 100%
+                data.setdefault(mcal_group(k), {}).setdefault(tag, []).append((math.log((1 - q) / q) if f else math.log(q / (1 - q)), (0 if w else 1) if f else (1 if w else 0)))
                 seg.setdefault(tag, []).append((mcal_group(k), k, lc_group(lk_of.get(mid)), q, 1 if w else 0))
         labels.append(season_name(code))
     groups = {}
@@ -8931,8 +9063,9 @@ def fit_mcal(state):
             continue
         base = groups[g]
         a0, b0 = (base['a'], base['b']) if base['on'] else (0.0, 1.0)
-        xs = [(math.log(r[3] / (1 - r[3])), r[4]) for r in rows]
-        xc = [(math.log(r[3] / (1 - r[3])), r[4]) for r in ck]
+        fl = lambda r: (math.log((1 - r[3]) / r[3]), 1 - r[4]) if r[1] in MCAL_FLIP else (math.log(r[3] / (1 - r[3])), r[4])
+        xs = [fl(r) for r in rows]
+        xc = [fl(r) for r in ck]
         a, b = fit_logit(xs, a0, b0, 0.05, 0.02)
         l0, l1 = logit_ll(xc, a0, b0), logit_ll(xc, a, b)
         on = l1 < l0 - MCAL_MIN_GAIN
@@ -8942,7 +9075,30 @@ def fit_mcal(state):
         groups[f'{g}|{tier}'] = {'on': on, 'a': round(a, 4), 'b': round(b, 4), 'n': len(rows) + len(ck), 'll': [round(l0, 5), round(l1, 5)]}
     log('market correction by kind of league: ' + ', '.join(f"{g} {'on' if v['on'] else 'off'} ({v['ll'][0]:.4f} -> {v['ll'][1]:.4f})"
                                                            for g, v in groups.items() if '|' in g))
-    state['autopsy'] = autopsy(seg.get('check') or [], groups, labels[1], state)
+    # v69: games without prices, read from the ratings alone. The engine took a flat 3 points off each of their chances;
+    # each kind of market now gets its own correction where it beats that cut on the unseen season
+    for g, d in sorted(data_u.items()):
+        fit_rows, ck = d.get('fit') or [], d.get('check') or []
+        if len(fit_rows) < 2000 or len(ck) < 1000:
+            continue
+        lg = lambda q: math.log(q / (1 - q))
+        base = groups.get(g) if (groups.get(g) or {}).get('on') else None
+        corr = lambda q: 1 / (1 + math.exp(-(base['a'] + base['b'] * lg(q)))) if base else q
+        # what the engine did: its correction (each pair's "no" side as one minus its "yes" side), then 3 points off
+        cut = lambda q, f: min(0.995, max(0.005, ((1 - corr(1 - q)) if f else corr(q)) - UNPRICED_CUT))
+        fx = lambda q, y, f: (lg(1 - q), 1 - y) if f else (lg(q), y)
+        xs, xc = [fx(*r) for r in fit_rows], [fx(*r) for r in ck]
+        l_cut = -sum(math.log(cut(q, f) if y else 1 - cut(q, f)) for q, y, f in ck) / len(ck)
+        a, b = fit_logit(xs)
+        l1 = logit_ll(xc, a, b)
+        on = l1 < l_cut - MCAL_MIN_GAIN
+        if on:
+            a, b = fit_logit(xs + xc)
+        a, b = max(-0.4, min(0.4, a)), max(0.8, min(1.25, b))
+        groups[f'U|{g}'] = {'on': on, 'a': round(a, 4), 'b': round(b, 4), 'n': len(fit_rows) + len(ck), 'll': [round(l_cut, 5), round(l1, 5)]}
+    log('correction for games without prices: ' + ', '.join(f"{g[2:]} {'on' if v['on'] else 'off'} ({v['ll'][0]:.4f} -> {v['ll'][1]:.4f})"
+                                                            for g, v in groups.items() if g.startswith('U|')))
+    state['autopsy'] = autopsy(seg.get('check') or [], {k: v for k, v in groups.items() if not k.startswith('U|')}, labels[1], state)
     return {'at': iso(NOW), 'fit': labels[0], 'check': labels[1], 'groups': groups}
 
 

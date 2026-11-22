@@ -485,6 +485,77 @@ The closing price is still well ahead of any results-only model, which is why pr
 Code: `pulse_run`, `pulse_carry`, `pulse_blend`, `PULSE`, `PULSE_BLEND`, `PYRAMIDS` in `update.py`.
 `PULSE_ON = False` gives v62's ratings exactly.
 
+## v69: 51 upgrades to what was already there
+
+No new sections: everything below makes an existing part sharper, quicker or easier to use. Each one was measured or checked in a browser before it went in, and four ideas that didn't pay off were tested and left out (at the end).
+
+### The engine (on your phone and in every replay)
+
+1. **Market fit by Levenberg-Marquardt** instead of a Nelder-Mead simplex: a damped Gauss-Newton step on the log expected goals, bounded to 0.02-7 goals (past that the 11-goal grid's cut-off makes false fits), with the simplex kept as a fallback. On 459 real markets it never found a worse fit, chances moved by at most 0.03 points, and a fit takes 2.8 µs instead of 23 (8x).
+2. **Uncertainty corners in one pass**: the four extra scorelines a game needs for its spread are summarised directly, without building four grids.
+3. **Extra markets in one pass**: handicaps, same-game combos and draw-no-bet summed in a single walk of the grid instead of twenty.
+4. **The grid in one buffer**, its sum taken while it is built, and the over/under lines read off the goal totals.
+5. Together: the live board of 648 games is analysed in 17-28 ms instead of 72-78 ms (about 3x), and the speed work changed no tier and no top pick.
+6. **The page is ready sooner on a slow phone** (CPU slowed 4x, three loads each): 1.99 s on average to 1.73 s.
+7. **The weekly replay is quicker** even though it now reads every game twice: corrections 7.9 to 6.1 s, the replay itself 7.6 to 5.2 s.
+
+### Learning: corrections that have to earn their place
+
+8. **Games on the ratings alone get a fitted correction** instead of a flat 3-point cut. The cut took 3 points off every market, a 10% long shot as much as a 90% favourite, so a game's three results added up to 91%, and on four replayed seasons it read results worse than no cut at all (log loss 0.6224 a market against 0.6198; a fitted correction 0.6181). The weekly replay now also reads each game with its prices taken away and fits one correction per kind of market, kept only where it beats the cut on the season it never saw. On 2025/26 all six switched on: both teams to score 0.6912 to 0.6877, draw 0.5793 to 0.5771, double chance 0.6094 to 0.6077, home/away 0.6105 to 0.6077, goals lines 0.6375 to 0.6343, team goals 0.6053 to 0.6017. On the live record such picks had been landing well above what was stated (Highly possible: said 81%, landed 94% of 52).
+9. **Pairs add up to 100%**: the "no" side of a pair (under, both teams to score: no) is corrected as one minus its "yes" side. A correction shared by the pair used to push both the same way (over and under could reach 101%).
+10. **That unlocked the both-teams-to-score correction for priced games**, which pooling the pair had cancelled: 0.6856 to 0.6845 on the unseen season.
+11. **The self-tuning has to beat the stated chances on picks it never saw**: fitted on the older two thirds of the last 90 days' graded top picks, switched on only if it reads the newest third better. On the live record of November 2026 it read the newest picks worse on every split tried (0.4636 to 0.4645 a pick on the newest half), so it had been pulling good chances down; it now stands aside, and the Lab says why in plain words.
+12. **More caution on goal picks when a price has no over/under line** (2 points off their cautious chance only; the stated chance is unchanged). Replayed with the line taken away, the top-tier goal picks landed 87.5% (2024/25) and 89.0% (2025/26) with a third more of them let in; with the caution 89.4% and 90.5%, about as many as with the line. On the live record, top-tier picks from prices alone had landed 79% of 92 against a stated 87%.
+13. **The coupon uses the same chances as everywhere else**: each leg's corrected chance (for bankable picks the banker's checked chance), not the raw grid number, so a slip from the dial shows the same chance in the coupon; saved bets and Kelly stakes use them too.
+14. **The assistant's "bankers today"** answers with the Bankers page's own list and each pick's record from last season.
+
+### Learning: quicker
+
+15. **Match chances for the tuning straight from the two goal distributions**, without building a grid per game: the same numbers to 1e-15, 3.8x faster (25.3 to 6.6 ms per 20,000 games). It is the inner loop of every tuning stage.
+16. **Weekly rating fits with less overhead** (warm starts from arrays, sum/count for averages): identical predictions, 0.529 to 0.466 s per tuning evaluation.
+17. **Margin removal by Newton's method** instead of 50 halvings: the same chances to 1e-13, 3.7x faster; a season of 19 leagues' results files parses in 0.81 s instead of 1.28. It runs on every price of every update.
+18. **The Elo mix search on arrays**: the same answer in 0.43 s instead of 3.75.
+19. **The game-by-game ratings search runs the leagues side by side** on the tuning's worker processes (it ran one league at a time), with its filter loop tidied (the same numbers to 1e-15).
+20. **Past seasons' stakes simulations side by side** in parallel node processes, each job keeping its own seed: exactly the same results, 9.5 to 5.2 s on two cores (the runner has four).
+21. **The live stakes simulations (10,000 seasons a league)** are split across cores the same way.
+22. Together: **the monthly tuning runs in 85 s instead of 132** (offline, two cores, the same 160 settings tried), and every value it fitted came out identical.
+
+### Easier to use
+
+23. **Countdowns to kick-off** ("in 45 min", "in 2 h 10 min") for games in the next three hours: match cards, next kick-offs, the spotlight, bankers, value cards, slip legs and the coupon, kept current every 30 seconds.
+24. **Day chips say "12 to come"** on a day already under way (the competition chips count every game, so the numbers looked inconsistent).
+25. **The live spotlight names the sides**: "Now: ATA 0.4% · draw 3% · INT 97%" instead of three bare numbers.
+26. **Started games: "Kicked off 35 min ago"** where there is no live feed, and their prices "as they stood at kick-off" instead of a false "refresh due" warning.
+27. **"No price yet"** replaces the "Model only" badge, with a plain explanation, and the match sheet explains the replay correction in words.
+28. **Slip buttons know your coupon**: once every leg is in it, "Add to coupon" becomes "In your coupon · Open" (no doubled legs), on smart slips and the dial.
+29. **Undo and View in the toasts**: removing a leg or clearing the coupon can be undone for five seconds; adding shows how many legs are in it, with a View button.
+30. **Started picks on the coupon are named**, with one tap to remove them.
+31. **Fixed: the coupon's cross could remove the wrong leg** (and a price edit land on the wrong one) when a game had left the board; legs are now named by game and pick.
+32. **Amounts as people write them**: 50,000 rather than 50000.00, and the bankroll box takes 50,000, 50 000, 50k or 1.5m (a comma used to be read as a decimal point, so 50,000 became 50).
+33. **"Loses about 1 time in 5"** next to the coupon's chance.
+34. **A copied coupon carries Statpad's chance** for sharing.
+35. **Tapping a price or the bankroll selects the number**, so typing replaces it.
+36. **The coupon in kick-off order**, the next game first.
+37. **An empty coupon shows where to fill it**: Bankers, Smart slips, Matches.
+38. **Search forgives typos**: "arsnal", "Roasrio Central" and "man untd" find the team, with a note saying they are close spellings.
+39. **The search box forgives typos** the same way.
+40. **A search with nothing on this day offers the games it found elsewhere** ("Show Instituto v Talleres, Sat 28").
+41. **A day with no bankers points at the next day that has some**, as a button.
+42. **The dial announces each level** to screen readers ("80% sure: 2 legs, total odds 1.20").
+43. **Bankers and slip legs open from the keyboard** (Enter or Space), with a visible focus ring.
+44. **Bigger tap targets** for the + buttons (44 px, the same look).
+45. **The day strip scrolls to the chosen day** when it is set from elsewhere.
+46. **The Lab's self-tuning card says plainly why it stands aside** (see 11).
+47. **The Lab's levels say "1 in 6 lost"** next to how many landed.
+48. **Plainer introductions** on the Value board and Bankers.
+49. **"est" explained where it appears** on bankers and dial slips.
+50. **The assistant explains "est" and "No price yet"** when asked.
+51. **Value bets turn the quarter-Kelly stake into money**: "0.2% of bank (100 of 50,000)", from the bankroll you set on the coupon.
+
+The engine's version changed, so the first update after uploading replays the season at once and the new corrections and the bankers' reading are ready within that run.
+
+**Tested and left out**, because they didn't help on seasons they never saw: capping a game's goals in the ratings (worse at every cap from 6 down to 3); a bigger weight on the over/under price in the market fit (0.61013 to 0.61012, nothing); letting the goals-only settings search run to 110 tries instead of 55 (the same best score); walking only reachable cells in the slip builder (4% quicker, not worth the risk).
+
 ## Bankers and sure slips (v68)
 
 Slip Studio opens on **Bankers**: each game's surest pick, and a dial that builds the slip paying the most while staying as sure as you set it. Every number on it is checked against a whole replayed season.
