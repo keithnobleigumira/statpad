@@ -484,6 +484,34 @@ The closing price is still well ahead of any results-only model, which is why pr
 Code: `pulse_run`, `pulse_carry`, `pulse_blend`, `PULSE`, `PULSE_BLEND`, `PYRAMIDS` in `update.py`.
 `PULSE_ON = False` gives v62's ratings exactly.
 
+## Getting around, teams you follow and a quieter page (v66)
+
+An audit of every screen at phone size (390 × 844, dark and light) and desktop size (1366 × 768), with the processor slowed four times (a mid-range Android) on live data, measuring each tab switch, each match opened and what the page does while nobody touches it.
+
+| | v65 | v66 |
+|---|---|---|
+| Main-thread work per second while idle (Overview / Matches / Value / Lab) | 195 / 206 / 144 / 94 ms | 43 / 58 / 17 / 29 ms |
+| Tap on the tab bar to the next frame (Event Timing, the measure behind INP) | 72–264 ms | 32–48 ms |
+| Opening a match, first time / again | 304 / 96 ms | 80 / 48 ms |
+| Opening a match's Model tab | 160–360 ms | 40–56 ms |
+| Lighthouse performance (mobile), two runs | 67, 69 | 76, 77 |
+| Total blocking time (Lighthouse) | 240–460 ms | 130–190 ms |
+| Back to a tab you scrolled down | at the top | where you left it |
+| Phone's back button with a match open | leaves Statpad | closes the match |
+
+What changed:
+
+- **The hidden orb.** The assistant's orb kept three animations running while it was invisible, and one of them (a breathing, clipped circle around a spinning sheen) made the phone repaint it on every frame: about 14% of a slow phone's processor on every page, all the time. Nothing on the orb moves now while it's hidden or its panel is open, and its breathing moved to the glow behind it, which costs next to nothing.
+- **The back button.** Back closes whatever is on top (a match or team page, More, the search, the bet form, the assistant), then goes from any section to the Overview, and only then leaves the site, as phone apps do.
+- **Each section keeps its place.** Leaving a section remembers how far down it was and how many games it showed; coming back (by the tab bar or by back) puts you there. Tapping the tab you're on scrolls to its top.
+- **Taps answered at once.** The tab bar lights up on the frame after the tap and the section is drawn on the next one. A match page shows its header and tabs at once and fills in its cards a frame later. The multiverse is built only once its tab is showing (it used to be simulated and set up for a Model tab nobody had opened), and WebGL is no longer started just to write its card.
+- **Links.** Links ending in #slips, #coupon and #saved used to open halfway down the page (three boxes on the page had the same names); they open at the top now. A match has its own link (`#m=` and the match's id): the new share button at the top of a match page sends it.
+- **Teams you follow.** A star beside each team in a match's Teams tab, and Follow on team pages. Followed teams' next or live games sit at the top of the Overview under Your teams; their names carry a small star in the match list; Matches gets a Following filter. Kept on the phone only.
+- **Form in the Teams tab.** Both sides' last five results this season with scores, each side's record at this venue, and their meetings this season, from the same team files as the team pages. The Teams tab used to be a single line for most games ("No line-ups or absences reported").
+- **Smart slips with nothing to show** (often slips B and C at 50%+ legs) share one short card that says why, with buttons to allow shorter legs or try the next day, instead of two full cards of dashes and greyed-out buttons.
+- **How it works** (about 30 phone screens) has a list of contents that jumps to any of its 38 sections, a Contents button that follows you down, and sections that are drawn only near the screen, sized ahead from their length so the page's length is right.
+- **Smaller things.** Team names in Next kick-offs get room on phones (they were cut to about 11 letters); the Value board and Smart slips introductions are in plain words, the formulas left to How it works; the Lab's long lists are drawn only near the screen.
+
 ## Speed, accessibility and a research round (v65)
 
 **The page on a budget phone.** Measured with the processor slowed six times (about a budget Android) on a 1.6 Mbps line with 150 ms delay, live data (606 matches), and with Lighthouse's mobile audit:

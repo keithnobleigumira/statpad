@@ -1373,7 +1373,14 @@ body:not(.va-conv) .va-nudge.left { left: 14px; right: auto; }
 .va-orb.drag { transition: none; transform: scale(1.08); }
 .va-o-glow { position: absolute; inset: -14px; border-radius: 50%; background: radial-gradient(circle, rgba(94, 240, 255, .45), rgba(124, 92, 255, .25) 45%, transparent 70%); filter: blur(6px); opacity: .75; transform: scale(calc(.9 + var(--lvl) * .35)); transition: transform .14s; }
 .va-o-core { position: absolute; inset: 5px; border-radius: 50%; overflow: hidden; box-shadow: 0 10px 26px -6px rgba(60, 80, 255, .65), inset 0 -6px 14px rgba(20, 8, 70, .55), inset 0 4px 10px rgba(255, 255, 255, .35);
-  background: radial-gradient(circle at 32% 28%, #ffffff 0 6%, #9ff7ff 14%, #5ec8ff 30%, #6f6dff 56%, #5a2fd6 78%, #24104f 100%); animation: va-breathe 4.5s ease-in-out infinite; }
+  background: radial-gradient(circle at 32% 28%, #ffffff 0 6%, #9ff7ff 14%, #5ec8ff 30%, #6f6dff 56%, #5a2fd6 78%, #24104f 100%); }
+/* v66: the breathing moved from the clipped core (a scaling clip around a spinning sheen made the phone repaint the
+   orb on every frame, about 14% of a slow phone's processor) to the glow behind it, and nothing on the orb moves
+   while it is hidden or the panel is open */
+.va-o-glow { animation: va-glow 4.5s ease-in-out infinite; }
+@keyframes va-glow { 50% { transform: scale(calc(.98 + var(--lvl) * .35)); } }
+.va-orb[data-st="speak"] .va-o-glow, .va-orb[data-st="listen"] .va-o-glow { animation: none; }
+.va-orb:not(.live) span, .va-orb:not(.live) span::after, .va-orb:not(.live)::before, body.va-on .va-orb span, body.va-on .va-orb span::after, body.va-on .va-orb::before, .va-orb.hide span, .va-orb.hide span::after { animation: none !important; }
 .va-o-core::after { content: ''; position: absolute; inset: -40%; background: conic-gradient(from 0deg, transparent 0 55%, rgba(255, 255, 255, .5) 62%, transparent 70%); animation: va-spin 7s linear infinite; mix-blend-mode: overlay; }
 .va-o-ring { position: absolute; inset: 0; border-radius: 50%; padding: 2px; background: conic-gradient(from 0deg, rgba(94, 240, 255, 0), #5ef0ff 30%, #8a5cff 60%, rgba(138, 92, 255, 0) 75%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: va-spin 6s linear infinite; opacity: .8; }
 .va-o-wave { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 3px; opacity: 0; transition: opacity .2s; }
@@ -1483,7 +1490,7 @@ body.va-on .va-nudge { display: none; }
 .va.peek .va-a .va-items, .va.peek .va-a .va-tail, .va.peek .va-a > .va-mc, .va.peek .va-a > .va-list, .va.peek .va-a > .va-slip, .va.peek .va-a > .va-kpis, .va.peek .va-a > .va-tbl, .va.peek .va-acts { display: none; }
 .va.peek .va-lead { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
 .va.peek .va-q { display: none; }
-@media (prefers-reduced-motion: reduce) { .va-o-core, .va-o-core::after, .va-o-ring, .va-orb::before, .va-mic.on, .va-a, .va-a.wait i, .va-mini, .va-live { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .va-o-core, .va-o-core::after, .va-o-ring, .va-o-glow, .va-orb::before, .va-mic.on, .va-a, .va-a.wait i, .va-mini, .va-live { animation: none !important; } }
 /* the full-screen shock map: no box around the globe, it floats in space */
 #sheet.shk-mode { top: 0; max-height: none; height: 100%; border-radius: 0; border: 0; color: #eaf4ff;
   background: var(--space, none) 0 0 / 320px 320px repeat, radial-gradient(90% 60% at 50% 34%, #0d2142 0%, #061026 38%, #02050d 72%, #010208 100%); box-shadow: none; }
@@ -1822,7 +1829,78 @@ h2 { font: 760 clamp(24px, calc(3.4vw / var(--z, 1)), 32px)/1.05 var(--f-display
 .nk-p { display: grid; gap: 7px; }
 .nk-pl { display: flex; justify-content: space-between; font: 600 12px/1 var(--f-body); font-variant-numeric: tabular-nums; }
 .nk-pl i { font-style: normal; } .nk-pl i:nth-child(1) { color: var(--h); } .nk-pl i:nth-child(2) { color: var(--ink-3); } .nk-pl i:nth-child(3) { color: var(--a); }
-@media (max-width: 380px) { .nk { grid-template-columns: 60px minmax(0, 1fr) 92px; gap: 10px; } }
+/* v66: on phones the team names get the room (they were cut to about 11 letters at 390 px wide) */
+@media (max-width: 520px) { .nk { grid-template-columns: 58px minmax(0, 1fr) 86px; gap: 10px; padding: 11px 14px; } .nk-tm > span { gap: 7px; } .nk-pl { font-size: 11.5px; } }
+@media (max-width: 380px) { .nk { grid-template-columns: 54px minmax(0, 1fr) 78px; gap: 8px; } .nk-t b { font-size: 12.5px; } .nk-tm b { font-size: 13.5px; } }
+/* ---------- v66 ---------- */
+/* teams you follow */
+.hero .yourt { margin: 12px 0 0; padding-bottom: 6px; }
+.yt-l { display: grid; margin: 0 -16px; }
+.yt-r { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 11px 16px; border: 0; border-top: 1px solid var(--rule-2); background: none; color: var(--ink); text-align: left; font: inherit; }
+.yt-r:first-child { border-top: 0; }
+button.yt-r { cursor: pointer; } button.yt-r:hover { background: color-mix(in srgb, var(--sunk) 60%, transparent); }
+.yt-r.none { grid-template-columns: minmax(0, 1fr) auto; }
+.yt-r .cr { width: 26px; height: 26px; }
+.yt-tm { display: grid; gap: 3px; min-width: 0; }
+.yt-tm b { font: 650 14.5px/1.2 var(--f-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yt-tm small { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yt-sc { display: grid; justify-items: end; gap: 3px; }
+.yt-sc b { font: 700 14px/1 var(--f-body); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.yt-sc small { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+.yt-sc.live b, .yt-sc.live small { color: var(--red); }
+.fol-s { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--ink-3); cursor: pointer; padding: 0; }
+.fol-s svg, .fol-b svg, .lgc .fav-c svg { width: 17px; height: 17px; }
+.fol-s[aria-pressed="true"], .fol-b[aria-pressed="true"] svg, .lgc .fav-c svg { color: var(--yellow); }
+svg.ic-star { fill: none; }   /* the star's inside is filled only when on */
+.fol-s[aria-pressed="true"] svg, .fol-b[aria-pressed="true"] svg, .lgc .fav-c svg { fill: currentColor; }
+.btn.fol-b { display: inline-flex; align-items: center; gap: 6px; }
+.tm-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.lgc button.fav-c { padding-left: 10px; }
+.lgc button.fav-c[aria-pressed="true"] svg { color: inherit; }
+.fx .nm.fol::after { content: '★'; margin-left: 4px; font-size: .78em; color: var(--yellow); }
+/* form and meetings in the Teams tab */
+.fm-g { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.fm-n { display: flex; align-items: center; gap: 6px; min-width: 0; margin-bottom: 6px; }
+.fm-n b { font: 680 14px/1.2 var(--f-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.fm-n .cr { width: 18px; height: 18px; flex: none; }
+.fm-n .fol-s { margin-left: auto; width: 28px; height: 28px; }
+.fm-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.fm-l li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 7px; align-items: center; font-size: 13px; }
+.fm-l .rs { width: 22px; height: 22px; border-radius: 6px; font-size: 10.5px; }
+.fm-o { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink-2); }
+.fm-s { font-weight: 650; font-variant-numeric: tabular-nums; }
+.fm-sum { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-3); } .fm-sum + .fm-sum { margin-top: 3px; }
+.fm-sum b { color: var(--ink); font-weight: 650; }
+.fm-h2h { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule-2); display: grid; gap: 6px; }
+.fm-h2h h5 { margin: 0 0 2px; font: 650 12.5px/1.2 var(--f-body); color: var(--ink-2); }
+.fm-h2h div { display: flex; gap: 12px; font-size: 13px; } .fm-h2h span { color: var(--ink-3); min-width: 52px; font-variant-numeric: tabular-nums; }
+@media (max-width: 360px) { .fm-g { grid-template-columns: minmax(0, 1fr); } }
+/* slips with nothing to show */
+.slip-none .slip-h { border-bottom: 0; }
+.slip-none .name .tier + .tier { margin-left: -4px; }
+.slip-none .note { margin: 8px 0 12px; }
+.slip-none .slip-acts { margin-left: 0; flex-wrap: wrap; }
+/* sharing a match */
+#sheetShare[hidden] { display: none; }
+.sheet-skel { min-height: 100vh; }
+.sheet-skel .sk { height: 150px; margin: 12px 0; border-radius: var(--r); background: var(--card); border: 1px solid var(--rule); }
+/* How it works: contents, and sections that draw only near the screen */
+.mth-toc { margin: 0 0 16px; background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); padding: 0 14px; }
+.mth-toc summary { display: flex; align-items: baseline; gap: 10px; padding: 13px 0; cursor: pointer; font: 700 15px/1.2 var(--f-display); list-style: none; }
+.mth-toc summary::-webkit-details-marker { display: none; }
+.mth-toc summary::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg) translateY(-3px); transition: transform .2s; }
+.mth-toc[open] summary::after { transform: rotate(-135deg) translateY(-1px); }
+.mth-toc summary span { font: 500 12px/1 var(--f-body); color: var(--ink-3); }
+.mth-toc div { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 14px; }
+.mth-top { position: fixed; z-index: 40; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px); opacity: 0; pointer-events: none; display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 99px; border: 1px solid var(--rule); background: color-mix(in srgb, var(--card) 94%, transparent); color: var(--ink); font: 650 13px/1 var(--f-body); box-shadow: 0 8px 22px -10px rgba(0, 0, 0, .5); transition: transform .2s, opacity .2s; }
+.mth-top svg { width: 16px; height: 16px; color: var(--cobalt); }
+.mth-top.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+@media (min-width: 980px) { .mth-top { bottom: 24px; } }
+.mth-toc button { border: 1px solid var(--rule); background: var(--card); color: var(--ink-2); border-radius: 99px; padding: 6px 11px; font: 600 12.5px/1.2 var(--f-body); cursor: pointer; }
+.mth-toc button:hover { color: var(--ink); border-color: var(--ink-3); }
+.mth { content-visibility: auto; contain-intrinsic-size: auto 900px; scroll-margin-top: 76px; }
+/* the Lab's long lists draw only near the screen */
+#trackBox .tk-cols > *, #trackBox .trk-grid > * { content-visibility: auto; contain-intrinsic-size: auto 700px; }
 
 /* find */
 .find { flex: none; margin-left: auto; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--rule); background: var(--card); color: var(--ink-2); display: grid; place-items: center; padding: 0; }
@@ -1982,6 +2060,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M18 7h2M4 17h3M12 17h8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"/><circle cx="15.5" cy="7" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9.5" cy="17" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.6L12 16.8l-5.1 2.6 1-5.6-4.1-4 5.7-.8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
   <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M8 7.5L12 4l4 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10.5H6.5A1.5 1.5 0 005 12v7a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0019 19v-7a1.5 1.5 0 00-1.5-1.5H16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
   <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4.5 8.5A1.5 1.5 0 016 7h2.2l1.3-2h5l1.3 2H18a1.5 1.5 0 011.5 1.5v9A1.5 1.5 0 0118 19H6a1.5 1.5 0 01-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.8" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
   <symbol id="i-install" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15.5V18a2 2 0 002 2h10a2 2 0 002-2v-2.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
@@ -2037,6 +2116,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
         <p class="hero-sub" id="heroSub"></p>
         <script>/* v65: today's date in the headline block from the first paint, before the app has started */(function () { try { if (!document.documentElement.classList.contains('boot-home')) return; var d = document.getElementById('mdayD'), s = document.getElementById('heroSub'); if (d && !d.textContent) d.textContent = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()); if (s && !s.textContent) s.textContent = 'Getting today\u2019s games ready\u2026'; } catch (e) {} })();</script>
         <div class="kpis hk" id="kpis"></div>
+        <div class="card yourt" id="yourTeams" hidden><h2 class="h4">Your teams <button type="button" class="lnk" data-favall="1">All their games</button></h2><div id="yourList"></div></div>
         <div class="spot-wrap"><div class="spot-rail" id="spotRail" aria-label="Headline games"></div><div class="spot-dots" id="spotDots" role="group" aria-label="Headline games"></div></div>
       </div>
       <div id="heroTicket"></div>
@@ -2070,7 +2150,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
 
     <section id="v-value" class="section" data-view="value" hidden>
       <div class="sec-head">
-        <div><h2 id="valTitle">Value board</h2><p class="sub" id="valSub">Real prices that beat Statpad's probability. Edge = probability × best price − 1. Estimated prices never appear here.</p></div>
+        <div><h2 id="valTitle">Value board</h2><p class="sub" id="valSub">Bets where the best price on offer pays more than it should. Only real prices appear here.</p></div>
         <div class="ctl"><div class="seg" id="valSeg" role="group" aria-label="Value bets or market movers"><button type="button" data-vseg="value" aria-pressed="true">Value bets</button><button type="button" data-vseg="movers" aria-pressed="false">Market movers</button></div>
         <span class="lbl" id="minEdgeL">Min edge</span><div class="seg" id="minEdge"></div></div>
       </div>
@@ -2082,23 +2162,23 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
       <div class="mvlist" id="moversList" style="margin-top:14px" hidden></div>
     </section>
 
-    <div class="studio" id="studio" role="group" aria-label="Slip Studio" hidden></div>
+    <div class="studio" id="studioBar" role="group" aria-label="Slip Studio" hidden></div>
     <section id="v-slips" class="section" data-view="slips" hidden>
       <div class="sec-head">
-        <div><h2 id="slipsTitle">Smart slips</h2><p class="sub" id="slipsSub">For the chosen day, the three likeliest combinations that still pay the target, no match in two of them. Kicked-off games removed.</p></div>
+        <div><h2 id="slipsTitle">Smart slips</h2><p class="sub" id="slipsSub">The three likeliest slips for the day that pay your target, with every leg at least as likely as you choose and no game in more than one of them.</p></div>
         <div class="ctl"><span class="lbl sl-only">Target odds</span><div class="seg sl-only" id="target"></div><label class="tgt-own sl-only"><span class="sr">Your own target odds</span><input id="tgtIn" type="text" inputmode="decimal" autocomplete="off" maxlength="8" placeholder="Own odds"></label><button type="button" class="btn listen-b sl-only" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
         <div class="ctl sl-only"><span class="lbl">Every leg at least</span><div class="seg" id="slipFloor" role="group" aria-label="Minimum chance for every leg"></div></div>
       </div>
       <div class="days" id="days-slips" role="group" aria-label="Day"></div>
       <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="men">Men’s football</option><option value="women">Women’s football</option><option value="priced">Matches with live prices</option></select></label></div>
-      <div class="slips" id="slips"></div>
+      <div class="slips" id="slipsBox"></div>
       <div id="goalBox" hidden></div>
       <div class="callout"><b>Read this before you stake.</b> A slip's hit chance is the product of its legs, and every leg can lose. The tiers only describe how likely each leg is; none of them is safe. Estimated prices (marked “est”) are what a fair book would offer. Check the real price before betting.</div>
     </section>
 
     <section id="v-coupon" class="section" data-view="coupon" hidden>
       <div class="sec-head"><div><h2 id="betsTitle">Your coupon</h2><p class="sub" id="betsSub">Add picks from any match. Type the price you can actually get and the maths updates.</p></div></div>
-      <div id="coupon"></div>
+      <div id="couponBox"></div>
       <div id="mybets" hidden></div>
       <div id="slipchk" hidden></div>
     </section>
@@ -2138,7 +2218,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
 <div class="scrim" id="scrim"></div>
 <aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
   <div class="grab"></div>
-  <div class="sheet-bar"><div class="t" id="sheetTitle"></div><button class="icon-btn" id="sheetClose" type="button" aria-label="Close"><svg><use href="#i-x"/></svg></button></div>
+  <div class="sheet-bar"><div class="t" id="sheetTitle"></div><button class="icon-btn" id="sheetShare" type="button" aria-label="Share this match" title="Share this match" hidden><svg aria-hidden="true"><use href="#i-share"/></svg></button><button class="icon-btn" id="sheetClose" type="button" aria-label="Close"><svg><use href="#i-x"/></svg></button></div>
   <div class="sheet-body" id="sheetBody"></div>
 </aside>
 <div class="scrim" id="bscrim"></div>
@@ -2691,9 +2771,75 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   };
   if (!TABS.some((t) => t[0] === S.tab)) S.tab = 'home';
   const hashTab = () => { const h = decodeURIComponent((location.hash || '').slice(1)); return h === 'saved' ? 'coupon' : h === 'studio' ? 'slips' : TABS.some((x) => x[0] === h) ? h : null; };
-  { const h = hashTab(); if (h) { S.tab = h; if (location.hash === '#saved') { try { localStorage.setItem('sp_bseg', '"mine"'); } catch (e) { /* */ } } } }
-  function syncHash() { try { const want = S.tab === 'home' ? '' : '#' + S.tab; if ((location.hash || '') !== want) history.replaceState(null, '', location.pathname + location.search + want); } catch (e) { /* sandboxed */ } }
-  addEventListener('hashchange', () => { const h = hashTab(); if (h && h !== S.tab) setTab(h); });
+  const hashMatch = () => { const h = decodeURIComponent((location.hash || '').slice(1)); return h.startsWith('m=') ? h.slice(2) : null; };
+  { const h = hashTab(); if (h) { S.tab = h; if (location.hash === '#saved') { S.bseg = 'mine'; try { localStorage.setItem('sp_bseg', '"mine"'); } catch (e) { /* */ } } } }
+  S.pendOpen = hashMatch();
+  S.follow = new Set(store.get('follow', []));   // v66: teams you follow, kept on this phone
+  if (S.league === 'fav' && !S.follow.size) S.league = 'all';
+  // ---------------- v66: the phone's back button ----------------
+  // Back closes whatever is open on top (a match or team page, More, search, the bet form, the assistant), then
+  // returns from any section to the Overview, and only then leaves Statpad, as phone apps do. Every open overlay
+  // owns one entry in the browser's history; closing it by its own button takes that entry away again. History
+  // changes wait for each other, because the browser's own back step finishes a moment later.
+  const H = { busy: false, q: [], t: 0 };
+  const tabURL = (t) => location.pathname + location.search + (t === 'home' ? '' : t === 'coupon' && S.bseg === 'mine' ? '#saved' : '#' + t);
+  function hFlush() { while (!H.busy && H.q.length) { try { H.q.shift()(); } catch (e) { /* sandboxed */ } } }
+  function hOp(fn) { if (H.busy) H.q.push(fn); else { try { fn(); } catch (e) { /* history unavailable in this frame */ } } }
+  function hBack() { H.busy = true; clearTimeout(H.t); H.t = setTimeout(() => { if (H.busy) { H.busy = false; hFlush(); } }, 600); try { history.back(); } catch (e) { H.busy = false; } }
+  function histTab(t) {
+    hOp(() => {
+      const st = history.state || {}, url = tabURL(t);
+      if (st.ov) { history.replaceState({ sp: 1, t, d: st.d || 0 }, '', url); return; }   // the overlay's entry gives way to the section
+      if (t === 'home') { if ((st.d || 0) >= 1 && st.sp) hBack(); else history.replaceState({ sp: 1, t, d: 0 }, '', url); return; }
+      if (st.sp && st.t === 'home' && !st.d) history.pushState({ sp: 1, t, d: 1 }, '', url);
+      else history.replaceState({ sp: 1, t, d: st.sp ? st.d || 0 : 0 }, '', url);
+    });
+  }
+  function syncHash() { histTab(S.tab); }
+  hOp(() => {   // a start on a section other than the Overview still has the Overview one step back
+    if (S.tab !== 'home' && !S.pendOpen) { history.replaceState({ sp: 1, t: 'home', d: 0 }, '', location.pathname + location.search); history.pushState({ sp: 1, t: S.tab, d: 1 }, '', tabURL(S.tab)); }
+    else history.replaceState({ sp: 1, t: S.tab, d: 0 }, '', tabURL(S.tab));   // a match link: the match opens over this once the games are in
+  });
+  const ovOpenNow = () => {
+    if (!$('#betDlg').hidden) return 'bet';
+    if (!$('#pal').hidden) return 'pal';
+    if ($('#sheet').classList.contains('open')) return 'sheet';
+    if (S.va && S.va.open && !S.va.peek) return 'va';
+    return null;
+  };
+  const ovURL = () => (S.open && S.byId && S.byId.has(S.open) && $('#sheet').classList.contains('open') ? location.pathname + location.search + '#m=' + encodeURIComponent(S.open) : tabURL(S.tab));
+  function ovCloseTop() {
+    const k = ovOpenNow();
+    if (k === 'bet') closeBetForm(); else if (k === 'pal') palClose(); else if (k === 'sheet') closeSheet(); else if (k === 'va') vaHide();
+  }
+  function ovSync() {
+    hOp(() => {
+      const any = ovOpenNow(), st = history.state || {};
+      if (any && !st.ov) history.pushState({ sp: 1, ov: 1, t: S.tab, d: (st.d || 0) + 1 }, '', ovURL());
+      else if (any) { const u = ovURL(); if (u !== location.pathname + location.search + location.hash) history.replaceState(st, '', u); }
+      else if (st.ov) hBack();
+    });
+  }
+  let ovQ = false; const ovSoon = () => { if (!ovQ) { ovQ = true; queueMicrotask(() => { ovQ = false; ovSync(); }); } };
+  addEventListener('popstate', (e) => {
+    if (H.busy) { H.busy = false; clearTimeout(H.t); hFlush(); return; }   // the step back that closing an overlay took
+    const st = e.state || {};
+    if (ovOpenNow()) {
+      ovCloseTop();
+      if (ovOpenNow()) { try { history.pushState({ sp: 1, ov: 1, t: S.tab, d: (st.d || 0) + 1 }, '', ovURL()); } catch (x) { /* */ } }
+      return;
+    }
+    const m = hashMatch();
+    if (st.ov || m) { try { history.replaceState({ sp: 1, t: st.t || S.tab, d: st.d || 0 }, '', tabURL(st.t || S.tab)); } catch (x) { /* */ } }
+    const t = st.sp ? st.t : hashTab() || 'home';
+    if (t && t !== S.tab) setTab(t, { now: true, hist: false });
+    if (m && !st.sp && S.byId && S.byId.has(m)) openMatch(m);
+  });
+  addEventListener('hashchange', () => {   // a typed or followed link to a section or a match
+    if (H.busy) return;
+    const m = hashMatch(); if (m) { if (S.byId && S.byId.has(m)) openMatch(m); return; }
+    const h = hashTab(); if (h && h !== S.tab && h !== S.toTab) setTab(h, { now: true });
+  });
 
   // ---------------- data ----------------
   function sig(m) { return JSON.stringify([m.lm, m.ext, m.mkt && [m.mkt.p, m.mkt.best, m.mkt.ou, m.mkt.upd]]); }
@@ -3079,7 +3225,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // Slip Studio: one switcher over the smart slips, goal seek, the coupon, the slip checker and My bets
   function renderStudio() {
-    const el = $('#studio'); if (!el) return;
+    const el = $('#studioBar'); if (!el) return;
     const on = S.tab === 'slips' || S.tab === 'coupon'; el.hidden = !on;
     const cc = S.coupon.length, ob = (S.bets || []).filter((b) => b.status === 'open').length;
     const cur = S.tab === 'slips' ? (S.sseg === 'goal' ? 'goal' : 'slips') : ['coupon', 'mine', 'check'].includes(S.bseg) ? S.bseg : 'coupon';
@@ -3089,15 +3235,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (on && (S.tab === 'slips' || S.bseg !== 'mine')) S.studioTab = S.tab;
   }
   function goNav(k, el) {
+    const tap = !!(el && el.closest && el.closest('#bnav, #sideNav')), o = { defer: true, tap, quiet: true };
     if (k === 'more') { openMore(el); return; }
-    if (k === 'saved') { S.bseg = 'mine'; store.set('bseg', 'mine'); loadResults(); if (S.tab === 'coupon') { renderCoupon(); renderNav(); } else setTab('coupon'); return; }
+    if (k === 'saved') { const was = S.bseg; S.bseg = 'mine'; store.set('bseg', 'mine'); loadResults(); if (S.tab === 'coupon') { if (was === 'mine' && tap) toTop(); renderCoupon(); renderNav(); histTab('coupon'); } else setTab('coupon', o); return; }
     if (k === 'studio') {
       const to = S.studioTab || (S.coupon.length ? 'coupon' : 'slips');
       if (to === 'coupon' && S.bseg === 'mine') { S.bseg = 'coupon'; store.set('bseg', 'coupon'); }
-      if (S.tab === to) { render(); return; }
-      setTab(to); return;
+      if (S.tab === to) { if (tap) toTop(); render(); histTab(to); return; }
+      setTab(to, o); return;
     }
-    setTab(k);
+    setTab(k, o);
   }
   function openMore(opener) {
     S.open = 'more:'; S.opener = opener || document.activeElement;
@@ -3239,6 +3386,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function renderHome() {
     if (!S.mirAt) loadMir();
     renderExplore();
+    renderYours();
     const items = feedItems();
     $('#feedAt').textContent = S.data ? `updated ${tFmt.format(Date.parse(S.data.generated))}` : '';
     morph($('#feed'), items.length ? items.map((x) => `<li><button type="button" class="feed-i t-${x.tone}" data-open="${esc(x.id)}"><span class="feed-ic"><svg aria-hidden="true"><use href="#${x.ic}"/></svg></span><span class="feed-b"><b>${esc(x.t)}</b><span>${esc(x.s)}</span><small>${esc(x.m)}</small></span><span class="feed-v">${esc(x.v)}</span></button></li>`).join('')
@@ -3321,7 +3469,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const q = fold(S.q.trim());
     return S.rows.filter((r) => {
       if (S.league === 'live') { if (!isLive(r)) return false; } else if (S.day !== 'all' && r.day !== S.day) return false;
-      if (S.league !== 'all' && S.league !== 'live') { if (S.league.startsWith('g:')) { if (lgInfo(r.m.lk).group !== S.league.slice(2)) return false; } else if (r.m.lk !== S.league) return false; }
+      if (S.league === 'fav') { if (!S.follow.has(r.m.h) && !S.follow.has(r.m.a)) return false; }
+      else if (S.league !== 'all' && S.league !== 'live') { if (S.league.startsWith('g:')) { if (lgInfo(r.m.lk).group !== S.league.slice(2)) return false; } else if (r.m.lk !== S.league) return false; }
       if (q && !fold(r.m.h + ' ' + r.m.a + ' ' + lgName(r.m.lk)).includes(q)) return false;
       return true;
     });
@@ -3365,8 +3514,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return `<article class="fx${r.live && !(LN && LN.ft) ? ' is-live' : ''}" data-open="${esc(m.id)}" tabindex="0" aria-label="${esc(m.h)} v ${esc(m.a)}">
       <div class="fx-meta"><time>${tFmt.format(r.ko)}</time>${status}${m.clash ? '<span class="badge b-clash">Big game</span>' : ''}${stakeBadge(m)}${a && !realMkt(m) ? (a.src === 'memory' ? '<span class="badge b-mem" title="No bookmaker price yet: priced from the market\'s memory of both sides">Market memory</span>' : '<span class="badge b-est">Model only</span>') : ''}${newsBadge(m)}</div>
       <div class="fx-teams">
-        <div class="tm"><span class="pos">${m.ph || ''}</span>${crest(m.h, m.lk)}<span class="nm">${esc(m.h)}</span>${formDots(m.fh)}<span class="xg">${a ? a.lh.toFixed(2) : ''}</span>${scs(0)}</div>
-        <div class="tm"><span class="pos">${m.pa || ''}</span>${crest(m.a, m.lk)}<span class="nm">${esc(m.a)}</span>${formDots(m.fa)}<span class="xg">${a ? a.la.toFixed(2) : ''}</span>${scs(1)}</div>
+        <div class="tm"><span class="pos">${m.ph || ''}</span>${crest(m.h, m.lk)}<span class="nm${S.follow.has(m.h) ? ' fol' : ''}">${esc(m.h)}</span>${formDots(m.fh)}<span class="xg">${a ? a.lh.toFixed(2) : ''}</span>${scs(0)}</div>
+        <div class="tm"><span class="pos">${m.pa || ''}</span>${crest(m.a, m.lk)}<span class="nm${S.follow.has(m.a) ? ' fol' : ''}">${esc(m.a)}</span>${formDots(m.fa)}<span class="xg">${a ? a.la.toFixed(2) : ''}</span>${scs(1)}</div>
       </div>
       <div class="fx-bar">${bar}${pick}</div>
       <div class="fx-odds">${btn('H', '1')}${btn('D', 'X')}${btn('A', '2')}</div>
@@ -3393,7 +3542,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!rows.length) {
       if (!S.mirAt) loadMir();
       renderExplore();
-      morph(box, `<div class="empty-state"><b>${S.league === 'live' ? 'No games in play' : 'No matches here'}</b>${S.league === 'live' ? 'Live games show here from kick-off. Pick “All” to see the day’s fixtures.' : S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`, ['list', S.day, S.league, S.sort].join('|'), true); return;
+      morph(box, `<div class="empty-state"><b>${S.league === 'live' ? 'No games in play' : S.league === 'fav' ? 'None of your teams play this day' : 'No matches here'}</b>${S.league === 'live' ? 'Live games show here from kick-off. Pick “All” to see the day’s fixtures.' : S.league === 'fav' ? 'Pick “All week” to see all their games, or “All” for every game this day.' : S.q ? 'Nothing matches that search for this day.' : 'Try another day or competition.'}</div>`, ['list', S.day, S.league, S.sort].join('|'), true); return;
     }
     S.shk.games = shockGames(); S.shk.key = (S.shk.key || 0) + 1; S.shk.liveN = S.shk.games.filter((g) => g.L && !g.L.ft).length;
     let html = '';
@@ -3434,6 +3583,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const tb = b.parentNode, sb = $('#sheetBody');
     if (tb && sb && tb.offsetTop < sb.scrollTop) sb.scrollTop = tb.offsetTop - 4;
     if (S.mtab === 'model' || S.mtab === 'overview') mvxAttach();
+    if (S.mtab === 'teams') paintForm();
   });
   function openMatch(id, opener) {
     const r = S.byId.get(id); if (!r) return;
@@ -3441,10 +3591,12 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (S.open !== id) Object.assign(S.qx, { r: '', g: '', b: '', m: '', hg: '', ag: '', s: [] });
     const wasOpen = $('#sheet').classList.contains('open');
     if (S.open === 'ask:') S.fromAsk = true; else if (!wasOpen) S.fromAsk = false;
+    const fresh = !wasOpen || S.open !== id;
     S.open = id; if (!wasOpen) S.opener = opener || document.activeElement;
     $('#sheetBody').scrollTop = 0;
     S.sheetAt = performance.now();
-    renderSheet();
+    S.sheetLite = fresh && !!(r.a && r.a.M); renderSheet();
+    if (S.sheetLite) requestAnimationFrame(() => setTimeout(() => { if (S.sheetLite && S.open === id) { S.sheetLite = false; renderSheet(); } else S.sheetLite = false; }, 0));
     $('#sheet').classList.add('open'); $('#scrim').classList.add('open'); $('#sheet').setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     setTimeout(() => $('#sheetClose').focus(), 60);
@@ -3536,6 +3688,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     return L && L.table && L.table.some((r) => r[0] === name) ? `<button type="button" class="tlink" data-team="${esc(lk)}|${esc(name)}">${esc(name)}</button>` : esc(name);
   }
   function renderSheet() {
+    { const sb = $('#sheetShare'); if (sb) sb.hidden = !(S.open && S.byId && S.byId.has(S.open)); }
     $('#sheet').classList.toggle('shk-mode', S.open === 'shock:');   // the shock map takes the whole screen, nothing around the globe
     if (String(S.open).startsWith('team:')) { renderTeamSheet(); return; }
     if (S.open === 'status:') { renderStatusSheet(); return; }
@@ -3585,13 +3738,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const mrows = mrowsOf(groups), xrows = mrowsOf(xgroups), nx = a.sels.filter((s) => s.x).length;
     const mt = MTABS.some((x) => x[0] === S.mtab) ? S.mtab : 'overview';
     const mk = m.mkt;
-    morph($('#sheetBody'), `${S.fromAsk ? `<button type="button" class="btn ghost tback" data-ask="1">← ${SW() ? 'Rudi kwa Uliza Statpad' : 'Back to Ask Statpad'}</button>` : ''}
+    const head = `${S.fromAsk ? `<button type="button" class="btn ghost tback" data-ask="1">← ${SW() ? 'Rudi kwa Uliza Statpad' : 'Back to Ask Statpad'}</button>` : ''}
       <div class="vs" data-tch="${esc(m.h)}" data-tca="${esc(m.a)}" style="--th:${teamCol(m.h)};--ta:${teamCol(m.a)}">
         <div class="side">${crest(m.h, m.lk, 'xl')}<div class="team">${teamLink(m, m.h, m.dh)}</div><div class="meta">${pos(m.ph, m.fh, m.dh)}</div></div>
         <div class="mid">${LNs ? `<div class="sc">${LNs.h}–${LNs.a}</div><span class="lvm">${esc(LNs.ft ? 'Full time' : LNs.st === 'HT' ? 'Half time' : Math.floor(LNs.min) + "'")}</span><div class="xg-l" style="margin-top:10px">Expected ${a.lh.toFixed(2)} – ${a.la.toFixed(2)}</div>` : `<div class="xg-big">${a.lh.toFixed(2)} – ${a.la.toFixed(2)}</div><div class="xg-l">Expected goals</div>`}</div>
         <div class="side r">${crest(m.a, m.lk, 'xl')}<div class="team">${teamLink(m, m.a, m.da)}</div><div class="meta">${pos(m.pa, m.fa, m.da)}</div></div>
       </div>
-      <div class="mtabs" role="tablist" aria-label="Match page">${MTABS.map(([k, l]) => `<button type="button" role="tab" data-mtab="${k}" aria-selected="${mt === k}">${l}</button>`).join('')}</div>
+      <div class="mtabs" role="tablist" aria-label="Match page">${MTABS.map(([k, l]) => `<button type="button" role="tab" data-mtab="${k}" aria-selected="${mt === k}">${l}</button>`).join('')}</div>`;
+    // v66: a match opened fresh shows its header and tabs on the very next frame; the cards fill in on the one after
+    if (S.sheetLite) { morph($('#sheetBody'), head + '<div class="sheet-skel" aria-hidden="true"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>', 'm:' + S.open); return; }
+    morph($('#sheetBody'), `${head}
       <div data-mt="overview"${mt === 'overview' ? '' : ' hidden'}>
       ${chips.some((c) => c[1] === 'warn') ? `<div class="chips">${chips.filter((c) => c[1] === 'warn').map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>` : ''}
       <div id="sheetLive">${r.started ? liveCard(r) : ''}</div>
@@ -3616,6 +3772,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div class="card"><h4>Price history <span>average 1X2 price</span></h4>${spark(m.hist, m)}${outlookBox(m, a)}</div>
       </div>
       <div data-mt="teams"${mt === 'teams' ? '' : ' hidden'}>
+      <div id="sheetForm">${mt === 'teams' ? formCard(m) : ''}</div>
       ${stakesCard(m)}
       ${newsCard(m) || `<div class="card"><h4>Team news</h4><p class="note" style="margin:0">No line-ups or absences reported for this game yet. They usually arrive about an hour before kick-off.</p></div>`}
       </div>
@@ -3672,7 +3829,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     for (const b of document.querySelectorAll('[data-vseg]')) b.setAttribute('aria-pressed', String(b.dataset.vseg === (mv ? 'movers' : 'value')));
     $('#valTitle').textContent = mv ? 'Market movers' : 'Value board';
     $('#valSub').textContent = mv ? 'The biggest moves in the bookmakers’ average prices since Statpad first saw them. A shortening price usually means money is coming in, often from sharp bettors; a drifting price means the opposite. Statpad’s chances follow the market, so these are the games where its numbers moved most.'
-      : 'Real prices above the bookmakers\' own fair price. Edge = fair chance × best price − 1, where the fair chance is the bookmakers\' consensus with their margin taken off (Pinnacle counted three times). Estimated prices never appear here.';
+      : 'Bets where the best price on offer pays more than it should. Statpad takes the bookmakers\' consensus, removes their margin to get a fair price, and lists the prices above it. Edge is how far above: +5% pays 5% more than fair. Only real prices appear here.';
     $('#minEdge').hidden = mv; $('#minEdgeL').hidden = mv; $('#valueList').hidden = mv; $('#moversList').hidden = !mv; $('#vsortL').hidden = mv; $('#radar').hidden = mv;
     $('#vscope').value = S.vscope;
     if (mv) { renderMovers(); return; }
@@ -3729,9 +3886,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (!S.ready) { showProgress(); return; }
     const goal = S.sseg === 'goal';
     renderStudio(); $('#slipsTitle').textContent = goal ? 'Goal seek' : 'Smart slips';
-    for (const el of [$('#days-slips'), $('#slips'), ...document.querySelectorAll('#v-slips .filters, #v-slips .sl-only')]) if (el) el.hidden = goal;
+    for (const el of [$('#days-slips'), $('#slipsBox'), ...document.querySelectorAll('#v-slips .filters, #v-slips .sl-only')]) if (el) el.hidden = goal;
     $('#goalBox').hidden = !goal;
-    $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.' : 'For the chosen day, the three likeliest combinations that pay your target, no match in two of them, with every leg at least as likely as you choose. Legs of 50% and up reach a target almost as surely as the fewest, longest legs; very short legs cost the most. Priced at a typical bookmaker’s odds; kicked-off games removed.';
+    $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.' : 'The three likeliest slips for the day that pay your target, with every leg at least as likely as you choose and no game in more than one of them. Priced at a typical bookmaker’s odds; games that have kicked off drop out.';
     if (goal) { renderGoal(); return; }
     if (S.day === 'all') S.day = pickDefaultDay();
     renderDays('days-slips', false);
@@ -3741,7 +3898,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     $('#slipFloor').innerHTML = SLIP_FLOOR_OPTS.map(([f, l]) => `<button type="button" data-slipfloor="${f}" aria-pressed="${S.slipFloor === f}">${l}</button>`).join('');
     $('#scope').value = S.scope;
     const n = S.rows.filter((r) => r.day === S.day && !r.started && r.a && inScope(r, S.scope)).length;
-    const box = $('#slips');
+    const box = $('#slipsBox');
     if (!n) { box.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>No open games for this day</b>Pick another day, or widen the scope.</div>`; return; }
     const want = [S.day, S.target, S.slipFloor, S.scope, S.ver].join('|');
     S.slipWant = want;
@@ -3758,8 +3915,20 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       paintSlips(box, out);
     }, cached ? 0 : 40);
   }
+  // v66: tiers with no combination at all share one short card that says why and offers the two ways forward, instead
+  // of two full cards of dashes and greyed-out buttons
+  function slipNone(empty) {
+    const lower = SLIP_FLOOR_OPTS.filter(([f]) => f < S.slipFloor).sort((x, y) => y[0] - x[0])[0];
+    const ks = days().map((d) => d.key), nxt = ks.slice(ks.indexOf(S.day) + 1).find((k) => S.rows.some((r) => r.day === k && !r.started && r.a && inScope(r, S.scope)));
+    const names = empty.map((s) => `<span class="tier tier-${s.tier}">${s.tier}</span>`).join('');
+    const why = empty.length === 3 ? 'No combination reaches the target from this day’s open games' : `No ${empty.length === 1 ? 'other combination' : 'second or third combination'} without the games already used above`;
+    return `<article class="slip slip-none"><div class="slip-h"><div class="name">${names}${empty.length === 1 ? esc(SLIP_NAME[empty[0].tier]) : 'Nothing more today'}</div>
+      <p class="note">${why}${S.slipFloor > 0 ? `, with every leg ${pct(S.slipFloor, 0)} or more` : ''}.</p>
+      <div class="slip-acts">${lower ? `<button type="button" class="btn" data-slipfloor="${lower[0]}">${lower[0] > 0 ? `Allow legs of ${lower[1]}` : 'Allow any leg'}</button>` : ''}${nxt ? `<button type="button" class="btn" data-day="${esc(nxt)}">Try ${esc(dayLabel(nxt))}</button>` : ''}</div></div></article>`;
+  }
   function paintSlips(box, slips) {
-    morph(box, slips.map((s) => {
+    const empty = slips.filter((s) => !s.legs.length);
+    morph(box, slips.filter((s) => s.legs.length).map((s) => {
       const ev = s.legs.length ? s.prob * s.odds - 1 : null;
       const oneIn = s.prob > 0 ? Math.max(1, Math.round(1 / s.prob)) : null;
       return `<article class="slip">
@@ -3772,7 +3941,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         <div class="slip-acts"><button type="button" class="btn" data-shareslip="${s.tier}" ${s.legs.length ? '' : 'disabled'} aria-label="Share this slip as an image"><svg aria-hidden="true"><use href="#i-share"/></svg>Share</button>
         <button type="button" class="btn pri" data-addslip="${s.tier}" ${s.legs.length ? '' : 'disabled'}>Add to coupon</button></div></div>
       </article>`;
-    }).join(''), ['sl', S.day, S.target, S.slipFloor, S.scope].join('|'), true);
+    }).join('') + (empty.length ? slipNone(empty) : ''), ['sl', S.day, S.target, S.slipFloor, S.scope].join('|'), true);
     S.lastSlips = slips;
   }
 
@@ -3791,13 +3960,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       check: 'Got a slip from WhatsApp, Telegram or a tipster? Add a screenshot or photo of it, or paste its text: Statpad finds each game and pick, and shows the real chance and whether the odds are worth it.',
       coupon: 'Add picks from any match. Type the price you can actually get and the maths updates.' }[seg];
     renderStudio(); void open;
-    $('#coupon').hidden = seg !== 'coupon'; $('#mybets').hidden = seg !== 'mine'; $('#slipchk').hidden = seg !== 'check';
+    $('#couponBox').hidden = seg !== 'coupon'; $('#mybets').hidden = seg !== 'mine'; $('#slipchk').hidden = seg !== 'check';
     if (seg === 'mine') { renderMyBets(); loadLive(true); } else if (seg === 'check') renderCheck(); else renderCouponList();
   }
   function renderCouponList() {
     if (!S.ready) { showProgress(); return; }
     const rows = couponRows();
-    const box = $('#coupon');
+    const box = $('#couponBox');
     if (!rows.length) { box.innerHTML = `<div class="empty-state"><b>Your coupon is empty</b>Tap a price on any match, or add a whole slip from Smart slips.</div>`; return; }
     const tOdds = rows.reduce((a, x) => a * x.price, 1), tP = couponChance(rows);
     const ev = tP * tOdds - 1, b = tOdds - 1, kelly = b > 0 ? Math.max(0, (b * tP - (1 - tP)) / b) : 0;
@@ -4156,6 +4325,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   // ideas tested on games the model never saw: what went live and what didn't, with the numbers
   const RESEARCH = [
+    ['kept', 'A quiet page when nothing is happening (v66)', 'Main-thread work per second with the phone left alone, processor slowed four times, on each section. The assistant’s orb kept animating while hidden: a scaling, clipped circle around a spinning sheen, repainted on every frame.', 'Overview 195 → 43 ms a second, Matches 206 → 58, Value 144 → 17, Lab 94 → 29'],
+    ['kept', 'Taps answered on the next frame (v66)', 'Time from a tap to the next frame on screen, from the browser’s own Event Timing (the measure behind Google’s INP), processor slowed four times. The tab bar now lights up first and the section is drawn on the frame after; a match page shows its header first; the multiverse is built only once its tab is open.', 'tab bar 72–264 ms → 32–48 ms; opening a match 304 → 80 ms the first time, 96 → 48 after; Model tab 160–360 → 40–56 ms'],
+    ['kept', 'Lighthouse after the changes (v66)', 'Lighthouse’s mobile audit, two runs of each version on the same live data.', 'performance 67–69 → 76–77; total blocking time 240–460 → 130–190 ms; layout shift 0.004–0.007 → 0.003–0.004; accessibility 100 both'],
     ['kept', 'Taking the margin off: the power method stays', 'Five ways of turning prices into chances (proportional, additive, power, Shin, odds ratio) on 49,452 games, with Pinnacle’s, Bet365’s and the average prices before kick-off and at the close, for home-draw-away and over/under 2.5.', 'power best or level everywhere; Shin −0.05 to −0.11 per 1,000 games in log loss, odds ratio −0.08 to −0.18, proportional −0.31 to −0.71'],
     ['off', 'More weight on the sharpest bookmaker', 'Pinnacle alone against the average of all bookmakers, and every blend between, before kick-off.', 'Pinnacle 0.99968, average 0.99989, the live weighting (Pinnacle ×3 among about 20) within 0.1 per 1,000 of the best: not worth a change'],
     ['off', 'A learned stack over the unpriced leagues', 'v64’s chances corrected by a multinomial logit on Pulse’s and the season fit’s gaps, Elo and pi-ratings over the same two seasons, the goal level and the league’s draw and home rates; fitted on 2023–25, judged on 21,531 games since.', '+0.0004 a game in log loss (95% −0.0001 to +0.0008): not clear of zero'],
@@ -4451,6 +4623,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function ivTxt(m) { return m >= 2880 ? Math.round(m / 1440) + ' days' : m >= 90 ? Math.round(m / 60) + ' h' : Math.max(1, Math.round(m)) + ' min'; }
   function renderMethod() {
     const d = S.data, src = d.sources || {}, o = d.odds || {};
+    { const bx = $('#methodProse'), k = [d.generated, S.ver, S.slipFloor].join('|'); if (bx && bx._k === k && bx.firstChild) return; if (bx) bx._k = k; }
     const st = (k, label) => { const s = src[k]; return s ? `<div><span>${label}</span><b>${s.ok ? 'OK' : 'Failed'} · ${new Date(s.at).toLocaleString()}${s.note ? ' · ' + esc(s.note) : ''}</b></div>` : ''; };
     $('#methodProse').innerHTML = `
       <h3>Data status</h3>
@@ -4552,7 +4725,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <h3>WhatsApp Status pack</h3>
       <p>In the Overview's shortcuts and in Smart slips, <b>Status pack</b> makes 11-second videos for the day, sized for WhatsApp Status, each built around its own animated data graphic. There are thirteen kinds: the safest pick on a confidence dial, an upset alert on a radar that locks onto the underdog, the game with most at stake as three futures, the slip at your target odds climbing leg by leg, a goal rush (the game with most goals expected, as an equalizer of total goals), the most likely exact score on a lit grid of scorelines, the match of the day in the two teams' own colours (who wins as a tug of war, their last five results, expected goals and Statpad's pick), the best value bet as two needles on an odds dial, the last day's results flipping pick by pick to landed or missed, a price that has dropped hard, a team in form, the whole day in numbers, and the weekend's rarest result lit up among 10,000 versions of its game. Each day the pack picks four from what the day's games make interesting, steers away from the kinds made on this phone in the last few days, and turns a little by the date, so it keeps changing; <b>4 more clips</b> makes the next ones on the day's list. Titles, closing lines and camera moves change by day too. Each clip opens with the camera swooping over a floodlit pitch drawn as a hologram and ends on Statpad's address, with the recent record of “Nearly definite” picks when there are enough of them. The sound is made the same way: machine hum, beeps, servo whirs, clunks and radar pings timed to the pictures, with no voices or music. Everything is drawn and encoded on your phone as ordinary MP4 video (H.264 with AAC sound; if the phone's browser has no AAC encoder, one loads with the video packer the first time), stored the way phone cameras store portrait video, so WhatsApp and other apps take it like any video from your gallery. <b>1080p · WhatsApp</b> is the default, as that's what WhatsApp Status shows; <b>4K</b> (2160 × 3840) is for TikTok, Instagram and YouTube Shorts and takes about three times as long. The pack opens on a poster of each clip and makes nothing until you pick: the clip you tap is made first, then the rest follow (tap another and it goes next), or <b>Make all</b> makes them in order. Frames are drawn straight into the shape the encoder takes, the background is reused while it holds still and the sound is made alongside, so a 1080p clip takes about half the time it used to. Each finished clip is played back on your phone before it's offered, and a size the phone can't play is made smaller by itself. Sound can be turned off. Phones that can't make video get the same graphics as 4K pictures. Sharing adds the site's link to the caption. Results clips show misses as well as wins.</p>
       <h3>Statpad, the assistant</h3>
-      <p>To find anything, use the search box at the top (press / on a computer): it finds teams, matches, competitions and sections. The address follows the section, so a link ending in #value opens the Value board; #slips, #track, #tables and #saved open the others.</p>
+      <p>To find anything, use the search box at the top (press / on a computer): it finds teams, matches, competitions and sections. The address follows the section, so a link ending in #value opens the Value board; #slips, #track, #tables and #saved open the others. A match has its own address too: the share button at the top of a match page sends a link that opens that match (while it's on the board).</p>
+      <h3>Getting around</h3>
+      <p>The phone's back button (or back swipe) closes whatever is open on top first: a match or team page, More, the search, the bet form or the assistant. From any section it then goes back to the Overview, and only from the Overview does it leave Statpad. Each section keeps its place: scroll down Matches, look at the Value board, come back, and you're where you were, with as many games showing as before. Tap the tab you're already on to go back to its top. The tab bar lights up the moment you tap it and the section is drawn on the next frame, and a match page shows its header and tabs at once and fills in its cards a moment later, so a slow phone never seems to ignore a tap. The assistant's orb no longer moves while it's hidden: it used to keep a slow phone's processor about 14% busy on every page even when nobody was using it.</p>
+      <h3>Teams you follow</h3>
+      <p>Tap the star beside a team's name in a match's Teams tab, or Follow on its team page. Its next game (or the one it's playing, with the live score) then sits at the top of the Overview under Your teams, its name carries a small star in the match list, and Matches gets a Following filter for the chosen day or the whole week. The list is kept on this phone only. A match's Teams tab also shows both sides' last five results this season with the scores, each side's record at this venue (home games for the home side, away games for the away side) and the two sides' earlier meetings this season.</p>
       <p>Tap <b>Ask Statpad</b> on the Overview (or press Ctrl/⌘ K on a computer) and the assistant opens, listening. Tap its orb, at the top of the conversation, to tuck the conversation away: the orb then floats over every page, match and tool while you look around. Tap it to bring the conversation back, or press and hold it to talk straight away. Close the conversation (×, or say "bye") and the orb goes with it. Speak or type, in English or Kiswahili: it answers in the language you use. It listens until you've finished, sending your question once you've been quiet for 3 seconds (5, or only when you tap ✓, under its settings). It answers about games (who wins, why, how sure, goals, both teams to score, the likeliest score, who scores first, clean sheets, the best price), picks (safest, value, underdogs, likely draws, most goals, biggest games, by day, league, market or level), slips (any odds, any number of legs, from the picks it just listed, "another one", "make it safer"), turning a stake into a goal, teams (form, position, ratings, team news, next game, title chances, two teams side by side), league tables and races, live scores and shocks, your bets and budget, Statpad's record, odds arithmetic (what odds mean, payouts after tax, fractions), and how Statpad works, from this Method page. It keeps the thread: "and tomorrow?", "what about La Liga?", "why the second one?", "add it", "more" and "yes" all lean on what came before, and it knows what's on screen, so "who wins?" on a match page means that match. When a name fits two clubs it asks which. It can also act: open a match, team, tab, the shock map, Weekend miracles or the Status pack, add picks to the coupon, switch theme, set a budget or target odds, and remember your name and your team. When it opens something, it shrinks to a strip so the page shows, and stays there for the next question. While the page is open it also speaks up when a game in one of your open bets, your coupon or your team's game kicks off, has a goal or finishes, with your bet's chance from there. Answers can be read aloud: when you speak (the default), always, or never; in hands-free mode it listens again after each spoken answer, even tucked away, so a conversation needs no taps, and tapping the orb while it talks stops it. Your phone's browser turns speech into text (Chrome on Android, Safari on iPhone), so voice needs the internet and the microphone allowed for the site; everything after that runs on the page, from the same numbers as everything else, and nothing is sent anywhere. It doesn't know about things outside Statpad, and it says so.</p>
       <h3>My bets</h3>
       <p>Save a coupon with your stake and your bookmaker's odds, and Statpad shows the chance of it landing, the odds you need to break even after the tax on winnings (15% in Uganda by default; change it in My bets), and what it's worth on average. Bets settle themselves from the same results, using the 90-minute score; a postponed leg counts at odds 1. Everything is stored on your device: use Back up to keep a copy or move to a new phone.</p>
@@ -4562,8 +4739,136 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <p>A value bet is a real price above the bookmakers' own fair price: edge = fair chance × best price − 1, where the fair chance is the consensus of all the bookmakers with their margin taken off (power method, Pinnacle counted three times). It is line-shopping: one bookmaker paying more than the market as a whole thinks the outcome is worth. Statpad's fitted chance is not used for this: on the replayed 2025/26 season, edges measured against it came mostly from the small gaps between a two-number scoreline model and the market's own draw and goals prices, and those 1,909 bets lost 7.3%. Measured against the consensus, the same season gave 284 bets that won 13.9%, and five seasons gave about 5,000 bets that won 5% a unit (95% range +1% to +9%) and beat the closing price 71% of the time. Each row shows how many bookmakers price the game, how old the prices are, the average price and which way it has moved, and how past bets with a similar edge did. A row's edge turns grey, with a note, when the fair price rests on one bookmaker or the prices are over 12 hours old. Each row's opportunity score, out of 100, weighs the edge (45%), the chance it lands (20%), how many bookmakers stand behind the fair price (20%) and how fresh the prices are (15%); the Opportunity radar above the list shows the best edge in each competition and market. About 6 value bets in 10 still lose: the edge only shows over hundreds of bets. Only real prices count, and estimates never appear on the Value board.</p>
       <h3>Responsible play</h3>
       <p>These are probabilities, not guarantees. Even an 85% leg loses about one time in seven, and accumulators multiply that risk. Set a budget, keep stakes small (¼ Kelly or a flat 1% is plenty), and stop if it stops being fun. For support, contact a local gambling help service.</p>`;
+    methodSections($('#methodProse'));
     $('#footData').textContent = d.generated ? 'Data ' + new Date(d.generated).toLocaleString() : '';
   }
+  // v66: How it works is long (about 30 screens on a phone). Each heading now starts its own section, a list of
+  // contents at the top jumps straight to any of them, and sections off screen skip drawing until you reach them.
+  function methodSections(box) {
+    if (!box) return;
+    const toc = []; let sec = null;
+    for (const el of [...box.children]) {
+      if (el.tagName === 'H3') {
+        sec = document.createElement('section'); sec.className = 'mth';
+        const id = 'mth-' + el.textContent.toLowerCase().replace(/&amp;|&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        sec.id = id; toc.push([id, el.textContent]); box.insertBefore(sec, el);
+      }
+      if (sec) sec.appendChild(el);
+    }
+    // each section's expected height from its length (within about 50 px), so the page's length is right before it's read
+    { const p0 = box.querySelector('p'), cs = p0 && getComputedStyle(p0), fs = (cs && parseFloat(cs.fontSize)) || 15, lh = (cs && parseFloat(cs.lineHeight)) || fs * 1.5, W = box.clientWidth || Math.min(683, innerWidth - 32);
+      for (const sec of box.querySelectorAll(':scope > .mth')) { let h = 40; for (const c of sec.children) { if (c.tagName === 'P') h += 14 + Math.ceil(c.textContent.length * fs * 0.5 / W) * lh; else if (c.tagName !== 'H3') h += 40 * c.children.length; } sec.style.containIntrinsicSize = `auto ${Math.round(h)}px`; } }
+    const view = box.closest('[data-view]'), old = view && view.querySelector('.mth-toc'); if (old) old.remove();
+    const nav = document.createElement('details'); nav.className = 'mth-toc'; if (innerWidth >= 760) nav.open = true;
+    nav.innerHTML = `<summary>Contents <span>${toc.length} sections</span></summary><div>${toc.map(([id, t]) => `<button type="button" data-mth="${id}">${esc(t)}</button>`).join('')}</div>`;
+    const flow = view && view.querySelector('.flow'); (flow || box).before(nav);
+    if (!S.mthIO && 'IntersectionObserver' in window) {
+      S.mthIO = new IntersectionObserver((es) => { for (const e of es) S.mthOff = !e.isIntersecting && e.boundingClientRect.top < 0; mthPill(); });
+    }
+    if (S.mthIO) { S.mthIO.disconnect(); S.mthIO.observe(nav); }
+  }
+  function mthPill() {
+    let p = $('#mthTop');
+    const on = S.tab === 'method' && S.mthOff;
+    if (!p && on) { p = document.createElement('button'); p.type = 'button'; p.id = 'mthTop'; p.className = 'mth-top'; p.dataset.mthtop = '1'; p.innerHTML = '<svg aria-hidden="true"><use href="#i-info"/></svg>Contents'; document.body.appendChild(p); }
+    if (p) p.classList.toggle('on', !!on);
+  }
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-mthtop]')) { const t = document.querySelector('.mth-toc'); if (t) { t.open = true; buzz(5); window.scrollTo({ top: Math.max(0, t.getBoundingClientRect().top + scrollY - 76), behavior: 'auto' }); } return; }
+    const b = e.target.closest('[data-mth]'); if (!b) return;
+    const el = document.getElementById(b.dataset.mth); if (!el) return;
+    // an instant jump: a smooth one passes over sections that draw as it goes and change height, and stops short
+    buzz(5); el.scrollIntoView({ block: 'start' }); requestAnimationFrame(() => el.scrollIntoView({ block: 'start' }));
+  });
+
+  // ---------------- v66: teams you follow ----------------
+  // A star on a team (on its team page, or beside its name in a match's Teams tab) keeps its games at the top of the
+  // Overview, marks it in the match list, and adds a Following filter there. Stored on this phone only.
+  function folBtn(name, small) {
+    const on = S.follow.has(name);
+    return small ? `<button type="button" class="fol-s" data-follow="${esc(name)}" aria-pressed="${on}" aria-label="${on ? 'Stop following' : 'Follow'} ${esc(name)}" title="${on ? 'Following' : 'Follow'}"><svg class="ic-star" aria-hidden="true"><use href="#i-star"/></svg></button>`
+      : `<button type="button" class="btn fol-b" data-follow="${esc(name)}" aria-pressed="${on}"><svg class="ic-star" aria-hidden="true"><use href="#i-star"/></svg>${on ? 'Following' : 'Follow'}</button>`;
+  }
+  function togFollow(name) {
+    const on = !S.follow.has(name);
+    if (on) S.follow.add(name); else S.follow.delete(name);
+    store.set('follow', [...S.follow]); buzz(on ? 12 : 6);
+    toast(on ? `Following ${name}: their games stay at the top of the Overview` : `Stopped following ${name}`);
+    if (!S.follow.size && S.league === 'fav') { S.league = 'all'; store.set('league', 'all'); }
+    for (const b of document.querySelectorAll('[data-follow]')) if (b.dataset.follow === name) {
+      b.setAttribute('aria-pressed', String(on));
+      if (b.classList.contains('fol-b')) b.lastChild.textContent = on ? 'Following' : 'Follow';
+      else { b.setAttribute('aria-label', `${on ? 'Stop following' : 'Follow'} ${name}`); b.title = on ? 'Following' : 'Follow'; }
+    }
+    const o = S.open; S.open = null; render(); S.open = o;
+  }
+  function renderYours() {
+    const box = $('#yourTeams'); if (!box) return;
+    const fol = [...S.follow]; box.hidden = !fol.length; if (!fol.length) return;
+    const rows = fol.map((name) => {
+      const rs = S.rows.filter((r) => r.m.h === name || r.m.a === name);
+      const live = rs.find(isLive), next = rs.filter((r) => !r.started).sort((x, y) => x.ko - y.ko)[0], last = rs.filter((r) => r.started && !isLive(r)).sort((x, y) => y.ko - x.ko)[0];
+      return { name, r: live || next || last, kind: live ? 'live' : next ? 'next' : last ? 'done' : null };
+    }).sort((x, y) => (x.kind === 'live' ? 0 : x.r ? 1 : 2) - (y.kind === 'live' ? 0 : y.r ? 1 : 2) || (x.r && y.r ? x.r.ko - y.r.ko : 0));
+    morph($('#yourList'), `<div class="yt-l">${rows.map(({ name, r, kind }) => {
+      if (!r) return `<div class="yt-r none"><span class="yt-tm"><b>${esc(name)}</b><small>No game on the board this week</small></span>${folBtn(name, true)}</div>`;
+      const home = r.m.h === name, opp = home ? r.m.a : r.m.h, LN = r.started ? liveNow(r.m.id) : null, win = r.a && !r.started ? (home ? r.a.p.H : r.a.p.A) : null;
+      const right = LN ? `<span class="yt-sc${kind === 'live' ? ' live' : ''}"><b>${LN.h}–${LN.a}</b><small>${esc(kind === 'live' ? liveTxt(r.m.id) || 'Live' : 'Full time')}</small></span>`
+        : `<span class="yt-sc"><b>${tFmt.format(r.ko)}</b><small>${esc(dayLabel(r.day))}</small></span>`;
+      return `<button type="button" class="yt-r" data-open="${esc(r.m.id)}">${crest(name, r.m.lk, 'sm')}<span class="yt-tm"><b>${esc(name)}</b><small>${home ? 'v' : 'at'} ${esc(opp)} · ${esc(lgName(r.m.lk))}${win != null ? ` · ${pct(win)} to win` : ''}</small></span>${right}</button>`;
+    }).join('')}</div>`, 'yt');
+  }
+  document.addEventListener('click', (e) => {
+    const f = e.target.closest('[data-favall]');
+    if (f) { e.stopPropagation(); S.league = 'fav'; S.day = 'all'; store.set('league', 'fav'); S.shown = 60; delete S.place.matches; setTab('matches', { defer: true }); return; }
+    const b = e.target.closest('[data-follow]'); if (!b) return;
+    e.stopPropagation(); e.preventDefault(); togFollow(b.dataset.follow);
+  }, true);
+
+  // ---------------- v66: form and meetings, in a match's Teams tab ----------------
+  // Each side's last five results this season, its record at this venue (home games for the home side, away games
+  // for the away side), and the two sides' meetings this season, from the same team files as the team pages.
+  function formCard(m) {
+    const g = lgInfo(m.lk).group, dl = (d) => d || (g !== 'cups' && g !== 'intl' ? m.lk : null);
+    const sides = [[m.h, dl(m.dh), true], [m.a, dl(m.da), false]];
+    if (!sides.some((x) => x[1])) return '';
+    const tf = (lk) => lk && S.tf[lk] && S.tf[lk].d, team = (name, lk) => { const d = tf(lk); return d && d.t && d.t[name]; };
+    const res = (r) => (r[3] > r[4] ? 'W' : r[3] === r[4] ? 'D' : 'L');
+    const dFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+    const col = ([name, lk, home]) => {
+      const T = team(name, lk);
+      const head = `<div class="fm-n">${crest(name, lk || m.lk, 'xs')}<b>${esc(name)}</b>${folBtn(name, true)}</div>`;
+      if (!T || !T.r || !T.r.length) return `<div class="fm-col">${head}<p class="note">${lk && S.tf[lk] && S.tf[lk].p ? 'Loading…' : 'No results on file for this season'}</p></div>`;
+      const rs = T.r.slice().reverse(), last = rs.slice(0, 5);
+      const pts = last.reduce((a, r) => a + (res(r) === 'W' ? 3 : res(r) === 'D' ? 1 : 0), 0), gf = last.reduce((a, r) => a + r[3], 0), ga = last.reduce((a, r) => a + r[4], 0);
+      const ven = rs.filter((r) => !!r[2] === home), vw = ven.filter((r) => res(r) === 'W').length, vd = ven.filter((r) => res(r) === 'D').length;
+      return `<div class="fm-col">${head}
+        <ol class="fm-l">${last.map((r) => `<li title="${esc(dFmt.format(Date.parse(r[0])))}"><span class="rs ${res(r)}">${res(r)}</span><span class="fm-o">${r[2] ? 'v' : 'at'} ${esc(r[1])}</span><span class="fm-s">${r[3]}–${r[4]}</span></li>`).join('')}</ol>
+        <p class="fm-sum"><b>${pts}</b> pts from ${last.length} · goals ${gf}–${ga}</p>
+        <p class="fm-sum">${home ? 'At home' : 'Away'}: <b>${vw}</b>W <b>${vd}</b>D <b>${ven.length - vw - vd}</b>L</p></div>`;
+    };
+    const TH = team(m.h, sides[0][1]), meet = TH && TH.r ? TH.r.filter((r) => r[1] === m.a).slice().reverse() : [];
+    return `<div class="card fm"><h4>Form <span>this season, latest first</span></h4><div class="fm-g">${sides.map(col).join('')}</div>
+      ${meet.length ? `<div class="fm-h2h"><h5>Meetings this season</h5>${meet.map((r) => `<div><span>${esc(dFmt.format(Date.parse(r[0])))}</span><b>${r[2] ? `${esc(m.h)} ${r[3]}–${r[4]} ${esc(m.a)}` : `${esc(m.a)} ${r[4]}–${r[3]} ${esc(m.h)}`}</b></div>`).join('')}</div>` : ''}</div>`;
+  }
+  function paintForm() {
+    const r = S.open && S.byId && S.byId.get(S.open); if (!r) return;
+    const id = r.m.id, g = lgInfo(r.m.lk).group, dl = (d) => d || (g !== 'cups' && g !== 'intl' ? r.m.lk : null);
+    const put = () => { if (S.open !== id) return; const el = $('#sheetForm'); if (el) el.innerHTML = formCard(r.m); };
+    for (const lk of new Set([dl(r.m.dh), dl(r.m.da)].filter(Boolean))) if (!(S.tf[lk] && S.tf[lk].d) && S.tf[lk] !== null) loadTeamFile(lk).then(put, put);
+    put();
+  }
+
+  // ---------------- v66: share a match ----------------
+  async function shareMatch(id) {
+    const r = S.byId && S.byId.get(id); if (!r) return;
+    const url = location.origin + location.pathname + '#m=' + encodeURIComponent(id);
+    const pick = r.a && r.a.top && !r.started ? ` Statpad's pick: ${r.a.top.label} (${pct(r.a.top.pAdj)}).` : '';
+    const text = `${r.m.h} v ${r.m.a}, ${lgName(r.m.lk)}, ${dayLabel(r.day)} ${tFmt.format(r.ko)}.${pick}`;
+    if (navigator.share) { try { await navigator.share({ title: `${r.m.h} v ${r.m.a} · Statpad`, text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); toast('Link copied'); } catch (e) { toast('Copy not available here'); }
+  }
+  document.addEventListener('click', (e) => { if (e.target.closest('#sheetShare')) { buzz(6); shareMatch(S.open); } });
 
   // ---------------- render orchestration ----------------
   function render() {
@@ -4580,22 +4885,43 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     else if (S.tab === 'method') renderMethod();
     if (S.open) renderSheet();
   }
-  function setTab(t) {
-    if (S.tab === t) return;
-    const from = TABS.findIndex((x) => x[0] === S.tab), to = TABS.findIndex((x) => x[0] === t);
+  // v66: every section keeps its place. Leaving one remembers how far down it was and how many games it showed;
+  // coming back (by the tab bar or the back button) puts you there again. Tapping the tab you're on scrolls to the
+  // top. The tab bar answers a tap on the same frame; the section is drawn on the next one.
+  S.place = {};
+  function navMark(t) {
+    { const p = document.getElementById('mthTop'); if (p) p.classList.toggle('on', t === 'method' && !!S.mthOff); }
+    const cur = navOf(t), on = (k) => k === cur || (k === 'more' && !BNAV.includes(cur));
+    for (const b of document.querySelectorAll('#bnav [data-nav], #sideNav [data-nav]')) { if (on(b.dataset.nav)) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }
+    $('#bnav').style.setProperty('--i', Math.max(0, BNAV.findIndex(on)));
+  }
+  function toTop() {
+    if (scrollY < 2) return;
+    buzz(6); window.scrollTo({ top: 0, behavior: motionOK() && scrollY < 6000 ? 'smooth' : 'auto' });
+  }
+  function setTab(t, o = {}) {
+    const was = S.toTab || S.tab;
+    if (was === t) { if (o.tap) toTop(); return; }
+    if (!S.toTab) S.place[S.tab] = { y: scrollY, shown: S.shown };
+    const from = TABS.findIndex((x) => x[0] === was), to = TABS.findIndex((x) => x[0] === t);
     const go = () => {
-      S.tab = t; store.set('tab', t); syncHash();
+      if (S.toTab !== t) return;   // a later tap won
+      S.toTab = null;
+      S.tab = t; store.set('tab', t); if (o.hist !== false) histTab(t);
       if (t === 'slips' && S.day === 'all') S.day = pickDefaultDay();
-      S.shown = 60; render(); window.scrollTo(0, 0);
+      const pl = S.place[t];
+      S.shown = pl ? Math.max(60, pl.shown || 60) : 60; render();
+      window.scrollTo(0, pl ? pl.y : 0);
+      // v61: no view transition here. It photographed the whole column (thousands of pixels tall on the match list)
+      // and cross-faded the old section over the new one: a ghost of both on screen, and a stutter on slower phones.
+      // The new section now simply slides in on its own.
+      const sec = document.querySelector(`[data-view="${t}"]`);
+      if (sec && motionOK()) { sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter'); }
     };
-    buzz(6);
-    // v61: no view transition here. It photographed the whole column (thousands of pixels tall on the match list)
-    // and cross-faded the old section over the new one: a ghost of both on screen, and a stutter on slower phones.
-    // The new section now simply slides in on its own.
+    if (!o.quiet) buzz(6);
     document.documentElement.dataset.dir = to < from ? 'back' : 'fwd';
-    go();
-    const sec = document.querySelector(`[data-view="${t}"]`);
-    if (sec && motionOK()) { sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter'); }
+    S.toTab = t; navMark(t);
+    if (o.defer && !document.hidden) requestAnimationFrame(() => setTimeout(go, 0)); else go();
   }
   let toastT;
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1600); }
@@ -7660,7 +7986,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-bseg],[data-bact],[data-chip],#saveToBets,#betDlgX,#bscrim,#betSave,#betCancel,#bkBackup,#bkRestoreBtn,#bkWipe,#bkCfgSave');
     if (!t) return;
-    if (t.dataset.bseg) { S.bseg = t.dataset.bseg; store.set('bseg', S.bseg); if (S.tab !== 'coupon') setTab('coupon'); else { renderCoupon(); renderNav(); } if (S.bseg === 'mine') loadResults(); return; }
+    if (t.dataset.bseg) { S.bseg = t.dataset.bseg; store.set('bseg', S.bseg); if (S.tab !== 'coupon') setTab('coupon'); else { renderCoupon(); renderNav(); histTab('coupon'); } if (S.bseg === 'mine') loadResults(); return; }
     if (t.dataset.bact) { const [a, id] = t.dataset.bact.split('|'); betAction(a, id); return; }
     if (t.dataset.chip) { $('#bfStake').value = (+t.dataset.chip).toLocaleString('en-US'); updateCheck(); return; }
     if (t.id === 'saveToBets') { openBetForm(); return; }
@@ -9201,7 +9527,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const real = st.mode === 'ft' ? mvxOutOf(`${st.L.h}–${st.L.a}`) : -1, name = [m.h, 'Draw', m.a];
     const aria = `${mvxN(X.cnt[0])} ${m.h} wins, ${mvxN(X.cnt[1])} draws and ${mvxN(X.cnt[2])} ${m.a} wins out of 10,000`;
     return `<div class="card mvx" id="mvx"><h4>Multiverse <span>${sub}</span></h4>
-      <div class="mvx-stage${mvgOK() ? ' g3' : ''}"><canvas class="mvx-u" aria-hidden="true"></canvas><canvas class="mvx-cv" data-mvx="${esc(m.id)}" role="img" aria-label="${esc(aria)}"></canvas><canvas class="mvx-o" aria-hidden="true"></canvas></div>
+      <div class="mvx-stage${MVG !== false ? ' g3' : ''}"><canvas class="mvx-u" aria-hidden="true"></canvas><canvas class="mvx-cv" data-mvx="${esc(m.id)}" role="img" aria-label="${esc(aria)}"></canvas><canvas class="mvx-o" aria-hidden="true"></canvas></div>
       <div class="mvx-b" role="group" aria-label="Show one ending">${MVX_K.map((k, o) => `<button type="button" class="mvx-k k${k}${o === real ? ' real' : ''}" data-mvxb="${k}" aria-pressed="${sel === k}"><span><i></i><em>${esc(name[o])}</em></span><b>${mvxN(X.cnt[o])}</b><small>${o === real ? 'real result' : pct(X.cnt[o] / X.N)}</small></button>`).join('')}</div>
       <p class="mvx-say">${mvxSay(r, st, X)}</p><p class="mvx-sel" aria-live="polite">${sel ? mvxPickLine(r, X, sel) : 'Tap an ending to follow only the universes that reach it.'}</p>
       ${st.mode === 'nolive' ? '<p class="note">The live score isn’t in yet, so this is the game as it looked at kick-off.</p>' : ''}</div>`;
@@ -9368,7 +9694,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const MVX_LT = MVX_C.map((c) => `rgb(${c.map((v) => Math.round(v + (255 - v) * 0.6)).join(',')})`).concat('#fff');
   function mvxDraw(cv, now) {
     let s = cv._mvx;
-    if (!s || s.W !== cv.clientWidth || s.H !== cv.clientHeight) s = mvxSync(cv);
+    if (!s || cv._stale || s.W !== cv.clientWidth || s.H !== cv.clientHeight) { cv._stale = false; s = mvxSync(cv); }
     if (!s || !s.X) return;
     if (s.g3) { if (!mvgDraw(cv, s, now)) cv._mvx = null; else s.drawn = true; return; }
     if (s.under) mvxUnder(s, now);
@@ -9421,7 +9747,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     let run = false;
     for (const cv of S.mvx.cvs) {
       if (!cv.isConnected) { S.mvx.cvs.delete(cv); if (S.mvx.io) S.mvx.io.unobserve(cv); continue; }
-      if (cv._mvx && cv._mvx.drawn && (!cv._vis || !open)) continue;
+      if (S.mvx.io && !cv._vis) continue;   // v66: nothing is simulated or drawn for a river that isn't on screen
+      if (cv._mvx && cv._mvx.drawn && !open) continue;
       mvxDraw(cv, t); run = true;
     }
     if (run && motionOK()) S.mvx.raf = requestAnimationFrame(mvxLoop);
@@ -9429,7 +9756,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // v61: the river's 3D scene is built once the sheet has finished sliding up, not during it (it was the slide's stutter)
   function mvxAttachSoon() { const wait = 420 - (performance.now() - (S.sheetAt || 0)); clearTimeout(S.mvxT); if (wait > 0) S.mvxT = setTimeout(mvxAttach, wait); else mvxAttach(); }
   function mvxAttach() {
-    if (!S.mvx.io && 'IntersectionObserver' in window) S.mvx.io = new IntersectionObserver((es) => { for (const e of es) e.target._vis = e.isIntersecting; mvxKick(); });
+    // v66: built once its tab is showing and it is within about a screen of view, after the tap has been answered, not
+    // for a tab you haven't opened: the Model tab's river used to cost a slow phone up to a third of a second per tap
+    if (!S.mvx.io && 'IntersectionObserver' in window) S.mvx.io = new IntersectionObserver((es) => { for (const e of es) e.target._vis = e.isIntersecting; mvxKick(); }, { rootMargin: '0px 0px 900px 0px' });
     for (const cv of document.querySelectorAll('canvas.mvx-cv')) {
       if (!S.mvx.cvs.has(cv)) {
         S.mvx.cvs.add(cv); cv._vis = !S.mvx.io; if (S.mvx.io) S.mvx.io.observe(cv);
@@ -9446,7 +9775,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           mvxPick(g > 0.5 ? 'H' : g < -0.5 ? 'A' : 'D');
         });
       }
-      if (mvxSync(cv)) { cv._mvx.drawn = false; }
+      cv._stale = true;
+      if (!S.mvx.io || cv._vis) { cv._stale = false; if (mvxSync(cv)) cv._mvx.drawn = false; }
     }
     mvxKick();
   }
@@ -9455,7 +9785,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     for (const b of document.querySelectorAll('[data-mvxb]')) b.setAttribute('aria-pressed', String(b.dataset.mvxb === S.mvx.sel));
     const r = S.open && S.byId.get(S.open), X = r && S.mvx.cache.get(r.m.id), p = $('#mvx .mvx-sel');
     if (p && X) p.innerHTML = S.mvx.sel ? mvxPickLine(r, X, S.mvx.sel) : 'Tap an ending to follow only the universes that reach it.';
-    for (const cv of S.mvx.cvs) { if (mvxSync(cv)) cv._mvx.drawn = false; }
+    for (const cv of S.mvx.cvs) { if (S.mvx.io && !cv._vis) { cv._stale = true; continue; } if (mvxSync(cv)) cv._mvx.drawn = false; }
     mvxKick();
   }
   document.addEventListener('click', (e) => { const b = e.target.closest('[data-mvxb]'); if (b) mvxPick(b.dataset.mvxb); });
@@ -10654,7 +10984,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const back = S.teamBack && S.byId.get(S.teamBack) ? `<button type="button" class="btn ghost tback" data-open="${esc(S.teamBack)}">← Back to the match</button>` : S.teamBack === 'ask:' ? `<button type="button" class="btn ghost tback" data-ask="1">← ${SW() ? 'Rudi kwa Uliza Statpad' : 'Back to Ask Statpad'}</button>` : '';
     const head = `<div class="tm-head">${back}<div class="tm-top">${crest(name, lk, 'xl')}<div class="tm-name">${esc(name)}</div></div>
       <div class="tm-meta">${pos ? `<span>${ord(pos)} of ${L.table.length}</span><span>${row[7]} pts from ${row[1]}</span>` : ''}${row ? formDots(row[8]) : ''}</div>
-      <button type="button" class="btn listen-b" data-listen="team"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></div>`;
+      <div class="tm-acts"><button type="button" class="btn listen-b" data-listen="team"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button>${folBtn(name)}</div></div>`;
     if (!T) {
       const msg = c && c.p ? '<div class="empty-state"><b>Loading…</b></div>' : '<div class="empty-state"><b>No team page yet</b>Team pages cover league teams; this one fills in after the site’s next results update.</div>';
       $('#sheetBody').innerHTML = head + teamNext(name) + msg;
@@ -12311,7 +12641,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function vaPeek(on) {
     const p = $('#va'); if (!p || !VA.open) return;
-    VA.peek = on === 'toggle' ? !VA.peek : !!on; p.classList.toggle('peek', VA.peek); vaRender(); vaOrbState();
+    VA.peek = on === 'toggle' ? !VA.peek : !!on; p.classList.toggle('peek', VA.peek); vaRender(); vaOrbState(); ovSoon();
   }
   function vaHide() {
     const p = $('#va'); if (!p) return;
@@ -13358,6 +13688,7 @@ void main() {
     if (cnt.has(S.league) && !ks.includes(S.league)) ks.unshift(S.league);
     el.innerHTML = `<button type="button" class="all" data-lgchip="all" aria-pressed="${S.league === 'all'}">All<span class="n">${dayRows.length}</span></button>`
       + (live ? `<button type="button" class="live-c" data-lgchip="live" aria-pressed="${S.league === 'live'}"><i></i>Live<span class="n">${live}</span></button>` : '')
+      + (S.follow.size ? `<button type="button" class="fav-c" data-lgchip="fav" aria-pressed="${S.league === 'fav'}"><svg class="ic-star" aria-hidden="true"><use href="#i-star"/></svg>Following<span class="n">${dayRows.filter((r) => S.follow.has(r.m.h) || S.follow.has(r.m.a)).length}</span></button>` : '')
       + ks.map((k) => `<button type="button" data-lgchip="${esc(k)}" aria-pressed="${S.league === k}" title="${esc(lgLabel(k))}">${lgIcon(k, 'xs')}${esc(lgName(k))}<span class="n">${cnt.get(k)}</span></button>`).join('');
   }
   // the price flies from the button to the Slips tab
@@ -13531,7 +13862,7 @@ void main() {
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-tab],[data-add],[data-open],[data-day],[data-target],[data-slipfloor],[data-edge],[data-stake],[data-rm],[data-addslip],[data-shareslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn,#installBtn,#installTipX');
     if (!t) return;
-    if (t.dataset.tab) { e.preventDefault(); setTab(t.dataset.tab); return; }
+    if (t.dataset.tab) { e.preventDefault(); setTab(t.dataset.tab, { defer: true, tap: !!t.closest('#bnav, #sideNav') }); return; }
     if (t.dataset.add) { e.stopPropagation(); const [id, key] = t.dataset.add.split('|'); toggleCoupon(id, key); buzz(inCoupon(id, key) ? 12 : 6); if (inCoupon(id, key)) flyToBets(t); if (S.tab === 'coupon') renderCoupon(); if (key.startsWith('Q:')) paintQx(); return; }
     if (t.dataset.goslips) { S.day = t.dataset.goslips; setTab('slips'); return; }
     if (t.dataset.open) { openMatch(t.dataset.open, t); return; }
@@ -13607,6 +13938,7 @@ void main() {
       const first = !S.introDone; S.introDone = true;
       if (first && motionOK()) { document.documentElement.classList.add('intro'); setTimeout(() => document.documentElement.classList.remove('intro'), 1500); }
       render(); flash(before);
+      if (S.pendOpen) { const id = S.pendOpen; S.pendOpen = null; if (S.byId.has(id)) openMatch(id); else { toast('That game is no longer on the board'); histTab(S.tab); } }
     } catch (e) { showFatal(e); }
   }
   function showFatal(e) {
@@ -13729,6 +14061,12 @@ void main() {
   }
 
   { const sh = $('#sheet'); if (sh) { const sync = () => { sh.inert = sh.getAttribute('aria-hidden') === 'true'; }; sync(); new MutationObserver(sync).observe(sh, { attributes: true, attributeFilter: ['aria-hidden'] }); } }
+  // v66: overlays opening and closing keep the back button's history in step (see H above)
+  if ('MutationObserver' in window) {
+    const mo = new MutationObserver(ovSoon);
+    for (const [sel, at] of [['#sheet', ['class']], ['#pal', ['hidden']], ['#betDlg', ['hidden']]]) { const el = $(sel); if (el) mo.observe(el, { attributes: true, attributeFilter: at }); }
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
   if (window.__spMark) window.__spMark('main script running');
   applyUI();
   try { matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (UI.theme === 'auto') applyUI(); }); RM.addEventListener('change', applyUI); } catch (e) { /* old browsers */ }
