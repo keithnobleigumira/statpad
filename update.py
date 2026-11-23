@@ -36,6 +36,7 @@ Environment (all optional):
 """
 import csv
 import difflib
+import functools
 import gzip
 import hashlib
 import io
@@ -267,6 +268,32 @@ def is_cup(lk):
     return c.get('group') == 'cups' or bool(c.get('cup'))
 
 
+# where each league's clubs play their continental football (Israel and Kazakhstan in UEFA's, Australia in Asia's)
+CONT = {c: 'Europe' for c in ('England', 'Spain', 'Germany', 'Italy', 'France', 'Portugal', 'Netherlands', 'Belgium', 'Scotland',
+                              'Turkey', 'Greece', 'Austria', 'Switzerland', 'Denmark', 'Norway', 'Sweden', 'Poland', 'Romania',
+                              'Czechia', 'Serbia', 'Croatia', 'Ukraine', 'Hungary', 'Israel', 'Cyprus', 'Bulgaria', 'Slovakia',
+                              'Slovenia', 'Russia', 'Ireland', 'Finland', 'Kazakhstan', 'Azerbaijan', 'Georgia', 'Armenia',
+                              'Belarus', 'Bosnia and Herzegovina', 'North Macedonia', 'Northern Ireland', 'Wales', 'Estonia',
+                              'Latvia', 'Lithuania')}
+CONT.update({c: 'South America' for c in ('Brazil', 'Argentina', 'Chile', 'Colombia', 'Peru', 'Ecuador', 'Uruguay', 'Paraguay',
+                                           'Bolivia', 'Venezuela')})
+CONT.update({c: 'North America' for c in ('Mexico', 'USA', 'Costa Rica', 'Honduras', 'Guatemala', 'El Salvador')})
+CONT.update({c: 'Africa' for c in ('South Africa', 'Uganda', 'Kenya', 'Ghana', 'Nigeria', 'Zambia', 'Rwanda', 'Egypt', 'Zimbabwe',
+                                    'Morocco', 'Algeria', 'Tunisia', 'DR Congo', 'Angola', 'Botswana', 'Sudan', 'Libya', 'Burundi')})
+CONT.update({c: 'Asia' for c in ('Japan', 'China', 'South Korea', 'Saudi Arabia', 'India', 'Australia', 'United Arab Emirates',
+                                  'Iran', 'Iraq', 'Jordan', 'Kuwait', 'Uzbekistan', 'Vietnam', 'Indonesia', 'Thailand')})
+
+
+def cup_region(lk):
+    """For a cup: which leagues its clubs can come from (a test on a league key), or None (anywhere)."""
+    c = (L.get(lk) or {}).get('country') if lk and is_cup(lk) else None
+    if not c or c == 'World':
+        return None
+    if c in ('Europe', 'South America', 'North America', 'Africa', 'Asia'):
+        return lambda lk2: CONT.get((L.get(lk2) or {}).get('country')) == c
+    return lambda lk2: (L.get(lk2) or {}).get('country') == c
+
+
 def knockout(lk):   # cups and national teams: no league table of their own
     return is_cup(lk) or (L.get(lk) or {}).get('group') == 'intl'
 
@@ -396,7 +423,35 @@ PRETTY = {
 }
 
 
-def norm(s):
+ALIAS.update({
+    # v70: names other feeds use for clubs our tables write another way (checked against each league's table)
+    'atletico mineiro': 'atletico mg', 'clube atletico mineiro': 'atletico mg', 'atletico paranaense': 'athletico pr',
+    'athletico paranaense': 'athletico pr', 'tokyo verdy': 'verdy', 'tokyo verdy 1969': 'verdy', 'urawa red diamonds': 'urawa reds',
+    'urawa': 'urawa reds', 'amed': 'amedspor', 'amed sfk': 'amedspor', 'basaksehir': 'buyuksehyr', 'istanbul basaksehir': 'buyuksehyr',
+    'istanbul bb': 'buyuksehyr', 'erzurum bb': 'erzurumspor', 'erzurum': 'erzurumspor', 'austria lustenau': 'a lustenau',
+    'zaglebie lubin': 'zaglebie', 'grasshopper zurich': 'grasshoppers', 'grasshopper': 'grasshoppers',
+    'grasshoppers zurich': 'grasshoppers', 'hamarkameratene': 'hamkam', 'celta fortuna': 'celta b', 'real sociedad ii': 'sociedad b',
+    'la galaxy': 'los angeles galaxy', 'lafc': 'los angeles', 'red bull new york': 'new york red bulls', 'red bull ny': 'new york red bulls',
+    'ny red bulls': 'new york red bulls', 'nycfc': 'new york city', 'agf': 'aarhus', 'agf aarhus': 'aarhus',
+    'csu craiova': 'univ craiova', 'universitatea craiova': 'univ craiova', 'estudiantes de la plata': 'estudiantes l p',
+    'estudiantes lp': 'estudiantes l p', 'gimnasia la plata': 'gimnasia l p', 'gimnasia y esgrima la plata': 'gimnasia l p',
+    'gimnasia lp': 'gimnasia l p', 'independiente rivadavia': 'ind rivadavia', 'estudiantes rc': 'estudiantes rio cuarto',
+    'gimnasia y esgrima mendoza': 'gimnasia mendoza', 'gimnasia m': 'gimnasia mendoza', 'wisla krakow': 'wisla',
+    'kobenhavn': 'copenhagen', 'kbenhavn': 'copenhagen', 'f c kobenhavn': 'copenhagen', 'f c kbenhavn': 'copenhagen',
+})
+# letters NFKD doesn't split into a base letter and an accent ("Zagłębie" lost its l, "Bodø" its o)
+TRANSLIT = str.maketrans({'ł': 'l', 'Ł': 'L', 'ø': 'o', 'Ø': 'O', 'đ': 'd', 'Đ': 'D', 'ð': 'd', 'Ð': 'D', 'ß': 'ss', 'æ': 'ae',
+                          'Æ': 'AE', 'œ': 'oe', 'Œ': 'OE', 'ı': 'i', 'þ': 'th', 'Þ': 'Th', 'ħ': 'h', 'Ħ': 'H'})
+NS = {}         # (lk, canonical name) -> the name shown, for a club whose name a club of a stronger league abroad also has
+NS_REV = {}     # the name shown -> the canonical name
+NS_PLAIN = set()   # names more than one country's league uses
+NS_KEEP = {}    # such a name -> [(lk, name)] of the club(s) keeping it plain
+
+
+def norm(s, tr=True):
+    s = NS_REV.get(s, s) if s else s   # "Liverpool (Montevideo)" is Uruguay's Liverpool wherever names are compared
+    if tr:
+        s = (s or '').translate(TRANSLIT)
     s = unicodedata.normalize('NFKD', s or '').encode('ascii', 'ignore').decode().lower()
     s = s.replace('&', ' and ').replace("'", '').replace('.', ' ')
     s = re.sub(r'[^a-z0-9 ]', ' ', s)
@@ -406,7 +461,153 @@ def norm(s):
 
 
 def slug(s):
-    return re.sub(r'[^a-z0-9]+', '-', norm(s)).strip('-')[:24] or 'x'
+    # match ids keep the spelling they've always had (tracked picks are filed under them)
+    return re.sub(r'[^a-z0-9]+', '-', norm(s, tr=False)).strip('-')[:24] or 'x'
+
+
+# ----------------------------------------------------------------------------------------------
+# Matching a feed's name to a club in one league's table (v70). Names are compared word by word: a word matches
+# when it's the same, the same once shortened words are read out ("Utd" / "United"), an initial ("A." / "Austria"),
+# initials run together ("L.P." / "La Plata"), a plural or close spelling ("Goztep" / "Goztepe") or, where a name
+# shortens it with a full stop, a shortened word ("Ind." / "Independiente"). The club whose every word is matched
+# wins; a feed name with words left over ("Independiente Rivadavia") only counts for a club when those words don't
+# name another club of the league, and two clubs that fit equally well mean no match at all: a fixture left with
+# the feed's own name is plain to see, while a wrong match silently prices a game with the wrong side's ratings.
+# ----------------------------------------------------------------------------------------------
+RES_WORDS = {'utd': 'united', 'rvs': 'rovers', 'jrs': 'juniors', 'jnrs': 'juniors', 'wed': 'wednesday', 'st': 'saint',
+             'ste': 'sainte', 'wand': 'wanderers', 'cty': 'city', 'hotspurs': 'hotspur'}
+RES_GENERIC = {'sk', 'sfk', 'bb', 'fk', 'club', 'jk', 'if', 'ik', 'bk', 'ff', 'cf', 'sc', 'ac', 'cd', 'afc', 'futbol', 'football',
+               'fotball', 'fotbal', 'futebol', 'clube', 'sport', 'sports', 'ks', 'mks', 'gks', 'kks', 'bsc', 'sv', 'ca', 'cs',
+               'csd', 'csyd', 'cfc', 'fbc', 'fcd', 'ad', 'sd', 'ud', 'cd', 'ec', 'se', 'cr', 'sa', 'sad', 'ltda', 'sp'}
+RES_SIDE = {'w': 'W', 'women': 'W', 'woman': 'W', 'fem': 'W', 'femenino': 'W', 'feminin': 'W', 'frauen': 'W', 'ladies': 'W',
+            'ii': 'R', 'b': 'R', 'reserves': 'R', 'res': 'R', 'jong': 'R', 'u17': 'u17', 'u18': 'u18', 'u19': 'u19',
+            'u20': 'u20', 'u21': 'u21', 'u23': 'u23', 'youth': 'Y', 'academy': 'Y'}
+
+
+@functools.lru_cache(maxsize=50000)
+def res_words(raw):
+    """A name as words for matching: (words, side marks, shortened words)."""
+    s = NS_REV.get(raw, raw) or ''
+    abbr = {norm(w) for w in re.findall(r"([^\W\d_]+)\.", s.translate(TRANSLIT))}
+    k = norm(s)
+    if '(' in s:   # "Gimnasia (M)": the bracket is part of the name here
+        k = norm(re.sub(r'[()]', ' ', s))
+    out, side = [], set()
+    for t in k.split():
+        if t in RES_SIDE:
+            side.add(RES_SIDE[t])
+            continue
+        t = RES_WORDS.get(t, t)
+        if t in RES_GENERIC:
+            continue
+        if len(t) > 6 and t.endswith('spor'):
+            t = t[:-4]   # "Amedspor" / "Amed SK", "Erzurumspor" / "Erzurum BB"
+        out.append(t)
+    # single letters side by side are one set of initials ("L P" / "LP")
+    j, w = [], out
+    i = 0
+    while i < len(w):
+        if len(w[i]) == 1 and i + 1 < len(w) and len(w[i + 1]) == 1:
+            run = w[i]
+            while i + 1 < len(w) and len(w[i + 1]) == 1:
+                i += 1
+                run += w[i]
+            j.append(run)
+        else:
+            j.append(w[i])
+        i += 1
+    j = [t for t in j if t not in RES_GENERIC] or j   # "F C" joined is "fc"
+    return tuple(j or k.split()), frozenset(side), frozenset(abbr)
+
+
+def word_eq(x, y, abbr):
+    """2: the same word (or plainly so), 1: an initial for it, 0: no."""
+    if x == y:
+        return 2
+    if len(x) == 1 or len(y) == 1:
+        a, b = (x, y) if len(x) == 1 else (y, x)
+        return 1 if len(b) >= 3 and b[0] == a else 0
+    if min(len(x), len(y)) >= 5 and abs(len(x) - len(y)) <= 2 and (x.startswith(y) or y.startswith(x)):
+        return 2
+    if min(len(x), len(y)) >= 5 and difflib.SequenceMatcher(None, x, y).ratio() >= 0.86:
+        return 2
+    a, b = (x, y) if len(x) < len(y) else (y, x)
+    return 2 if a in abbr and len(a) >= 2 and b.startswith(a) else 0
+
+
+def words_cover(A, B, abbr):
+    """Which words of A and of B are matched (a word of initials in one may stand for several words of the other),
+    and how many matched as whole words rather than initials."""
+    ma, mb, strong = set(), set(), 0
+    for i, x in enumerate(A):
+        for j, y in enumerate(B):
+            if j not in mb:
+                e = word_eq(x, y, abbr)
+                if e:
+                    ma.add(i); mb.add(j); strong += e == 2
+                    break
+    for P, Q, mp, mq in ((A, B, ma, mb), (B, A, mb, ma)):   # "rc" / "rio cuarto"
+        for i, x in enumerate(P):
+            if i in mp or not (2 <= len(x) <= 4):
+                continue
+            for j in range(len(Q) - len(x) + 1):
+                run = range(j, j + len(x))
+                if all(r not in mq for r in run) and ''.join(Q[r][0] for r in run) == x and all(len(Q[r]) >= 2 for r in run):
+                    mp.add(i); mq.update(run)
+                    break
+    return ma, mb, strong
+
+
+def name_match(raw, table, cutoff=0.80, women=False, strict=False):
+    """The one club of table (normkey -> canonical) that raw surely is, or None. women: a women's competition,
+    where "Women" / "(W)" in a name tells nothing apart. strict (clubs from anywhere, for cups): a feed name shorter
+    than ours never counts ("Nacional" is not "Atletico Nacional")."""
+    if not table or not raw:
+        return None
+    R, rside, rabbr = res_words(raw)
+    if women:
+        rside = rside - {'W'}
+    W = {}
+    for kk, v in table.items():
+        K, ks, ka = res_words(v)
+        W[kk] = (K, ks - {'W'} if women else ks, ka)
+    cands = []
+    for kk, (K, kside, kabbr) in W.items():
+        if rside != kside:
+            continue   # never a club and its women's, youth or reserve side
+        abbr = rabbr | kabbr
+        mr, mk, strong = words_cover(R, K, abbr)
+        if not strong:
+            continue   # initials alone never name a club
+        if len(mr) == len(R) and len(mk) == len(K):
+            s = 3
+        elif K and len(mk) == len(K):
+            left = tuple(R[i] for i in range(len(R)) if i not in mr)
+            others = [W[o] for o in W if o != kk]
+            # the feed's words left over must not name another club of this league ("Independiente Rivadavia")
+            if any(O and len(words_cover(left, O, abbr | oa)[1]) == len(O) for O, _, oa in others):
+                continue
+            s = 1 if any(words_cover(left, O, abbr | oa)[0] for O, _, oa in others) else 2
+        elif R and len(mr) == len(R) and not strict:
+            s = 2
+        else:
+            continue
+        cands.append((s, table[kk]))
+    if cands:
+        top = max(c[0] for c in cands)
+        hits = {v for sc, v in cands if sc == top}
+        return next(iter(hits)) if len(hits) == 1 else None
+    # a close spelling of the whole name, every word of the shorter one close to a word of the other
+    k = norm(raw)
+    m = difflib.get_close_matches(k, list(table.keys()), n=2, cutoff=cutoff)
+    if len(m) == 1 or (len(m) == 2 and difflib.SequenceMatcher(None, k, m[0]).ratio() - difflib.SequenceMatcher(None, k, m[1]).ratio() > 0.05):
+        A, B = R, W[m[0]][0]
+        S, Lg = (A, B) if len(A) <= len(B) else (B, A)
+        close = lambda x, y: word_eq(x, y, rabbr) == 2 or (min(len(x), len(y)) >= 3 and (x.startswith(y) or y.startswith(x))) \
+            or difflib.SequenceMatcher(None, x, y).ratio() >= 0.75
+        if rside == W[m[0]][1] and all(any(close(x, y) for y in Lg) for x in S):
+            return table[m[0]]
+    return None
 
 
 def pretty(name):
@@ -415,7 +616,7 @@ def pretty(name):
 
 # names used by cup and European feeds for league sides (applied only when matching across leagues, so match ids
 # keep their names)
-XALIAS = {'f c kbenhavn': 'copenhagen', 'kbenhavn': 'copenhagen', 'heart of midlothian': 'hearts'}
+XALIAS = {'f c kbenhavn': 'copenhagen', 'kbenhavn': 'copenhagen', 'kobenhavn': 'copenhagen', 'heart of midlothian': 'hearts'}
 # European clubs whose name contains a rated side's (Arsenal Tivat, Red Star Belgrade, AEK Larnaca, ...): never
 # matched across leagues, so they're rated as the unrated clubs they are
 XNONE = set(['aek larnaca', 'apollon limassol', 'aris limassol', 'arsenal tivat', 'dinamo brest', 'inter baku', 'inter descaldes', 'lincoln red imps', 'red star belgrade', 'virtus'])
@@ -426,37 +627,74 @@ class Teams:
 
     def __init__(self):
         self.by_league = {}   # lk -> {normkey: canonical}
-        self.globals = {}     # pool ('m' or 'w') -> {normkey: (lk, canonical)}
+        self.globals = {}     # pool ('m' or 'w') -> {normkey: [(lk, canonical), ...]}
+        self.fuzzy = []       # (lk, feed name, our club) matched by name_match, for the run's log
 
     @property
     def global_(self):
-        return self.globals.setdefault('m', {})
+        return {k: v[0] for k, v in self.globals.setdefault('m', {}).items()}
 
     def add(self, lk, name):
         k = norm(name)
         self.by_league.setdefault(lk, {})[k] = name
         if not is_cup(lk) and not (L.get(lk) or {}).get('local'):
-            self.globals.setdefault(pool(lk), {}).setdefault(k, (lk, name))
+            lst = self.globals.setdefault(pool(lk), {}).setdefault(k, [])
+            if all(x[0] != lk for x in lst):
+                lst.append((lk, name))
 
     def resolve(self, lk, raw, cutoff=0.80):
         k = norm(raw)
         table = self.by_league.get(lk) or {}
         if k in table:
             return table[k]
-        hit = self._fuzzy(k, table, cutoff)
+        if (L.get(lk) or {}).get('w'):   # "Manchester City Women" in a women's league is its "Manchester City"
+            k2 = norm(re.sub(r'\((?:w|women)\)|\b(?:women|woman|ladies|femenino|feminines?|frauen|w)\b', ' ', raw or '', flags=re.I))
+            if k2 in table:
+                return table[k2]
+        hit = name_match(raw, table, cutoff, women=bool((L.get(lk) or {}).get('w')))
+        if hit and len(self.fuzzy) < 400:
+            self.fuzzy.append((lk, raw, hit))
         return hit
 
-    def resolve_global(self, raw, cutoff=0.86, pool_='m'):
+    def resolve_global(self, raw, cutoff=0.86, pool_='m', lk=None):
+        """(league, our name) of a cup or European side. lk: the competition, whose region (a country for a
+        domestic cup, a continent for the others) bounds where the club can come from: Uruguay's Nacional in the
+        Copa Libertadores is never Portugal's."""
         g = self.globals.get(pool_) or {}
         k = norm(raw)
         if k in XNONE:
             return None
         k = XALIAS.get(k, k)
-        if k in g:
-            return g[k]
-        keys = {kk: kk for kk in g}
-        hit = self._fuzzy(k, keys, cutoff)
-        return g[hit] if hit else None
+        reg = cup_region(lk)
+        ok = (lambda lk2: reg(lk2)) if reg else (lambda lk2: True)
+        lst = [x for x in g.get(k) or [] if ok(x[0])]
+        if lst:
+            return lst[0]
+        idx = self._index(pool_)
+        near = set()
+        for w in res_words(raw)[0]:
+            near |= idx.get(w[:3], set()) if len(w) >= 3 else set()
+        keys = {kk: kk for kk in near if any(ok(x[0]) for x in g[kk])}
+        hit = name_match(raw, keys, cutoff, women=pool_ == 'w', strict=True)
+        if not hit:
+            return None
+        lst = [x for x in g[hit] if ok(x[0])]
+        return lst[0] if lst else None
+
+    def _index(self, pool_):
+        """First three letters of each word -> the clubs of the pool with such a word (the clubs a name could be)."""
+        c = getattr(self, '_idx', None)
+        if c is None:
+            c = self._idx = {}
+        g = self.globals.get(pool_) or {}
+        if pool_ not in c or c[pool_][0] != len(g):
+            ix = {}
+            for kk in g:
+                for w in res_words(kk)[0]:
+                    if len(w) >= 3:
+                        ix.setdefault(w[:3], set()).add(kk)
+            c[pool_] = (len(g), ix)
+        return c[pool_][1]
 
     @staticmethod
     def _fuzzy(k, table, cutoff):
@@ -477,16 +715,76 @@ class Teams:
 # I/O
 # ----------------------------------------------------------------------------------------------
 
-def disp(lk, name):
-    """The name shown on the site: women's sides carry "Women" so they're never confused with the men's club."""
-    n = pretty(name)
+def disp(lk, name, dom=None):
+    """The name shown on the site: women's sides carry "Women" so they're never confused with the men's club, and a
+    club sharing its name with a club of a stronger league abroad carries where it's from ("Liverpool (Montevideo)"). dom: a
+    cup side's own league."""
+    n = NS.get((dom or lk, name)) or pretty(name)
     if (L.get(lk) or {}).get('w') and not re.search(r'\b(women|woman|femen\w*|f[eé]minin\w*|frauen|ladies|lionesses|wfc)\b', n, re.I):
         n += ' Women'
     return n
 
 
-def base_name(n):
+def women_base(n):
     return re.sub(r'\s+Women$', '', n or '')
+
+
+def base_name(n):
+    """The club's own name, as other feeds write it: without "Women" or a namesake's country."""
+    n = women_base(n)
+    return NS_REV.get(n, n)
+
+
+# Namesakes (v70). Uruguay's Liverpool and Nacional, Honduras's Platense and El Salvador's Alianza share their
+# names with clubs of England, Portugal, Argentina and Colombia. Crests, colours and team pages are filed by the
+# name shown, so one name for two clubs gave Montevideo's Liverpool the English club's crest and colours. The club
+# of the weaker league now carries where it's from, as ESPN already writes "Racing (Montevideo)"; the other keeps
+# its name (and its picks' history). A club not listed here carries its country.
+NS_PLACE = {('URU1', 'Liverpool'): 'Montevideo', ('URU1', 'Nacional'): 'Montevideo'}
+
+
+def cup_shown(lk, name, g):
+    """A match side's name as shown. g: a cup side's (league, name) when it was found in one of our leagues. A cup
+    side found nowhere whose name a namesake abroad has ("Nacional" in the Copa Libertadores) is the namesake from
+    the cup's own region, when there's exactly one."""
+    if g:
+        return disp(lk, g[1], g[0])
+    if is_cup(lk) and pretty(name) in NS_PLAIN:
+        reg = cup_region(lk)
+        opts = [(lk2, n) for (lk2, n) in NS if pretty(n) == pretty(name) and (reg is None or reg(lk2))]
+        keep_in = [lk2 for lk2, n in NS_KEEP.get(pretty(name), []) if reg is None or reg(lk2)]
+        if len(opts) == 1 and not keep_in:
+            return disp(lk, opts[0][1], opts[0][0])
+    return disp(lk, name)
+
+
+def set_namesakes(leagues):
+    """Find the clubs that share a name with a club of another country's league (from every league's table and
+    ratings) and name the weaker league's one by its country. Returns a signature of the result."""
+    NS.clear(); NS_REV.clear(); NS_PLAIN.clear(); NS_KEEP.clear()
+    res_words.cache_clear()
+    fold = lambda s: unicodedata.normalize('NFKD', s.translate(TRANSLIT)).encode('ascii', 'ignore').decode().casefold().strip()
+    by = {}
+    for lk, lg in sorted((leagues or {}).items()):
+        if lk not in L or knockout(lk) or not isinstance(lg, dict):
+            continue
+        names = {r[0] for r in lg.get('table') or [] if r and r[0]} | set(lg.get('ratings') or {})
+        for n in names:
+            by.setdefault((pool(lk), fold(pretty(n))), []).append((lk, n))
+    for (pl, key), sides in sorted(by.items()):
+        if len({L[lk]['country'] for lk, _ in sides}) < 2:
+            continue   # the same club in two of one country's divisions (promoted or relegated this year)
+        keep = max(sides, key=lambda x: (L[x[0]]['strength'], x[0]))
+        NS_PLAIN.add(pretty(keep[1]))
+        for lk, n in sides:
+            if L[lk]['country'] == L[keep[0]]['country']:
+                NS_KEEP.setdefault(pretty(keep[1]), []).append((lk, n))
+            else:
+                shown = f"{pretty(n)} ({NS_PLACE.get((lk, n)) or L[lk]['country']})"
+                NS[(lk, n)] = shown
+                NS_REV[shown] = n
+    res_words.cache_clear()
+    return sorted([list(k) + [v] for k, v in NS.items()])
 
 # Quiet mode (v63). The repository that runs Statpad is public, and so are its Actions logs, so with STATPAD_QUIET=1
 # the run log goes to the private state (.statpad/logs, kept 7 days) instead of the public log, which gets one
@@ -1413,6 +1711,35 @@ def load_results():
     return out
 
 
+def season_old(label):
+    """Is a season label ("2025/26", "2026") older than the season under way now?"""
+    m = re.match(r'(\d{4})', str(label or ''))
+    if not m:
+        return False
+    y = int(m.group(1))
+    if '/' in str(label):
+        return y < (NOW.year if NOW.month >= 7 else NOW.year - 1)
+    return y < (NOW.year if NOW.month >= 2 else NOW.year - 1)
+
+
+def league_table(lk, games):
+    """The league table from this season's games, less its play-off games (ESPN names their stage) and less any club
+    from another division that only came in for a play-off (Finland's PK-35 and Ireland's UC Dublin: one or two
+    games where everyone else has thirty). Returns (rows as build_table gives them, the clubs left out)."""
+    po = PLAYOFF.get(lk) or ()
+    gs = [g for g in games if not (po and (g[0].strftime('%Y-%m-%d'), g[1], g[2]) in po)]
+    table = build_table(gs)
+    ps = sorted(r['p'] for _, r in table)
+    out = []
+    if len(ps) >= 6 and ps[len(ps) // 2] >= 10:
+        med = ps[len(ps) // 2]
+        out = [t for t, r in table if r['p'] <= 3 and r['p'] < 0.2 * med]
+        if out:
+            gs = [g for g in gs if g[1] not in out and g[2] not in out]
+            table = build_table(gs)
+    return table, out
+
+
 def compute_leagues(results, teams):
     leagues = {}
     pul, pgroup = {}, {}
@@ -1432,7 +1759,9 @@ def compute_leagues(results, teams):
             for lk in grp:
                 pgroup[lk] = (grp, pseen, o)
     for lk, (games, season) in results.items():
-        table = build_table(games)
+        table, out_ = league_table(lk, games)
+        if out_ or PLAYOFF.get(lk):
+            log('table', lk + ':', f'{len(PLAYOFF.get(lk) or ())} play-off games left out' + (f", and {', '.join(out_)} (a play-off visitor)" if out_ else ''))
         cur_teams = [t for t, _ in table]
         seen = {g[1] for g in games} | {g[2] for g in games}
         extra = [t for t in AF_CUR.get(lk) or () if t not in set(cur_teams)]
@@ -1472,7 +1801,8 @@ def compute_leagues(results, teams):
                        'ratings': {t: v for t, v in (rt or {}).get('teams', {}).items() if t in cur_teams},
                        'se': {t: v for t, v in (rt or {}).get('se', {}).items() if t in cur_teams},
                        'shots': sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None),
-                       'games': len(games), 'start': min(cur_d).strftime('%Y-%m-%d') if cur_d else None}
+                       'games': len(games), 'start': min(cur_d).strftime('%Y-%m-%d') if cur_d else None,
+                       'end': max(cur_d).strftime('%Y-%m-%d') if cur_d else None}
         nt = P_.get('nt', NEW_TEAM_PRIOR[1])
         for t in extra:
             teams.add(lk, t)
@@ -1480,6 +1810,13 @@ def compute_leagues(results, teams):
                 leagues[lk]['ratings'][t] = list(rt['teams'][t]) if rt.get('pulse') and t in rt['teams'] else [round(-nt, 5), round(nt, 5)]
                 s0 = round(1 / math.sqrt(P_['k'] * math.exp(rt['mu'] + rt['home'] / 2)), 4)   # the prior's spread alone
                 leagues[lk]['se'][t] = [s0, s0]
+        # early in a season the table lists every club of it, played or not (Nigeria's had five of twenty)
+        have = {r[0] for r in rows}
+        pad = sorted(t for t in extra if t not in have)
+        if pad and rows and max(r[1] for r in rows) <= 8 and len(rows) + len(pad) <= 24:
+            for t in pad:
+                ar = leagues[lk]['ratings'].get(t)
+                rows.append([t, 0, 0, 0, 0, 0, 0, 0, '', ar[0] if ar else None, ar[1] if ar else None])
         if lk in AF_PART:
             leagues[lk]['part'] = AF_PART[lk]
         if kal:
@@ -2824,13 +3161,17 @@ def refresh_espn_data(state):
             h, a = th.get('displayName') or g['h'][0], ta.get('displayName') or g['a'][0]
             for t in (th, ta):
                 if t.get('id') and t.get('displayName'):
-                    logos[t['displayName']] = logos[pretty(t['displayName'])] = str(t['id'])
+                    for nm in {t['displayName'], pretty(t['displayName'])}:
+                        if nm in NS_PLAIN and is_cup(lk):
+                            continue   # a cup's "Nacional": which one, ESPN's name alone doesn't say
+                        logos[NS.get((lk, nm), nm)] = str(t['id'])   # Uruguay's Liverpool under "Liverpool (Montevideo)"
+            g['po'] = espn_playoff((e.get('season') or {}).get('slug'))
             rows.append((g, h, a, c, (e.get('season') or {}).get('year')))
         if L[lk].get('hist'):
             hs = hist.setdefault(lk, {'m': {}, 'g': {}})
             for g, h, a, c, yr in rows:
                 if g['done'] and g['st'] not in ESPN_OFF and g['state'] == 'post':
-                    rec = [g['ko'].strftime('%Y-%m-%d'), h, a, g['hs'], g['as'], yr]
+                    rec = [g['ko'].strftime('%Y-%m-%d'), h, a, g['hs'], g['as'], yr] + ([1] if g.get('po') else [])
                     if hs['g'].get(g['id']) != rec:
                         hs['g'][g['id']] = rec
                         new_hist = True
@@ -2863,6 +3204,13 @@ def refresh_espn_data(state):
         if not c.get('hist'):
             continue
         hs = hist.setdefault(lk, {'m': {}, 'g': {}})
+        if hs.get('pv') != 1 and hs['g']:
+            # v70: this season's months once more, to learn which games were play-offs (left out of the table)
+            latest = max((r[5] or 0) for r in hs['g'].values())
+            first = min((r[0] for r in hs['g'].values() if (r[5] or 0) == latest), default=None)
+            for ym in [k for k in hs['m'] if first and k >= first[:4] + first[5:7]]:
+                del hs['m'][ym]
+        hs['pv'] = 1
         for ym in reversed(months_between(oldest, NOW)):
             at = hs['m'].get(ym)
             y, m = int(ym[:4]), int(ym[4:])
@@ -2947,11 +3295,26 @@ def rate_espn(state):
         log('ESPN ratings:', ', '.join(f"{lk} {len(g)} games" for lk, (g, _) in sorted(eres.items())))
 
 
+# ESPN's season stage names for games after a league's own table: "playoffs---semifinals", "clausura---round-of-16",
+# "clausura-quadrangular", "eastern-conference-playoffs---wild-card", "championship-playoff-semifinal", "finals-series"
+PLAYOFF_RE = re.compile(r'play-?offs?|round-of-\d+|quarter-?finals?|semi-?finals?|(?:^|-)finals?(?:$|-series)|wild-?card|'
+                        r'quadrangular|cuadrangular|liguilla|knockout|championship$')
+LEAGUE_STAGE_RE = re.compile(r'hexagonal|-round$|split|regular')   # split leagues' second stages carry their points
+
+
+def espn_playoff(slug):
+    return bool(slug and PLAYOFF_RE.search(slug) and not LEAGUE_STAGE_RE.search(slug))
+
+
+PLAYOFF = {}   # lk -> {(date, home, away)}: this season's play-off games (rated, but not in the league table)
+
+
 def espn_results(state):
     """The ESPN-rated competitions' results in the ratings' form: lk -> (games, season label)."""
     out = {}
     AF_CUR.clear()
     AF_PART.clear()
+    PLAYOFF.clear()
     for lk, hs in (state.get('es_hist') or {}).items():
         if lk not in L or not L[lk].get('hist') or not hs.get('g') or not ts_ready(state, lk):
             continue
@@ -2979,6 +3342,9 @@ def espn_results(state):
             if new and not L[lk].get('wk') and not tsfull and sum(1 for gid, _ in new if gid[:2] in ('af', 'ts')) > 0.2 * len(new):
                 AF_PART[lk] = min(r[0] for _, r in new)   # only the games since Statpad began reading them
         games = [(parse_date(r[0]), r[1], r[2], int(r[3]), int(r[4]), (r[5] or 0) == latest, None, None) for r in rows]
+        po = {(r[0], r[1], r[2]) for r in rows if len(r) > 6 and r[6] and (r[5] or 0) == latest}
+        if po:
+            PLAYOFF[lk] = po
         if len(games) >= 20:
             cal = L[lk]['country'] in CAL_YEAR or (L[lk].get('ts') and '-' not in (((state.get('ts') or {}).get(lk) or {}).get('season') or '-'))
             out[lk] = (games, str(latest) if cal else f'{latest}/{str(latest + 1)[2:]}')
@@ -4323,8 +4689,8 @@ def expected_goals(lk, h, a, leagues, teams):
             lh, la = elo_mix(lh, la, (kh, ka), KAL['v'])
         return [round(lh, 4), round(la, 4)], False
     # cross-league: each side's own league ratings plus a league-strength offset
-    rh = teams.resolve_global(h, pool_=pool(lk))
-    ra = teams.resolve_global(a, pool_=pool(lk))
+    rh = teams.resolve_global(h, pool_=pool(lk), lk=lk)
+    ra = teams.resolve_global(a, pool_=pool(lk), lk=lk)
     if not rh or not ra:
         return None, False
     lh_, th = rh
@@ -4349,7 +4715,7 @@ def lam_sd(lk, h, a, leagues, teams, cross):
         if h in se and a in se:
             return [round(math.hypot(se[h][0], se[a][1]), 3), round(math.hypot(se[a][0], se[h][1]), 3)]
         return None
-    rh, ra = teams.resolve_global(h, pool_=pool(lk)), teams.resolve_global(a, pool_=pool(lk))
+    rh, ra = teams.resolve_global(h, pool_=pool(lk), lk=lk), teams.resolve_global(a, pool_=pool(lk), lk=lk)
     if not rh or not ra:
         return None
     sh_ = ((leagues.get(rh[0]) or {}).get('se') or {}).get(rh[1])
@@ -4853,6 +5219,14 @@ def learn_crests(state, doc):
     fx = state.setdefault('crest_fl', {})
     for lk, lid in AF_LEAGUE.items():
         lc.setdefault(lk, lid)
+    # a name two clubs shared until v70: what was learnt under it may be the other club's, so it's learnt again
+    done = state.setdefault('ns_purged', [])
+    for name in sorted(NS_PLAIN - set(done)):
+        for k in ('crest_es', 'es_logo'):
+            (state.get(k) or {}).pop(name, None)
+        cr.pop(name, None)
+        done.append(name)
+        log('crest: relearning', name, '(a namesake abroad shared it)')
     for name, tid in CREST_SEED.items():
         cr.setdefault(name, tid)
     n = 0
@@ -5001,7 +5375,7 @@ def publish_crests(state, doc):
     sign = lambda i, f: i if (d / f).exists() else -i
     crests = {}
     for n0, _ in sorted(crest_names(doc)):
-        n = n0 if (n0 in cr or n0 in fx or n0 in ce or n0 in logos) else base_name(n0)
+        n = n0 if (n0 in cr or n0 in fx or n0 in ce or n0 in logos) else women_base(n0)   # a women's side: its club's crest (never a namesake's)
         opts = []   # (key, on file?) in order of preference: API-Football, football-logos, ESPN
         if n in cr:
             opts.append((cr[n], (d / f'{cr[n]}.png').exists()))
@@ -5306,6 +5680,7 @@ def pick_market(main, es, old):
 
 def build(state, prev, seed=None):
     leagues = state.get('leagues') or {}
+    set_namesakes(leagues)
     teams = Teams()
     for lk, lg in leagues.items():
         for row in lg.get('table') or []:
@@ -5335,7 +5710,7 @@ def build(state, prev, seed=None):
         h = teams.resolve(f['lk'], f['h']) or f['h']
         a = teams.resolve(f['lk'], f['a']) or f['a']
         if not find(f['lk'], h, a, f['ko']):
-            fx.append({'lk': f['lk'], 'ko': f['ko'], 'h': h, 'a': a, 'fd_mkt': f.get('mkt'), 'api_mkt': None, 'api_id': None, 'ks': 'fd'})
+            fx.append({'lk': f['lk'], 'ko': f['ko'], 'h': h, 'a': a, 'rh': f['h'], 'ra': f['a'], 'fd_mkt': f.get('mkt'), 'api_mkt': None, 'api_id': None, 'ks': 'fd'})
 
     for f in state.get('of_fixtures') or []:
         ko = parse_iso(f['ko'])
@@ -5344,10 +5719,10 @@ def build(state, prev, seed=None):
         h = teams.resolve(f['lk'], f['h']) or f['h']
         a = teams.resolve(f['lk'], f['a']) or f['a']
         if not find(f['lk'], h, a, f['ko'], f.get('tbc')):
-            fx.append({'lk': f['lk'], 'ko': f['ko'], 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'of'})
+            fx.append({'lk': f['lk'], 'ko': f['ko'], 'h': h, 'a': a, 'rh': f['h'], 'ra': f['a'], 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'of'})
 
     def cup_names(lk, h, a):
-        rh, ra = teams.resolve_global(h, pool_=pool(lk)), teams.resolve_global(a, pool_=pool(lk))
+        rh, ra = teams.resolve_global(h, pool_=pool(lk), lk=lk), teams.resolve_global(a, pool_=pool(lk), lk=lk)
         return (rh[1] if rh else h), (ra[1] if ra else a)
 
     for f in state.get('es_fixtures') or []:   # ESPN: competitions no other source lists, and DraftKings prices
@@ -5371,7 +5746,7 @@ def build(state, prev, seed=None):
             if g.get('ks') in ('of', 'fd'):
                 g['ko'], g['ks'], g['tbc'] = iso(ko), 'es', False   # ESPN's kick-off time is exact
         else:
-            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'es_mkt': f.get('mkt'), 'ks': 'es', 'vc': f.get('vc')})
+            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'rh': f['h'], 'ra': f['a'], 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'es_mkt': f.get('mkt'), 'ks': 'es', 'vc': f.get('vc')})
 
     for f in state.get('ol_fixtures') or []:   # OpenLigaDB: 3. Liga
         if f['lk'] not in L:
@@ -5382,7 +5757,7 @@ def build(state, prev, seed=None):
         h = teams.resolve(f['lk'], f['h']) or f['h']
         a = teams.resolve(f['lk'], f['a']) or f['a']
         if not find(f['lk'], h, a, f['ko']):
-            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'ks': 'ol'})
+            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'rh': f['h'], 'ra': f['a'], 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'ks': 'ol'})
 
     for f in state.get('ts_fixtures') or []:   # TheSportsDB: the same leagues, when API-Football isn't answering
         if f['lk'] not in L:
@@ -5393,7 +5768,7 @@ def build(state, prev, seed=None):
         h = teams.resolve(f['lk'], f['h']) or f['h']
         a = teams.resolve(f['lk'], f['a']) or f['a']
         if not find(f['lk'], h, a, f['ko'], f.get('tbc')):
-            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'ts'})
+            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'rh': f['h'], 'ra': f['a'], 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'ts'})
 
     for f in state.get('af_fixtures') or []:   # API-Football's day lists: the African and Wikipedia-rated leagues
         if f['lk'] not in L or f['lk'] not in AF_FILL:
@@ -5404,7 +5779,7 @@ def build(state, prev, seed=None):
         h = teams.resolve(f['lk'], f['h']) or f['h']
         a = teams.resolve(f['lk'], f['a']) or f['a']
         if not find(f['lk'], h, a, f['ko'], f.get('tbc')):
-            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'af'})
+            fx.append({'lk': f['lk'], 'ko': iso(ko), 'h': h, 'a': a, 'rh': f['h'], 'ra': f['a'], 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'tbc': f.get('tbc'), 'ks': 'af'})
 
     plan = sport_plan(state, quiet=True) if state.get('api') else {}
     for key, blob in (state.get('api') or {}).items():
@@ -5431,10 +5806,41 @@ def build(state, prev, seed=None):
                 f['ks'] = 'api'
                 f['tbc'] = False
             else:
-                f = {'lk': lk, 'ko': iso(ko), 'h': h, 'a': a, 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'ks': 'api'}
+                f = {'lk': lk, 'ko': iso(ko), 'h': h, 'a': a, 'rh': e['h'], 'ra': e['a'], 'fd_mkt': None, 'api_mkt': None, 'api_id': None, 'ks': 'api'}
                 fx.append(f)
             f['api_mkt'] = api_market(e)
             f['api_id'] = e.get('id')
+
+    # A club can't play two different sides within 40 hours in one league: one of those names was matched to the
+    # wrong club. Whichever was matched loosely (not by its own name) keeps the feed's name instead, so no game is
+    # priced with another club's ratings.
+    by_side = {}
+    for f in fx:
+        if knockout(f['lk']):
+            continue
+        for s_ in ('h', 'a'):
+            by_side.setdefault((f['lk'], f[s_]), []).append((parse_iso(f['ko']), id(f), f, s_))
+    for (lk_, t_), lst in by_side.items():
+        lst.sort(key=lambda x: (x[0], x[1]))
+        for (k1, _, f1, s1), (k2, _, f2, s2) in zip(lst, lst[1:]):
+            if (k2 - k1).total_seconds() >= 40 * 3600 or f1 is f2:
+                continue
+            if same_team(f1['a' if s1 == 'h' else 'h'], f2['a' if s2 == 'h' else 'h']):
+                continue   # the same game from two feeds
+            loose = [(f_, s_) for f_, s_ in ((f1, s1), (f2, s2)) if f_.get('r' + s_) and norm(f_['r' + s_]) != norm(f_[s_])]
+            for f_, s_ in loose:
+                log('names:', t_, 'twice in', lk_, f"({f1['ko'][:10]}, {f2['ko'][:10]}): kept the feed's", repr(f_['r' + s_]))
+                f_[s_] = f_['r' + s_]
+            if not loose:
+                log('names:', t_, 'has two games within 40 h in', lk_, '-', f1['ko'][:16], f2['ko'][:16])
+    # the run's name report (private log): feed names matched by their words, and fixture sides no table has
+    if teams.fuzzy:
+        fz = list(dict.fromkeys(teams.fuzzy))
+        log(f'names: {len(fz)} feed names matched by their words:', '; '.join(f'{x[0]} {x[1]!r} = {x[2]!r}' for x in fz[:40]))
+    unk = sorted({(f['lk'], f[s_]) for f in fx for s_ in ('h', 'a') if not knockout(f['lk']) and teams.by_league.get(f['lk'])
+                  and len(teams.by_league[f['lk']]) >= 6 and f[s_] not in teams.by_league[f['lk']].values()})
+    if unk:
+        log(f'names: {len(unk)} fixture sides found in no table:', '; '.join(f'{lk} {n!r}' for lk, n in unk[:40]))
 
     prev_list, ids = [], set()
     for doc in (prev, seed):
@@ -5481,8 +5887,9 @@ def build(state, prev, seed=None):
         pa = pos.get((f['lk'], f['a']))
         dom_h = dom_a = None
         cup_sides = None
+        gh = ga = None
         if is_cup(f['lk']) and f['lk'] not in CAF_LKS:
-            gh, ga = teams.resolve_global(f['h'], pool_=pool(f['lk'])), teams.resolve_global(f['a'], pool_=pool(f['lk']))
+            gh, ga = teams.resolve_global(f['h'], pool_=pool(f['lk']), lk=f['lk']), teams.resolve_global(f['a'], pool_=pool(f['lk']), lk=f['lk'])
             dom_h, dom_a = (gh[0] if gh else None), (ga[0] if ga else None)
             if gh and ga:
                 cup_sides = (gh[0], gh[1], ga[0], ga[1])
@@ -5532,7 +5939,7 @@ def build(state, prev, seed=None):
                 ou = mkt.get('ou') or {}
                 mem_obs.append((f['lk'], mid, ko, f['h'], f['a'], mkt['p'][0], mkt['p'][2], ou.get('pO') if ou.get('line', 2.5) == 2.5 else None))
         matches.append({
-            'id': mid, 'lk': f['lk'], 'ko': iso(ko), 'h': disp(f['lk'], f['h']), 'a': disp(f['lk'], f['a']),
+            'id': mid, 'lk': f['lk'], 'ko': iso(ko), 'h': cup_shown(f['lk'], f['h'], gh), 'a': cup_shown(f['lk'], f['a'], ga),
             'ph': ph[0] if ph else None, 'pa': pa[0] if pa else None,
             'fh': ph[2] if ph else None, 'fa': pa[2] if pa else None,
             'dh': dom_h, 'da': dom_a,
@@ -5566,6 +5973,13 @@ def build(state, prev, seed=None):
     covered = {m['lk'] for m in matches}
     carried = [m for m in prev_list if m['lk'] not in covered and lo <= parse_iso(m['ko']) <= hi]
     for m in carried:
+        for s_ in ('h', 'a'):   # carried names are matched again (a namesake now carries where it's from)
+            if not knockout(m['lk']):
+                cn = teams.resolve(m['lk'], women_base(m[s_]))
+                if cn and disp(m['lk'], cn) != m[s_]:
+                    m[s_] = disp(m['lk'], cn)
+            elif (m['lk'], m[s_]) in NS:
+                m[s_] = NS[(m['lk'], m[s_])]
         news = team_news_for(state, m['id'], m['lk'], parse_iso(m['ko']), m['h'], m['a'])
         if news:
             m['tn'] = news
@@ -5587,7 +6001,7 @@ def build(state, prev, seed=None):
                 log('CAF clubs:', m.get('id'), repr(e)[:120]); mm, cx = None, {}
         if not mm and m['lk'] in EURO_LKS and state.get('outs'):
             try:
-                gh_, ga_ = teams.resolve_global(m['h'], pool_='m'), teams.resolve_global(m['a'], pool_='m')
+                gh_, ga_ = teams.resolve_global(m['h'], pool_='m', lk=m['lk']), teams.resolve_global(m['a'], pool_='m', lk=m['lk'])
                 mm, cx = euro_mem(state, m['h'], gh_, m['a'], ga_)
             except Exception as e:
                 log('European clubs:', m.get('id'), repr(e)[:120]); mm, cx = None, {}
@@ -5635,10 +6049,17 @@ def build(state, prev, seed=None):
         rec = {'name': c['name'], 'country': c['country'], 'group': c['group']}
         old_lg = ((seed or {}).get('leagues') or {}).get(lk) or {}
         if not lg and old_lg.get('table'):
-            rec.update({'season': old_lg.get('season'), 'mu': None, 'home': None, 'table': old_lg['table']})
+            rec.update({'season': old_lg.get('season'), 'mu': None, 'home': None,
+                        'table': [[NS.get((lk, r[0]), r[0])] + r[1:] for r in old_lg['table']]})
+            if season_old(old_lg.get('season')):
+                rec['old'] = 1
         if lg:
             rec.update({'season': lg.get('season'), 'mu': lg.get('mu'), 'home': lg.get('home'),
                         'table': [[disp(lk, r[0])] + r[1:] for r in lg.get('table') or []]})
+            if lg.get('end'):
+                rec['end'] = lg['end']   # the last game in the table: the page says when a season is over
+            if season_old(lg.get('season')):
+                rec['old'] = 1   # last season's final table: this season hasn't started here yet
             if lg.get('part'):   # only the games since Statpad began reading this season: no table to show
                 rec.update({'table': [], 'part': lg['part']})
             if lg.get('shots'):
@@ -7126,7 +7547,7 @@ def fit_outsiders(state, np):
                 continue
             sides = []
             for nm in (h, a):
-                g = teams.resolve_global(nm, pool_='m')
+                g = teams.resolve_global(nm, pool_='m', lk='UCL')
                 if g:
                     ad = rated_ad(mems, g)
                     sides.append(('R', ad) if ad else None)
@@ -9221,6 +9642,9 @@ def main():
             log('source error in', fn.__name__, '->', repr(e))
             return default
 
+    ns_sig = safe(lambda: set_namesakes(state.get('leagues')), [])   # namesakes abroad, before any name is published
+    if ns_sig:
+        log('namesakes:', ', '.join(x[2] for x in ns_sig))
     retuned = False
     if tune_due(state):
         last['tune'] = iso(NOW)
@@ -9250,10 +9674,11 @@ def main():
     src['espn_data'] = {'ok': es_note != 'error', 'at': iso(NOW), 'note': es_note}
     log('ESPN competitions:', es_note)
     if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or 'teamfiles' not in state or 'last_played' not in state or retuned \
-            or state.get('mem_fd_v') != MEM_FD_V:
+            or state.get('mem_fd_v') != MEM_FD_V or state.get('ns_sig') != ns_sig:
         res = safe(load_results, {})
         if res:
             state['leagues'] = safe(lambda: compute_leagues(res, Teams()), state.get('leagues') or {})
+            state['ns_sig'] = ns_sig   # team pages are written with the names shown: rewritten when those change
             state['recent_results'] = safe(lambda: recent_results(res), state.get('recent_results') or {})
             tf = safe(lambda: team_files(res), None)
             state.setdefault('teamfiles', {})   # set even when nothing was made, so a failure doesn't reload results every run

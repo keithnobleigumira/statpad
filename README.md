@@ -485,6 +485,55 @@ The closing price is still well ahead of any results-only model, which is why pr
 Code: `pulse_run`, `pulse_carry`, `pulse_blend`, `PULSE`, `PULSE_BLEND`, `PYRAMIDS` in `update.py`.
 `PULSE_ON = False` gives v62's ratings exactly.
 
+## v70: the right club in every league, and calmer pages
+
+### Liverpool in Uruguay is real; sharing England's crest wasn't
+
+Liverpool Fútbol Club of Montevideo is a genuine Uruguayan first-division club (founded 1915), so it belongs in Uruguay's table and fixtures. What was wrong is that it shared a name with England's Liverpool, and Statpad files crests, team colours and team pages by the name shown: Montevideo's Liverpool wore the English club's crest and red. Every league was searched for the same problem and four were found:
+
+| Shown now | Shares its name with |
+| --- | --- |
+| Liverpool (Montevideo) | Liverpool, Premier League |
+| Nacional (Montevideo) | Nacional, Primeira Liga |
+| Platense (Honduras) | Platense, Liga Profesional (Argentina) |
+| Alianza FC (El Salvador) | Alianza FC, Primera A (Colombia) |
+
+The club of the weaker league carries where it's from (the way ESPN already writes "Racing (Montevideo)"); the other keeps its name, so its match ids and tracked picks don't change. They're found afresh every run from every league's table and ratings, so a namesake promoted next season is caught the same way. A club in two divisions of one country (South Africa's Milford and Kruger United, just promoted) is the same club and keeps its name. Each namesake's crest, ESPN logo and colours are learnt again, once, from its own league. Cups now look for their clubs only in their own region (a country for a domestic cup, a continent for the others): "Nacional" in the Copa Libertadores could otherwise have been rated as Portugal's Nacional, and a bare "Nacional" there is shown as Montevideo's.
+
+### Feed names matched word by word
+
+Fixtures and prices come from several feeds that spell clubs their own way. The old matcher accepted a feed name when one of our names was a part of it, or when the two spellings were 80% alike, and replayed on ESPN's club lists for 62 leagues it gave clubs to the wrong side 7 times. On today's board that had real consequences:
+
+- **Wisła Kraków was read as Wieczysta Kraków** (the "ł" was dropped, leaving "Wisa Krakow" 81% like "Wieczysta Krakow"): its game was priced with the wrong club's ratings, and Wieczysta showed three games in a week.
+- **Grasshopper Club Zürich was read as FC Zürich**, so Zürich had two games at the same minute.
+- On ESPN's names, **Independiente Rivadavia** became Independiente, **Dundee Utd** became Dundee, **Melbourne Victory** became Melbourne City, **Gimnasia Mendoza** became Gimnasia La Plata, **Estudiantes de Río Cuarto** became Estudiantes de La Plata, and **Hapoel Hadera** and **Maccabi Raina** became the Haifa clubs.
+
+Names are now compared word by word. A word matches when it's the same, the same once shortened words are read out ("Utd" / "United"), an initial ("A." / "Austria"), initials run together ("L.P." / "La Plata"), a plural or close spelling ("Goztep" / "Göztepe") or, where one name shortens it with a full stop, a shortened word ("Ind." / "Independiente"). The club whose every word is matched wins; a feed name with words left over ("Independiente Rivadavia") only counts for a club when those words don't name another club of the league; a club is never matched to its women's, youth or reserve side; and two clubs that fit equally well mean no match, because a fixture left with the feed's own name is plain to see while a wrong match quietly prices a game with the wrong side. Letters that don't break into a base letter and an accent (ł, ø, đ, ß, æ, ı) are now read as l, o, d, ss, ae, i; match ids keep their old spelling. Replayed on the same 62 ESPN lists: no club given to the wrong side, and the nine fixture names that matched nothing on today's board (Atlético Mineiro, Atlético Paranaense, Tokyo Verdy, Urawa Red Diamonds, Amed SK, Başakşehir, Erzurum BB, Austria Lustenau, Zagłębie Lubin) now find their clubs, so those games are priced from the ratings again.
+
+Two guards stay on every run. A club can't play two different sides within 40 hours in one league, so if two fixtures say it does, whichever side was matched loosely keeps the feed's name. And the run's private log lists the names matched by their words and any fixture side no table has, so a new spelling shows up the day it appears.
+
+### League tables
+
+- **Play-off games are left out of the table** (they still count for the ratings). ESPN names each game's stage; on today's data that took 7 play-off games out of the NWSL table (where some sides showed 33 games against 30), 49 out of Venezuela's, 18 out of Colombia's and one out of Uruguay's. A split league's second stage, whose points carry over, stays in.
+- **Clubs from another division that only came in for a play-off are left out**: UC Dublin (1 game, in a 10-club League of Ireland) and PK-35 (2 games, in Finland's 12-club Veikkausliiga), and their games come off their opponents' records too.
+- **Early in a season every club is listed**: Nigeria's table showed the 5 clubs that had played; it now lists all 20, the others on zero.
+- **Last season's table says so**: South Africa's First Division still has only 2025/26 to show, and its page now says it's the final table of 2025/26 and the new season hasn't started in Statpad's results. A table whose season is over, with nothing coming up, says that too.
+
+### Calmer pages, nothing taken away
+
+On a phone, the extra detail that made every page long now sits one tap away, and each fold stays as you left it while the page refreshes:
+
+- **Introductions take two lines**, with "More" for the rest (Matches, Value, Slips, Bankers, Coupon, Lab, Rule tester, Leagues).
+- **Value board**: the minimum edge and the order sit behind one button that says what they're set to ("2%+ · biggest edge"); the opportunity radar is one line ("Biggest: +5% in Allsvenskan · 3 competitions with value") with the grid behind "Show the radar"; each value bet shows the pick, edge, best price and fair chance, with the average price, fair odds, Kelly stake, bookmakers, price age, drift and track record behind "Details". Warnings (one bookmaker only, old prices) and the bet-now forecast stay on the card. The opportunity score and the add button sit side by side, so a card is about a third shorter.
+- **Match page**: before kick-off it opens on the verdict (the pick and why, then who wins) instead of the animation; the pick, its first reason and any caution stay on show, with the other reasons behind "N more reasons"; the notes above (no prices yet, cautious chance) are one swipeable row.
+- **Smart slips**: the target odds fit one row, "every leg at least" sits behind one button beside the competitions, and Listen and Status pack moved up beside the title.
+- **Overview**: the intelligence feed shows three stories, the rest behind one button. **Lab**: picks in play and the next six, the later ones behind one button. **Leagues**: the table first, the cross-league "most at stake" below it, and its sentences no longer break across lines.
+- On a wide screen all of it is open, as before.
+
+The assistant reads a country as its top league ("Uruguay table", "safest picks in Honduras"), and a word in brackets ("Honduras" in "Platense (Honduras)") no longer counts as a club's name.
+
+Checked: a new test (tests/v70_names_unit.py) covers the namesakes, 32 hard names, cup regions and the tables; the earlier suites pass (the slips page test now opens the folded control first); two full runs of the pipeline on live feeds; a slowed phone is ready as fast as before (1.61 s against 1.70 s).
+
 ## v69: 51 upgrades to what was already there
 
 No new sections: everything below makes an existing part sharper, quicker or easier to use. Each one was measured or checked in a browser before it went in, and four ideas that didn't pay off were tested and left out (at the end).

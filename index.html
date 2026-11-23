@@ -250,6 +250,33 @@ h1 em { font-style: normal; color: var(--cobalt); }
 .sec-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin-bottom: 16px; }
 h2 { font: 850 clamp(30px, calc(4.4vw / var(--z, 1)), 42px)/.95 var(--f-display); letter-spacing: .005em; margin: 0; }
 .sub { color: var(--ink-2); font-size: 14px; margin: 6px 0 0; max-width: 70ch; }
+/* v70: folds. A section's introduction takes two lines on a phone; cards and long lists keep their extra detail one tap away */
+.sub.fold { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sub-more, .more-b { border: 0; background: none; padding: 6px 0; margin: 0; color: var(--cobalt); font: 600 13px/1.2 var(--f-body); cursor: pointer; min-height: 32px; }
+.sub-more { display: block; padding-top: 4px; }
+.more-b { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
+.more-b::after { content: ''; width: 7px; height: 7px; border: solid currentColor; border-width: 0 1.6px 1.6px 0; transform: translateY(-2px) rotate(45deg); transition: transform .2s; }
+.more-b[aria-expanded="true"]::after { transform: translateY(1px) rotate(-135deg); }
+.more-c[hidden] { display: none !important; }
+.vf-row { display: flex; gap: 10px; align-items: stretch; margin-bottom: 4px; }
+.vf-row .field { flex: 1 1 auto; min-width: 0; }
+.vf-tog { flex: none; display: inline-flex; align-items: center; gap: 7px; max-width: 58%; }
+.vf-tog span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vf-tog svg { width: 16px; height: 16px; flex: none; }
+.vf-more { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 10px 0 2px; }
+.vf-more[hidden] { display: none; }
+@media (min-width: 760px) { .vf-tog { display: none !important; } .vf-more[hidden] { display: flex !important; } .vf-row { display: contents; } }
+.vf-more.off { display: none !important; }
+.n-only { display: none; }
+@media (max-width: 759px) { .n-only { display: inline; } .w-only { display: none; } .tgt-row { flex-wrap: nowrap; gap: 8px; } .tgt-row .seg button { padding: 6px 9px; } .tgt-row .tgt-own input { width: 4.6em; padding: 7px 8px; } }
+.vrow .more-c { grid-column: 1 / -1; display: grid; gap: 6px; }
+.vrow .more-b { grid-column: 1 / -1; padding: 2px 0; min-height: 28px; font-size: 12.5px; }
+@media (min-width: 760px) { .vrow .more-c[hidden] { display: grid !important; } .vrow .more-b { display: none; } }
+.radar .rd-sum { font-size: 13px; color: var(--ink-2); margin: 2px 0 0; }
+.radar .more-c { margin-top: 10px; }
+@media (min-width: 760px) { .radar .more-c[hidden] { display: block !important; } .radar .more-b { display: none; } }
+.feed-l + .more-c > .feed-l { margin-top: 0; }
+.story .more-c ul { margin-top: 0; }
 .days { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 calc(-1 * var(--gut)); padding-left: var(--gut); padding-right: var(--gut); }
 .days::-webkit-scrollbar { display: none; }
 .day { flex: none; border: 1px solid var(--rule); background: var(--card); border-radius: 12px; padding: 8px 12px; text-align: left; min-width: 74px; }
@@ -990,6 +1017,9 @@ details.xm .note { margin: 0 0 10px; }
 
 /* ---------- tables ---------- */
 .lt { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); overflow-x: auto; box-shadow: var(--shadow); }
+.h2row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.h2acts { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.tnote { margin: 0 0 10px; padding: 9px 12px; border-radius: var(--r); background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--yellow); color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
 .lt table { min-width: 640px; }
 .lt th { text-align: right; font: 600 10.5px/1 var(--f-mono); font-variant-numeric: tabular-nums; color: var(--ink-3); padding: 12px 8px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 .lt th.l, .lt td.l { text-align: left; }
@@ -1265,7 +1295,8 @@ body { background: var(--paper); }
 
 /* most at stake, value, slips, coupon: crest pairs and lifted cards */
 .bigg-c { border-radius: 18px; background: linear-gradient(180deg, var(--card-2), var(--card)); }
-.bigg-c b { display: flex; align-items: center; gap: 2px; }
+.bigg-c > b { display: flex; align-items: center; gap: 2px; }
+.bigg-s b { display: inline; }
 .vrow { border-radius: 18px; transition: transform .15s var(--pop); }
 .vrow .fxl .crp { vertical-align: -4px; }
 .slip { border-radius: 20px; }
@@ -2118,6 +2149,7 @@ body.pal-on { overflow: hidden; }
 .mtabs button { flex: 1 0 auto; border: 0; background: none; padding: 9px 12px; border-radius: 10px; font: 600 14px/1 var(--f-body); color: var(--ink-3); white-space: nowrap; }
 .mtabs button[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
 [data-mt] > .chips { margin-top: 14px; }
+@media (max-width: 759px) { [data-mt] > .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: calc(-1 * var(--gut)); margin-right: calc(-1 * var(--gut)); padding: 0 var(--gut) 2px; } [data-mt] > .chips::-webkit-scrollbar { display: none; } [data-mt] > .chips .chip { flex: none; white-space: nowrap; } }
 .mk-l { margin: 0; display: grid; }
 .mk-l > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--rule-2); font-size: 13.5px; }
 .mk-l > div:first-child { border-top: 0; padding-top: 2px; }
@@ -2128,6 +2160,8 @@ body.pal-on { overflow: hidden; }
 
 /* value intelligence */
 .opp-w { display: grid; justify-items: end; gap: 2px; margin-top: 10px; }
+.edge-acts { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 8px; }   /* v70: side by side, not stacked */
+.edge-acts .opp-w { margin-top: 0; justify-items: center; }
 .opp-w small { font-size: 11px; color: var(--ink-3); }
 .opp { position: relative; width: 38px; height: 38px; display: grid; place-items: center; }
 .opp svg { position: absolute; inset: 0; transform: rotate(-90deg); }
@@ -2300,7 +2334,7 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
       <div class="xp-row" id="explore" role="group" aria-label="More to explore"></div>
       <div class="home-grid">
         <div class="card bankc" id="bankCard" hidden></div>
-        <div class="card feed"><h2 class="h4">Intelligence feed <span id="feedAt"></span></h2><ol class="feed-l" id="feed"></ol></div>
+        <div class="card feed"><h2 class="h4">Intelligence feed <span id="feedAt"></span></h2><ol class="feed-l" id="feed"></ol><div id="feedMore" class="feed-more"></div></div>
         <div class="card nextk"><h2 class="h4">Next kick-offs <button type="button" class="lnk" data-tab="matches">All matches</button></h2><div id="nextList"></div></div>
       </div>
     </section>
@@ -2323,12 +2357,13 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
     <section id="v-value" class="section" data-view="value" hidden>
       <div class="sec-head">
         <div><h2 id="valTitle">Value board</h2><p class="sub" id="valSub">Prices that pay more than they should. Statpad works out a fair price from all the bookmakers (their margin taken off) and lists the prices above it: an edge of +5% pays 5% more than fair. Only real bookmaker prices appear here.</p></div>
-        <div class="ctl"><div class="seg" id="valSeg" role="group" aria-label="Value bets or market movers"><button type="button" data-vseg="value" aria-pressed="true">Value bets</button><button type="button" data-vseg="movers" aria-pressed="false">Market movers</button></div>
-        <span class="lbl" id="minEdgeL">Min edge</span><div class="seg" id="minEdge"></div></div>
+        <div class="ctl"><div class="seg" id="valSeg" role="group" aria-label="Value bets or market movers"><button type="button" data-vseg="value" aria-pressed="true">Value bets</button><button type="button" data-vseg="movers" aria-pressed="false">Market movers</button></div></div>
       </div>
       <div class="days" id="days-value" role="group" aria-label="Day"></div>
-      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="vscope"><option value="all">All competitions</option><option value="big">Big leagues</option><option value="cups">Europe &amp; cups</option><option value="intl">Internationals</option></select></label>
-        <label class="field" id="vsortL"><span class="sr">Sort</span><select id="vsort"><option value="edge">Biggest edge first</option><option value="opp">Best opportunity first</option><option value="ko">Kick-off order</option><option value="books">Most bookmakers first</option></select></label></div>
+      <div class="filters"><div class="vf-row"><label class="field"><span class="sr">Scope</span><select id="vscope"><option value="all">All competitions</option><option value="big">Big leagues</option><option value="cups">Europe &amp; cups</option><option value="intl">Internationals</option></select></label>
+        <button type="button" class="btn vf-tog" id="vfTog" aria-expanded="false" aria-controls="vfMore"><svg aria-hidden="true"><use href="#i-filter"/></svg><span id="vfSum">Edge &amp; order</span></button></div>
+        <div class="vf-more" id="vfMore" hidden><span class="lbl" id="minEdgeL">Min edge</span><div class="seg" id="minEdge"></div>
+        <label class="field" id="vsortL"><span class="sr">Sort</span><select id="vsort"><option value="edge">Biggest edge first</option><option value="opp">Best opportunity first</option><option value="ko">Kick-off order</option><option value="books">Most bookmakers first</option></select></label></div></div>
       <div id="radar"></div>
       <div class="vlist" id="valueList" style="margin-top:14px"></div>
       <div class="rl-in"><div><b>Would this rule have paid?</b><span>Try it, or any rule of your own, on six seasons of real prices.</span></div><button type="button" class="btn" data-rlgo="0">Test the rule</button></div>
@@ -2338,12 +2373,13 @@ button.rd-c:hover { outline: 1px solid var(--yellow); }
     <div class="studio" id="studioBar" role="group" aria-label="Slip Studio" hidden></div>
     <section id="v-slips" class="section" data-view="slips" hidden>
       <div class="sec-head">
-        <div><h2 id="slipsTitle">Smart slips</h2><p class="sub" id="slipsSub">The three likeliest slips for the day that pay your target, with every leg at least as likely as you choose and no game in more than one of them.</p></div>
-        <div class="ctl"><span class="lbl sl-only">Target odds</span><div class="seg sl-only" id="target"></div><label class="tgt-own sl-only"><span class="sr">Your own target odds</span><input id="tgtIn" type="text" inputmode="decimal" autocomplete="off" maxlength="8" placeholder="Own odds"></label><button type="button" class="btn listen-b sl-only" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></div>
-        <div class="ctl sl-only"><span class="lbl">Every leg at least</span><div class="seg" id="slipFloor" role="group" aria-label="Minimum chance for every leg"></div></div>
+        <div><div class="h2row"><h2 id="slipsTitle">Smart slips</h2><span class="h2acts"><button type="button" class="btn listen-b sm sl-only" data-listen="slips"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button><button type="button" class="btn listen-b sm" data-statuspack="1"><svg aria-hidden="true"><use href="#i-status"/></svg>Status pack</button></span></div><p class="sub" id="slipsSub">The three likeliest slips for the day that pay your target, with every leg at least as likely as you choose and no game in more than one of them.</p></div>
+        <div class="ctl sl-only tgt-row"><span class="lbl"><span class="w-only">Target odds</span><span class="n-only">Target</span></span><div class="seg" id="target"></div><label class="tgt-own"><span class="sr">Your own target odds</span><input id="tgtIn" type="text" inputmode="decimal" autocomplete="off" maxlength="8" placeholder="Own odds"></label></div>
       </div>
       <div class="days" id="days-slips" role="group" aria-label="Day"></div>
-      <div class="filters"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="men">Men’s football</option><option value="women">Women’s football</option><option value="priced">Matches with live prices</option></select></label></div>
+      <div class="filters"><div class="vf-row"><label class="field"><span class="sr">Scope</span><select id="scope"><option value="all">All competitions</option><option value="big">Big leagues only</option><option value="men">Men’s football</option><option value="women">Women’s football</option><option value="priced">Matches with live prices</option></select></label>
+        <button type="button" class="btn vf-tog sl-only" id="sfTog" aria-expanded="false" aria-controls="sfMore"><svg aria-hidden="true"><use href="#i-filter"/></svg><span id="sfSum">Every leg</span></button></div>
+        <div class="vf-more" id="sfMore" hidden><span class="lbl">Every leg at least</span><div class="seg" id="slipFloor" role="group" aria-label="Minimum chance for every leg"></div></div></div>
       <div class="slips" id="slipsBox"></div>
       <div id="goalBox" hidden></div>
       <div id="bankBox" hidden></div>
@@ -3835,8 +3871,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     renderBankCard();
     const items = feedItems();
     $('#feedAt').textContent = S.data ? `updated ${tFmt.format(Date.parse(S.data.generated))}` : '';
-    morph($('#feed'), items.length ? items.map((x) => `<li><button type="button" class="feed-i t-${x.tone}" data-open="${esc(x.id)}"><span class="feed-ic"><svg aria-hidden="true"><use href="#${x.ic}"/></svg></span><span class="feed-b"><b>${esc(x.t)}</b><span>${esc(x.s)}</span><small>${esc(x.m)}</small></span><span class="feed-v">${esc(x.v)}</span></button></li>`).join('')
-      : '<li class="empty-state"><b>Nothing to report yet</b>The feed fills as fixtures and prices come in.</li>', 'feed');
+    const fi = (x) => `<li><button type="button" class="feed-i t-${x.tone}" data-open="${esc(x.id)}"><span class="feed-ic"><svg aria-hidden="true"><use href="#${x.ic}"/></svg></span><span class="feed-b"><b>${esc(x.t)}</b><span>${esc(x.s)}</span><small>${esc(x.m)}</small></span><span class="feed-v">${esc(x.v)}</span></button></li>`;
+    // v70: three stories on show, the rest one tap away
+    morph($('#feed'), items.length ? items.slice(0, 3).map(fi).join('') : '<li class="empty-state"><b>Nothing to report yet</b>The feed fills as fixtures and prices come in.</li>', 'feed');
+    { const fm = $('#feedMore'); if (fm) morph(fm, items.length > 4 ? foldHtml('feed', `<ol class="feed-l">${items.slice(3).map(fi).join('')}</ol>`, `${items.length - 3} more from the feed`, 'Show less') : items.length === 4 ? `<ol class="feed-l">${fi(items[3])}</ol>` : '', 'feedmore'); }
     const nx = S.rows.filter((r) => !r.started && r.a).sort((x, y) => x.ko - y.ko).slice(0, 5);
     const nk = (r) => { const p = r.a.p; return `<button type="button" class="nk" data-open="${esc(r.m.id)}"><span class="nk-t"><b>${tFmt.format(r.ko)}</b><small>${esc(dayLabel(r.day))}</small></span>
       <span class="nk-tm"><span>${crest(r.m.h, r.m.lk, 'xs')}<b>${esc(r.m.h)}</b></span><span>${crest(r.m.a, r.m.lk, 'xs')}<b>${esc(r.m.a)}</b></span><small>${esc(lgName(r.m.lk))}</small></span>
@@ -4228,6 +4266,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const mrows = mrowsOf(groups), xrows = mrowsOf(xgroups), nx = a.sels.filter((s) => s.x).length;
     const mt = MTABS.some((x) => x[0] === S.mtab) ? S.mtab : 'overview';
     const mk = m.mkt;
+    // v70: before kick-off the page opens on the verdict (the pick and why, who wins); the multiverse follows
+    const who = `<div class="card"><h4>Who wins <span>home, draw, away</span></h4><div class="cmp">
+        <div class="cmp-row"><span class="n">Statpad</span>${sbar([a.p.H, a.p.D, a.p.A])}</div>
+        ${mk ? `<div class="cmp-row"><span class="n">Market</span>${sbar(mk.p)}</div>` : ''}
+        ${a.pMod ? `<div class="cmp-row"><span class="n">Model</span>${sbar([a.pMod.H, a.pMod.D, a.pMod.A])}</div>` : ''}
+        ${m.mm && a.src !== 'memory' ? (() => { const am = ENGINE.analyse(Object.assign({}, m, { mkt: null, ext: null })); return am && am.src === 'memory' ? `<div class="cmp-row"><span class="n">Memory</span>${sbar([am.p.H, am.p.D, am.p.A])}</div>` : ''; })() : ''}
+      </div><div class="legend"><span><i style="background:var(--h)"></i>${esc(m.h)}</span><span><i style="background:var(--d)"></i>Draw</span><span><i style="background:var(--a)"></i>${esc(m.a)}</span></div></div>`;
     const head = `${S.fromAsk ? `<button type="button" class="btn ghost tback" data-ask="1">← ${SW() ? 'Rudi kwa Uliza Statpad' : 'Back to Ask Statpad'}</button>` : ''}
       <div class="vs" data-tch="${esc(m.h)}" data-tca="${esc(m.a)}" style="--th:${teamCol(m.h)};--ta:${teamCol(m.a)}">
         <div class="side">${crest(m.h, m.lk, 'xl')}<div class="team">${teamLink(m, m.h, m.dh)}</div><div class="meta">${pos(m.ph, m.fh, m.dh)}</div></div>
@@ -4241,15 +4286,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       <div data-mt="overview"${mt === 'overview' ? '' : ' hidden'}>
       ${chips.some((c) => c[1] === 'warn') ? `<div class="chips">${chips.filter((c) => c[1] === 'warn').map(([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`).join('')}</div>` : ''}
       <div id="sheetLive">${r.started ? liveCard(r) : ''}</div>
+      ${r.started ? '' : storyCard(r) + who}
       <div id="sheetMC">${mcCard(r)}</div>
       ${r.started ? `<div id="sheetMV">${mvxCard(r)}</div><div id="sheetFP">${fpCard(r)}</div>` : ''}
-      ${storyCard(r)}
-      <div class="card"><h4>Who wins <span>home, draw, away</span></h4><div class="cmp">
-        <div class="cmp-row"><span class="n">Statpad</span>${sbar([a.p.H, a.p.D, a.p.A])}</div>
-        ${mk ? `<div class="cmp-row"><span class="n">Market</span>${sbar(mk.p)}</div>` : ''}
-        ${a.pMod ? `<div class="cmp-row"><span class="n">Model</span>${sbar([a.pMod.H, a.pMod.D, a.pMod.A])}</div>` : ''}
-        ${m.mm && a.src !== 'memory' ? (() => { const am = ENGINE.analyse(Object.assign({}, m, { mkt: null, ext: null })); return am && am.src === 'memory' ? `<div class="cmp-row"><span class="n">Memory</span>${sbar([am.p.H, am.p.D, am.p.A])}</div>` : ''; })() : ''}
-      </div><div class="legend"><span><i style="background:var(--h)"></i>${esc(m.h)}</span><span><i style="background:var(--d)"></i>Draw</span><span><i style="background:var(--a)"></i>${esc(m.a)}</span></div></div>
+      ${r.started ? storyCard(r) + who : ''}
       <div class="card qx" id="qx">${qxCard(r)}</div>
       </div>
       <div data-mt="markets"${mt === 'markets' ? '' : ' hidden'}>
@@ -4307,10 +4347,20 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       const b = c[0], k = Math.pow(b.s.edge / emax, 0.7);
       return `<button type="button" class="rd-c" data-open="${esc(b.m.id)}" style="--k:${Math.round(14 + k * 62)}%" title="${esc(b.s.label)}, ${esc(b.m.h)} v ${esc(b.m.a)}: ${sgn(b.s.edge)}${c.length > 1 ? `, and ${c.length - 1} more` : ''}"><b>${sgn(b.s.edge, 0)}</b>${c.length > 1 ? `<small>${c.length}</small>` : ''}</button>`;
     };
-    return `<div class="card radar"><h4>Opportunity radar <span>best edge by competition and market</span></h4>
-      <div class="rd" style="--n:${cols.length}"><span class="rd-h"></span>${cols.map(([, l]) => `<span class="rd-h">${esc(l)}</span>`).join('')}
+    const grid = `<div class="rd" style="--n:${cols.length}"><span class="rd-h"></span>${cols.map(([, l]) => `<span class="rd-h">${esc(l)}</span>`).join('')}
       ${rows.map(([k, xs]) => `<span class="rd-l">${lgIcon(k, 'xs')}<span>${esc(lgName(k))}</span></span>${cols.map(([g]) => cell(xs, g)).join('')}`).join('')}</div>
-      <p class="note">Brighter means a bigger edge. Tap a cell for its match. ${v.length} value ${v.length === 1 ? 'bet' : 'bets'} at 2% or more${by.size > rows.length ? `, top ${rows.length} of ${by.size} competitions` : ''}.</p></div>`;
+      <p class="note">Brighter means a bigger edge. Tap a cell for its match. ${v.length} value ${v.length === 1 ? 'bet' : 'bets'} at 2% or more${by.size > rows.length ? `, top ${rows.length} of ${by.size} competitions` : ''}.</p>`;
+    // v70: folded to one line on a phone (the grid is one tap away)
+    return `<div class="card radar"><h4>Opportunity radar <span>best edge by competition and market</span></h4>
+      <p class="rd-sum">Biggest: <b>${sgn(v[0].s.edge, 0)}</b> in ${esc(lgName(rows[0][0]))} · ${by.size} ${by.size === 1 ? 'competition' : 'competitions'} with value</p>
+      ${foldHtml('radar', grid, 'Show the radar', 'Hide the radar')}</div>`;
+  }
+  // v70: on a phone the minimum edge and the order sit behind one button that says what they're set to
+  const VSORT = { edge: 'biggest edge', opp: 'best opportunity', ko: 'kick-off', books: 'most bookmakers' };
+  function vfSync() {
+    const b = $('#vfTog'), m = $('#vfMore'); if (!b || !m) return;
+    m.hidden = !S.vfOpen; b.setAttribute('aria-expanded', !!S.vfOpen);
+    $('#vfSum').textContent = `${Math.round(S.minEdge * 100)}%+ · ${VSORT[S.vsort] || 'biggest edge'}`;
   }
   function renderValue() {
     if (!S.ready) { showProgress(); return; }
@@ -4321,6 +4371,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     $('#valSub').textContent = mv ? 'The biggest moves in the bookmakers’ average prices since Statpad first saw them. A shortening price usually means money is coming in, often from sharp bettors; a drifting price means the opposite. Statpad’s chances follow the market, so these are the games where its numbers moved most.'
       : 'Prices that pay more than they should. Statpad works out a fair price from all the bookmakers (their margin taken off) and lists the prices above it: an edge of +5% pays 5% more than fair. Only real bookmaker prices appear here.';
     $('#minEdge').hidden = mv; $('#minEdgeL').hidden = mv; $('#valueList').hidden = mv; $('#moversList').hidden = !mv; $('#vsortL').hidden = mv; $('#radar').hidden = mv;
+    $('#vfTog').hidden = mv; $('#vfMore').classList.toggle('off', mv); if (mv) $('#vfMore').hidden = true; else vfSync();
+    subFold();
     $('#vscope').value = S.vscope;
     if (mv) { renderMovers(); return; }
     $('#minEdge').innerHTML = EDGES.map((e) => `<button type="button" data-edge="${e}" aria-pressed="${S.minEdge === e}"><span class="mono">${Math.round(e * 100)}%</span></button>`).join('');
@@ -4355,23 +4407,33 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         const o0 = m.hist[0][i + 1], o1 = m.hist[m.hist.length - 1][i + 1];
         if (o0 > 1 && o1 > 1 && Math.abs(o1 / o0 - 1) >= 0.02) mv = `<span class="chip ${o1 < o0 ? 'good' : ''}" title="Average price since Statpad first saw it">average ${odds(o0)} → ${odds(o1)} ${o1 < o0 ? '(shortening)' : '(drifting)'}</span>`;
       }
-      if (s.mv != null && Math.abs(s.mv) >= ENGINE.MV_SHOW) mv += s.mv < 0
+      let now = '';
+      if (s.mv != null && Math.abs(s.mv) >= ENGINE.MV_SHOW) now = s.mv < 0
         ? `<span class="chip good" title="Value bets forecast to shorten beat the closing price by 6.3% taken at once, 1.4% left to kick-off (47,190 past games)">Bet now: price forecast ▼${mvPct(s.mv)} by kick-off</span>`
         : `<span class="chip" title="Value bets forecast to drift did about as well taken later (47,190 past games)">No rush: price forecast ▲${mvPct(s.mv)}</span>`;
       const warn = thin ? 'One bookmaker only: the fair price rests on its own margin' : old ? 'Old prices: the best price may have gone' : '';
       const band = s.edge >= 0.07 ? '7' : s.edge >= 0.04 ? '4' : '2', bh = H && H.bands ? vbStat(H.bands[band]) : null;
       return `<div class="vrow${warn ? ' vwarn' : ''}" data-open="${esc(m.id)}" tabindex="0">
         <div><div class="fxl">${esc(lgName(m.lk))} · ${esc(dayLabel(dayKey(ko)))} ${tFmt.format(ko)}${soonSpan(+ko, true)}</div><div class="sel">${esc(s.label)}</div><div class="fxl">${pair(m)}${esc(m.h)} v ${esc(m.a)}</div></div>
-        <div class="edge"><div class="v">${sgn(s.edge)}</div><div class="l">edge</div><div class="opp-w">${oppRing(o)}<small>${oppWord(o)}</small></div><button type="button" class="add" style="margin-top:8px" data-add="${esc(m.id)}|${s.key}" aria-pressed="${inCoupon(m.id, s.key)}" aria-label="Add to coupon">${inCoupon(m.id, s.key) ? '✓' : '+'}</button></div>
+        <div class="edge"><div class="v">${sgn(s.edge)}</div><div class="l">edge</div><div class="edge-acts"><div class="opp-w">${oppRing(o)}<small>${oppWord(o)}</small></div><button type="button" class="add" data-add="${esc(m.id)}|${s.key}" aria-pressed="${inCoupon(m.id, s.key)}" aria-label="Add to coupon">${inCoupon(m.id, s.key) ? '✓' : '+'}</button></div></div>
         <div class="ebar"><i style="width:${(s.edge / emax) * 100}%"></i></div>
-        <div class="nums"><span>Best <b>${odds(s.price)}</b>${s.bk ? ' at ' + esc(s.bk) : ''}</span>${avg > 1 && Math.abs(s.price / avg - 1) >= 0.005 ? `<span>Average <b>${odds(avg)}</b> (best is ${sgn(s.price / avg - 1, 0)})</span>` : ''}<span>Fair <b>${odds(s.fair)}</b></span><span>Fair chance <b>${pct(s.pm || s.p)}</b></span><span>¼ Kelly <b>${Math.min(5, Math.max(0, kelly) * 25).toFixed(1)}%</b> of bank${S.bank > 0 && kelly > 0 ? ` (${cashFmt(S.bank * Math.min(0.05, Math.max(0, kelly) * 0.25))} of ${cashFmt(S.bank)})` : ''}</span></div>
-        <div class="vchips">${chips.map((c) => `<span class="chip">${esc(c)}</span>`).join('')}${mv}${warn ? `<span class="chip warn">${esc(warn)}</span>` : ''}</div>
-        ${bh && bh.n >= 30 ? `<div class="vpast">Past bets like this (${esc(BAND_NAME[band].toLowerCase())}): <b class="${bh.roi >= 0 ? 'pl-pos' : 'pl-neg'}">${sgn(bh.roi)}</b> a unit over ${bh.n.toLocaleString('en-US')} bets, 95% range ${rPct(bh.lo)} to ${rPct(bh.hi)}; ${pct(bh.hr, 0)} won.</div>` : ''}
+        <div class="nums"><span>Best <b>${odds(s.price)}</b>${s.bk ? ' at ' + esc(s.bk) : ''}</span><span>Fair chance <b>${pct(s.pm || s.p)}</b></span></div>
+        ${warn || now ? `<div class="vchips">${now}${warn ? `<span class="chip warn">${esc(warn)}</span>` : ''}</div>` : ''}
+        ${foldHtml('vd:' + m.id + '|' + s.key, `<div class="nums">${avg > 1 && Math.abs(s.price / avg - 1) >= 0.005 ? `<span>Average <b>${odds(avg)}</b> (best is ${sgn(s.price / avg - 1, 0)})</span>` : ''}<span>Fair <b>${odds(s.fair)}</b></span><span>¼ Kelly <b>${Math.min(5, Math.max(0, kelly) * 25).toFixed(1)}%</b> of bank${S.bank > 0 && kelly > 0 ? ` (${cashFmt(S.bank * Math.min(0.05, Math.max(0, kelly) * 0.25))} of ${cashFmt(S.bank)})` : ''}</span></div>
+        <div class="vchips">${chips.map((c) => `<span class="chip">${esc(c)}</span>`).join('')}${mv}</div>
+        ${bh && bh.n >= 30 ? `<div class="vpast">Past bets like this (${esc(BAND_NAME[band].toLowerCase())}): <b class="${bh.roi >= 0 ? 'pl-pos' : 'pl-neg'}">${sgn(bh.roi)}</b> a unit over ${bh.n.toLocaleString('en-US')} bets, 95% range ${rPct(bh.lo)} to ${rPct(bh.hi)}; ${pct(bh.hr, 0)} won.</div>` : ''}`, 'Details: price, stake, track record', 'Fewer details')}
       </div>`;
     }).join('') + (H && H.all ? `<p class="note" style="grid-column:1/-1">“Past bets like this” are the same rule on ${(H.seasons || []).length} past seasons of the main leagues, at the best listed price (see Lab → Value bets). They are a guide to the long run, not a promise for any one bet: about 6 in 10 value bets lose.</p>` : ''), ['v', S.day, S.vscope, S.vsort, S.minEdge].join('|'), true);
   }
 
   // ---------------- slips ----------------
+  // v70: the minimum chance for every leg sits behind one button on a phone, saying what it's set to
+  function sfSync() {
+    const b = $('#sfTog'), m = $('#sfMore'); if (!b || !m) return;
+    m.hidden = !S.sfOpen; b.setAttribute('aria-expanded', !!S.sfOpen);
+    const o = SLIP_FLOOR_OPTS.find(([f]) => f === S.slipFloor);
+    $('#sfSum').textContent = o ? (S.slipFloor > 0 ? `Every leg ${o[1]}+` : 'Any leg') : 'Every leg';
+  }
   function renderSlips() {
     if (!S.ready) { showProgress(); return; }
     const goal = S.sseg === 'goal', bank = S.sseg === 'bank';
@@ -4382,14 +4444,17 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     $('#slipsSub').textContent = goal ? 'Say what you want to turn your stake into: Statpad finds the slip with the best chance of getting there, and shows honestly how small that chance is.'
       : bank ? 'The safest pick in every game, and a dial: choose how sure your slip must be and Statpad builds the one that pays most. Every level was checked on last season’s real results.'
       : 'The three likeliest slips for the day that pay your target, with every leg at least as likely as you choose and no game in more than one of them. Priced at a typical bookmaker’s odds; games that have kicked off drop out.';
+    $('#sfMore').classList.toggle('off', goal || bank);
+    subFold();
     if (goal) { renderGoal(); return; }
     if (bank) { renderBank(); return; }
     if (S.day === 'all') S.day = pickDefaultDay();
     renderDays('days-slips', false);
     $('#target').innerHTML = TARGETS.map((t) => `<button type="button" data-target="${t}" aria-pressed="${S.target === t}"><span class="mono">${t}</span></button>`).join('');
     const ti = $('#tgtIn');
-    if (ti) { const own = !TARGETS.includes(S.target); ti.parentNode.classList.toggle('on', own); if (document.activeElement !== ti) ti.value = own ? tgtTxt(S.target) : ''; }
+    if (ti) { const own = !TARGETS.includes(S.target); ti.parentNode.classList.toggle('on', own); if (document.activeElement !== ti) ti.value = own ? tgtTxt(S.target) : ''; ti.placeholder = narrow() ? 'Own' : 'Own odds'; }
     $('#slipFloor').innerHTML = SLIP_FLOOR_OPTS.map(([f, l]) => `<button type="button" data-slipfloor="${f}" aria-pressed="${S.slipFloor === f}">${l}</button>`).join('');
+    sfSync();
     $('#scope').value = S.scope;
     const n = S.rows.filter((r) => r.day === S.day && !r.started && r.a && inScope(r, S.scope)).length;
     const box = $('#slipsBox');
@@ -4725,6 +4790,14 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // v69: how soon a game kicks off, for the next three hours (kept current by a timer below)
   function soonTxt(ko) { const d = (ko - Date.now()) / 60e3; return d <= 0 || d > 180 ? '' : d < 1 ? 'kicking off' : d < 60 ? `in ${Math.round(d)} min` : `in ${Math.floor(d / 60)} h ${Math.round(d % 60)} min`; }
   function soonSpan(ko, inline) { const t = soonTxt(ko); return t ? `<span class="soon" data-soon="${ko}">${inline ? ' · ' : ''}${t}</span>` : ''; }
+  // v70: one tap away rather than always on screen. A fold keeps the rest of a card or list behind a button; it stays as
+  // left across redraws (S.folds), so a list that refreshes doesn't snap shut
+  S.folds = new Set();
+  function foldHtml(key, rest, more, less) {
+    if (!rest) return '';
+    const open = S.folds.has(key), L = less || 'Show less';
+    return `<div class="more-c"${open ? '' : ' hidden'}>${rest}</div><button type="button" class="more-b" data-fold="${esc(key)}" data-fm="${esc(more)}" data-fl="${esc(L)}" aria-expanded="${open}">${esc(open ? L : more)}</button>`;
+  }
   function toggleCoupon(id, key) {
     const i = S.coupon.findIndex((c) => c.id === id && c.key === key);
     if (i >= 0) { const prev = S.coupon.slice(); S.coupon.splice(i, 1); toast('Removed from coupon', couponUndo(prev)); } else { S.coupon.push({ id, key, price: null }); toast(`Added · ${S.coupon.length} in your coupon`, S.tab === 'coupon' ? null : openCoupon, 'View'); }   // v69: one tap to the coupon
@@ -4756,10 +4829,16 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const stakes = bigGames(S.rows.filter((r) => !r.started));
     const hasR = L.table.some((r) => r[9] != null), hasW = L.table.some((r) => r[2] != null);
     const amax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[9] || 0))) : 1, dmax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[10] || 0))) : 1;
-    $('#tableBox').innerHTML = `${stakes}<div class="lt"><table><thead><tr><th class="l">#</th><th class="l">Team</th><th>P</th>${hasW ? '<th>W</th><th>D</th><th>L</th>' : ''}<th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th class="l">Form</th>${hasR ? '<th>Attack</th><th>Defence</th>' : ''}</tr></thead><tbody>
+    // v70: say plainly when a table is last season's, or a season that's over
+    const lkT = S.tleague, coming = S.rows.some((r) => r.m.lk === lkT && !r.started);
+    const endD = L.end ? new Date(L.end + 'T12:00:00Z') : null, longAgo = endD && Date.now() - endD > 21 * 864e5;
+    const tnote = L.old ? `<p class="tnote">Final table of ${esc(L.season || 'last season')}. The new season hasn’t started in Statpad’s results yet${coming ? '' : ' and no games are listed'}.</p>`
+      : (!coming && longAgo) ? `<p class="tnote">The season looks finished: this is the final table (last game ${esc(endD.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))}).</p>` : '';
+    $('#tableBox').innerHTML = `${tnote}<div class="lt"><table><thead><tr><th class="l">#</th><th class="l">Team</th><th>P</th>${hasW ? '<th>W</th><th>D</th><th>L</th>' : ''}<th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th class="l">Form</th>${hasR ? '<th>Attack</th><th>Defence</th>' : ''}</tr></thead><tbody>
       ${L.table.map((r, i) => `<tr class="${i < 4 ? 'zone' : ''}"><td class="l">${i + 1}</td><td class="l team">${crest(r[0], S.tleague, 'xs')} <button type="button" class="tlink" data-team="${esc(S.tleague)}|${esc(r[0])}">${esc(r[0])}</button></td><td>${r[1]}</td>${hasW ? `<td>${r[2] ?? ''}</td><td>${r[3] ?? ''}</td><td>${r[4] ?? ''}</td>` : ''}<td>${r[5]}</td><td>${r[6]}</td><td>${r[5] - r[6] > 0 ? '+' : ''}${r[5] - r[6]}</td><td><b>${r[7]}</b></td><td class="l">${formDots(r[8]) || ''}</td>
       ${hasR ? `<td>${r[9] != null ? Math.exp(r[9]).toFixed(2) + '×' : ''}<span class="rbar"><i style="width:${r[9] != null ? (Math.exp(r[9]) / amax) * 100 : 0}%"></i></span></td><td>${r[10] != null ? Math.exp(r[10]).toFixed(2) + '×' : ''}<span class="rbar def"><i style="width:${r[10] != null ? (Math.exp(r[10]) / dmax) * 100 : 0}%"></i></span></td>` : ''}</tr>`).join('')}
-    </tbody></table></div><p class="note">${esc(L.name)}${L.season ? ' · ' + esc(L.season) : ''}. ${hasR ? 'Attack above 1.00 scores more than an average side; defence below 1.00 concedes less. ' : ''}Points deductions are not applied.</p>`;
+    </tbody></table></div><p class="note">${esc(L.name)}${L.season ? ' · ' + esc(L.season) : ''}. ${hasR ? 'Attack above 1.00 scores more than an average side; defence below 1.00 concedes less. ' : ''}Points deductions are not applied.</p>${stakes}`;
+    subFold();
   }
 
   // ---------------- track record ----------------
@@ -4853,7 +4932,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const RANK = { live: 0, play: 0, done: 1, wait: 2, pre: 3 }, X = W.map((w) => [w, tkWaitState(w)]);
     X.sort((a, b) => RANK[a[1].st] - RANK[b[1].st] || (a[0][2] < b[0][2] ? -1 : a[0][2] > b[0][2] ? 1 : 0));
     const now = X.filter((x) => x[1].st !== 'pre'), next = X.filter((x) => x[1].st === 'pre');
-    return now.concat(next.slice(0, 12)).map(([w, x]) => tkWaitRow(w, x)).join('') + (next.length > 12 ? `<p class="note">and ${next.length - 12} more later.</p>` : '');
+    const all = now.concat(next.slice(0, 12)), cut = Math.max(6, now.length);
+    return all.slice(0, cut).map(([w, x]) => tkWaitRow(w, x)).join('') + (all.length > cut + 1 ? foldHtml('tkw:' + t, all.slice(cut).map(([w, x]) => tkWaitRow(w, x)).join(''), `${all.length - cut} more coming up`, 'Show less') : all.slice(cut).map(([w, x]) => tkWaitRow(w, x)).join(''))
+      + (next.length > 12 ? `<p class="note">and ${next.length - 12} more later.</p>` : '');
   }
   function tkSpark(c) {   // cumulative units, pick by pick; the dashed line is break-even
     if (c.length < 4) return '';
@@ -6009,8 +6090,25 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
 
   // ---------------- render orchestration ----------------
+  // v70: a section's introduction takes two lines on a phone; "More" shows the rest (and stays open for that section)
+  S.subOpen = new Set();
+  const narrow = () => innerWidth < 760;
+  function subFold() {
+    const sec = document.querySelector('.section:not([hidden])'); if (!sec) return;
+    for (const p of sec.querySelectorAll('.sec-head .sub')) {
+      const k = sec.id + ':' + (p.id || 'sub');
+      let b = p.nextElementSibling && p.nextElementSibling.matches('.sub-more') ? p.nextElementSibling : null;
+      if (!narrow() || !p.textContent.trim()) { p.classList.remove('fold'); if (b) b.hidden = true; continue; }
+      const open = S.subOpen.has(k);
+      p.classList.toggle('fold', !open);
+      const over = open || p.scrollHeight > p.clientHeight + 2;
+      if (!b) { b = document.createElement('button'); b.type = 'button'; b.className = 'sub-more'; b.dataset.submore = k; p.after(b); }
+      b.hidden = !over; b.textContent = open ? 'Less' : 'More'; b.setAttribute('aria-expanded', open);
+    }
+  }
+  addEventListener('resize', () => { clearTimeout(subFold.t); subFold.t = setTimeout(subFold, 150); });
   function render() {
-    if (S.tab === 'track') { renderNav(); renderTrack(); return; }
+    if (S.tab === 'track') { renderNav(); renderTrack(); subFold(); return; }
     if (!S.data) return;
     if (!S.ready) { renderNav(); showProgress(); return; }
     renderNav(); renderLive();
@@ -6022,6 +6120,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     else if (S.tab === 'tables') renderTables();
     else if (S.tab === 'method') renderMethod();
     else if (S.tab === 'rules') renderRules();
+    subFold();
     if (S.open) renderSheet();
   }
   // v66: every section keeps its place. Leaving one remembers how far down it was and how many games it showed;
@@ -10504,7 +10603,11 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     if (m.clash) why.push('it is a big game');
     if (m.fr) why.push('it is a friendly');
     if (why.length || t.pAdj - t.pLo > 0.04) out.push(`Caution: ${why.length ? why.join(', ') : 'the numbers have a wide spread'}, so the cautious chance is ${pct(t.pLo)}.`);
-    return `<div class="card story"><h4>Why this pick <button type="button" class="btn listen-b sm" data-listen="match"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></h4><ul>${out.map((x) => `<li>${x}</li>`).join('')}</ul></div>`;
+    // v70: the pick, its first reason and any caution stay on show; the other reasons are one tap away
+    const cau = out.length > 3 && /^Caution:/.test(out[out.length - 1]) ? out.pop() : null;
+    const shown = out.slice(0, 2).concat(cau ? [cau] : []), rest = out.slice(2);
+    const li = (xs) => xs.map((x) => `<li>${x}</li>`).join('');
+    return `<div class="card story"><h4>Why this pick <button type="button" class="btn listen-b sm" data-listen="match"><svg aria-hidden="true"><use href="#i-speaker"/></svg>Listen</button></h4><ul>${li(shown)}</ul>${rest.length > 1 ? foldHtml('story:' + m.id, `<ul>${li(rest)}</ul>`, `${rest.length} more reasons`, 'Fewer reasons') : rest.length ? `<ul>${li(rest)}</ul>` : ''}</div>`;
   }
 
   // ---------------- live win probability ----------------
@@ -12493,7 +12596,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         add(nm, nm); add(ckKey(nm), nm); if (raw) { add(raw, nm); add(ckKey(raw), nm); }
         for (const k of ckAliasesOf(ckKey(nm))) add(k, nm);
         if (raw) for (const k of ckAliasesOf(ckKey(raw))) add(k, nm);
-        for (const w of ckKey(nm).split(' ')) if (w.length >= 4 && !CK_GENERIC.has(w) && !ASK_STOP.has(w)) words.set(w, (words.get(w) || new Set()).add(nm));
+        // v70: a word in brackets says where a club is from ("Platense (Honduras)"), so "Honduras" alone isn't that club
+        for (const w of ckKey(nm.replace(/\s*\([^)]*\)\s*$/, '')).split(' ')) if (w.length >= 4 && !CK_GENERIC.has(w) && !ASK_STOP.has(w)) words.set(w, (words.get(w) || new Set()).add(nm));
       }
       teams.get(nm).lks.add(lk);
     };
@@ -12865,13 +12969,17 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         const nm = ckPlain(L.name || '').trim(); if (nm.length >= 4) list.push([nm, lk, 3]);
         const short = nm.replace(/\b(league|liga|division|cup|the|1|one)\b/g, ' ').replace(/\s+/g, ' ').trim(); if (short.length >= 5 && short !== nm) list.push([short, lk, 1]);
       }
-      VA_LG = { n: Object.keys(S.data.leagues || {}).length, list: list.sort((a, b) => b[0].length - a[0].length) };
+      // v70: a country's name means its top flight ("uruguay table"), where it has just one
+      const top = {};
+      for (const [lk, L] of Object.entries(S.data.leagues || {})) if (['big', 'more'].includes(L.group) && L.country) (top[ckPlain(L.country)] = top[ckPlain(L.country)] || []).push(lk);
+      VA_LG = { n: Object.keys(S.data.leagues || {}).length, list: list.sort((a, b) => b[0].length - a[0].length), cty: Object.entries(top).filter(([c, ks]) => c.length >= 4 && ks.length === 1).map(([c, ks]) => [c, ks[0]]).sort((a, b) => b[0].length - a[0].length) };
     }
     const out = [];
     const SWC = [[/\b(ligi ya )?uingereza\b/, 'EPL'], [/\b(ligi ya )?hispania\b/, 'LaLiga'], [/\b(ligi ya )?ujerumani\b/, 'BUN'], [/\b(ligi ya )?italia\b/, 'SA'], [/\b(ligi ya )?ufaransa\b/, 'L1'], [/\b(ligi ya )?ureno\b/, 'POR'], [/\b(ligi ya )?uholanzi\b/, 'ERE']];
     for (const [re, lk] of SWC) if (re.test(t) && S.data.leagues[lk]) return [lk];
     for (const [re, lk] of LG_WORDS) if (re.test(t) && S.data.leagues[lk] && !out.includes(lk)) { out.push(lk); break; }
     if (!out.length) for (const [nm, lk] of VA_LG.list) if (new RegExp(`\\b${nm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(t) && !out.includes(lk)) { out.push(lk); break; }
+    if (!out.length && !/\b(women|ladies|wanawake)\b/.test(t)) for (const [c, lk] of VA_LG.cty) if (new RegExp(`\\b${c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(t)) { out.push(lk); break; }
     if (/\b(champions league|ucl)\b/.test(t)) { const k = Object.keys(S.data.leagues).find((x) => /champions league/i.test(S.data.leagues[x].name) && !/women/i.test(S.data.leagues[x].name)); if (k) return [k]; }
     if (/\b(europa league)\b/.test(t)) { const k = Object.keys(S.data.leagues).find((x) => /europa league/i.test(S.data.leagues[x].name)); if (k) return [k]; }
     return out;
@@ -12919,7 +13027,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function vaShared() {
     const I = askTeams(); if (VA_SH && VA_SH.key === I.key) return VA_SH.m;
     const m = new Map();
-    for (const nm of I.teams.keys()) for (const w of new Set([...ckKey(nm).split(' '), ...ckPlain(nm).split(' ')])) if (w.length >= 4 && !CK_GENERIC.has(w) && !ASK_STOP.has(w)) { if (!m.has(w)) m.set(w, []); if (!m.get(w).includes(nm)) m.get(w).push(nm); }
+    for (const nm of I.teams.keys()) for (const w of new Set([...ckKey(nm.replace(/\s*\([^)]*\)\s*$/, '')).split(' '), ...ckPlain(nm.replace(/\s*\([^)]*\)\s*$/, '')).split(' ')])) if (w.length >= 4 && !CK_GENERIC.has(w) && !ASK_STOP.has(w)) { if (!m.has(w)) m.set(w, []); if (!m.get(w).includes(nm)) m.get(w).push(nm); }
     VA_SH = { key: I.key, m }; return m;
   }
   function vaNextDays(f) {   // the nearest other day with games for this question (later first, else earlier)
@@ -15131,8 +15239,12 @@ void main() {
 
   // ---------------- events ----------------
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-tab],[data-add],[data-open],[data-day],[data-target],[data-slipfloor],[data-edge],[data-stake],[data-rm],[data-rmstarted],[data-qall],[data-addslip],[data-shareslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn,#installBtn,#installTipX');
+    const t = e.target.closest('[data-fold],[data-submore],#vfTog,#sfTog,[data-tab],[data-add],[data-open],[data-day],[data-target],[data-slipfloor],[data-edge],[data-stake],[data-rm],[data-rmstarted],[data-qall],[data-addslip],[data-shareslip],[data-more],[data-goslips],#copyCoupon,#clearCoupon,#scrim,#sheetClose,#themeBtn,#installBtn,#installTipX');
     if (!t) return;
+    if (t.dataset.fold) { e.stopPropagation(); const k = t.dataset.fold, open = !S.folds.has(k); if (open) S.folds.add(k); else S.folds.delete(k); const c = t.previousElementSibling; if (c && c.classList.contains('more-c')) c.hidden = !open; t.setAttribute('aria-expanded', open); t.textContent = open ? t.dataset.fl : t.dataset.fm; buzz(5); return; }
+    if (t.dataset.submore) { const k = t.dataset.submore; if (S.subOpen.has(k)) S.subOpen.delete(k); else S.subOpen.add(k); subFold(); buzz(5); return; }
+    if (t.id === 'vfTog') { S.vfOpen = !S.vfOpen; vfSync(); buzz(5); return; }
+    if (t.id === 'sfTog') { S.sfOpen = !S.sfOpen; sfSync(); buzz(5); return; }
     if (t.dataset.tab) { e.preventDefault(); setTab(t.dataset.tab, { defer: true, tap: !!t.closest('#bnav, #sideNav') }); return; }
     if (t.dataset.add) { e.stopPropagation(); const [id, key] = t.dataset.add.split('|'); toggleCoupon(id, key); buzz(inCoupon(id, key) ? 12 : 6); if (inCoupon(id, key)) flyToBets(t); if (S.tab === 'coupon') renderCoupon(); if (key.startsWith('Q:')) paintQx(); return; }
     if (t.dataset.goslips) { S.day = t.dataset.goslips; setTab('slips'); return; }
