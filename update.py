@@ -4687,8 +4687,10 @@ def hl_countries(state):
 
 
 def hl_needs(lk):
-    """A league whose games Highlightly is asked about: ESPN doesn't carry it (or stopped, as with these African ones)."""
-    return not is_cup(lk) and L[lk].get('group') != 'intl' and (lk not in ESPN_SLUG or lk in AF_AFRICA)
+    """A league whose games Highlightly is asked about: ESPN doesn't carry it (or stopped, as with these African ones).
+    Competitions added from The Odds API's own list (X_..., such as the EFL Trophy) aren't ours to look up."""
+    c = L.get(lk)
+    return bool(c) and not is_cup(lk) and c.get('group') != 'intl' and (lk not in ESPN_SLUG or lk in AF_AFRICA)
 
 
 def hl_lists(state, matches):
