@@ -57,8 +57,7 @@ jobs:
           ODDS_RESET_DAY: ${{ vars.ODDS_RESET_DAY }}
           ODDS_SPORTS: ${{ vars.ODDS_SPORTS }}
           STATPAD_TIMEZONE: ${{ vars.STATPAD_TIMEZONE }}
-          STATPAD_FORCE: ${{ inputs.force && '1' || '0' }}
-                    HIGHLIGHTLY_KEY: ${{ secrets.HIGHLIGHTLY_KEY }}
+          STATPAD_FORCE: ${{ inputs.force && '1' |
         run: python update.py
 
       - name: Save state
