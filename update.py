@@ -20,6 +20,9 @@ The browser (index.html) turns that into probabilities for every market, value p
 
 Environment (all optional):
   ODDS_API_KEY          The Odds API key (store it as a GitHub Actions secret, never in the repo)
+  API_FOOTBALL_KEY      API-Football key: injuries, line-ups, day lists (a secret too)
+  HIGHLIGHTLY_KEY       Highlightly key: line-ups and day lists for games ESPN doesn't carry (a secret too)
+  HIGHLIGHTLY_DAILY     Highlightly calls a day, default 100 (the free plan)
   ODDS_REGIONS          bookmaker regions, default "eu"            (each region costs credits)
   ODDS_MARKETS          markets, default "h2h"  (add ",totals" for over/under; doubles the cost)
   ODDS_MIN_INTERVAL     fastest refresh per competition in minutes, default 5 (the credit budget
@@ -839,7 +842,7 @@ def fetch(url, params=None, tries=3, headers=None, timeout=40):
     full = url + ('?' + urlencode(params) if params else '')
     if OFFLINE:
         p = Path(OFFLINE) / offline_name(url)
-        if params and 'api-sports' in url:   # test files for API-Football are per query
+        if params and ('api-sports' in url or 'highlightly' in url):   # test files for API-Football and Highlightly are per query
             p = Path(OFFLINE) / (offline_name(url) + '__' + re.sub(r'[^A-Za-z0-9.-]+', '_', urlencode(sorted(params.items()))))
         if not p.exists():
             return Fetched(404, b'', {})
@@ -3536,8 +3539,8 @@ def team_sim(a, b):
     return difflib.SequenceMatcher(None, na, nb).ratio()
 
 
-def af_link(state, matches):
-    """Pair Statpad's matches in the next ~40 h with API-Football fixture ids (for team news)."""
+def af_link(state, matches, af_usable=True):
+    """Pair Statpad's matches in the next ~40 h with API-Football's or Highlightly's fixture ids (for team news)."""
     tn = state.setdefault('tn', {})
     fxs = af_rows(state)
     linked = 0
@@ -3546,7 +3549,7 @@ def af_link(state, matches):
         if not (NOW - timedelta(hours=3) < ko < NOW + timedelta(hours=40)):
             continue
         r = tn.get(m['id'])
-        if r and r.get('fid'):
+        if r and r.get('fid') and (str(r['fid']).startswith('hl') or af_usable or r.get('lu')):
             linked += 1
             continue
         f = af_match(m['lk'], ko, m['h'], m['a'], fxs)
@@ -3590,18 +3593,35 @@ def af_lineups(state):
     for mid, r in tn.items():
         if not r.get('fid') or r.get('lu') or (elu.get(mid) or {}).get('lu') or r.get('lu_n', 0) >= 2:
             continue
-        mins = (parse_iso(r['ko']) - NOW).total_seconds() / 60
-        if not (-20 <= mins <= (15 if mid in ev else AF_LU_FROM)):
+        hl_ = str(r['fid']).startswith('hl')
+        if hl_ and not HL_KEY:
             continue
-        if r.get('lu_try') and (NOW - parse_iso(r['lu_try'])).total_seconds() / 60 < AF_LU_EVERY - 1 and not FORCE:
+        mins = (parse_iso(r['ko']) - NOW).total_seconds() / 60
+        if not ((-HL_LU_TO if hl_ else -20) <= mins <= (15 if mid in ev else HL_LU_FROM - 5 if hl_ else AF_LU_FROM)):
+            continue
+        every = HL_LU_EVERY if hl_ else AF_LU_EVERY
+        if r.get('lu_try') and (NOW - parse_iso(r['lu_try'])).total_seconds() / 60 < every - 1 and not FORCE:
             continue
         due.append(r)
     due.sort(key=lambda r: r['ko'])
-    found = 0
-    for r in due[:6]:
+    found, af_out = 0, False
+    for r in due[:10]:
+        if str(r['fid']).startswith('hl'):
+            side, err = hl_lineup(state, r)
+            if err in ('paused', 'daily allowance used', 'the key was refused'):
+                continue
+            r['lu_try'], r['lu_n'] = iso(NOW), r.get('lu_n', 0) + 1
+            if side:
+                r['lu'], r['lu_at'] = side, iso(NOW)
+                state.setdefault('lineup_lk', {})[r['lk']] = iso(NOW)
+                found += 1
+            continue
+        if af_out:
+            continue
         resp, err = af_get('/fixtures/lineups', {'fixture': r['fid']}, state, reserve=AF_RESERVE)
         if resp is None:
-            break
+            af_out = True
+            continue
         r['lu_try'], r['lu_n'] = iso(NOW), r.get('lu_n', 0) + 1
         side = {}
         for x in resp:
@@ -3667,14 +3687,22 @@ def af_match(lk, ko, h, a, fxs):
         if not (sh == 1 and sa == 1) and country and f[5] and f[5].lower() not in ('world', 'europe') and f[5].lower() != country.lower():
             continue   # loose name matches must at least be in the same country
         ok = (sh == 1 and sa == 1) or (dt <= 15 and ((sh == 1 and sa >= 0.5) or (sa == 1 and sh >= 0.5) or (sh >= 0.8 and sa >= 0.8)))
-        if ok and sh + sa - dt / 600 > best_s:
-            best, best_s = f, sh + sa - dt / 600
+        sc = sh + sa - dt / 600 + (0 if str(f[0]).startswith('hl') else 0.001)   # both feeds: API-Football's id (injuries)
+        if ok and sc > best_s:
+            best, best_s = f, sc
     return best
+
+
+def day_lists(state):
+    """Every day list kept: API-Football's (by day) and Highlightly's (by day and country), as {key: {'at', 'list'}}."""
+    out = dict((state.get('af') or {}).get('fx') or {})
+    out.update({'hl|' + k: v for k, v in ((state.get('hl') or {}).get('fx') or {}).items()})
+    return out
 
 
 def af_rows(state):
     fxs = []
-    for rec in ((state.get('af') or {}).get('fx') or {}).values():
+    for rec in day_lists(state).values():
         fxs.extend((parse_iso(f[1]), f) for f in rec['list'] if f[1])
     fxs.sort(key=lambda x: x[0])
     return fxs
@@ -4413,7 +4441,7 @@ def af_fill(state):
     assumed: a league in the same country, not a cup or a women's or youth league, with AF_VOTES or more games between
     two sides ours already has. Names are matched to ESPN's, so a side's old results and new ones are one record;
     promoted clubs keep API-Football's name. Results go into the same history the ratings read."""
-    lists = ((state.get('af') or {}).get('fx') or {})
+    lists = day_lists(state)
     hist = state.setdefault('es_hist', {})
     known = state.setdefault('af_lg', {})          # lk -> [league id, its name, when learned]
     votes = state.setdefault('af_votes', {})       # lk -> {league id: [fixture ids]}
@@ -4454,25 +4482,29 @@ def af_fill(state):
                 if f[0] not in ids:
                     ids.append(f[0])
                     del ids[:-30]
-    taken = {}
-    for lk in AF_FILL:
-        v = votes.get(lk) or {}
-        if v:
-            lid, ids = max(v.items(), key=lambda kv: len(kv[1]))
-            if len(ids) >= AF_VOTES and len(ids) > taken.get(lid, (None, 0))[1]:
-                taken[lid] = (lk, len(ids))
-    for lid, (lk, _) in taken.items():
-        if (known.get(lk) or [None])[0] != lid:
-            name = next((f[4] for f in rows if str(f[11]) == lid), '')
-            for k2 in [k2 for k2, v in known.items() if v[0] == lid]:
-                del known[k2]
-            known[lk] = [lid, name, iso(NOW)]
-            log(f'API-Football: {L[lk]["country"]} {name} (league {lid}) is {lk}')
-    by_id = {v[0]: lk for lk, v in known.items() if lk in AF_FILL}
-    for lk, c in wcur.items():   # pair this season's API-Football names with Wikipedia's
-        lid = (known.get(lk) or [None])[0]
-        if lid:
-            seen = sorted({n for f in rows if str(f[11]) == lid and af_season(parse_iso(f[1])) >= c['s'] for n in (f[2], f[3])})
+    # each feed's own league id for each of ours (v71: API-Football's and Highlightly's side by side, so a league
+    # learnt from one keeps filling from the other when that one stops)
+    known_hl = state.setdefault('hl_lg', {})
+    for feed, kn in ((False, known), (True, known_hl)):
+        taken = {}
+        for lk in AF_FILL:
+            v = {lid: ids for lid, ids in (votes.get(lk) or {}).items() if str(lid).startswith('hl') == feed}
+            if v:
+                lid, ids = max(v.items(), key=lambda kv: len(kv[1]))
+                if len(ids) >= AF_VOTES and len(ids) > taken.get(lid, (None, 0))[1]:
+                    taken[lid] = (lk, len(ids))
+        for lid, (lk, _) in taken.items():
+            if (kn.get(lk) or [None])[0] != lid:
+                name = next((f[4] for f in rows if str(f[11]) == lid), '')
+                for k2 in [k2 for k2, v in kn.items() if v[0] == lid]:
+                    del kn[k2]
+                kn[lk] = [lid, name, iso(NOW)]
+                log(f'{"Highlightly" if feed else "API-Football"}: {L[lk]["country"]} {name} (league {lid}) is {lk}')
+    by_id = {v[0]: lk for kn in (known, known_hl) for lk, v in kn.items() if lk in AF_FILL}
+    for lk, c in wcur.items():   # pair this season's day-list names with Wikipedia's
+        lids = {x[0] for x in (known.get(lk), known_hl.get(lk)) if x}
+        if lids:
+            seen = sorted({n for f in rows if str(f[11]) in lids and af_season(parse_iso(f[1])) >= c['s'] for n in (f[2], f[3])})
             amap[lk] = pair_names(seen, sorted(c['links']), c['links'], amap.get(lk))
     held = {}
     fixl, added, season_now = [], 0, af_season(NOW)
@@ -4516,42 +4548,293 @@ def af_fill(state):
     state['af_fixtures'] = sorted(fixl, key=lambda x: x['ko'])
     if held:
         log('API-Football names not paired yet:', '; '.join(f"{lk}: {', '.join(sorted(v))}" for lk, v in held.items()))
-    if not known:
-        return f'none of API-Football\'s leagues recognised yet ({sum(len(i) for v in votes.values() for i in v.values())} games counted)'
-    return (f"from API-Football: {', '.join(sorted(k for k in known if k in AF_FILL))}; {len(fixl)} fixtures, {added} new results"
+    if not known and not known_hl:
+        return f'none of the day lists\' leagues recognised yet ({sum(len(i) for v in votes.values() for i in v.values())} games counted)'
+    src_ = ' and '.join(x for x, kn in (('API-Football', known), ('Highlightly', known_hl)) if any(k in AF_FILL for k in kn))
+    return (f"from {src_}: {', '.join(sorted({k for kn in (known, known_hl) for k in kn if k in AF_FILL}))}; {len(fixl)} fixtures, {added} new results"
             + (f"; waiting to pair {sum(len(v) for v in held.values())} names" if held else ''))
 
 
+# ----------------------------------------------------------------------------------------------
+# Highlightly (v71, optional): line-ups and results for the games ESPN doesn't follow, and fixtures and results for
+# the leagues filled from day lists (AF_FILL), from a free key in the HIGHLIGHTLY_KEY secret (100 calls a day). Its
+# lists are kept in API-Football's row form, so everything built on those (pairing our games, fast results, the
+# leagues filled from day lists, line-ups) reads both, and API-Football's code carries on if its key comes back.
+# Highlightly has no injury lists: those still need API-Football. Its lists are asked for by country and day, only
+# for countries with games that need them: one call usually covers a country's whole day.
+# ----------------------------------------------------------------------------------------------
+HL_KEY = (ENV('HIGHLIGHTLY_KEY') or '').strip()
+HL_BASES = ('https://soccer.highlightly.net', 'https://sports.highlightly.net/football',
+            'https://football-highlights-api.p.rapidapi.com')   # a Football key, an All Sports key, a RapidAPI key
+HL_DAILY = int(float(ENV('HIGHLIGHTLY_DAILY') or 100))
+HL_LISTS = 0.55        # share of the day's calls the lists may take; line-ups get the rest
+HL_RESERVE = 4         # calls left unused each day
+HL_LU_FROM = 40        # Highlightly has line-ups from 40 minutes before kick-off
+HL_LU_TO = 30          # ... and they're asked for until 30 minutes after
+HL_LU_EVERY = 15       # minutes between tries for one game (two tries at most)
+HL_LINK_H = 30         # hours ahead a country's games are looked up
+HL_STATUS = {'not started': 'NS', 'to be announced': 'TBD', 'first half': '1H', 'half time': 'HT', 'second half': '2H',
+             'extra time': 'ET', 'break time': 'BT', 'penalties': 'P', 'in progress': 'LIVE', 'finished': 'FT',
+             'finished after penalties': 'PEN', 'finished after extra time': 'AET', 'postponed': 'PST', 'suspended': 'SUSP',
+             'cancelled': 'CANC', 'awarded': 'AWD', 'interrupted': 'INT', 'abandoned': 'ABD', 'unknown': 'NS'}
+HL_NAME = {'czechia': 'czech republic', 'south korea': 'korea republic', 'dr congo': 'congo dr', 'usa': 'united states',
+           'bosnia and herzegovina': 'bosnia herzegovina', 'north macedonia': 'macedonia', 'turkey': 'turkiye',
+           'ireland': 'republic of ireland', 'united arab emirates': 'uae', 'ivory coast': 'cote divoire'}
+
+
+def hl_get(path, params, state, kind='list'):
+    """One Highlightly call -> (data or None, error text or None), within the day's allowance."""
+    hl = state.setdefault('hl', {})
+    day = NOW.strftime('%Y-%m-%d')
+    if hl.get('day') != day:
+        hl.update({'day': day, 'used': 0, 'lists': 0, 'lu': 0, 'left': None})
+    fp = hashlib.sha256(HL_KEY.encode()).hexdigest()[:10]
+    if hl.get('kfp') != fp:   # a new key: forget the old one's pause and address (only this fingerprint is kept)
+        for k in ('block_until', 'why', 'base'):
+            hl.pop(k, None)
+        hl['kfp'] = fp
+    if hl.get('block_until') and parse_iso(hl['block_until']) > NOW and not FORCE:
+        return None, 'paused'
+    left = hl.get('left')
+    if hl['used'] >= HL_DAILY - HL_RESERVE or (left is not None and left <= HL_RESERVE):
+        return None, 'daily allowance used'
+    if kind == 'list' and hl['lists'] >= HL_DAILY * HL_LISTS:
+        return None, 'allowance for lists used'
+    order = [hl['base']] if isinstance(hl.get('base'), int) else list(range(len(HL_BASES)))
+    r = None
+    for bi in order:
+        base = HL_BASES[bi]
+        hdr = {'x-rapidapi-key': HL_KEY, 'Accept-Encoding': 'gzip'}
+        if 'rapidapi' in base:
+            hdr['x-rapidapi-host'] = 'football-highlights-api.p.rapidapi.com'
+        r = fetch(base + path, params, tries=1, headers=hdr, timeout=25)
+        hl['used'] += 1
+        ck = {'list': 'lists', 'lu': 'lu'}.get(kind, 'other')
+        hl[ck] = hl.get(ck, 0) + 1
+        rem = r.headers.get('x-ratelimit-requests-remaining')
+        if rem is not None:
+            hl['left'] = fnum(rem)
+        if r.status in (401, 403) and len(order) > 1 and bi != order[-1]:
+            continue   # the key may be for another of Highlightly's addresses
+        break
+    body = r.body or b''
+    if body[:2] == b'\x1f\x8b':
+        try:
+            body = gzip.decompress(body)
+        except OSError:
+            body = b''
+    if r.status in (401, 403):
+        try:
+            why = (json.loads(text_of(body)) or {}).get('message') or (json.loads(text_of(body)) or {}).get('error')
+        except ValueError:
+            why = None
+        hl['block_until'], hl['why'] = iso(NOW + timedelta(hours=6)), (str(why)[:160] if why else f'status {r.status}')
+        log('Highlightly refused the key; pausing for 6 h:', hl['why'])
+        return None, 'the key was refused'
+    if r.status != 200:
+        return None, f'status {r.status or "no answer"}'
+    if not isinstance(hl.get('base'), int):
+        hl['base'] = bi
+        log('Highlightly answers at', HL_BASES[bi])
+    try:
+        data = json.loads(text_of(body))
+    except ValueError:
+        return None, 'unreadable reply'
+    if isinstance(data, dict) and isinstance(data.get('plan'), dict) and data['plan'].get('message'):
+        hl['plan'] = str(data['plan']['message'])[:160]
+    return data, None
+
+
+def hl_row(m, country=None):
+    """A Highlightly match as an API-Football day-list row (ids marked "hl"). A game decided after extra time or on
+    penalties gets no score: the list only has the final one, and Statpad grades the 90 minutes."""
+    h, a, lg, st = m.get('homeTeam') or {}, m.get('awayTeam') or {}, m.get('league') or {}, m.get('state') or {}
+    if not (m.get('id') and m.get('date') and h.get('name') and a.get('name')):
+        return None
+    try:
+        ko = iso(parse_iso(str(m['date'])).astimezone(UTC))
+    except (ValueError, TypeError):
+        return None
+    code = HL_STATUS.get(re.sub(r'\s+', ' ', str(st.get('description') or '')).strip().lower(), 'NS')
+    hs = as_ = None
+    if code == 'FT':
+        sc = re.match(r'\s*(\d+)\s*[-:]\s*(\d+)', str((st.get('score') or {}).get('current') or ''))
+        if sc:
+            hs, as_ = int(sc.group(1)), int(sc.group(2))
+    return ['hl' + str(m['id']), ko, h['name'], a['name'], lg.get('name'), country or (m.get('country') or {}).get('name'),
+            'hl' + str(h.get('id')), 'hl' + str(a.get('id')), code, hs, as_, 'hl' + str(lg.get('id'))]
+
+
+def hl_countries(state):
+    """Our countries -> Highlightly's country codes (its list read once a month)."""
+    hl = state.setdefault('hl', {})
+    cc = hl.get('cc')
+    if cc and NOW - parse_iso(cc['at']) < timedelta(days=30) and cc.get('map'):
+        return cc['map']
+    data, err = hl_get('/countries', {}, state, kind='other')
+    if not isinstance(data, list):
+        return (cc or {}).get('map') or {}
+    flat = lambda x: re.sub(r'[^a-z]', '', unicodedata.normalize('NFKD', x or '').encode('ascii', 'ignore').decode().lower())
+    theirs = {flat(c.get('name')): c.get('code') for c in data if c.get('code') and c.get('name')}
+    out = {}
+    for c in sorted({v['country'] for v in L.values() if v.get('country')}):
+        code = theirs.get(flat(c)) or theirs.get(flat(HL_NAME.get(c.lower(), '')))
+        if code:
+            out[c] = code
+    hl['cc'] = {'at': iso(NOW), 'map': out}
+    log(f'Highlightly: {len(out)} of our countries found in its list of {len(theirs)}')
+    return out
+
+
+def hl_needs(lk):
+    """A league whose games Highlightly is asked about: ESPN doesn't carry it (or stopped, as with these African ones)."""
+    return not is_cup(lk) and L[lk].get('group') != 'intl' and (lk not in ESPN_SLUG or lk in AF_AFRICA)
+
+
+def hl_lists(state, matches):
+    """Read the day lists Statpad needs now, most needed first: days whose games await a result, then the next
+    30 hours' games (to pair them, for line-ups and results), then the leagues filled from day lists whose own
+    results have gone quiet (one look a day at today and tomorrow)."""
+    hl = state.setdefault('hl', {})
+    fx = hl.setdefault('fx', {})
+    for k in [k for k in fx if k[:10] < (NOW - timedelta(days=3)).strftime('%Y-%m-%d')]:
+        del fx[k]
+    codes = hl_countries(state)
+    if not codes:
+        return 'no country list yet'
+    today = NOW.strftime('%Y-%m-%d')
+    want = {}   # (day, country) -> (priority, why)
+
+    def add(day, country, pri, why):
+        if country in codes and ((day, country) not in want or want[(day, country)][0] > pri):
+            want[(day, country)] = (pri, why)
+
+    done = (state.get('af') or {}).get('scores') or {}
+    off = (state.get('af') or {}).get('void') or {}
+    ev = state.get('espn_ev') or {}
+    ends = {}
+    for r in (state.get('track_pending') or {}).values():
+        if r['id'] in done or r['id'] in off or not hl_needs(r['lk']) or r['id'] in ev:
+            continue
+        ko = parse_iso(r['ko'])
+        if NOW - timedelta(days=2) <= ko <= NOW - timedelta(minutes=110):
+            k = (ko.strftime('%Y-%m-%d'), L[r['lk']]['country'])
+            ends[k] = max(ends.get(k, ko), ko)
+    for (day, c), last in ends.items():
+        rec = fx.get(f'{day}|{c}')
+        ended = last + timedelta(minutes=110)
+        if not rec or (parse_iso(rec['at']) < ended and NOW - parse_iso(rec['at']) >= timedelta(hours=2 if day == today else 6)):
+            add(day, c, 0, 'results')
+    for m in matches:
+        if not hl_needs(m['lk']):
+            continue
+        ko = parse_iso(m['ko'])
+        if NOW - timedelta(hours=1) <= ko <= NOW + timedelta(hours=HL_LINK_H):
+            day, c = ko.strftime('%Y-%m-%d'), L[m['lk']]['country']
+            rec = fx.get(f'{day}|{c}')
+            if not rec or (NOW - parse_iso(rec['at']) >= timedelta(hours=12) and ko > NOW):
+                add(day, c, 1 + (ko - NOW).total_seconds() / 86400, 'games')
+    hist = state.get('es_hist') or {}
+    for lk in AF_FILL:
+        last = max((r[0] for r in ((hist.get(lk) or {}).get('g') or {}).values()), default='')
+        if last and last >= (NOW - timedelta(days=6)).strftime('%Y-%m-%d'):
+            continue   # its results are coming in from elsewhere
+        for day in (today, (NOW + timedelta(days=1)).strftime('%Y-%m-%d')):
+            rec = fx.get(f'{day}|{L[lk]["country"]}')
+            if not rec or NOW - parse_iso(rec['at']) >= timedelta(hours=24):
+                add(day, L[lk]['country'], 3, 'quiet league')
+    fail = hl.setdefault('fail', {})   # a list that failed waits an hour before it's asked for again
+    for k in [k for k, v in fail.items() if NOW - parse_iso(v) >= timedelta(hours=1)]:
+        del fail[k]
+    got, rows, err = 0, 0, None
+    for (day, c), (pri, why) in sorted(want.items(), key=lambda kv: kv[1][0]):
+        if f'{day}|{c}' in fail and not FORCE:
+            continue
+        data, err = hl_get('/matches', {'countryCode': codes[c], 'date': day, 'timezone': 'Etc/UTC', 'limit': 100}, state)
+        if data is None:
+            if err in ('paused', 'daily allowance used', 'allowance for lists used', 'the key was refused'):
+                break
+            fail[f'{day}|{c}'] = iso(NOW)
+            continue
+        lst = [x for x in (hl_row(mm, c) for mm in (data.get('data') or []) if isinstance(mm, dict)) if x]
+        fx[f'{day}|{c}'] = {'at': iso(NOW), 'list': lst}
+        got += 1
+        rows += len(lst)
+    left = len(want) - got
+    return (f'{got} day list{"s" if got != 1 else ""} read ({rows} games)' + (f', {left} waiting' if left > 0 else '')
+            + (f' ({err})' if err and left > 0 else ''))
+
+
+def hl_lineup(state, r):
+    """Confirmed line-ups for one game from Highlightly, in the shape team news uses (None if not out yet)."""
+    data, err = hl_get(f'/lineups/{str(r["fid"])[2:]}', {}, state, kind='lu')
+    if not isinstance(data, dict):
+        return None, err
+
+    def pos(p):
+        n = str(p.get('position') or '').lower()
+        return 'G' if 'goal' in n else 'D' if 'defen' in n or 'back' in n else 'M' if 'midfield' in n else 'F' if re.search(r'forward|attack|striker|wing', n) else None
+
+    def flat(x):
+        for y in x or []:
+            if isinstance(y, list):
+                yield from flat(y)
+            elif isinstance(y, dict):
+                yield y
+    side = {}
+    for key, k2 in (('homeTeam', 'h'), ('awayTeam', 'a')):
+        t = data.get(key) or {}
+        xi = [[p.get('number'), p.get('name'), pos(p)] for p in flat(t.get('initialLineup')) if p.get('name')]
+        if len(xi) >= 7:
+            side[k2] = {'fm': t.get('formation'), 'xi': xi[:11], 'co': None}
+    return (side if 'h' in side and 'a' in side else None), None
+
+
 def refresh_team_news(state, matches):
-    if not AF_KEY:
+    """Team news and the day lists: API-Football (injuries, suspensions, line-ups, results) and Highlightly
+    (line-ups and results for the games ESPN doesn't follow), whichever keys are set and working."""
+    if not AF_KEY and not HL_KEY:
         return 'no key'
     af = state.setdefault('af', {})
-    note0 = af.get('note') or ''
-    if 'this date' in note0 or note0.startswith('your plan does not cover this'):
-        # older versions paused every API-Football call for a day when the plan refused one kind of request
-        # (a date, or lists of fixture ids): undo that; now only the refused kind waits
-        af.pop('block_until', None)
-        af.pop('note', None)
-    af.pop('inj_mode', None)
-    for k in [k for k, v in (af.get('nope') or {}).items() if parse_iso(v[0]) < NOW]:
-        del af['nope'][k]
-    if af_blocked(state):
-        why = af.get('why') if af.get('note') == 'the key was refused' else None
-        return 'paused: ' + (af.get('note') or '') + (f' (API-Football: “{why}”)' if why else '')
-    fx = af.setdefault('fx', {})
     days = [NOW.strftime('%Y-%m-%d'), (NOW + timedelta(days=1)).strftime('%Y-%m-%d')]
-    graded = af_results(state)    # results first: they matter more than news
-    for ds in days:
-        rec = fx.get(ds)
-        if rec and NOW - parse_iso(rec['at']) < timedelta(hours=AF_FIX_EVERY) and not FORCE:
-            continue
-        af_day(state, ds, 'team news')
+    af_ok, af_note = False, None
+    if AF_KEY:
+        note0 = af.get('note') or ''
+        if 'this date' in note0 or note0.startswith('your plan does not cover this'):
+            # older versions paused every API-Football call for a day when the plan refused one kind of request
+            # (a date, or lists of fixture ids): undo that; now only the refused kind waits
+            af.pop('block_until', None)
+            af.pop('note', None)
+        af.pop('inj_mode', None)
+        for k in [k for k, v in (af.get('nope') or {}).items() if parse_iso(v[0]) < NOW]:
+            del af['nope'][k]
+        if af_blocked(state):
+            why = af.get('why') if af.get('note') == 'the key was refused' else None
+            af_note = 'API-Football paused: ' + (af.get('note') or '') + (f' (“{why}”)' if why else '')
+        else:
+            af_ok = True
+    hl_note = None
+    if HL_KEY:
+        try:
+            hl_note = hl_lists(state, matches)
+        except Exception as e:   # the other steps still run
+            log('Highlightly lists failed:', repr(e))
+            hl_note = 'error'
+    graded = af_results(state)    # results first: they matter more than news (API-Football's lists download here)
+    fx = af.setdefault('fx', {})
+    if af_ok:
+        for ds in days:
+            rec = fx.get(ds)
+            if rec and NOW - parse_iso(rec['at']) < timedelta(hours=AF_FIX_EVERY) and not FORCE:
+                continue
+            af_day(state, ds, 'team news')
     for ds in [d for d in fx if d < (NOW - timedelta(days=3)).strftime('%Y-%m-%d')]:
         del fx[ds]
-    linked = af_link(state, matches)
-    af_injuries(state, days)
+    linked = af_link(state, matches, af_ok)
+    if af_ok:
+        af_injuries(state, days)
     got = af_lineups(state)
-    n_live = af_live(state)
+    n_live = af_live(state) if af_ok else 0
     tn = state.setdefault('tn', {})
     for mid in [k for k, r in tn.items() if parse_iso(r['ko']) < NOW - timedelta(hours=6)]:
         del tn[mid]
@@ -4559,14 +4842,21 @@ def refresh_team_news(state, matches):
         del state['lineup_lk'][lk]
     n_lu = sum(1 for r in tn.values() if r.get('lu'))
     note = (f"{linked} matches linked, {n_lu} line-ups in{f' ({got} new)' if got else ''}, "
-            f"{graded} new results{f', {n_live} live scores' if n_live else ''}, {af.get('used', 0)} calls today")
-    words = {'/fixtures?live': 'live scores', '/fixtures/lineups?fixture': 'line-ups', '/injuries?date': 'injuries',
-             '/fixtures?date': 'fixture lists', '/teams?country': 'club lists for crests'}
-    nope = sorted(words.get(k, k) for k, v in (af.get('nope') or {}).items() if parse_iso(v[0]) > NOW)
-    if nope:
-        note += ' · your plan refuses ' + ', '.join(nope) + ' (asked again weekly)'
-    if af.get('note') and af_blocked(state):
-        note += ' · paused: ' + af['note'] + (f' (API-Football: “{af["why"]}”)' if af['note'] == 'the key was refused' and af.get('why') else '')
+            f"{graded} new results{f', {n_live} live scores' if n_live else ''}")
+    if af_ok:
+        note += f", {af.get('used', 0)} API-Football calls today"
+        words = {'/fixtures?live': 'live scores', '/fixtures/lineups?fixture': 'line-ups', '/injuries?date': 'injuries',
+                 '/fixtures?date': 'fixture lists', '/teams?country': 'club lists for crests'}
+        nope = sorted(words.get(k, k) for k, v in (af.get('nope') or {}).items() if parse_iso(v[0]) > NOW)
+        if nope:
+            note += ' · your plan refuses ' + ', '.join(nope) + ' (asked again weekly)'
+    if af_note:
+        note += ' · ' + af_note
+    if HL_KEY:
+        hl = state.get('hl') or {}
+        note += f" · Highlightly: {hl_note}, {hl.get('used', 0)} calls today"
+        if hl.get('block_until') and parse_iso(hl['block_until']) > NOW:
+            note += f" · Highlightly paused: the key was refused (“{hl.get('why') or ''}”)"
     return note
 
 
@@ -4593,6 +4883,10 @@ def team_news_for(state, mid, lk, ko, h, a):
     if not (out['h'] or out['a'] or lu):
         return None
     news = {'h': {'out': out['h']}, 'a': {'out': out['a']}, 'lu': bool(lu)}
+    # v71: where the line-ups came from, and whether absences were looked up at all (only API-Football lists them)
+    hl_ = str((r or {}).get('fid') or '').startswith('hl')
+    news['src'] = ('Highlightly' if hl_ else 'API-Football') if r.get('lu') else 'ESPN' if elu else None
+    news['inj'] = bool(r and r.get('fid') and not hl_ and r['ko'][:10] in (((state.get('af') or {}).get('inj')) or {}))
     for side in ('h', 'a'):
         if lu.get(side):
             news[side].update({'fm': lu[side].get('fm'), 'xi': lu[side].get('xi'), 'co': lu[side].get('co')})
@@ -9753,9 +10047,10 @@ def main():
     lv_ok, lv_note = safe(lambda: refresh_live(state, prev_matches), (False, 'error'))
     src['live'] = {'ok': lv_ok, 'at': iso(NOW), 'note': lv_note}
     log('live:', lv_note)
-    if AF_KEY:
+    if AF_KEY or HL_KEY:
         note = safe(lambda: refresh_team_news(state, prev_matches), 'error')
-        src['team_news'] = {'ok': note != 'error' and not af_blocked(state), 'at': iso(NOW), 'note': note}
+        hl_up = bool(HL_KEY) and not ((state.get('hl') or {}).get('block_until') and parse_iso(state['hl']['block_until']) > NOW)
+        src['team_news'] = {'ok': note != 'error' and (hl_up or (bool(AF_KEY) and not af_blocked(state))), 'at': iso(NOW), 'note': note}
         log('team news:', note)
     else:
         src.pop('team_news', None)
@@ -9775,9 +10070,9 @@ def main():
         ts_note += f'; scores for {tl[0]} in play and {tl[1]} finished on the board'
     src['tsdb'] = {'ok': ts_note != 'error', 'at': iso(NOW), 'note': ts_note}
     log('TheSportsDB:', ts_note)
-    af_note = safe(lambda: af_fill(state), 'error')   # African and Wikipedia-rated leagues from API-Football's day lists
+    af_note = safe(lambda: af_fill(state), 'error')   # African and Wikipedia-rated leagues from the day lists
     src.pop('africa', None)
-    if af_note != 'error' and not state.get('af_lg') and not AF_KEY:
+    if af_note != 'error' and not state.get('af_lg') and not AF_KEY and not HL_KEY:
         src.pop('af_fill', None)
     else:
         src['af_fill'] = {'ok': af_note != 'error', 'at': iso(NOW), 'note': af_note}

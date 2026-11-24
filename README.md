@@ -485,6 +485,29 @@ The closing price is still well ahead of any results-only model, which is why pr
 Code: `pulse_run`, `pulse_carry`, `pulse_blend`, `PULSE`, `PULSE_BLEND`, `PYRAMIDS` in `update.py`.
 `PULSE_ON = False` gives v62's ratings exactly.
 
+## v71: Highlightly, a second source for what API-Football did
+
+API-Football has refused the key since 20 Nov 2026, and since 24 Nov says the account is suspended ("Your account is suspended", in **Method → Data status**). Its free plan forbids more than one account, and its own notes say free accounts that seem to share an internet address with others (as GitHub's machines do) can be suspended automatically, so a new account would likely go the same way. Statpad now reads **Highlightly** as well, from a free key (100 calls a day) in a new `HIGHLIGHTLY_KEY` secret. API-Football's code is untouched: if its key comes back, both work side by side.
+
+What each source covers now:
+
+| | ESPN (no key) | Highlightly (free key) | API-Football (key refused) |
+| --- | --- | --- | --- |
+| Line-ups | competitions it carries, from 75 min before kick-off | the rest, from about 40 min before | the rest, from 60 min before |
+| Injuries and suspensions | no | no | yes |
+| Fast results for grading | competitions it carries | the rest, within a couple of hours | the rest |
+| Fixtures and results for the day-list leagues | no | yes | yes |
+
+**How the calls are spent.** Highlightly's lists are asked for by country and day (one call usually covers a country's whole day), and only for countries with games ESPN doesn't carry: the African leagues, the Wikipedia-rated leagues and the other leagues ESPN doesn't list (Poland, Switzerland, Romania, K League and others). In order: days whose games await a result (re-read 2 hours after the last game ends, then every 6), then the next 30 hours' games (to pair them for line-ups and results; a day's list is re-read after 12 hours if games are still to come), then any day-list league whose results have gone quiet for 6 days (Nigeria's had stopped on 7 Oct; one look a day at today and tomorrow, to pick up a new season too). Lists may take 55 of the day's calls; line-ups get the rest (each game tried at most twice, 15 minutes apart, from 35 minutes before kick-off to 30 after). Four calls a day are kept unused. A list that fails waits an hour.
+
+**Fitting it to what was there.** Highlightly's games are turned into API-Football's day-list rows (ids marked "hl"), so the code that pairs our games, grades results, learns which list league is ours and fills the day-list leagues reads both feeds. Each feed's league id is learnt on its own (Highlightly's Uganda league beside API-Football's), so a league learnt from one keeps filling from the other. A game decided after extra time or on penalties gets no score from Highlightly (its lists carry only the final score, and Statpad grades the 90 minutes), so it's left to other sources. The key is found at whichever of Highlightly's addresses answers (a Football API key, an All Sports key or a RapidAPI key), and a refused key pauses it for 6 hours, lifted at once when a new key is put in the secret (only a short fingerprint is kept, never the key).
+
+**On the match page.** Team news says where the line-ups came from ("Line-ups from ESPN", "from Highlightly"), and when they came without absences it no longer says "No reported absences": it says injuries and suspensions aren't listed for that game.
+
+**Setting it up.** Sign up at highlightly.net (not RapidAPI; either works, but they're separate accounts), copy the key, and add it as the secret `HIGHLIGHTLY_KEY`. The workflow needs one more line, `HIGHLIGHTLY_KEY: ${{ secrets.HIGHLIGHTLY_KEY }}`, under the `API_FOOTBALL_KEY` line in `.github/workflows/update.yml`. **Data status → Team news** then shows "Highlightly: N day lists read, N calls today", and its free plan's note ("Some results might be hidden with FREE tier") is kept in the run's log.
+
+Checked: a new test (tests/v71_highlightly_unit.py) runs the whole path against Highlightly's published response shapes: rows, the key found at its second address, a refused key paused and lifted by a new one, the day's allowance, lists in order of need, a pick graded, a game paired, line-ups read from the formation's rows, team news labelled, Uganda's league learnt beside API-Football's, results and fixtures filled, and no call to API-Football while it's refused. The earlier suites pass, and API-Football's line-up and live tests give the same results as before (only the note's wording changed).
+
 ## v70: the right club in every league, and calmer pages
 
 ### Liverpool in Uruguay is real; sharing England's crest wasn't
@@ -1090,6 +1113,8 @@ The first time the page opens in a visit, the board comes up bank by bank, like 
 - **ESPN** (free, no key: the public scoreboards behind espn.com). Live scores, goal and red-card times, final scores within minutes, and confirmed line-ups, for every competition Statpad covers except the Swiss, Romanian, Polish, Czech, Serbian and Finnish leagues and K League 1. Read by the workflow every 5 minutes and by your phone every 30 seconds to a minute while a game is on. Also DraftKings' prices for the next day and a half, and for these competitions the fixtures and the last two seasons of results that build their ratings: the Women's Super League, Liga F, Première Ligue, NWSL, the Women's Champions League, the Saudi Pro League, the Eerste Divisie, the A-League, Brazil's Série B, Chile, Colombia and South Africa, plus fixtures for the Libertadores, the Sudamericana and the Scottish Championship. Past months are read once (about 250 small requests spread over the first few runs); after that, a few a run.
 - **API-Football** (optional key, free plan: 100 calls a day). Club lists for crests (about 30 calls a month). Team news: injuries, suspensions and doubts for today and tomorrow, plus line-ups for the games ESPN doesn't cover. Also results and live scores for the competitions ESPN doesn't carry, and the team ids that give each club its crest. The calls are rationed to fit the free plan, which only serves fixtures and results for yesterday, today and tomorrow, one fixture per call; anything older comes from football-data. When the plan refuses one kind of request (for example several fixtures in one call), only that kind waits a week and **Method → Data status** names it; everything else carries on.
 
+- **Highlightly** (optional key, free plan: 100 calls a day; v71). Line-ups and fast results for the games ESPN doesn't carry, and fixtures and results for the leagues filled from day lists (the African leagues and the Wikipedia-rated ones), when API-Football's key is refused or absent. It has no injury lists. See **Highlightly** under v71.
+
 Without a key, the site still works from the model, the football-data prices and DraftKings' prices from ESPN. Czech and Serbian matches, the Frauen-Bundesliga and K League 1, the UEFA and cup matches, and the Nations League and friendlies need the key, because their fixtures come from The Odds API.
 
 **Women's football.** The Women's Super League, Liga F, Première Ligue, NWSL and Women's Champions League come from ESPN (with DraftKings' prices where they have them, and The Odds API's for the Women's Champions League); the Frauen-Bundesliga from The Odds API. Women's sides are named "… Women" (Chelsea Women) and are only ever matched with other women's sides, so they never borrow a men's team's ratings, results or form; they do wear their club's crest. In **Slips**, the scope menu has **Men's football** and **Women's football**. Serie A Femminile isn't covered: none of the free sources lists it with fixtures ahead of time.
@@ -1114,8 +1139,9 @@ Secrets (**Settings → Secrets and variables → Actions → Secrets**):
 |---|---|
 | `ODDS_API_KEY` | Your The Odds API key, for live prices. |
 | `API_FOOTBALL_KEY` | Your API-Football key, for team news. It also needs the line `API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}` in `update.yml` (already there in the current version). |
+| `HIGHLIGHTLY_KEY` | Your Highlightly key, for line-ups and results of the games ESPN doesn't carry. It also needs the line `HIGHLIGHTLY_KEY: ${{ secrets.HIGHLIGHTLY_KEY }}` in `.github/workflows/update.yml`, under `API_FOOTBALL_KEY`. |
 
-`API_FOOTBALL_DAILY` (variable, default `100`) sets the daily call limit if you're on a bigger API-Football plan.
+`API_FOOTBALL_DAILY` (variable, default `100`) sets the daily call limit if you're on a bigger API-Football plan; `HIGHLIGHTLY_DAILY` (default `100`) does the same for Highlightly.
 
 To refresh everything at once, go to **Actions → Statpad update → Run workflow** and tick *force*.
 
