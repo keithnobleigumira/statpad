@@ -1017,6 +1017,7 @@ details.xm .note { margin: 0 0 10px; }
 
 /* ---------- tables ---------- */
 .lt { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r); overflow-x: auto; box-shadow: var(--shadow); }
+#tableBox { contain: layout paint; }   /* v72: the header's progress text never re-lays the table out */
 .h2row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .h2acts { display: inline-flex; gap: 8px; flex-wrap: wrap; }
 .tnote { margin: 0 0 10px; padding: 9px 12px; border-radius: var(--r); background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--yellow); color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
@@ -1026,6 +1027,17 @@ details.xm .note { margin: 0 0 10px; }
 .lt td { text-align: right; padding: 9px 8px; border-top: 1px solid var(--rule-2); font: 500 12.5px/1.2 var(--f-mono); font-variant-numeric: tabular-nums; font-stretch: 87.5%; white-space: nowrap; }
 .lt td.team { font: 650 14px/1.2 var(--f-body); }
 .lt tr.zone td:first-child { box-shadow: inset 3px 0 0 var(--cobalt); }
+/* v72: live tables */
+.tlive { display: flex; gap: 6px 10px; flex-wrap: wrap; align-items: baseline; margin: 0 0 10px; padding: 9px 12px; border-radius: var(--r); background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--pitch); color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
+.tlive b { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); white-space: nowrap; }
+.tl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pitch); position: relative; flex: none; }
+.tl-dot.on::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--pitch); animation: ping 2.4s infinite; }
+.lt tr.tl-upd td { background: var(--pitch-soft); }
+.lt tr.tl-flash td { animation: tlFlash 2.4s ease-out 1; }
+@keyframes tlFlash { 0%, 25% { background: var(--pitch); color: var(--card); } 100% { background: var(--pitch-soft); } }
+.tl-mv { font-style: normal; font-size: 9.5px; margin-left: 4px; letter-spacing: -.02em; }
+.tl-mv.up { color: var(--pitch); } .tl-mv.dn { color: var(--red); }
+@media (prefers-reduced-motion: reduce) { .tl-dot.on::after, .lt tr.tl-flash td { animation: none; } }
 .rbar { display: inline-block; width: 46px; height: 5px; border-radius: 4px; background: var(--sunk); vertical-align: middle; margin-left: 6px; overflow: hidden; }
 .rbar i { display: block; height: 100%; background: var(--cobalt); }
 .rbar.def i { background: var(--a); }
@@ -4806,9 +4818,72 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     for (const b of document.querySelectorAll(`[data-add="${CSS.escape(id + '|' + key)}"]`)) { const on = inCoupon(id, key); b.setAttribute('aria-pressed', on); if (b.classList.contains('add')) b.textContent = on ? '✓' : '+'; }
   }
 
+  // ---------------- v72: live tables ----------------
+  // A result counts in its league table the moment it's confirmed. The site's update adds every final score its sources
+  // confirm before the results feeds list the game (L.lt), names the finished games on the board the table already
+  // counts (L.cnt) and those that never count (L.nx: play-offs), and says whether this page may add more (L.lv). The page
+  // adds the games that have finished since, from ESPN's scoreboards (read every 45 s while games are on), live.json and
+  // results.json. Every table reader (team pages, the simulator, the assistant) sees the live table.
+  const LT_SORT = (x, y) => y[7] - x[7] || (y[5] - y[6]) - (x[5] - x[6]) || y[5] - x[5];   // stable: full ties keep the feed's order
+  function ltAdd(r, f, g, sgn = 1) {
+    const k = f > g ? 0 : f === g ? 1 : 2;
+    r[1] += sgn; if (r[2] != null) r[2 + k] += sgn; r[5] += sgn * f; r[6] += sgn * g; r[7] += sgn * [3, 1, 0][k];
+    if (sgn > 0) r[8] = ((r[8] || '') + 'WDL'[k]).slice(-5);
+  }
+  S.ltSeen = new Map(); S.ltFlash = new Set();
+  function liveTables() {
+    const D = S.data; if (!D || !D.leagues || !Array.isArray(D.matches)) return false;
+    const R = (S.results && S.results.scores) || {}, G = (S.live && S.live.games) || {}, now = Date.now(), add = new Map();
+    for (const m of D.matches) {
+      const L = m && D.leagues[m.lk];
+      if (!L || !L.lv || !(L.table0 || L.table || []).length || !(Date.parse(m.ko) <= now)) continue;
+      if ((L.cnt && L.cnt.includes(m.id)) || (L.nx && L.nx.includes(m.id)) || ES.po[m.id]) continue;
+      const g = G[m.id], s = R[m.id] || ES.res[m.id] || (g && g[3] === 'FT' ? g : null);
+      if (!s || !(+s[0] >= 0) || !(+s[1] >= 0)) continue;
+      if (!add.has(m.lk)) add.set(m.lk, []);
+      add.get(m.lk).push([m.h, m.a, +s[0], +s[1], m.id, Date.parse(m.ko)]);
+    }
+    let changed = false;
+    for (const [lk, L] of Object.entries(D.leagues)) {
+      if (!L || !Array.isArray(L.table)) continue;
+      const list = (add.get(lk) || []).sort((x, y) => x[5] - y[5]), sg = JSON.stringify(list.map((x) => x.slice(0, 5)));
+      if ((L.ltSig || '[]') === sg) continue;
+      if (!L.table0) L.table0 = L.table;
+      const rows = L.table0.map((r) => r.slice()), by = new Map(rows.map((r) => [r[0], r])), used = [];
+      for (const x of list) {
+        const rh = by.get(x[0]), ra = by.get(x[1]); if (!rh || !ra || rh === ra) continue;
+        ltAdd(rh, x[2], x[3]); ltAdd(ra, x[3], x[2]); used.push(x.slice(0, 5));
+        if (!S.ltSeen.has(x[4])) { S.ltSeen.set(x[4], now); if (S.ltInit && now - x[5] < 150 * 60e3) { S.ltFlash.add(lk + '|' + x[0]); S.ltFlash.add(lk + '|' + x[1]); } }   // only a game that has just finished, while you watch, flashes
+      }
+      L.table = rows.sort(LT_SORT); L.ltc = used; L.ltSig = sg; changed = true;
+    }
+    S.ltInit = true;
+    return changed;
+  }
+  function ltRefresh() {   // new scores in: count any finals, and redraw the table if it's on screen
+    let ch = false; try { ch = liveTables(); } catch (e) { /* the scores never stop for a table */ }
+    if (ch && S.tab === 'tables' && S.tseg !== 'sim' && S.data) renderTables();
+  }
+  function ltMoves(L, prov) {   // each side's place before the results counted live: the arrows
+    if (!prov.length) return null;
+    const rows = L.table.map((r) => r.slice()), by = new Map(rows.map((r) => [r[0], r]));
+    for (const [h, a, hs, as] of prov) { const rh = by.get(h), ra = by.get(a); if (rh && ra) { ltAdd(rh, hs, as, -1); ltAdd(ra, as, hs, -1); } }
+    return new Map(rows.sort(LT_SORT).map((r, i) => [r[0], i + 1]));
+  }
+  function ltStrip(lk, L, prov) {
+    const D = S.data, G = (S.live && S.live.games) || {}, R = (S.results && S.results.scores) || {}, now = Date.now();
+    const playing = L.lv ? (D.matches || []).filter((m) => m.lk === lk && Date.parse(m.ko) <= now && Date.parse(m.ko) > now - 150 * 60e3
+      && !(L.cnt || []).includes(m.id) && !R[m.id] && !ES.res[m.id] && !(G[m.id] && G[m.id][3] === 'FT')) : [];
+    if (!prov.length && !playing.length) return '';
+    const recent = prov.slice(-3).reverse().map((x) => `${esc(x[0])} ${x[2]}–${x[3]} ${esc(x[1])}`).join(', ');
+    const more = prov.length > 3 ? ` and ${prov.length - 3} more` : '';
+    const live = !playing.length ? '' : playing.length === 1 ? 'One game is in play: it counts the moment it finishes.' : `${playing.length} games are in play: each counts the moment it finishes.`;
+    return `<div class="tlive" role="status"><b><i class="tl-dot${playing.length ? ' on' : ''}"></i>Live table</b><span>${prov.length ? `${prov.length === 1 ? 'One result is' : prov.length + ' results are'} counted already: ${recent}${more}. ` : ''}${live}</span></div>`;
+  }
+
   // ---------------- tables ----------------
   function renderTables() {
-    if (!S.ready) { showProgress(); return; }
+    if (!S.data) { showProgress(); return; }
     const lgs = Object.entries(S.data.leagues || {}).filter(([, v]) => v.table && v.table.length);
     const sel = $('#tleague');
     let h = '';
@@ -4825,20 +4900,26 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     for (const b of document.querySelectorAll('[data-tseg]')) b.setAttribute('aria-pressed', String(b.dataset.tseg === (sim ? 'sim' : 'table')));
     $('#tTitle').textContent = sim ? 'Season simulator' : 'Leagues';
     $('#tSub').textContent = sim ? 'The rest of the season played thousands of times from Statpad’s ratings and prices: each team’s chance of every finishing position. Set results for the next games to see what changes.'
-      : 'Standings from results. Attack and defence are the model’s goal multipliers against a league-average side. Tap a team for its page.';
-    if (sim) { renderSim(); return; }
-    const stakes = bigGames(S.rows.filter((r) => !r.started));
+      : 'Standings from results, each one counted the moment it’s confirmed. Attack and defence are the model’s goal multipliers against a league-average side. Tap a team for its page.';
+    if (sim) { if (!S.ready) { $('#tableBox').innerHTML = '<div class="empty-state"><b>Getting the games ready…</b>The simulator starts once this week’s games are analysed.</div>'; return; } renderSim(); return; }
+    const stakes = S.ready ? bigGames(S.rows.filter((r) => !r.started)) : '';
     const hasR = L.table.some((r) => r[9] != null), hasW = L.table.some((r) => r[2] != null);
     const amax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[9] || 0))) : 1, dmax = hasR ? Math.max(...L.table.map((r) => Math.exp(r[10] || 0))) : 1;
     // v70: say plainly when a table is last season's, or a season that's over
-    const lkT = S.tleague, coming = S.rows.some((r) => r.m.lk === lkT && !r.started);
-    const endD = L.end ? new Date(L.end + 'T12:00:00Z') : null, longAgo = endD && Date.now() - endD > 21 * 864e5;
+    const lkT = S.tleague, now = Date.now(), coming = S.ready ? S.rows.some((r) => r.m.lk === lkT && !r.started) : (S.data.matches || []).some((m) => m.lk === lkT && Date.parse(m.ko) > now);
+    // v72: results counted live (by the site's update, and on this phone since), the places they moved sides, and games in play
+    const prov = (L.lt || []).concat(L.ltc || []), mv = ltMoves(L, prov), fresh = new Set(prov.flatMap((x) => [x[0], x[1]]));
+    const ends = [L.end].concat(prov.map((x) => x[4] ? String(x[4]).slice(0, 10) : '')).filter(Boolean).sort(), endS = ends[ends.length - 1];
+    const endD = endS ? new Date(endS + 'T12:00:00Z') : null, longAgo = endD && now - endD > 21 * 864e5;
     const tnote = L.old ? `<p class="tnote">Final table of ${esc(L.season || 'last season')}. The new season hasn’t started in Statpad’s results yet${coming ? '' : ' and no games are listed'}.</p>`
       : (!coming && longAgo) ? `<p class="tnote">The season looks finished: this is the final table (last game ${esc(endD.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))}).</p>` : '';
-    $('#tableBox').innerHTML = `${tnote}<div class="lt"><table><thead><tr><th class="l">#</th><th class="l">Team</th><th>P</th>${hasW ? '<th>W</th><th>D</th><th>L</th>' : ''}<th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th class="l">Form</th>${hasR ? '<th>Attack</th><th>Defence</th>' : ''}</tr></thead><tbody>
-      ${L.table.map((r, i) => `<tr class="${i < 4 ? 'zone' : ''}"><td class="l">${i + 1}</td><td class="l team">${crest(r[0], S.tleague, 'xs')} <button type="button" class="tlink" data-team="${esc(S.tleague)}|${esc(r[0])}">${esc(r[0])}</button></td><td>${r[1]}</td>${hasW ? `<td>${r[2] ?? ''}</td><td>${r[3] ?? ''}</td><td>${r[4] ?? ''}</td>` : ''}<td>${r[5]}</td><td>${r[6]}</td><td>${r[5] - r[6] > 0 ? '+' : ''}${r[5] - r[6]}</td><td><b>${r[7]}</b></td><td class="l">${formDots(r[8]) || ''}</td>
+    const flash = motionOK() ? S.ltFlash : new Set();
+    const arrow = (nm, i) => { const was = mv && mv.get(nm), d = was ? was - (i + 1) : 0; return d ? `<i class="tl-mv ${d > 0 ? 'up' : 'dn'}" aria-label="${d > 0 ? 'up' : 'down'} ${Math.abs(d)}">${d > 0 ? '▲' : '▼'}${Math.abs(d)}</i>` : ''; };
+    $('#tableBox').innerHTML = `${tnote}${L.old ? '' : ltStrip(lkT, L, prov)}<div class="lt"><table><thead><tr><th class="l">#</th><th class="l">Team</th><th>P</th>${hasW ? '<th>W</th><th>D</th><th>L</th>' : ''}<th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th class="l">Form</th>${hasR ? '<th>Attack</th><th>Defence</th>' : ''}</tr></thead><tbody>
+      ${L.table.map((r, i) => `<tr class="${i < 4 ? 'zone' : ''}${fresh.has(r[0]) ? ' tl-upd' : ''}${flash.has(lkT + '|' + r[0]) ? ' tl-flash' : ''}"><td class="l">${i + 1}${arrow(r[0], i)}</td><td class="l team">${crest(r[0], S.tleague, 'xs')} <button type="button" class="tlink" data-team="${esc(S.tleague)}|${esc(r[0])}">${esc(r[0])}</button></td><td>${r[1]}</td>${hasW ? `<td>${r[2] ?? ''}</td><td>${r[3] ?? ''}</td><td>${r[4] ?? ''}</td>` : ''}<td>${r[5]}</td><td>${r[6]}</td><td>${r[5] - r[6] > 0 ? '+' : ''}${r[5] - r[6]}</td><td><b>${r[7]}</b></td><td class="l">${formDots(r[8]) || ''}</td>
       ${hasR ? `<td>${r[9] != null ? Math.exp(r[9]).toFixed(2) + '×' : ''}<span class="rbar"><i style="width:${r[9] != null ? (Math.exp(r[9]) / amax) * 100 : 0}%"></i></span></td><td>${r[10] != null ? Math.exp(r[10]).toFixed(2) + '×' : ''}<span class="rbar def"><i style="width:${r[10] != null ? (Math.exp(r[10]) / dmax) * 100 : 0}%"></i></span></td>` : ''}</tr>`).join('')}
-    </tbody></table></div><p class="note">${esc(L.name)}${L.season ? ' · ' + esc(L.season) : ''}. ${hasR ? 'Attack above 1.00 scores more than an average side; defence below 1.00 concedes less. ' : ''}Points deductions are not applied.</p>${stakes}`;
+    </tbody></table></div><p class="note">${esc(L.name)}${L.season ? ' · ' + esc(L.season) : ''}. ${prov.length ? 'Shaded rows include a result counted the moment it was confirmed, before the official results lists caught up; arrows show the places it moved them. ' : ''}${hasR ? 'Attack above 1.00 scores more than an average side; defence below 1.00 concedes less. ' : ''}Points deductions are not applied.</p>${stakes}`;
+    for (const k of [...S.ltFlash]) if (k.startsWith(lkT + '|')) S.ltFlash.delete(k);
     subFold();
   }
 
@@ -6111,7 +6192,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   function render() {
     if (S.tab === 'track') { renderNav(); renderTrack(); subFold(); return; }
     if (!S.data) return;
-    if (!S.ready) { renderNav(); showProgress(); return; }
+    if (!S.ready) { renderNav(); showProgress(); if (S.tab === 'tables') { renderTables(); subFold(); } return; }
     renderNav(); renderLive();
     if (S.tab === 'home') { renderHero(); renderTape(); renderNav(); renderHome(); }
     else if (S.tab === 'matches') renderMatches();
@@ -9103,6 +9184,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       if (!r.ok) return;
       S.results = await r.json(); if (want) S.got.results = want;
       if (settleBets() && S.tab === 'coupon' && S.bseg === 'mine') renderCoupon();
+      ltRefresh();
     } catch (e) { /* no results file yet: bets can still be settled by hand */ }
   }
 
@@ -10276,7 +10358,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   // (Data saver: 1 and 3 minutes). ESPN's finals settle bets at once; the site's results file confirms them later.
   const ES_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/';
   const ES_GAP = { fast: [20e3, 45e3], saver: [60e3, 180e3] }, ES_WAIT = 5 * 60e3, ES_OFF = /POSTPONED|CANCEL|ABANDON|FORFEIT/;
-  const ES = S.es = { at: {}, games: {}, res: {}, void: {}, ev: store.get('esev', {}) || {}, n: 0, last: 0, fail: 0, pause: 0, busy: false, checks: 0 };
+  const ES = S.es = { at: {}, games: {}, res: {}, void: {}, po: {}, ev: store.get('esev', {}) || {}, n: 0, last: 0, fail: 0, pause: 0, busy: false, checks: 0 };
+  // ESPN's season stages after a league's own table (as the site's update reads them)
+  const ES_PO = /play-?offs?|round-of-\d+|quarter-?finals?|semi-?finals?|(?:^|-)finals?(?:$|-series)|wild-?card|quadrangular|cuadrangular|liguilla|knockout|championship$/, ES_LS = /hexagonal|-round$|split|regular/;
   for (const [k, v] of Object.entries(ES.ev)) if (!Array.isArray(v) || !(Date.now() - v[3] < 4 * 86400e3)) delete ES.ev[k];
   const esSlug = (lk) => ((S.data && S.data.espn) || {})[lk] || null;
   const esDay = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, '');
@@ -10309,8 +10393,10 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
         const lab = (d.clock || {}).displayValue || '', s = (d.team || {}).id === hid ? 'h' : 'a';
         if (d.scoringPlay) goals.push([esMin(lab), s, !!d.ownGoal, lab]); else if (d.redCard) reds.push([esMin(lab), s]);
       }
+      const sl = (e.season || {}).slug || '';   // v72: ESPN's stage: a play-off game never counts in the league table
       return { id: String(e.id), ko: Date.parse(e.date || c.date), h: nm(h.team || {}), a: nm(a.team || {}), hs: +h.score || 0, as: +a.score || 0,
-        st: ty.name || '', state: ty.state || '', done: !!ty.completed, period: +st.period || 0, clock: st.displayClock || '', goals, reds };
+        st: ty.name || '', state: ty.state || '', done: !!ty.completed, period: +st.period || 0, clock: st.displayClock || '', goals, reds,
+        po: ES_PO.test(sl) && !ES_LS.test(sl) };
     } catch (err) { return null; }
   }
   function esGoals(g) {   // goal times, trusted only when they add up to the score (feeds differ on own goals)
@@ -10399,6 +10485,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
     const at = Math.max(F.checked ? Date.parse(F.checked) : 0, ES.last);
     S.live = Object.assign({}, F, { games: G, checked: at ? new Date(at).toISOString() : null });
     try { vaLive(); } catch (e) { /* the assistant's notices never stop the scores */ }
+    ltRefresh();
   }
   async function esTick() {
     if (UI.live === 'off' || ES.busy || document.hidden || !S.data || !S.ready || Date.now() < ES.pause) return;
@@ -10423,7 +10510,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
           const tu = esTuple(g, ES.games[t.id] || ((S.liveFile || {}).games || {})[t.id]); if (!tu) continue;
           const old = ES.games[t.id]; ES.games[t.id] = tu;
           if (!old || JSON.stringify(old.slice(0, 4).concat(old.slice(5))) !== JSON.stringify(tu.slice(0, 4).concat(tu.slice(5)))) changed = true;
-          if (g.state === 'post' && g.done) { ES.res[t.id] = [tu[0], tu[1]]; changed = true; }
+          if (g.state === 'post' && g.done) { ES.res[t.id] = [tu[0], tu[1]]; if (g.po || /AET|PEN/.test(g.st)) ES.po[t.id] = 1; changed = true; }
         }
       }
     } finally { ES.busy = false; }
@@ -12085,7 +12172,8 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
       base.forEach((b, k) => { b.att = L.mm.t[names[k]][0]; b.def = L.mm.t[names[k]][1]; });
     }
     const live = new Map(S.rows.filter((x) => x.m.lk === lk && !x.started && x.a).map((x) => [x.m.h + '|' + x.m.a, x]));
-    const fx = tf.rem.map(([i, j]) => {
+    const gone = new Set((L.lt || []).concat(L.ltc || []).map((x) => x[0] + '|' + x[1]));   // v72: already in the live table
+    const fx = tf.rem.filter(([i, j]) => !gone.has(names[i] + '|' + names[j])).map(([i, j]) => {
       const r = live.get(names[i] + '|' + names[j]);
       return { i, j, lh: r ? r.a.lh : Math.exp(mu + home + base[i].att + base[j].def), la: r ? r.a.la : Math.exp(mu + base[j].att + base[i].def), r };
     });
@@ -15320,6 +15408,8 @@ void main() {
       S.data = doc; S.err = null; S.now = Date.now();
       const cal = doc.calib && doc.calib.on ? { a: doc.calib.a, b: doc.calib.b } : null, mc = doc.mcal || null, rl = doc.rho || null, cs = JSON.stringify([cal, mc, rl]);
       if (cs !== S.calSig) { S.calSig = cs; ENGINE.setCalib(cal); if (ENGINE.setMcal) ENGINE.setMcal(mc); if (ENGINE.setRho) ENGINE.setRho(rl); S.cache.clear(); GR.clear(); }
+      liveTables();
+      if (!S.ready && S.tab === 'tables') renderTables();   // v72: a table needs no analysis: shown at once
       if (window.__spMark) window.__spMark('analysis started');
       if (!(await analyseAll(token))) return;
       if (window.__spMark) window.__spMark('analysis done, drawing');

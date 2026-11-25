@@ -1791,6 +1791,18 @@ def compute_leagues(results, teams):
             _, fin, kbase = kalman_run(games, KAL, P_.get('sw') or 0.0, P_.get('nt', NEW_TEAM_PRIOR[1]), P_.get('sx') or 0.0)
             kal = {t: [round(v[0], 4), round(v[1], 4), round(v[2], 5), round(v[3], 5), v[4].strftime('%Y-%m-%d')] for t, v in fin.items() if t in cur_teams}
         cur_d = [g[0] for g in games if g[5]]
+        # v72: each side's latest game in the table, and the season's first play-off game: what a final score
+        # confirmed since needs to be counted in the table at once (see live_tables)
+        po_ = PLAYOFF.get(lk) or ()
+        last_ = {}
+        for g in games:
+            if g[5]:
+                ds = g[0].strftime('%Y-%m-%d')
+                if (ds, g[1], g[2]) in po_:
+                    continue
+                for t_ in (g[1], g[2]):
+                    if ds > last_.get(t_, ''):
+                        last_[t_] = ds
         rows = []
         for pos, (t, r) in enumerate(table, 1):
             ar = (rt or {}).get('teams', {}).get(t)
@@ -1805,7 +1817,10 @@ def compute_leagues(results, teams):
                        'se': {t: v for t, v in (rt or {}).get('se', {}).items() if t in cur_teams},
                        'shots': sum(1 for g in games if g[5] and len(g) > 7 and g[6] is not None),
                        'games': len(games), 'start': min(cur_d).strftime('%Y-%m-%d') if cur_d else None,
-                       'end': max(cur_d).strftime('%Y-%m-%d') if cur_d else None}
+                       'end': max(cur_d).strftime('%Y-%m-%d') if cur_d else None,
+                       'last': last_}
+        if po_:
+            leagues[lk]['po0'] = min(d for d, _, _ in po_)
         nt = P_.get('nt', NEW_TEAM_PRIOR[1])
         for t in extra:
             teams.add(lk, t)
@@ -2054,7 +2069,9 @@ def stakes_jobs(state, doc):
             att = [mm['t'][nm][0] for nm in names]
             dfn = [mm['t'][nm][1] for nm in names]
         fx, ms, tgt = [], [], []
-        for k, (i, j) in enumerate(tf['rem']):
+        gone = {(x[0], x[1]) for x in lg.get('lt') or ()}   # v72: games the live table already counts
+        rem = [p for p in tf['rem'] if (names[p[0]], names[p[1]]) not in gone]
+        for k, (i, j) in enumerate(rem):
             fx.append([i, j, round(math.exp(mu + home + att[i] + dfn[j]), 4), round(math.exp(mu + att[j] + dfn[i]), 4)])
             m = upcoming[lk].get((names[i], names[j]))
             if m:
@@ -2064,7 +2081,7 @@ def stakes_jobs(state, doc):
             continue
         jobs.append({'n': STAKES_N, 'sig': SIM_SIG, 'seed': sim_seed(lk, NOW.strftime('%Y-%m-%d')), 'zones': zones_for(lk),
                      'base': [[r[7], r[5], r[6]] for r in rr], 'fx': fx, 'ms': ms, 'tgt': tgt})
-        meta.append((lk, [upcoming[lk][(names[tf['rem'][k][0]], names[tf['rem'][k][1]])]['id'] for k in tgt]))
+        meta.append((lk, [upcoming[lk][(names[rem[k][0]], names[rem[k][1]])]['id'] for k in tgt]))
     return jobs, meta
 
 
@@ -2662,7 +2679,8 @@ def espn_row(e):
                 'hs': int(h.get('score') or 0), 'as': int(a.get('score') or 0),
                 'st': typ.get('name') or '', 'state': typ.get('state') or '', 'done': bool(typ.get('completed')),
                 'period': int(st.get('period') or 0), 'clock': st.get('displayClock') or '', 'goals': goals, 'reds': reds,
-                'mkt': espn_market(c) if typ.get('state') == 'pre' else None}
+                'mkt': espn_market(c) if typ.get('state') == 'pre' else None,
+                'po': espn_playoff((e.get('season') or {}).get('slug'))}
     except Exception:
         return None
 
@@ -2806,7 +2824,8 @@ def refresh_espn(state, matches):
             t = espn_tuple(g, games.get(mid))
             if g['state'] == 'post' and g['done']:
                 if t:
-                    done[mid] = [t[0], t[1], iso(ko)]
+                    # v72: a fourth entry marks a play-off game, or one that went to extra time: not a league-table game
+                    done[mid] = [t[0], t[1], iso(ko)] + ([1] if g.get('po') or g['st'] in ('STATUS_FINAL_AET', 'STATUS_FINAL_PEN') else [])
                     n_res += 1
                     if mid in games or NOW - ko < timedelta(hours=4):
                         games[mid] = t
@@ -5974,9 +5993,130 @@ def pick_market(main, es, old):
     return main or es or old
 
 
+# ----------------------------------------------------------------------------------------------
+# v72: live tables. The results feeds that tables are built from take hours (ESPN's monthly pages, re-read every few
+# hours) or days (football-data's files, updated a few times a week) to list a game. Every league game on the board
+# is remembered with its names as shown, and the moment any source confirms its final score (ESPN's scoreboards,
+# TheSportsDB, the day lists, The Odds API) it counts in its table: played, won/drawn/lost, goals, points, form, and the
+# order. Once a feed lists the game it counts from the feed instead. Play-off games, and games that went to extra time,
+# never count, and a league whose play-offs have begun gets no additions at all.
+# ----------------------------------------------------------------------------------------------
+LT_DAYS = 10   # days a finished league game is kept waiting for the results feeds to list it
+
+
+def lt_meta(state, prev):
+    """Every league game on the board (and in the record's waiting list): competition, kick-off and both names."""
+    meta = state.setdefault('lt_meta', {})
+    for m in list((prev or {}).get('matches') or []) + list((state.get('track_pending') or {}).values()):
+        lk = m.get('lk')
+        if not m.get('id') or not m.get('ko') or not m.get('h') or not m.get('a') or lk not in L or knockout(lk) or parse_iso(m['ko']) > NOW:
+            continue   # (a game joins once it has kicked off: it stays on the board for hours after)
+        meta[m['id']] = [lk, m['ko'], m['h'], m['a']]
+    cut = NOW - timedelta(days=LT_DAYS)
+    for k in [k for k, v in meta.items() if parse_iso(v[1]) < cut]:
+        del meta[k]
+    return meta
+
+
+def lt_scores(state):
+    """Confirmed final scores by match id -> (home, away, not a table game). ESPN's word on a play-off wins."""
+    out = {}
+    for mid, v in (state.get('scores') or {}).items():
+        out[mid] = (int(v[0]), int(v[1]), False)
+    for mid, v in ((state.get('af') or {}).get('scores') or {}).items():
+        out[mid] = (int(v[0]), int(v[1]), len(v) > 3 and bool(v[3]))
+    return out
+
+
+def lt_has(lg, name, ko):
+    """Does the table's feed already count this side's game kicking off at ko? (Feeds date a game by its local day,
+    a day either side of UTC's, and a side never plays twice in two days.)"""
+    d1 = (parse_iso(ko) - timedelta(days=1)).strftime('%Y-%m-%d')
+    return (lg.get('last') or {}).get(name, '') >= d1
+
+
+def lt_sort(rows):
+    rows.sort(key=lambda r: (-r[7], -(r[5] - r[6]), -r[5]))   # stable: full ties keep the feed's order
+
+
+def lt_apply(r, gf, ga):
+    res = 'W' if gf > ga else 'D' if gf == ga else 'L'
+    r[1] += 1
+    r[2 + 'WDL'.index(res)] += 1
+    r[5] += gf
+    r[6] += ga
+    r[7] += 3 if res == 'W' else 1 if res == 'D' else 0
+    r[8] = ((r[8] or '') + res)[-5:]
+
+
+def live_tables(state, prev, leagues):
+    """The leagues with every confirmed final score counted (copies: the feeds' tables in state stay as they are).
+    A league given results gets 'lt': [home, away, home goals, away goals, date, match id] for each game added."""
+    meta = lt_meta(state, prev)
+    sc = lt_scores(state)
+    by_lk = {}
+    for mid, (lk, ko, h, a) in meta.items():
+        if mid in sc:
+            by_lk.setdefault(lk, []).append((ko, mid, h, a, sc[mid]))
+    out, n, gone = dict(leagues), 0, []
+    for lk, items in by_lk.items():
+        lg = leagues.get(lk)
+        if not lg or not lg.get('table') or lg.get('part') or season_old(lg.get('season')) or 'last' not in lg:
+            continue
+        rows = [list(r) for r in lg['table']]
+        by = {disp(lk, r[0]): r for r in rows}
+        lt = []
+        for ko, mid, h, a, (hs, as_, po) in sorted(items):
+            rh, ra = by.get(h), by.get(a)
+            if not rh or not ra or rh is ra:
+                continue
+            if lt_has(lg, rh[0], ko) or lt_has(lg, ra[0], ko):
+                gone.append(mid)   # the feed lists it now
+                continue
+            if po or (lg.get('po0') and ko[:10] >= (parse_iso(lg['po0'] + 'T00:00:00Z') - timedelta(days=1)).strftime('%Y-%m-%d')):
+                continue
+            lt_apply(rh, hs, as_)
+            lt_apply(ra, as_, hs)
+            lt.append([h, a, hs, as_, ko[:10], mid])
+        if lt:
+            lt_sort(rows)
+            out[lk] = dict(lg, table=rows, lt=lt, end=max([lg.get('end') or ''] + [x[4] for x in lt]))
+            n += len(lt)
+    for mid in gone:
+        meta.pop(mid, None)
+    if n:
+        log(f'live tables: {n} confirmed results counted before the feeds list them, in', ', '.join(sorted(k for k in out if out[k] is not leagues.get(k))))
+    return out
+
+
+def lt_publish(lk, lg, rec, matches, nx=()):
+    """What the page needs to keep a table live: the games added here ('lt'), the finished games on the board the
+    table already counts ('cnt') and those that never count ('nx': play-offs, extra time), and whether the page may
+    add the ones that finish next ('lv')."""
+    if 'last' not in lg or rec.get('old') or rec.get('part') or not rec.get('table'):
+        return
+    added = {x[5] for x in lg.get('lt') or ()}
+    if lg.get('lt'):
+        rec['lt'] = [x[:5] for x in lg['lt']]
+    names = {disp(lk, r[0]): r[0] for r in lg.get('table') or []}
+    cnt = [m['id'] for m in matches if m['lk'] == lk and parse_iso(m['ko']) <= NOW
+           and (m['id'] in added or (m['h'] in names and lt_has(lg, names[m['h']], m['ko'])) or (m['a'] in names and lt_has(lg, names[m['a']], m['ko'])))]
+    if cnt:
+        rec['cnt'] = cnt
+    no = [m['id'] for m in matches if m['lk'] == lk and m['id'] in nx]
+    if no:
+        rec['nx'] = no
+    if not lg.get('po0'):
+        rec['lv'] = 1
+
+
 def build(state, prev, seed=None):
     leagues = state.get('leagues') or {}
     set_namesakes(leagues)
+    try:
+        leagues = live_tables(state, prev, leagues)
+    except Exception as e:   # a table a few hours behind is better than no board
+        log('live tables: skipped', repr(e)[:160])
     teams = Teams()
     for lk, lg in leagues.items():
         for row in lg.get('table') or []:
@@ -6337,6 +6477,7 @@ def build(state, prev, seed=None):
         matches.sort(key=lambda m: (m['ko'], m['lk'], m['h']))
 
     used = {m['lk'] for m in matches}
+    lt_nx = {k for k, v in ((state.get('af') or {}).get('scores') or {}).items() if len(v) > 3 and v[3]}
     out_leagues = {}
     for lk, c in L.items():
         lg = leagues.get(lk)
@@ -6360,6 +6501,10 @@ def build(state, prev, seed=None):
                 rec.update({'table': [], 'part': lg['part']})
             if lg.get('shots'):
                 rec['sh'] = 1   # ratings use shots on target as well as goals
+            try:
+                lt_publish(lk, lg, rec, matches, lt_nx)
+            except Exception as e:
+                log('live tables:', lk, repr(e)[:120])
         mem = (state.get('mem') or {}).get(lk)
         if mem and lk in SIM_LEAGUES:
             # the season simulator's strengths: the market's memory, in the table's terms (defence: higher concedes more)
@@ -9970,10 +10115,11 @@ def main():
     src['espn_data'] = {'ok': es_note != 'error', 'at': iso(NOW), 'note': es_note}
     log('ESPN competitions:', es_note)
     if due(state, 'results', RESULTS_EVERY) or not state.get('leagues') or 'recent_results' not in state or 'teamfiles' not in state or 'last_played' not in state or retuned \
-            or state.get('mem_fd_v') != MEM_FD_V or state.get('ns_sig') != ns_sig:
+            or state.get('mem_fd_v') != MEM_FD_V or state.get('ns_sig') != ns_sig or state.get('lt_v') != 1:
         res = safe(load_results, {})
         if res:
             state['leagues'] = safe(lambda: compute_leagues(res, Teams()), state.get('leagues') or {})
+            state['lt_v'] = 1   # v72: tables carry each side's latest game date (for the live tables)
             state['ns_sig'] = ns_sig   # team pages are written with the names shown: rewritten when those change
             state['recent_results'] = safe(lambda: recent_results(res), state.get('recent_results') or {})
             tf = safe(lambda: team_files(res), None)

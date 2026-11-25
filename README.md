@@ -485,6 +485,21 @@ The closing price is still well ahead of any results-only model, which is why pr
 Code: `pulse_run`, `pulse_carry`, `pulse_blend`, `PULSE`, `PULSE_BLEND`, `PYRAMIDS` in `update.py`.
 `PULSE_ON = False` gives v62's ratings exactly.
 
+## v72: live league tables
+
+Tables are built from results feeds that are slow to list a game: football-data's files (most European leagues) are updated a few times a week, and ESPN's monthly result pages are re-read every few hours. So on Tuesday night the Championship table still showed Saturday's standings, although results.json had every final score within minutes. Now a result counts in its table the moment it's confirmed:
+
+- **The site's update** (every 5 minutes) remembers every league game once it kicks off, and as soon as any source confirms the final score (ESPN's scoreboards, TheSportsDB, the Highlightly/API-Football day lists, The Odds API) adds it to the table: played, won/drawn/lost, goals, points, form, and the order. Once the feed lists the game, it counts from the feed instead (each team's latest game in the feed is kept to tell). Copies only: the feed's own tables in the state are never changed.
+- **The page** adds the games that finish after that, from ESPN's scoreboards (read every 45 s while games are on), live.json and results.json, so a table you're looking at updates within a minute of the final whistle. The update tells the page which finished games it already counts, so nothing is counted twice.
+- On the **Leagues** tab a green **Live table** strip lists the results counted this way and how many games are in play; those teams' rows are shaded, arrows show the places they moved, and a game that has just finished flashes once (not with reduced motion). Team pages, the assistant, the season simulator and "what's at stake" all read the live table; the simulator and the stakes no longer play a game the table already counts.
+- **Never counted:** play-off games (ESPN's season stage says so, e.g. MLS's play-offs this week), games that went to extra time, and nothing at all is added in a league whose play-offs have begun, to last season's final table, or to a season only partly seen.
+- The table now appears as soon as the data is in, without waiting for the week's games to be analysed (on a slow phone that wait was several seconds).
+- Also in this version: v71's fix for "Highlightly: error, 1 calls today" (a competition The Odds API had added, England's EFL Trophy, wasn't in the league list).
+
+The first run after upload re-reads the results once (about a minute longer), to record each team's latest game in the feeds.
+
+Code: `live_tables`, `lt_meta`, `lt_scores`, `lt_publish` in `update.py`; `liveTables`, `ltRefresh`, `ltMoves`, `ltStrip` in the page. Tests: `tests/v72_live_tables_unit.py`, and a replay of 24 Nov's real Championship, League One, League Two and Scottish finals (the page's own count matched the update's, team by team).
+
 ## v71: Highlightly, a second source for what API-Football did
 
 API-Football has refused the key since 20 Nov 2026, and since 24 Nov says the account is suspended ("Your account is suspended", in **Method → Data status**). Its free plan forbids more than one account, and its own notes say free accounts that seem to share an internet address with others (as GitHub's machines do) can be suspended automatically, so a new account would likely go the same way. Statpad now reads **Highlightly** as well, from a free key (100 calls a day) in a new `HIGHLIGHTLY_KEY` secret. API-Football's code is untouched: if its key comes back, both work side by side.
